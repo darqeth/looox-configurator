@@ -1,0 +1,44 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import Sidebar from '@/components/layout/sidebar'
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, company, tier, is_admin')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.is_admin) redirect('/dashboard')
+
+  const [
+    { count: configCount },
+    { count: orderCount },
+    { count: pendingCount },
+  ] = await Promise.all([
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending'),
+  ])
+
+  return (
+    <div className="min-h-screen bg-[#F0EDE8]">
+      <Sidebar
+        userName={profile.full_name ?? user.email ?? 'Gebruiker'}
+        company={profile.company ?? ''}
+        tier={profile.tier ?? 'Studio'}
+        configCount={configCount ?? 0}
+        orderCount={orderCount ?? 0}
+        isAdmin={true}
+        pendingCount={pendingCount ?? 0}
+      />
+      <main className="lg:ml-60 min-h-screen">
+        {children}
+      </main>
+    </div>
+  )
+}

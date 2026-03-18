@@ -132,12 +132,15 @@
       .bento-grid { grid-template-columns: 1fr !important; }
       /* Bottom row: stack */
       .bottom-grid { grid-template-columns: 1fr !important; }
+      /* Circle grid: stack */
+      .circle-grid { grid-template-columns: 1fr !important; }
     }
 
     @media (min-width: 640px) and (max-width: 1023px) {
-      /* Tablet: 2-col KPI, 2-col bottom */
+      /* Tablet: 2-col KPI, 2-col bottom, 2-col circle */
       .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
       .bottom-grid { grid-template-columns: repeat(2, 1fr) !important; }
+      .circle-grid { grid-template-columns: repeat(2, 1fr) !important; }
       .content-area { padding: 22px 22px 40px; }
     }
   </style>
@@ -197,6 +200,12 @@
       </a>
 
       <a class="nav-item" href="#">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        LoooX Circle
+        <span style="margin-left:auto; background:rgba(93,168,122,0.2); color:#6EBD8E; font-size:10px; font-weight:700; padding:1px 7px; border-radius:20px;">Studio</span>
+      </a>
+
+      <a class="nav-item" href="#">
         <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Mijn account
       </a>
@@ -215,6 +224,20 @@
         </a>
       </div>
     </nav>
+
+    <!-- LoooX Circle compact tier widget -->
+    <div style="padding: 0 12px 12px;">
+      <div style="background:rgba(255,255,255,0.07); border-radius:12px; padding:11px 13px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:7px;">
+          <span style="color:rgba(255,255,255,0.45); font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;">LoooX Circle</span>
+          <span style="background:rgba(93,168,122,0.22); color:#6EBD8E; font-size:9.5px; font-weight:700; padding:1px 7px; border-radius:20px;">Studio</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.1); border-radius:4px; height:4px; overflow:hidden; margin-bottom:5px;">
+          <div style="background:#5FA87A; height:100%; width:30%; border-radius:4px;"></div>
+        </div>
+        <p style="color:rgba(255,255,255,0.32); font-size:9.5px; margin:0;">3/10 orders → <span style="color:rgba(255,255,255,0.55);">Signature</span></p>
+      </div>
+    </div>
 
     <!-- CTA -->
     <div style="padding: 0 12px 12px;">
@@ -588,6 +611,78 @@
 
       </div>
     </div><!-- /bento-grid -->
+
+    <!-- ── LoooX Circle milestones ── -->
+    <div class="card" style="overflow:hidden; margin-top:14px; margin-bottom:40px;">
+      <div class="section-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="section-title">LoooX Circle</span>
+          <span style="background:#EFF6F1; color:#3D6B4F; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; letter-spacing:0.04em;">Studio</span>
+        </div>
+        <a href="#" class="section-link">Mijn voortgang →</a>
+      </div>
+      <div style="padding:16px 20px;">
+        <p style="font-size:12px; color:#6B7280; margin:0 0 14px;">Je bent dichtbij — zet de volgende stap en ontgrendel je voordeel.</p>
+        <div class="circle-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+
+          <!-- Milestone 1: Ontwerper — 80% -->
+          <div style="background:#F9F7F5; border-radius:14px; padding:14px 16px; border:1.5px solid #DFF0E5; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:10px; right:10px; background:#DCFCE7; color:#166534; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:10px;">80%</div>
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:10px;">
+              <div style="width:32px; height:32px; border-radius:10px; background:#EFF6F1; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3D6B4F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </div>
+              <div>
+                <p style="font-size:12.5px; font-weight:600; color:#1A1A1A; margin:0;">Ontwerper</p>
+                <p style="font-size:11px; color:#6B7280; margin:0;">5 configuraties maken</p>
+              </div>
+            </div>
+            <div style="background:#D1FAE5; border-radius:4px; height:5px; overflow:hidden; margin-bottom:6px;">
+              <div style="background:#3D6B4F; height:100%; width:80%; border-radius:4px;"></div>
+            </div>
+            <p style="font-size:11px; color:#3D6B4F; font-weight:500; margin:0;">4 van 5 — nog 1 te gaan</p>
+          </div>
+
+          <!-- Milestone 2: Vaste Klant — 60% -->
+          <div style="background:#F9F7F5; border-radius:14px; padding:14px 16px; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:10px; right:10px; background:#FFF7ED; color:#C2410C; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:10px;">60%</div>
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:10px;">
+              <div style="width:32px; height:32px; border-radius:10px; background:#FFF7ED; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              </div>
+              <div>
+                <p style="font-size:12.5px; font-weight:600; color:#1A1A1A; margin:0;">Vaste Klant</p>
+                <p style="font-size:11px; color:#6B7280; margin:0;">5 bestellingen plaatsen</p>
+              </div>
+            </div>
+            <div style="background:#E5E7EB; border-radius:4px; height:5px; overflow:hidden; margin-bottom:6px;">
+              <div style="background:#C2410C; height:100%; width:60%; border-radius:4px;"></div>
+            </div>
+            <p style="font-size:11px; color:#C2410C; font-weight:500; margin:0;">3 van 5 — nog 2 te gaan</p>
+          </div>
+
+          <!-- Milestone 3: Signature tier — 30% -->
+          <div style="background:#F9F7F5; border-radius:14px; padding:14px 16px; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:10px; right:10px; background:#EFF6FF; color:#2563EB; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:10px;">30%</div>
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:10px;">
+              <div style="width:32px; height:32px; border-radius:10px; background:#EFF6FF; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <div>
+                <p style="font-size:12.5px; font-weight:600; color:#1A1A1A; margin:0;">Signature</p>
+                <p style="font-size:11px; color:#6B7280; margin:0;">10 orders of €15.000</p>
+              </div>
+            </div>
+            <div style="background:#E5E7EB; border-radius:4px; height:5px; overflow:hidden; margin-bottom:6px;">
+              <div style="background:#2563EB; height:100%; width:30%; border-radius:4px;"></div>
+            </div>
+            <p style="font-size:11px; color:#2563EB; font-weight:500; margin:0;">3/10 orders · €3.640/€15.000</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
     </div><!-- /content-area -->
   </main>
 

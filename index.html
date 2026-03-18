@@ -110,34 +110,39 @@
 
     /* ── Responsive breakpoints ── */
     @media (max-width: 1023px) {
-      /* Sidebar slides off-screen, triggered by JS */
-      .sidebar-wrapper { transform: translateX(-100%); }
+      /* Sidebar: full-width on mobile so nothing shows through */
+      .sidebar-wrapper { transform: translateX(-100%); width: 100vw; max-width: 320px; }
       .sidebar-wrapper.open { transform: translateX(0); }
       .sidebar-backdrop { display: block; }
 
-      /* Main takes full width */
-      .main-wrapper { margin-left: 0; padding: 0; max-width: 100vw; overflow-x: hidden; }
+      /* Main takes full width — hard stop at viewport */
+      .main-wrapper { margin-left: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: hidden; }
 
       /* Mobile top bar */
       .mobile-header { display: flex; align-items: center; justify-content: space-between;
         padding: 14px 18px; background: white; border-bottom: 1px solid rgba(0,0,0,0.07);
-        position: sticky; top: 0; z-index: 30; }
+        position: sticky; top: 0; z-index: 30; width: 100%; box-sizing: border-box; }
 
-      /* Content area padding on mobile */
-      .content-area { padding: 14px 14px 32px !important; }
-    }
+      /* Content area padding on mobile — force hard constraint */
+      .content-area { padding: 14px 14px 32px !important; width: 100% !important; box-sizing: border-box !important; overflow: hidden !important; }
 
-    @media (max-width: 1023px) {
-      /* KPI: 1 col on mobile, 3 on tablet landscape */
-      .kpi-grid { grid-template-columns: 1fr !important; }
+      /* Grid children: critical min-width:0 fix — prevents flex/grid items from
+         exceeding their container when content is intrinsically wide */
+      .kpi-grid > *, .bento-grid > *, .bottom-grid > *, .circle-grid > * { min-width: 0; }
+
+      /* KPI: 1 col on mobile */
+      .kpi-grid { grid-template-columns: 1fr !important; width: 100% !important; }
       /* Bento: stack to single column */
-      .bento-grid { grid-template-columns: 1fr !important; }
+      .bento-grid { grid-template-columns: 1fr !important; width: 100% !important; }
       /* Bottom row: stack */
-      .bottom-grid { grid-template-columns: 1fr !important; }
+      .bottom-grid { grid-template-columns: 1fr !important; width: 100% !important; }
       /* Circle grid: stack */
-      .circle-grid { grid-template-columns: 1fr !important; }
-      /* Cards never exceed viewport */
-      .card { max-width: 100%; }
+      .circle-grid { grid-template-columns: 1fr !important; width: 100% !important; }
+      /* Cards: full width, never overflow */
+      .card { width: 100% !important; max-width: 100% !important; box-sizing: border-box; }
+
+      /* Flex columns inside bento: constrain width */
+      .bento-col { min-width: 0; width: 100% !important; }
     }
 
     @media (max-width: 639px) {
@@ -150,7 +155,7 @@
       /* Config row: tighter padding */
       .config-row { padding: 11px 14px; }
       /* Section headers: tighter */
-      .section-header { padding: 12px 14px; }
+      .section-header { padding: 12px 14px !important; }
       /* Header greeting: smaller */
       .dashboard-greeting { font-size: 18px !important; }
       /* LoooX Circle reward pill: wrap text */
@@ -378,7 +383,7 @@
     <div class="bento-grid" style="display:grid; grid-template-columns: 3fr 2fr; gap:14px;">
 
       <!-- LEFT COLUMN -->
-      <div style="display:flex; flex-direction:column; gap:14px;">
+      <div class="bento-col" style="display:flex; flex-direction:column; gap:14px;">
 
         <!-- Laatste configuraties -->
         <div class="card" style="overflow:hidden;">
@@ -566,7 +571,7 @@
       </div>
 
       <!-- RIGHT COLUMN -->
-      <div style="display:flex; flex-direction:column; gap:14px;">
+      <div class="bento-col" style="display:flex; flex-direction:column; gap:14px;">
 
         <!-- Laatste nieuws -->
         <div class="card" style="overflow:hidden;">

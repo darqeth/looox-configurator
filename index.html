@@ -10,7 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { font-family: 'Inter', system-ui, sans-serif; box-sizing: border-box; }
-    body { background-color: #F0EDE8; margin: 0; }
+    body { background-color: #F0EDE8; margin: 0; overflow-x: hidden; }
+    html { overflow-x: hidden; }
 
     /* Custom scrollbar */
     ::-webkit-scrollbar { width: 4px; }
@@ -95,7 +96,8 @@
     .layout { display: flex; min-height: 100vh; }
     .sidebar-wrapper { width: 240px; min-height: 100vh; position: fixed; top: 0; left: 0; bottom: 0; z-index: 40;
       display: flex; flex-direction: column; overflow: hidden; transition: transform 240ms ease; }
-    .main-wrapper { margin-left: 240px; flex: 1; padding: 28px 28px 40px 28px; min-height: 100vh; }
+    .main-wrapper { margin-left: 240px; flex: 1; padding: 28px 28px 40px 28px; min-height: 100vh; max-width: 100%; }
+    .content-area { padding: 0; }  /* desktop: padding is on main-wrapper */
 
     /* Mobile hamburger button — hidden on desktop */
     .mobile-header { display: none; }
@@ -114,7 +116,7 @@
       .sidebar-backdrop { display: block; }
 
       /* Main takes full width */
-      .main-wrapper { margin-left: 0; padding: 0 0 40px 0; }
+      .main-wrapper { margin-left: 0; padding: 0; max-width: 100vw; overflow-x: hidden; }
 
       /* Mobile top bar */
       .mobile-header { display: flex; align-items: center; justify-content: space-between;
@@ -122,7 +124,7 @@
         position: sticky; top: 0; z-index: 30; }
 
       /* Content area padding on mobile */
-      .content-area { padding: 18px 16px 32px; }
+      .content-area { padding: 14px 14px 32px !important; }
     }
 
     @media (max-width: 1023px) {
@@ -134,6 +136,25 @@
       .bottom-grid { grid-template-columns: 1fr !important; }
       /* Circle grid: stack */
       .circle-grid { grid-template-columns: 1fr !important; }
+      /* Cards never exceed viewport */
+      .card { max-width: 100%; }
+    }
+
+    @media (max-width: 639px) {
+      /* Hide desktop search/notifications bar via CSS (not only JS) */
+      .desktop-actions { display: none !important; }
+      /* Hide action buttons in config rows on small phones */
+      .config-action-btn { display: none !important; }
+      /* Hide status badge in config rows — price already tells the story */
+      .config-badge { display: none !important; }
+      /* Config row: tighter padding */
+      .config-row { padding: 11px 14px; }
+      /* Section headers: tighter */
+      .section-header { padding: 12px 14px; }
+      /* Header greeting: smaller */
+      .dashboard-greeting { font-size: 18px !important; }
+      /* LoooX Circle reward pill: wrap text */
+      .reward-pill { white-space: normal !important; line-height: 1.3; align-items: flex-start !important; }
     }
 
     @media (min-width: 640px) and (max-width: 1023px) {
@@ -141,7 +162,7 @@
       .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
       .bottom-grid { grid-template-columns: repeat(2, 1fr) !important; }
       .circle-grid { grid-template-columns: repeat(2, 1fr) !important; }
-      .content-area { padding: 22px 22px 40px; }
+      .content-area { padding: 18px 18px 40px !important; }
     }
   </style>
 </head>
@@ -278,12 +299,12 @@
     </div>
 
     <!-- Content area (padded on mobile via class) -->
-    <div class="content-area" style="padding: 28px 28px 0;">
+    <div class="content-area">
 
     <!-- Header row -->
     <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px;">
       <div>
-        <h1 style="font-size:22px; font-weight:600; color:#1A1A1A; margin:0; letter-spacing:-0.3px;">Goedemorgen, Mark</h1>
+        <h1 class="dashboard-greeting" style="font-size:22px; font-weight:600; color:#1A1A1A; margin:0; letter-spacing:-0.3px;">Goedemorgen, Mark</h1>
         <p style="color:#6B7280; font-size:13px; margin:4px 0 0;">Woensdag 18 maart 2026 &nbsp;·&nbsp; RM Sanitair</p>
       </div>
       <div class="desktop-actions" style="display:flex; align-items:center; gap:10px;">
@@ -376,11 +397,11 @@
                 <p style="font-size:13.5px; font-weight:500; color:#1A1A1A; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Badkamer project Janssen</p>
                 <p style="font-size:11.5px; color:#6B7280; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">800×600 · LED direct · Aluminium zwart · Verwarming · <span style="color:#9CA3AF;">15 mrt 2026</span></p>
               </div>
-              <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+              <div class="config-badge" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
                 <p style="font-size:13.5px; font-weight:600; color:#1A1A1A; margin:0; white-space:nowrap;">€ 1.240</p>
                 <span class="badge badge-besteld">Besteld</span>
               </div>
-              <div style="display:flex; gap:2px; flex-shrink:0;">
+              <div class="config-action-btn" style="display:flex; gap:2px; flex-shrink:0;">
                 <button class="btn-icon" title="Bekijken" aria-label="Bekijken: Badkamer project Janssen">
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -399,11 +420,11 @@
                 <p style="font-size:13.5px; font-weight:500; color:#1A1A1A; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Rond model showroom</p>
                 <p style="font-size:11.5px; color:#6B7280; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Ø600 · LED indirect · Frameless · Bluetooth · <span style="color:#9CA3AF;">12 mrt 2026</span></p>
               </div>
-              <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+              <div class="config-badge" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
                 <p style="font-size:13.5px; font-weight:600; color:#1A1A1A; margin:0; white-space:nowrap;">€ 890</p>
                 <span class="badge badge-offerte">Offerte</span>
               </div>
-              <div style="display:flex; gap:2px; flex-shrink:0;">
+              <div class="config-action-btn" style="display:flex; gap:2px; flex-shrink:0;">
                 <button class="btn-icon" title="Bewerken"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
                 <button class="btn-icon" title="PDF"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>
               </div>
@@ -418,11 +439,11 @@
                 <p style="font-size:13.5px; font-weight:500; color:#1A1A1A; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Slaapkamer make-up spiegel</p>
                 <p style="font-size:11.5px; color:#6B7280; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">600×800 · LED direct · Aluminium goud · Make-up Ø80 · <span style="color:#9CA3AF;">8 mrt 2026</span></p>
               </div>
-              <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+              <div class="config-badge" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
                 <p style="font-size:13.5px; font-weight:600; color:#1A1A1A; margin:0; white-space:nowrap;">€ 1.450</p>
                 <span class="badge badge-concept">Concept</span>
               </div>
-              <div style="display:flex; gap:2px; flex-shrink:0;">
+              <div class="config-action-btn" style="display:flex; gap:2px; flex-shrink:0;">
                 <button class="btn-icon" title="Bewerken"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
                 <button class="btn-icon" title="PDF"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>
               </div>
@@ -437,11 +458,11 @@
                 <p style="font-size:13.5px; font-weight:500; color:#1A1A1A; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Project Van der Berg — WC</p>
                 <p style="font-size:11.5px; color:#6B7280; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">400×600 · Geen verlichting · Frameless · <span style="color:#9CA3AF;">2 mrt 2026</span></p>
               </div>
-              <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+              <div class="config-badge" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
                 <p style="font-size:13.5px; font-weight:600; color:#1A1A1A; margin:0; white-space:nowrap;">€ 320</p>
                 <span class="badge badge-besteld">Besteld</span>
               </div>
-              <div style="display:flex; gap:2px; flex-shrink:0;">
+              <div class="config-action-btn" style="display:flex; gap:2px; flex-shrink:0;">
                 <button class="btn-icon" title="Bekijken" aria-label="Bekijken: Project Van der Berg — WC"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
                 <button class="btn-icon" title="PDF downloaden" aria-label="PDF downloaden: Project Van der Berg — WC"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>
               </div>
@@ -456,11 +477,11 @@
                 <p style="font-size:13.5px; font-weight:500; color:#1A1A1A; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Landscape — hotel lobby</p>
                 <p style="font-size:11.5px; color:#6B7280; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">1200×800 · LED indirect · Aluminium mat · Verwarming · BT · <span style="color:#9CA3AF;">18 mrt 2026</span></p>
               </div>
-              <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+              <div class="config-badge" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
                 <p style="font-size:13.5px; font-weight:600; color:#1A1A1A; margin:0; white-space:nowrap;">€ 2.180</p>
                 <span class="badge badge-concept">Concept</span>
               </div>
-              <div style="display:flex; gap:2px; flex-shrink:0;">
+              <div class="config-action-btn" style="display:flex; gap:2px; flex-shrink:0;">
                 <button class="btn-icon" title="Bewerken"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
                 <button class="btn-icon" title="PDF"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>
               </div>
@@ -641,8 +662,8 @@
               <div style="background:#3D6B4F; height:100%; width:80%; border-radius:4px;"></div>
             </div>
             <p style="font-size:11px; color:#3D6B4F; font-weight:500; margin:0 0 8px;">4 van 5 — nog 1 te gaan</p>
-            <div style="display:flex; align-items:center; gap:5px; background:#EFF6F1; border-radius:8px; padding:6px 9px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3D6B4F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            <div class="reward-pill" style="display:flex; align-items:center; gap:5px; background:#EFF6F1; border-radius:8px; padding:6px 9px;">
+              <svg style="flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#3D6B4F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
               <span style="font-size:10.5px; font-weight:600; color:#3D6B4F;">5% korting op je volgende bestelling</span>
             </div>
           </div>
@@ -663,8 +684,8 @@
               <div style="background:#C2410C; height:100%; width:60%; border-radius:4px;"></div>
             </div>
             <p style="font-size:11px; color:#C2410C; font-weight:500; margin:0 0 8px;">3 van 5 — nog 2 te gaan</p>
-            <div style="display:flex; align-items:center; gap:5px; background:#FFF7ED; border-radius:8px; padding:6px 9px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="13" x="4" y="8" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M12 12v5"/><path d="M9.5 14.5h5"/></svg>
+            <div class="reward-pill" style="display:flex; align-items:center; gap:5px; background:#FFF7ED; border-radius:8px; padding:6px 9px;">
+              <svg style="flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="13" x="4" y="8" rx="2"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M12 12v5"/><path d="M9.5 14.5h5"/></svg>
               <span style="font-size:10.5px; font-weight:600; color:#C2410C;">Gratis verzending voor 6 maanden</span>
             </div>
           </div>
@@ -685,8 +706,8 @@
               <div style="background:#2563EB; height:100%; width:30%; border-radius:4px;"></div>
             </div>
             <p style="font-size:11px; color:#2563EB; font-weight:500; margin:0 0 8px;">3/10 orders · €3.640/€15.000</p>
-            <div style="display:flex; align-items:center; gap:5px; background:#EFF6FF; border-radius:8px; padding:6px 9px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <div class="reward-pill" style="display:flex; align-items:center; gap:5px; background:#EFF6FF; border-radius:8px; padding:6px 9px;">
+              <svg style="flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               <span style="font-size:10.5px; font-weight:600; color:#2563EB;">12% korting + rondleiding LoooX met lunch</span>
             </div>
           </div>

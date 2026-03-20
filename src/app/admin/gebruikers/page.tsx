@@ -113,9 +113,13 @@ function UserRow({ profile, showActions = false, showApprove = false }: {
           <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${status.className}`}>
             {status.label}
           </span>
-          {profile.price_factor_enabled && (profile.price_factor ?? 1) > 1 && (
-            <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">
-              ×{Number(profile.price_factor).toFixed(2)} consument
+          {(profile.price_factor ?? 1) > 1 && (
+            <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
+              profile.price_factor_enabled
+                ? 'bg-lx-icon-bg text-lx-cta'
+                : 'bg-lx-panel-bg text-lx-text-secondary'
+            }`}>
+              ×{Number(profile.price_factor).toFixed(2)} consument{profile.price_factor_enabled ? '' : ' (uit)'}
             </span>
           )}
         </div>

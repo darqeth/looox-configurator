@@ -73,10 +73,14 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {priceFactorEnabled && priceFactor > 1 && (
-            <span className="hidden sm:flex items-center gap-1.5 bg-lx-icon-bg text-lx-cta text-[11.5px] font-semibold px-3 py-1.5 rounded-xl border border-lx-cta/20">
+          {priceFactor > 1 && (
+            <span className={`hidden sm:flex items-center gap-1.5 text-[11.5px] font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
+              priceFactorEnabled
+                ? 'bg-lx-icon-bg text-lx-cta border-lx-cta/20'
+                : 'bg-lx-panel-bg text-lx-text-secondary border-black/8'
+            }`}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4m0 4h.01"/></svg>
-              Consumentenprijzen actief
+              Consumentenprijzen {priceFactorEnabled ? 'actief' : 'uit'}
             </span>
           )}
           <SearchButton />

@@ -305,7 +305,7 @@ function OpAanvraagTab() {
     <div className="space-y-5">
       <SectionCard title="Op aanvraag">
         <p className="text-[12.5px] text-lx-text-secondary leading-relaxed">
-          Eigen ontwerpen, bijzondere maten of vormen worden op aanvraag geconfigureerd. De klant maakt een configuratie aan als "offerteaanvraag" —
+          Eigen ontwerpen, bijzondere maten of vormen worden op aanvraag geconfigureerd. De klant maakt een configuratie aan als &ldquo;offerteaanvraag&rdquo; —
           geen betaling vereist. LoooX brengt binnen 1 werkdag een prijsopgave uit.
         </p>
         <div className="mt-4 space-y-0">

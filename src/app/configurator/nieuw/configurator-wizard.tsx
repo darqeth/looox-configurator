@@ -10,8 +10,25 @@ import StepVerlichting, { LightConfig } from './step-verlichting'
 import StepOpties from './step-opties'
 import StepSamenvatting from './step-samenvatting'
 import PricePanel from './price-panel'
-import { saveConfiguration } from '@/lib/actions/configurator'
+import { saveConfiguration, updateConfiguration } from '@/lib/actions/configurator'
 import { placeOrder } from '@/lib/actions/orders'
+
+interface InitialConfig {
+  id: string
+  shape: ShapeSlug
+  width: number
+  height: number
+  diameter: number | null
+  organicSizeKey: string | null
+  directLight: LightConfig
+  indirectLight: LightConfig
+  selectedOptions: string[]
+  optionSubChoices: Record<string, string>
+  projectName: string
+  reference: string
+  description: string
+  quantity: number
+}
 
 const STEPS = [
   { label: 'Afmeting' },
@@ -61,30 +78,31 @@ function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, direct
   )
 }
 
-export default function ConfiguratorWizard() {
+export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: InitialConfig }) {
   const router = useRouter()
-  const [shape, setShape] = useState<ShapeSlug | null>(null)
+  const isEditing = !!initialConfig
+  const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
   const [step, setStep] = useState(1)
 
   // Step 1: dimensions
-  const [width, setWidth] = useState(80)
-  const [height, setHeight] = useState(60)
-  const [diameter, setDiameter] = useState<number | null>(60)
-  const [organicSizeKey, setOrganicSizeKey] = useState<string | null>('60x40')
+  const [width, setWidth] = useState(initialConfig?.width ?? 80)
+  const [height, setHeight] = useState(initialConfig?.height ?? 60)
+  const [diameter, setDiameter] = useState<number | null>(initialConfig?.diameter ?? 60)
+  const [organicSizeKey, setOrganicSizeKey] = useState<string | null>(initialConfig?.organicSizeKey ?? '60x40')
 
   // Step 2: lighting
-  const [directLight, setDirectLight] = useState<LightConfig>(DEFAULT_LIGHT)
-  const [indirectLight, setIndirectLight] = useState<LightConfig>(DEFAULT_LIGHT)
+  const [directLight, setDirectLight] = useState<LightConfig>(initialConfig?.directLight ?? DEFAULT_LIGHT)
+  const [indirectLight, setIndirectLight] = useState<LightConfig>(initialConfig?.indirectLight ?? DEFAULT_LIGHT)
 
   // Step 3: options
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([])
-  const [optionSubChoices, setOptionSubChoices] = useState<Record<string, string>>({})
+  const [selectedOptions, setSelectedOptions] = useState<string[]>(initialConfig?.selectedOptions ?? [])
+  const [optionSubChoices, setOptionSubChoices] = useState<Record<string, string>>(initialConfig?.optionSubChoices ?? {})
 
   // Step 4: save info
-  const [projectName, setProjectName] = useState('')
-  const [reference, setReference] = useState('')
-  const [description, setDescription] = useState('')
-  const [quantity, setQuantity] = useState(1)
+  const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
+  const [reference, setReference] = useState(initialConfig?.reference ?? '')
+  const [description, setDescription] = useState(initialConfig?.description ?? '')
+  const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; orderId: string } | null>(null)
@@ -129,15 +147,20 @@ export default function ConfiguratorWizard() {
     if (!shape || !projectName.trim()) return
     setSaving(true)
     try {
-      await saveConfiguration({
+      const payload = {
         shape, width, height, diameter, organicSizeKey,
         directLight, indirectLight, selectedOptions, optionSubChoices,
         projectName: projectName.trim(),
         reference: reference.trim(),
         description: description.trim(),
         quantity,
-        status: 'saved',
-      })
+        status: 'saved' as const,
+      }
+      if (isEditing && initialConfig) {
+        await updateConfiguration({ ...payload, configId: initialConfig.id })
+      } else {
+        await saveConfiguration(payload)
+      }
       setSaved(true)
       router.push('/configuraties')
     } catch (e) {
@@ -268,7 +291,7 @@ export default function ConfiguratorWizard() {
 
   return (
     <>
-      {!shape && <ShapePicker onSelect={handleShapeSelect} onClose={() => router.push('/configuraties')} />}
+      {!shape && !isEditing && <ShapePicker onSelect={handleShapeSelect} onClose={() => router.push('/configuraties')} />}
 
       <div className="px-4 sm:px-6 py-6 max-w-[1100px] mx-auto pb-24 lg:pb-6">
         {/* Header */}
@@ -279,7 +302,7 @@ export default function ConfiguratorWizard() {
             </svg>
           </Link>
           <div>
-            <h1 className="text-[18px] font-bold text-lx-text-primary leading-tight">Nieuwe spiegel</h1>
+            <h1 className="text-[18px] font-bold text-lx-text-primary leading-tight">{isEditing ? 'Configuratie bewerken' : 'Nieuwe spiegel'}</h1>
             {shape && (
               <button onClick={() => setShape(null)} className="text-[12px] text-lx-cta hover:underline font-medium">
                 Vorm wijzigen

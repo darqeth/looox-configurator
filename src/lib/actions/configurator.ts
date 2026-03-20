@@ -89,3 +89,55 @@ export async function saveConfiguration(input: SaveConfigInput) {
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
 }
+
+type UpdateConfigInput = SaveConfigInput & { configId: string }
+
+export async function updateConfiguration(input: UpdateConfigInput) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+
+  const totalPrice = calcTotalPrice({
+    shape: input.shape,
+    width: input.width,
+    height: input.height,
+    diameter: input.diameter,
+    organicSizeKey: input.organicSizeKey,
+    directPosition: input.directLight.position,
+    directType: input.directLight.type,
+    directControl: input.directLight.control,
+    indirectPosition: input.indirectLight.position,
+    indirectType: input.indirectLight.type,
+    indirectControl: input.indirectLight.control,
+    selectedOptions: input.selectedOptions,
+  })
+
+  const selectedOptionsJson = {
+    shape: input.shape,
+    diameter: input.diameter,
+    organicSizeKey: input.organicSizeKey,
+    directLight: input.directLight,
+    indirectLight: input.indirectLight,
+    extras: input.selectedOptions,
+    optionSubChoices: input.optionSubChoices ?? {},
+    reference: input.reference,
+    description: input.description,
+    quantity: input.quantity,
+  }
+
+  const { error } = await supabase.from('configurations').update({
+    name: input.projectName,
+    width: input.width,
+    height: input.height,
+    selected_options: selectedOptionsJson,
+    total_price: totalPrice.toString(),
+    status: input.status,
+    updated_at: new Date().toISOString(),
+  }).eq('id', input.configId).eq('user_id', user.id)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/configuraties')
+  revalidatePath('/dashboard')
+  revalidatePath(`/configurator/${input.configId}`)
+}

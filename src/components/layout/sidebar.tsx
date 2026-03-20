@@ -121,7 +121,7 @@ const tierLabel = tier === 'Studio'
       {/* Logo */}
       <div className="px-5 py-6 border-b border-white/8 text-center">
         <Image src="/logo-looox-grey.svg" alt="LoooX" width={160} height={56} unoptimized className="h-14 brightness-0 invert opacity-90 mx-auto" style={{ width: 'auto' }} />
-        <p className="text-white/30 text-[10.5px] mt-1.5 tracking-wide">Configurator Portal</p>
+        <p className="text-white/60 text-[10.5px] mt-1.5 tracking-wide">Producten Configurator</p>
       </div>
 
       {/* Nav */}

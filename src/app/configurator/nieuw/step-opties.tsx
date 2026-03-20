@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { ShapeSlug, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN } from '@/lib/configurator-config'
 
 function OptionIcon({ id, active }: { id: string; active: boolean }) {
@@ -11,7 +12,7 @@ function OptionIcon({ id, active }: { id: string; active: boolean }) {
   }
   if (imgIds[id]) {
     return (
-      <img
+      <Image
         src={imgIds[id]}
         alt=""
         width={32}
@@ -195,7 +196,7 @@ export default function StepOpties({ shape, diameter, selectedOptions, onChange,
                             style={choice.image ? undefined : { backgroundColor: choice.color }}
                           >
                             {choice.image && (
-                              <img src={choice.image} alt={choice.name} className="w-full h-full object-cover" />
+                              <Image src={choice.image} alt={choice.name} width={40} height={40} className="w-full h-full object-cover" />
                             )}
                           </button>
                           {/* Tooltip */}

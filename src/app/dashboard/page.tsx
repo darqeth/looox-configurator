@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import SearchButton from '@/components/layout/search-button'
 import ChangelogModal from '@/components/dashboard/changelog-modal'
 import OrderButton from '@/app/configuraties/order-button'
@@ -234,7 +235,7 @@ export default async function DashboardPage() {
                   <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 px-5 py-3 hover:bg-lx-panel-bg transition-colors">
                     {item.image_url
-                      ? <img src={item.image_url} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                      ? <Image src={item.image_url} alt="" width={64} height={64} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
                       : <div className="w-16 h-16 rounded-lg bg-lx-panel-bg flex-shrink-0" />
                     }
                     <div className="min-w-0 flex-1 flex flex-col justify-center">

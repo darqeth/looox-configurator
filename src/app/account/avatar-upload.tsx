@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 
 export default function AvatarUpload({
@@ -75,7 +76,7 @@ export default function AvatarUpload({
         className="relative w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 group"
       >
         {url && !imgError ? (
-          <img src={url} alt="Logo" className="w-full h-full object-cover" onError={() => setImgError(true)} />
+          <Image src={url} alt="Logo" fill className="object-cover" onError={() => setImgError(true)} />
         ) : (
           <div className="w-full h-full bg-lx-icon-bg flex items-center justify-center text-lx-cta text-[18px] font-bold">
             {initials}

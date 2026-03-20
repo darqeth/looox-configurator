@@ -73,13 +73,6 @@ export default async function AdminConfiguratiePage({
     return `/admin/configuraties${params.size ? '?' + params.toString() : ''}`
   }
 
-  function searchHref(newQ: string) {
-    const params = new URLSearchParams()
-    if (status) params.set('status', status)
-    if (newQ) params.set('q', newQ)
-    return `/admin/configuraties${params.size ? '?' + params.toString() : ''}`
-  }
-
   return (
     <div className="p-4 sm:p-6 lg:p-7">
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/lib/actions/auth'
@@ -119,7 +120,7 @@ const tierLabel = tier === 'Studio'
     <div className="flex flex-col h-full bg-lx-sidebar-bg">
       {/* Logo */}
       <div className="px-5 py-6 border-b border-white/8 text-center">
-        <img src="/logo-looox-grey.svg" alt="LoooX" className="h-14 brightness-0 invert opacity-90 mx-auto" />
+        <Image src="/logo-looox-grey.svg" alt="LoooX" width={160} height={56} unoptimized className="h-14 brightness-0 invert opacity-90 mx-auto" style={{ width: 'auto' }} />
         <p className="text-white/30 text-[10.5px] mt-1.5 tracking-wide">Configurator Portal</p>
       </div>
 
@@ -167,9 +168,9 @@ const tierLabel = tier === 'Studio'
       {/* User */}
       <div className="border-t border-white/8 px-4 py-3.5">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
+          <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden relative">
             {avatarUrl
-              ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              ? <Image src={avatarUrl} alt="" fill className="object-cover" />
               : <div className="w-full h-full bg-[#5DA87A]/25 flex items-center justify-center text-[#6EBD8E] text-sm font-semibold">{firstLetter}</div>
             }
           </div>
@@ -207,7 +208,7 @@ const tierLabel = tier === 'Studio'
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <img src="/logo-looox-grey.svg" alt="LoooX" className="h-14" />
+        <Image src="/logo-looox-grey.svg" alt="LoooX" width={160} height={56} unoptimized className="h-14" style={{ width: 'auto' }} />
         <div className="w-8" />
       </div>
 

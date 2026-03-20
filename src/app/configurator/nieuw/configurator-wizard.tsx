@@ -149,7 +149,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
     })
   }
 
-  async function handleSave(_asConcept: boolean) {
+  async function handleSave() {
     if (!shape || !projectName.trim()) return
     setSaving(true)
     try {
@@ -487,7 +487,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
             step={step} isStep1Valid={step === 1 ? isStep1Valid() : step === 2 ? isStep2Valid() : isStep3Valid()}
             projectName={projectName} saving={saving}
             onNext={() => setStep(step + 1)}
-            onSave={() => handleSave(false)}
+            onSave={() => handleSave()}
           />
         )}
       </div>

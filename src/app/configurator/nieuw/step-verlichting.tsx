@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import {
   ShapeSlug,
   LightType,
@@ -35,7 +36,7 @@ const CONTROL_IMG: Record<string, string> = {
 function ControlIcon({ id, active }: { id: string; active: boolean }) {
   if (CONTROL_IMG[id]) {
     return (
-      <img
+      <Image
         src={CONTROL_IMG[id]}
         alt=""
         width={32}

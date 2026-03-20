@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { signOut } from '@/lib/actions/auth'
 
@@ -12,7 +13,7 @@ export default function PendingContent() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
-          <img src="/logo-looox-grey.svg" alt="LoooX" className="h-24 mx-auto mb-2" />
+          <Image src="/logo-looox-grey.svg" alt="LoooX" width={200} height={96} unoptimized className="h-24 mx-auto mb-2" style={{ width: 'auto' }} />
           <p className="text-sm text-lx-text-secondary">Configurator</p>
         </div>
 

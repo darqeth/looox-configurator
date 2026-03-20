@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { ShapeSlug, LightType, calcTotalPrice } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 
 const DEFAULT_PRODUCT_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -13,12 +13,12 @@ type LightConfig = {
 }
 
 type PlaceOrderInput = {
-  // Config data (nieuw, nog niet opgeslagen)
   shape: ShapeSlug
   width: number
   height: number
   diameter: number | null
   organicSizeKey: string | null
+  glasKleur?: GlasKleur | null
   directLight: LightConfig
   indirectLight: LightConfig
   selectedOptions: string[]
@@ -49,10 +49,13 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     height: input.height,
     diameter: input.diameter,
     organicSizeKey: input.organicSizeKey,
+    glasKleur: input.glasKleur,
     directPosition: input.directLight.position,
     directType: input.directLight.type,
+    directControl: input.directLight.control,
     indirectPosition: input.indirectLight.position,
     indirectType: input.indirectLight.type,
+    indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
   })
 
@@ -60,6 +63,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     shape: input.shape,
     diameter: input.diameter,
     organicSizeKey: input.organicSizeKey,
+    glasKleur: input.glasKleur ?? 'helder',
     directLight: input.directLight,
     indirectLight: input.indirectLight,
     extras: input.selectedOptions,

@@ -3,13 +3,19 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ShapeSlug,
-  LightType,
+  GlasKleur,
   SHAPES,
   ORGANIC_SIZES,
+  GLAS_KLEUREN,
   LIGHT_TYPE_LABELS,
   EXTRA_OPTIONS,
   calcTotalPrice,
   calcBasePrice,
+  calcGlasKosten,
+  calcDirectLEDMeters,
+  calcIndirectLEDMeters,
+  calcHeatingPrice,
+  CONTROL_PRICES,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 
@@ -314,19 +320,18 @@ interface PricePanelProps {
   height: number
   diameter: number | null
   organicSizeKey: string | null
+  glasKleur: GlasKleur
   directLight: LightConfig
   indirectLight: LightConfig
   selectedOptions: string[]
 }
 
-const LIGHT_PRICES: Record<LightType, number> = { '3000k': 120, '4000k': 130, rgbw: 195, cct: 165 }
-
 export default function PricePanel({
-  shape, width, height, diameter, organicSizeKey,
+  shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions,
 }: PricePanelProps) {
   const total = calcTotalPrice({
-    shape, width, height, diameter, organicSizeKey,
+    shape, width, height, diameter, organicSizeKey, glasKleur,
     directPosition: directLight.position,
     directType: directLight.type,
     directControl: directLight.control,
@@ -336,30 +341,71 @@ export default function PricePanel({
     selectedOptions,
   })
 
-  const basePrice = calcBasePrice(shape, width, height, diameter ?? undefined, organicSizeKey ?? undefined)
-  const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? ''
-
   const lineItems: { label: string; price: number }[] = []
 
-  // Afmeting label
-  let dimLabel = ''
-  if (shape === 'rechthoek') dimLabel = `${width} × ${height} cm`
-  else if (shape === 'rond') dimLabel = diameter ? `⌀ ${diameter} cm` : ''
-  else if (shape === 'organic') dimLabel = ORGANIC_SIZES.find(s => s.key === organicSizeKey)?.label ?? ''
+  if (shape === 'rechthoek') {
+    // Glaskosten
+    const glasKosten = calcGlasKosten(width, height, glasKleur, directLight.position)
+    const glasNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? 'Helder'
+    lineItems.push({ label: `Glas ${width}×${height} cm · ${glasNaam}`, price: Math.round(glasKosten) })
+    lineItems.push({ label: 'Vaste toeslag', price: 105 })
 
-  if (basePrice > 0) {
-    lineItems.push({ label: `${shapeName}${dimLabel ? ' · ' + dimLabel : ''}`, price: basePrice })
-  }
+    if (directLight.position !== 'geen' && directLight.type) {
+      const m = calcDirectLEDMeters(directLight.position, width, height)
+      lineItems.push({ label: `Direct LED · ${m.toFixed(2)}m`, price: Math.round(m * 99) })
+      if (directLight.control) {
+        const cp = CONTROL_PRICES[directLight.control] ?? 0
+        if (cp > 0) lineItems.push({ label: `Bediening direct`, price: cp })
+      }
+    }
 
-  if (directLight.position !== 'geen' && directLight.type) {
-    lineItems.push({ label: `Directe verlichting (${LIGHT_TYPE_LABELS[directLight.type]})`, price: LIGHT_PRICES[directLight.type] })
-  }
-  if (indirectLight.position !== 'geen' && indirectLight.type) {
-    lineItems.push({ label: `Indirecte verlichting (${LIGHT_TYPE_LABELS[indirectLight.type]})`, price: LIGHT_PRICES[indirectLight.type] })
-  }
-  for (const optId of selectedOptions) {
-    const opt = EXTRA_OPTIONS.find(o => o.id === optId)
-    if (opt) lineItems.push({ label: opt.name, price: opt.price })
+    if (indirectLight.position !== 'geen' && indirectLight.type) {
+      const m = calcIndirectLEDMeters(indirectLight.position, width, height)
+      lineItems.push({ label: `Indirect LED · ${m.toFixed(2)}m`, price: Math.round(m * 99) })
+      if (indirectLight.control) {
+        const cp = CONTROL_PRICES[indirectLight.control] ?? 0
+        if (cp > 0) lineItems.push({ label: `Bediening indirect`, price: cp })
+      }
+    }
+
+    for (const optId of selectedOptions) {
+      if (optId === 'verwarming') {
+        lineItems.push({ label: 'Verwarming', price: calcHeatingPrice(width, height) })
+      } else if (optId === 'schuine-zijden') {
+        lineItems.push({ label: 'Schuine zijden (+30%)', price: Math.round(glasKosten * 0.30) })
+      } else if (optId === 'afgeronde-hoeken') {
+        lineItems.push({ label: 'Afgeronde hoeken (+60%)', price: Math.round(glasKosten * 0.60) })
+      } else {
+        const opt = EXTRA_OPTIONS.find(o => o.id === optId)
+        if (opt && opt.price > 0) lineItems.push({ label: opt.name, price: opt.price })
+      }
+    }
+  } else {
+    // Rond / Organic / Op aanvraag: vaste-prijs systeem
+    const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? ''
+    let dimLabel = ''
+    if (shape === 'rond') dimLabel = diameter ? `⌀ ${diameter} cm` : ''
+    else if (shape === 'organic') dimLabel = ORGANIC_SIZES.find(s => s.key === organicSizeKey)?.label ?? ''
+
+    const basePrice = calcBasePrice(shape, width, height, diameter ?? undefined, organicSizeKey ?? undefined)
+    if (basePrice > 0) lineItems.push({ label: `${shapeName}${dimLabel ? ' · ' + dimLabel : ''}`, price: basePrice })
+
+    if (directLight.position !== 'geen' && directLight.type) {
+      if (directLight.control) {
+        const cp = CONTROL_PRICES[directLight.control] ?? 0
+        if (cp > 0) lineItems.push({ label: `Bediening (${LIGHT_TYPE_LABELS[directLight.type]})`, price: cp })
+      }
+    }
+    if (indirectLight.position !== 'geen' && indirectLight.type) {
+      if (indirectLight.control) {
+        const cp = CONTROL_PRICES[indirectLight.control] ?? 0
+        if (cp > 0) lineItems.push({ label: `Bediening indirect`, price: cp })
+      }
+    }
+    for (const optId of selectedOptions) {
+      const opt = EXTRA_OPTIONS.find(o => o.id === optId)
+      if (opt && opt.price > 0) lineItems.push({ label: opt.name, price: opt.price })
+    }
   }
 
   return (

@@ -118,7 +118,7 @@ export default function StepOpties({ shape, selectedOptions, onChange, optionSub
               <span className={`absolute top-3 right-3 text-[11px] font-bold px-2 py-0.5 rounded-full ${
                 isSelected ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
               }`}>
-                +€{option.price}
+                {option.priceDisplay ?? `+€${option.price}`}
               </span>
 
               {/* Icoon */}

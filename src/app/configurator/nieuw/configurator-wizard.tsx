@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShapeSlug, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS } from '@/lib/configurator-config'
 import ShapePicker from './shape-picker'
 import StepAfmeting from './step-afmeting'
 import StepVerlichting, { LightConfig } from './step-verlichting'
@@ -20,6 +20,7 @@ interface InitialConfig {
   height: number
   diameter: number | null
   organicSizeKey: string | null
+  glasKleur: GlasKleur
   directLight: LightConfig
   indirectLight: LightConfig
   selectedOptions: string[]
@@ -84,11 +85,12 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
   const [step, setStep] = useState(1)
 
-  // Step 1: dimensions
+  // Step 1: dimensions + glaskleur
   const [width, setWidth] = useState(initialConfig?.width ?? 80)
   const [height, setHeight] = useState(initialConfig?.height ?? 60)
   const [diameter, setDiameter] = useState<number | null>(initialConfig?.diameter ?? 60)
   const [organicSizeKey, setOrganicSizeKey] = useState<string | null>(initialConfig?.organicSizeKey ?? '60x40')
+  const [glasKleur, setGlasKleur] = useState<GlasKleur>(initialConfig?.glasKleur ?? 'helder')
 
   // Step 2: lighting
   const [directLight, setDirectLight] = useState<LightConfig>(initialConfig?.directLight ?? DEFAULT_LIGHT)
@@ -110,6 +112,7 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
   function handleShapeSelect(s: ShapeSlug) {
     setShape(s)
     setStep(1)
+    setGlasKleur('helder')
     setDirectLight(DEFAULT_LIGHT)
     setIndirectLight(DEFAULT_LIGHT)
     setSelectedOptions([])
@@ -148,7 +151,7 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
     setSaving(true)
     try {
       const payload = {
-        shape, width, height, diameter, organicSizeKey,
+        shape, width, height, diameter, organicSizeKey, glasKleur,
         directLight, indirectLight, selectedOptions, optionSubChoices,
         projectName: projectName.trim(),
         reference: reference.trim(),
@@ -174,7 +177,7 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
     setSaving(true)
     try {
       const result = await placeOrder({
-        shape, width, height, diameter, organicSizeKey,
+        shape, width, height, diameter, organicSizeKey, glasKleur,
         directLight, indirectLight, selectedOptions, optionSubChoices,
         projectName: projectName.trim(),
         reference: reference.trim(),
@@ -367,11 +370,13 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
                   <StepAfmeting
                     shape={shape} width={width} height={height}
                     diameter={diameter} organicSizeKey={organicSizeKey}
+                    glasKleur={glasKleur}
                     onChange={(updates) => {
                       if (updates.width !== undefined) setWidth(updates.width)
                       if (updates.height !== undefined) setHeight(updates.height)
                       if (updates.diameter !== undefined) setDiameter(updates.diameter)
                       if (updates.organicSizeKey !== undefined) setOrganicSizeKey(updates.organicSizeKey)
+                      if (updates.glasKleur !== undefined) setGlasKleur(updates.glasKleur)
                     }}
                   />
                 )}
@@ -400,6 +405,7 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
                   <StepSamenvatting
                     shape={shape} width={width} height={height}
                     diameter={diameter} organicSizeKey={organicSizeKey}
+                    glasKleur={glasKleur}
                     directLight={directLight} indirectLight={indirectLight}
                     selectedOptions={selectedOptions}
                     projectName={projectName} reference={reference}
@@ -450,6 +456,7 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
               <PricePanel
                 shape={shape} width={width} height={height}
                 diameter={diameter} organicSizeKey={organicSizeKey}
+                glasKleur={glasKleur}
                 directLight={directLight} indirectLight={indirectLight}
                 selectedOptions={selectedOptions}
               />

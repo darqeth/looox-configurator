@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import ConfiguratorWizard from '../nieuw/configurator-wizard'
 import { LightConfig } from '../nieuw/step-verlichting'
-import { ShapeSlug } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 
 export default async function EditConfiguratorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -27,6 +27,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const initialConfig = {
     id: config.id,
     shape: (opts.shape as ShapeSlug) ?? 'rechthoek',
+    glasKleur: (opts.glasKleur as GlasKleur) ?? 'helder',
     width: config.width ?? 80,
     height: config.height ?? 60,
     diameter: (opts.diameter as number | null) ?? null,

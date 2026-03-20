@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { ShapeSlug, LightType, calcTotalPrice } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 
 function generateArticleNumber(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -30,6 +30,7 @@ type SaveConfigInput = {
   height: number
   diameter: number | null
   organicSizeKey: string | null
+  glasKleur?: GlasKleur | null
   directLight: LightConfig
   indirectLight: LightConfig
   selectedOptions: string[]
@@ -52,10 +53,13 @@ export async function saveConfiguration(input: SaveConfigInput) {
     height: input.height,
     diameter: input.diameter,
     organicSizeKey: input.organicSizeKey,
+    glasKleur: input.glasKleur,
     directPosition: input.directLight.position,
     directType: input.directLight.type,
+    directControl: input.directLight.control,
     indirectPosition: input.indirectLight.position,
     indirectType: input.indirectLight.type,
+    indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
   })
 
@@ -63,6 +67,7 @@ export async function saveConfiguration(input: SaveConfigInput) {
     shape: input.shape,
     diameter: input.diameter,
     organicSizeKey: input.organicSizeKey,
+    glasKleur: input.glasKleur ?? 'helder',
     directLight: input.directLight,
     indirectLight: input.indirectLight,
     extras: input.selectedOptions,
@@ -103,6 +108,7 @@ export async function updateConfiguration(input: UpdateConfigInput) {
     height: input.height,
     diameter: input.diameter,
     organicSizeKey: input.organicSizeKey,
+    glasKleur: input.glasKleur,
     directPosition: input.directLight.position,
     directType: input.directLight.type,
     directControl: input.directLight.control,
@@ -116,6 +122,7 @@ export async function updateConfiguration(input: UpdateConfigInput) {
     shape: input.shape,
     diameter: input.diameter,
     organicSizeKey: input.organicSizeKey,
+    glasKleur: input.glasKleur ?? 'helder',
     directLight: input.directLight,
     indirectLight: input.indirectLight,
     extras: input.selectedOptions,

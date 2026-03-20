@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import DeleteButton from '@/app/configuraties/delete-button'
 import {
   SHAPES,
   ORGANIC_SIZES,
@@ -220,9 +221,13 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
               <ModalRow label="Extra opties" value={extras || 'Geen'} />
             </div>
 
-            {/* Footer: prijs */}
+            {/* Footer: prijs + verwijderen */}
             <div className="px-6 py-3.5 bg-lx-panel-bg border-t border-lx-divider flex items-center justify-between">
-              <span className="text-[12px] text-lx-text-muted">Totaalprijs</span>
+              <DeleteButton
+                configId={config.id}
+                configName={config.name ?? 'Naamloze configuratie'}
+                isAdmin
+              />
               <div className="text-right">
                 <span className="text-[16px] font-bold text-lx-cta">
                   €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}

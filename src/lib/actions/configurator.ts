@@ -95,6 +95,38 @@ export async function saveConfiguration(input: SaveConfigInput) {
   revalidatePath('/dashboard')
 }
 
+export async function deleteConfiguration(configId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+
+  const { error } = await supabase
+    .from('configurations')
+    .delete()
+    .eq('id', configId)
+    .eq('user_id', user.id)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/configuraties')
+  revalidatePath('/dashboard')
+}
+
+export async function adminDeleteConfiguration(configId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+  if (!profile?.is_admin) throw new Error('Geen toegang')
+
+  const { error } = await supabase.from('configurations').delete().eq('id', configId)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/configuraties')
+  revalidatePath('/dashboard')
+}
+
 type UpdateConfigInput = SaveConfigInput & { configId: string }
 
 export async function updateConfiguration(input: UpdateConfigInput) {

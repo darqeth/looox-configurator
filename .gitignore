@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# lokale bronbestanden
+"configurator flow images/"
+"extra keuzes images/"
+icons/
+*.xlsx

@@ -9,7 +9,7 @@ export const SHAPES = [
   { slug: 'op-aanvraag' as ShapeSlug, name: 'Op aanvraag',   description: 'Eigen ontwerp of bijzondere maat',        fromPrice: null },
 ]
 
-export const ROND_DIAMETERS = [30, 40, 50, 60, 80, 100]
+export const ROND_DIAMETERS = [30, 40, 50, 60, 70, 80, 100, 120]
 
 export const ORGANIC_SIZES = [
   { label: '60 × 40 cm', width: 60,  height: 40, key: '60x40' },
@@ -28,7 +28,7 @@ export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
 }
 
 export const INDIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
-  rechthoek:    ['geen', 'boven', 'boven-beneden', 'onder', 'links-rechts', 'rondom'],
+  rechthoek:    ['geen', 'boven-beneden', 'onder', 'links-rechts', 'rondom'],
   rond:         ['geen', 'rondom'],
   organic:      ['geen', 'rondom'],
   'op-aanvraag': [],
@@ -102,7 +102,7 @@ export const GLAS_KLEUREN: { id: GlasKleur; name: string; color: string }[] = [
 // Prijs is afhankelijk van glaskleur én directe lichtpositie (zandstraalbewerking).
 // Indirecte verlichting heeft géén invloed op de glasprijs.
 
-const GLAS_PRIJS_M2: Record<GlasKleur, Record<string, number>> = {
+export const GLAS_PRIJS_M2: Record<GlasKleur, Record<string, number>> = {
   'helder': {
     'geen':          175,
     'boven':         215,
@@ -126,8 +126,8 @@ const GLAS_PRIJS_M2: Record<GlasKleur, Record<string, number>> = {
   },
 }
 
-const VASTE_TOESLAG = 105       // vaste productiekosten per spiegel
-const LED_PRIJS_PER_METER = 99  // €/strekm voor alle lichttypen
+export const VASTE_TOESLAG = 105       // vaste productiekosten per spiegel
+export const LED_PRIJS_PER_METER = 99  // €/strekm voor alle lichttypen
 
 // ─── LED-meter berekeningen ───────────────────────────────────────────────────
 // Direct: 10cm marge aan elke kant (20cm totaal per richting)
@@ -161,7 +161,7 @@ export function calcIndirectLEDMeters(position: string, widthCm: number, heightC
 // ─── Verwarmingsmatrix ────────────────────────────────────────────────────────
 // Breedte en hoogte in cm
 
-const HEATING_MATRIX = [
+export const HEATING_MATRIX = [
   { maxW: 100, rows: [{ maxH: 80, price: 76  }, { maxH: 120, price: 152 }, { maxH: 160, price: 229 }] },
   { maxW: 200, rows: [{ maxH: 80, price: 114 }, { maxH: 120, price: 304 }, { maxH: 160, price: 455 }] },
   { maxW: 250, rows: [{ maxH: 80, price: 152 }, { maxH: 120, price: 456 }, { maxH: 160, price: 685 }] },
@@ -172,6 +172,44 @@ export function calcHeatingPrice(widthCm: number, heightCm: number): number {
   const row  = HEATING_MATRIX.find(r => widthCm <= r.maxW)  ?? HEATING_MATRIX[HEATING_MATRIX.length - 1]
   const cell = row.rows.find(c => heightCm <= c.maxH)        ?? row.rows[row.rows.length - 1]
   return cell.price
+}
+
+// ─── Ronde spiegel basisprijs (glas, excl. vaste kosten) ─────────────────────
+// Bron: prijzen_spiegels_rond.xlsx — kolom "standaard"
+
+export const ROND_BASIS_GLAS: Record<number, number> = {
+  30: 33, 40: 47, 50: 56, 60: 67, 70: 81, 80: 92, 100: 123, 120: 178,
+}
+
+// Vaste frameprijzen per diameter (excl. standaard glas, excl. vaste kosten)
+// Bron: prijzen_spiegels_rond.xlsx
+export const ROND_FRAME_PRIJZEN: Record<string, Partial<Record<number, number>>> = {
+  'aluminium':       { 30: 55,  40: 61,  50: 65,  60: 70,  70: 76,  80: 81,  100: 93,  120: 98  },
+  'zwart':           { 30: 216, 40: 223, 50: 232, 60: 245, 70: 269, 80: 294, 100: 328, 120: 379 },
+  'gun-metal':       { 60: 499, 80: 659, 100: 959 },
+  'brushed-brass':   { 60: 499, 80: 659, 100: 959 },
+  'brushed-copper':  { 60: 499, 80: 659, 100: 959 },
+}
+
+// LED-meters voor ronde spiegel
+// Direct: LED zit 3cm terug van de rand → effectieve diameter = diameter - 6
+// Indirect: volledige omtrek
+export function calcRondDirectLEDMeters(position: string, diameterCm: number): number {
+  if (position === 'rondom') return (Math.PI * (diameterCm - 6)) / 100
+  return 0
+}
+
+export function calcRondIndirectLEDMeters(position: string, diameterCm: number): number {
+  if (position === 'rondom') return (Math.PI * diameterCm) / 100
+  return 0
+}
+
+// Verwarmingsprijs voor ronde spiegel (op basis van diameter)
+export function calcRondHeatingPrice(diameterCm: number): number {
+  if (diameterCm <= 60)  return 76
+  if (diameterCm <= 90)  return 95
+  if (diameterCm <= 120) return 115
+  return 285
 }
 
 // ─── Glaskosten (voor procentuele opties) ────────────────────────────────────
@@ -223,10 +261,10 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
   {
     id: 'makeup-spiegel',
     name: 'Make-up spiegel',
-    description: 'Ingebouwde vergrotingsspiegel (5×)',
+    description: 'Ingebouwde vergrotingsspiegel',
     price: 155,
     shapes: ['rechthoek', 'rond'],
-    incompatibleWith: ['schuine-zijden'],
+    incompatibleWith: [],
     subChoices: {
       label: 'Locatie',
       options: [
@@ -272,10 +310,10 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
   {
     id: 'frame-in-kleur',
     name: 'Frame in kleur',
-    description: 'Aluminium frame in kleur naar keuze',
+    description: 'Aluminium frame, keuze uit 5 kleuren',
     price: 80,
     shapes: ['rechthoek', 'rond'],
-    incompatibleWith: ['afgeronde-hoeken'],
+    incompatibleWith: ['afgeronde-hoeken', 'schuine-zijden'],
     subChoices: {
       label: 'Kleur',
       options: [
@@ -290,11 +328,11 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
   {
     id: 'schuine-zijden',
     name: 'Schuine zijden',
-    description: 'Gefacetteerde zijkanten voor diepte-effect',
+    description: 'Eén of meerdere zijden van de spiegel onder een hoek gezaagd (bijv. 45°)',
     price: 0,
     priceDisplay: '+30% glas',
     shapes: ['rechthoek'],
-    incompatibleWith: ['afgeronde-hoeken', 'makeup-spiegel'],
+    incompatibleWith: ['afgeronde-hoeken', 'frame-in-kleur'],
   },
 ]
 
@@ -313,8 +351,7 @@ export function calcBasePrice(
     return Math.round(calcGlasKosten(width, height, glasKleur, directPosition) + VASTE_TOESLAG)
   }
   if (shape === 'rond' && diameter) {
-    const prices: Record<number, number> = { 30: 138, 40: 175, 50: 220, 60: 265, 80: 340, 100: 420 }
-    return prices[diameter] ?? 138
+    return (ROND_BASIS_GLAS[diameter] ?? 92) + VASTE_TOESLAG
   }
   if (shape === 'organic') {
     const prices: Record<string, number> = { '60x40': 281, '80x60': 345, '100x70': 420, '120x80': 510 }
@@ -337,6 +374,7 @@ export function calcTotalPrice(state: {
   indirectType: LightType | null
   indirectControl?: string | null
   selectedOptions: string[]
+  optionSubChoices?: Record<string, string>
 }): number {
   const glasKleur: GlasKleur = state.glasKleur ?? 'helder'
 
@@ -374,7 +412,43 @@ export function calcTotalPrice(state: {
     return Math.round(price)
   }
 
-  // ── Rond & Organic: vaste-prijs systeem ──────────────────────────────────
+  // ── Rond: diameter-gebaseerde prijsberekening ─────────────────────────────
+  if (state.shape === 'rond') {
+    const diameter = state.diameter ?? 60
+    let price = (ROND_BASIS_GLAS[diameter] ?? 92) + VASTE_TOESLAG
+
+    // Direct LED (voor rond altijd rondom, 6cm kleiner dan spiegeldiameter)
+    if (state.directPosition !== 'geen' && state.directType) {
+      price += calcRondDirectLEDMeters(state.directPosition, diameter) * LED_PRIJS_PER_METER
+      if (state.directControl) price += CONTROL_PRICES[state.directControl] ?? 0
+    }
+
+    // Indirect LED (volledige omtrek)
+    if (state.indirectPosition !== 'geen' && state.indirectType) {
+      price += calcRondIndirectLEDMeters(state.indirectPosition, diameter) * LED_PRIJS_PER_METER
+      if (state.indirectControl) price += CONTROL_PRICES[state.indirectControl] ?? 0
+    }
+
+    // Extra opties
+    for (const optId of state.selectedOptions) {
+      if (optId === 'verwarming') {
+        price += calcRondHeatingPrice(diameter)
+      } else if (optId === 'frame-in-kleur') {
+        const colorId = state.optionSubChoices?.['frame-in-kleur']
+        if (colorId) {
+          const framePrice = ROND_FRAME_PRIJZEN[colorId]?.[diameter]
+          if (framePrice !== undefined) price += framePrice
+        }
+      } else {
+        const opt = EXTRA_OPTIONS.find(o => o.id === optId)
+        if (opt) price += opt.price
+      }
+    }
+
+    return Math.round(price)
+  }
+
+  // ── Organic: vaste-prijs systeem ──────────────────────────────────────────
   let price = calcBasePrice(
     state.shape, state.width, state.height,
     state.diameter ?? undefined, state.organicSizeKey ?? undefined,
@@ -390,9 +464,7 @@ export function calcTotalPrice(state: {
 
   for (const optId of state.selectedOptions) {
     if (optId === 'verwarming') {
-      // rond/organic: gebruik breedte als diameter-equivalent
-      const w = state.diameter ?? state.width
-      price += calcHeatingPrice(w, w)
+      price += calcHeatingPrice(state.width, state.height)
     } else {
       const opt = EXTRA_OPTIONS.find(o => o.id === optId)
       if (opt) price += opt.price

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { updateProfile, updatePassword } from '@/lib/actions/account'
+import { updateProfile, updatePassword, updatePriceFactor } from '@/lib/actions/account'
 
 type Profile = {
   full_name: string | null
@@ -62,11 +62,12 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   const [profileError, setProfileError] = useState('')
   const [profileLoading, setProfileLoading] = useState(false)
 
-  async function handleProfile(formData: FormData) {
+  async function handleProfile(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     setProfileLoading(true)
     setProfileStatus('idle')
     try {
-      await updateProfile(formData)
+      await updateProfile(new FormData(e.currentTarget))
       setProfileStatus('success')
     } catch (e) {
       setProfileError(e instanceof Error ? e.message : 'Er is iets misgegaan')
@@ -77,7 +78,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   }
 
   return (
-    <form action={handleProfile} className="space-y-4">
+    <form onSubmit={handleProfile} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <InputField label="Volledige naam" name="full_name" defaultValue={profile.full_name} placeholder="Jan de Vries" />
         <InputField label="Bedrijf" name="company" defaultValue={profile.company} placeholder="Interieur BV" />
@@ -96,6 +97,131 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           className="bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors"
         >
           {profileLoading ? 'Opslaan...' : 'Wijzigingen opslaan'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+export function PrijsfactorForm({ priceFactor, priceFactorEnabled }: { priceFactor: number; priceFactorEnabled: boolean }) {
+  const [status, setStatus]   = useState<'idle' | 'success' | 'error'>('idle')
+  const [error, setError]     = useState('')
+  const [loading, setLoading] = useState(false)
+  const [factor, setFactor]   = useState(priceFactor)
+  const [factorRaw, setFactorRaw] = useState(String(priceFactor))
+
+  function handleFactorBlur() {
+    const parsed = parseFloat(factorRaw)
+    const clamped = isNaN(parsed) || parsed < 1 ? 1 : parsed > 10 ? 10 : parsed
+    setFactor(clamped)
+    setFactorRaw(String(clamped))
+  }
+  const [enabled, setEnabled] = useState(priceFactorEnabled)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setStatus('idle')
+    try {
+      await updatePriceFactor(new FormData(e.currentTarget))
+      setStatus('success')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Er is iets misgegaan')
+      setStatus('error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const exampleNetto    = 450
+  const exampleConsumer = Math.round(exampleNetto * factor)
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Toggle */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[13px] font-semibold text-lx-text-primary">Consumentenprijzen activeren</p>
+          <p className="text-[12px] text-lx-text-secondary mt-0.5 leading-relaxed">
+            Wanneer actief worden prijzen in de configurator vermenigvuldigd met de factor. Bestellingen naar LoooX blijven altijd op netto inkoopprijs.
+          </p>
+        </div>
+        {/* Toggle switch */}
+        <label className="relative flex-shrink-0 cursor-pointer">
+          <input
+            type="checkbox"
+            name="price_factor_enabled"
+            checked={enabled}
+            onChange={e => setEnabled(e.target.checked)}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-black/12 peer-checked:bg-lx-cta rounded-full transition-colors duration-200" />
+          <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 peer-checked:translate-x-5" />
+        </label>
+      </div>
+
+      {/* Factor input */}
+      <div>
+        <label className="block text-[12px] font-semibold text-lx-text-primary mb-1.5">
+          Prijsfactor
+        </label>
+        <div className="flex items-center gap-3">
+          <div className="relative w-32">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] text-lx-text-secondary font-medium">×</span>
+            <input
+              type="number"
+              name="price_factor"
+              min="1"
+              max="10"
+              step="0.01"
+              value={factorRaw}
+              onChange={e => setFactorRaw(e.target.value)}
+              onBlur={handleFactorBlur}
+              className="w-full pl-8 pr-3 py-2.5 text-[13px] font-semibold rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10 outline-none transition-colors"
+            />
+          </div>
+          <p className="text-[12px] text-lx-text-secondary">
+            = {factor >= 1 ? `+${Math.round((factor - 1) * 100)}%` : '—'} marge
+          </p>
+        </div>
+        <p className="text-[11.5px] text-lx-text-secondary mt-1.5">Voer een getal in ≥ 1 in. Bijv. 1.35 = 35% opslag.</p>
+      </div>
+
+      {/* Live preview */}
+      <div className={`rounded-xl p-4 border transition-colors ${enabled ? 'bg-lx-icon-bg border-lx-cta/20' : 'bg-lx-panel-bg border-black/8'}`}>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Voorbeeld</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <p className="text-[11px] text-lx-text-secondary">Netto (LoooX)</p>
+            <p className="text-[15px] font-bold text-lx-text-primary">€{exampleNetto}</p>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+          <div>
+            <p className="text-[11px] text-lx-text-secondary">Consument</p>
+            <p className={`text-[15px] font-bold ${enabled ? 'text-lx-cta' : 'text-lx-text-secondary'}`}>
+              €{enabled ? exampleConsumer : exampleNetto}
+            </p>
+          </div>
+          {enabled && factor > 1 && (
+            <span className="ml-1 text-[11px] font-semibold text-lx-cta bg-lx-icon-bg px-2 py-0.5 rounded-full">
+              +{Math.round((factor - 1) * 100)}%
+            </span>
+          )}
+        </div>
+      </div>
+
+      {status === 'success' && <SuccessBanner message="Consumentenprijzen opgeslagen" />}
+      {status === 'error' && <ErrorBanner message={error} />}
+
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
+        >
+          {loading ? 'Opslaan...' : 'Opslaan'}
         </button>
       </div>
     </form>

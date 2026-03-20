@@ -13,6 +13,7 @@ export default function AvatarUpload({
   name: string | null
 }) {
   const [url, setUrl] = useState(currentUrl)
+  const [imgError, setImgError] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -49,6 +50,7 @@ export default function AvatarUpload({
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
     const publicUrl = data.publicUrl + '?t=' + Date.now()
+    setImgError(false)
 
     const { error: updateError } = await supabase
       .from('profiles')
@@ -72,8 +74,8 @@ export default function AvatarUpload({
         onClick={() => inputRef.current?.click()}
         className="relative w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 group"
       >
-        {url ? (
-          <img src={url} alt="Logo" className="w-full h-full object-cover" />
+        {url && !imgError ? (
+          <img src={url} alt="Logo" className="w-full h-full object-cover" onError={() => setImgError(true)} />
         ) : (
           <div className="w-full h-full bg-lx-icon-bg flex items-center justify-center text-lx-cta text-[18px] font-bold">
             {initials}

@@ -7,7 +7,6 @@ import {
   SHAPES,
   ORGANIC_SIZES,
   GLAS_KLEUREN,
-  LIGHT_TYPE_LABELS,
   EXTRA_OPTIONS,
   calcTotalPrice,
   calcBasePrice,
@@ -15,12 +14,25 @@ import {
   calcDirectLEDMeters,
   calcIndirectLEDMeters,
   calcHeatingPrice,
+  calcRondDirectLEDMeters,
+  calcRondIndirectLEDMeters,
+  calcRondHeatingPrice,
   CONTROL_PRICES,
+  CONTROLS_FOR_TYPE,
+  ROND_BASIS_GLAS,
+  ROND_FRAME_PRIJZEN,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 
+// Glaskleur → SVG appearance
+const GLASS_APPEARANCE: Record<GlasKleur, { fill: string; fillOpacity: number; stroke: string; glansOpacity: number }> = {
+  'helder':      { fill: '#C8D4DC', fillOpacity: 0.40, stroke: '#A8B4BC', glansOpacity: 0.09 },
+  'smoke-grijs': { fill: '#5A6068', fillOpacity: 0.70, stroke: '#464C54', glansOpacity: 0.12 },
+  'smoke-zwart': { fill: '#18191C', fillOpacity: 0.90, stroke: '#2C2E33', glansOpacity: 0.15 },
+}
+
 // Mirror preview SVG
-function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition }: {
+function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur }: {
   shape: ShapeSlug
   width: number
   height: number
@@ -28,7 +40,9 @@ function MirrorPreview({ shape, width, height, diameter, directPosition, indirec
   organicSizeKey?: string | null
   directPosition: string
   indirectPosition: string
+  glasKleur: GlasKleur
 }) {
+  const glass = GLASS_APPEARANCE[glasKleur]
   const CANVAS = 220
   const PAD = 28
   const available = CANVAS - PAD * 2
@@ -110,8 +124,8 @@ function MirrorPreview({ shape, width, height, diameter, directPosition, indirec
         </g>
 
         {/* ── Spiegel: glasplaat ── */}
-        <rect x={x} y={y} width={w} height={h} rx="2" fill="#C8C4BE" opacity="0.38" />
-        <rect x={x} y={y} width={w} height={h} rx="2" fill="none" stroke="#A8A39C" strokeWidth="1.5" />
+        <rect x={x} y={y} width={w} height={h} rx="2" fill={glass.fill} opacity={glass.fillOpacity} />
+        <rect x={x} y={y} width={w} height={h} rx="2" fill="none" stroke={glass.stroke} strokeWidth="1.5" />
 
         {/* ── Directe verlichting: gezandstraalde banen IN het glas ── */}
         {directPosition === 'rondom' ? (
@@ -159,9 +173,9 @@ function MirrorPreview({ shape, width, height, diameter, directPosition, indirec
 
         {/* Spiegelglans */}
         <line x1={x + w * 0.25} y1={y + h * 0.1} x2={x + w * 0.52} y2={y + h * 0.58}
-          stroke="white" strokeWidth="9" opacity="0.09" strokeLinecap="round" />
+          stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round" />
         <line x1={x + w * 0.5} y1={y + h * 0.05} x2={x + w * 0.65} y2={y + h * 0.42}
-          stroke="white" strokeWidth="4" opacity="0.07" strokeLinecap="round" />
+          stroke="white" strokeWidth="4" opacity={glass.glansOpacity * 0.75} strokeLinecap="round" />
       </svg>
     )
   }
@@ -202,8 +216,8 @@ function MirrorPreview({ shape, width, height, diameter, directPosition, indirec
         )}
 
         {/* Spiegelglas */}
-        <circle cx={cx} cy={cy} r={r} fill="#C8C4BE" opacity="0.38" />
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#A8A39C" strokeWidth="1.5" />
+        <circle cx={cx} cy={cy} r={r} fill={glass.fill} opacity={glass.fillOpacity} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={glass.stroke} strokeWidth="1.5" />
 
         {/* Directe verlichting: gezandstraalde baan rondom binnenin (5cm van rand) */}
         {hasDirect && (
@@ -217,7 +231,7 @@ function MirrorPreview({ shape, width, height, diameter, directPosition, indirec
 
         {/* Spiegelglans */}
         <line x1={cx - r * 0.2} y1={cy - r * 0.5} x2={cx + r * 0.28} y2={cy + r * 0.38}
-          stroke="white" strokeWidth="9" opacity="0.09" strokeLinecap="round" />
+          stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round" />
       </svg>
     )
   }
@@ -254,8 +268,8 @@ function MirrorPreview({ shape, width, height, diameter, directPosition, indirec
         )}
 
         {/* Spiegelglas */}
-        <path d={mirrorPath} fill="#C8C4BE" opacity="0.38" />
-        <path d={mirrorPath} fill="none" stroke="#A8A39C" strokeWidth="1.5" />
+        <path d={mirrorPath} fill={glass.fill} opacity={glass.fillOpacity} />
+        <path d={mirrorPath} fill="none" stroke={glass.stroke} strokeWidth="1.5" />
 
         {/* Directe verlichting: gezandstraald rondom binnenin */}
         {hasDirect && (
@@ -266,7 +280,7 @@ function MirrorPreview({ shape, width, height, diameter, directPosition, indirec
         )}
 
         {/* Spiegelglans */}
-        <line x1="76" y1="55" x2="114" y2="124" stroke="white" strokeWidth="9" opacity="0.09" strokeLinecap="round" />
+        <line x1="76" y1="55" x2="114" y2="124" stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round" />
       </svg>
     )
   }
@@ -324,13 +338,17 @@ interface PricePanelProps {
   directLight: LightConfig
   indirectLight: LightConfig
   selectedOptions: string[]
+  optionSubChoices: Record<string, string>
+  priceFactor?: number
+  priceFactorEnabled?: boolean
 }
 
 export default function PricePanel({
   shape, width, height, diameter, organicSizeKey, glasKleur,
-  directLight, indirectLight, selectedOptions,
+  directLight, indirectLight, selectedOptions, optionSubChoices,
+  priceFactor = 1, priceFactorEnabled = false,
 }: PricePanelProps) {
-  const total = calcTotalPrice({
+  const netto = calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur,
     directPosition: directLight.position,
     directType: directLight.type,
@@ -339,7 +357,18 @@ export default function PricePanel({
     indirectType: indirectLight.type,
     indirectControl: indirectLight.control,
     selectedOptions,
+    optionSubChoices,
   })
+  const showConsumer = priceFactorEnabled && priceFactor > 1
+  const total = showConsumer ? Math.round(netto * priceFactor) : netto
+
+  function getControlName(controlId: string): string {
+    for (const controls of Object.values(CONTROLS_FOR_TYPE) as { id: string; name: string }[][]) {
+      const found = controls.find(c => c.id === controlId)
+      if (found) return found.name
+    }
+    return controlId
+  }
 
   const lineItems: { label: string; price: number }[] = []
 
@@ -347,15 +376,14 @@ export default function PricePanel({
     // Glaskosten
     const glasKosten = calcGlasKosten(width, height, glasKleur, directLight.position)
     const glasNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? 'Helder'
-    lineItems.push({ label: `Glas ${width}×${height} cm · ${glasNaam}`, price: Math.round(glasKosten) })
-    lineItems.push({ label: 'Vaste toeslag', price: 105 })
+    lineItems.push({ label: `Glas ${width}×${height} cm · ${glasNaam}`, price: Math.round(glasKosten) + 105 })
 
     if (directLight.position !== 'geen' && directLight.type) {
       const m = calcDirectLEDMeters(directLight.position, width, height)
       lineItems.push({ label: `Direct LED · ${m.toFixed(2)}m`, price: Math.round(m * 99) })
       if (directLight.control) {
         const cp = CONTROL_PRICES[directLight.control] ?? 0
-        if (cp > 0) lineItems.push({ label: `Bediening direct`, price: cp })
+        if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(directLight.control)}`, price: cp })
       }
     }
 
@@ -364,7 +392,7 @@ export default function PricePanel({
       lineItems.push({ label: `Indirect LED · ${m.toFixed(2)}m`, price: Math.round(m * 99) })
       if (indirectLight.control) {
         const cp = CONTROL_PRICES[indirectLight.control] ?? 0
-        if (cp > 0) lineItems.push({ label: `Bediening indirect`, price: cp })
+        if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(indirectLight.control)}`, price: cp })
       }
     }
 
@@ -380,27 +408,60 @@ export default function PricePanel({
         if (opt && opt.price > 0) lineItems.push({ label: opt.name, price: opt.price })
       }
     }
-  } else {
-    // Rond / Organic / Op aanvraag: vaste-prijs systeem
-    const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? ''
-    let dimLabel = ''
-    if (shape === 'rond') dimLabel = diameter ? `⌀ ${diameter} cm` : ''
-    else if (shape === 'organic') dimLabel = ORGANIC_SIZES.find(s => s.key === organicSizeKey)?.label ?? ''
+  } else if (shape === 'rond') {
+    const d = diameter ?? 60
+    const glasNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? 'Helder'
+    lineItems.push({ label: `Rond ⌀ ${d} cm · ${glasNaam}`, price: (ROND_BASIS_GLAS[d] ?? 92) + 105 })
 
+    if (directLight.position !== 'geen' && directLight.type) {
+      const m = calcRondDirectLEDMeters(directLight.position, d)
+      lineItems.push({ label: `Direct LED · ${m.toFixed(2)}m`, price: Math.round(m * 99) })
+      if (directLight.control) {
+        const cp = CONTROL_PRICES[directLight.control] ?? 0
+        if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(directLight.control)}`, price: cp })
+      }
+    }
+
+    if (indirectLight.position !== 'geen' && indirectLight.type) {
+      const m = calcRondIndirectLEDMeters(indirectLight.position, d)
+      lineItems.push({ label: `Indirect LED · ${m.toFixed(2)}m`, price: Math.round(m * 99) })
+      if (indirectLight.control) {
+        const cp = CONTROL_PRICES[indirectLight.control] ?? 0
+        if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(indirectLight.control)}`, price: cp })
+      }
+    }
+
+    for (const optId of selectedOptions) {
+      if (optId === 'verwarming') {
+        lineItems.push({ label: 'Verwarming', price: calcRondHeatingPrice(d) })
+      } else if (optId === 'frame-in-kleur') {
+        const colorId = optionSubChoices['frame-in-kleur']
+        if (colorId) {
+          const framePrice = ROND_FRAME_PRIJZEN[colorId]?.[d]
+          if (framePrice !== undefined) {
+            const colorName = EXTRA_OPTIONS.find(o => o.id === 'frame-in-kleur')?.subChoices?.options.find(c => c.id === colorId)?.name ?? colorId
+            lineItems.push({ label: `Frame · ${colorName}`, price: framePrice })
+          }
+        }
+      } else {
+        const opt = EXTRA_OPTIONS.find(o => o.id === optId)
+        if (opt && opt.price > 0) lineItems.push({ label: opt.name, price: opt.price })
+      }
+    }
+  } else {
+    // Organic / Op aanvraag
+    const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? ''
+    const dimLabel = shape === 'organic' ? (ORGANIC_SIZES.find(s => s.key === organicSizeKey)?.label ?? '') : ''
     const basePrice = calcBasePrice(shape, width, height, diameter ?? undefined, organicSizeKey ?? undefined)
     if (basePrice > 0) lineItems.push({ label: `${shapeName}${dimLabel ? ' · ' + dimLabel : ''}`, price: basePrice })
 
-    if (directLight.position !== 'geen' && directLight.type) {
-      if (directLight.control) {
-        const cp = CONTROL_PRICES[directLight.control] ?? 0
-        if (cp > 0) lineItems.push({ label: `Bediening (${LIGHT_TYPE_LABELS[directLight.type]})`, price: cp })
-      }
+    if (directLight.position !== 'geen' && directLight.type && directLight.control) {
+      const cp = CONTROL_PRICES[directLight.control] ?? 0
+      if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(directLight.control)}`, price: cp })
     }
-    if (indirectLight.position !== 'geen' && indirectLight.type) {
-      if (indirectLight.control) {
-        const cp = CONTROL_PRICES[indirectLight.control] ?? 0
-        if (cp > 0) lineItems.push({ label: `Bediening indirect`, price: cp })
-      }
+    if (indirectLight.position !== 'geen' && indirectLight.type && indirectLight.control) {
+      const cp = CONTROL_PRICES[indirectLight.control] ?? 0
+      if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(indirectLight.control)}`, price: cp })
     }
     for (const optId of selectedOptions) {
       const opt = EXTRA_OPTIONS.find(o => o.id === optId)
@@ -420,15 +481,22 @@ export default function PricePanel({
           organicSizeKey={organicSizeKey}
           directPosition={directLight.position}
           indirectPosition={indirectLight.position}
+          glasKleur={glasKleur}
         />
       </div>
 
       {/* Prijs kaart */}
       <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-5 space-y-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">Netto inkoopprijs</p>
+          <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">
+            {showConsumer ? 'Consumentenprijs' : 'Netto inkoopprijs'}
+          </p>
           <AnimatedPrice price={total} />
-          <p className="text-[11px] text-lx-text-secondary mt-0.5">Excl. btw</p>
+          {showConsumer ? (
+            <p className="text-[11px] text-lx-text-secondary mt-0.5">Netto inkoop: €{netto.toLocaleString('nl-NL')} · excl. btw</p>
+          ) : (
+            <p className="text-[11px] text-lx-text-secondary mt-0.5">Excl. btw</p>
+          )}
         </div>
 
         {lineItems.length > 0 && (
@@ -440,9 +508,15 @@ export default function PricePanel({
               </div>
             ))}
             <div className="flex justify-between gap-2 text-[13px] font-bold pt-1.5 border-t border-lx-divider mt-1.5">
-              <span className="text-lx-text-primary">Totaal</span>
-              <span className="text-lx-cta">€{total.toLocaleString('nl-NL')}</span>
+              <span className="text-lx-text-primary">Netto totaal</span>
+              <span className="text-lx-cta">€{netto.toLocaleString('nl-NL')}</span>
             </div>
+            {showConsumer && (
+              <div className="flex justify-between gap-2 text-[13px] font-bold">
+                <span className="text-lx-text-primary">Consument totaal</span>
+                <span className="text-lx-cta">€{total.toLocaleString('nl-NL')}</span>
+              </div>
+            )}
           </div>
         )}
       </div>

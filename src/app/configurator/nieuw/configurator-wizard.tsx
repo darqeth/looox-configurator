@@ -40,18 +40,20 @@ const STEPS = [
 
 const DEFAULT_LIGHT: LightConfig = { position: 'geen', type: null, control: null }
 
-function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, step, isStep1Valid, projectName, saving, onNext, onSave }: {
+function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, priceFactor, priceFactorEnabled, step, isStep1Valid, projectName, saving, onNext, onSave }: {
   shape: ShapeSlug; width: number; height: number; diameter: number | null; organicSizeKey: string | null
-  directLight: LightConfig; indirectLight: LightConfig; selectedOptions: string[]
+  directLight: LightConfig; indirectLight: LightConfig; selectedOptions: string[]; optionSubChoices: Record<string, string>
+  priceFactor: number; priceFactorEnabled: boolean
   step: number; isStep1Valid: boolean; projectName: string; saving: boolean
   onNext: () => void; onSave: () => void
 }) {
-  const total = calcTotalPrice({
+  const netto = calcTotalPrice({
     shape, width, height, diameter, organicSizeKey,
     directPosition: directLight.position, directType: directLight.type, directControl: directLight.control,
     indirectPosition: indirectLight.position, indirectType: indirectLight.type, indirectControl: indirectLight.control,
-    selectedOptions,
+    selectedOptions, optionSubChoices,
   })
+  const total = priceFactorEnabled && priceFactor > 1 ? Math.round(netto * priceFactor) : netto
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/8 px-4 py-3 flex items-center justify-between z-30">
       <div>
@@ -79,7 +81,7 @@ function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, direct
   )
 }
 
-export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: InitialConfig }) {
+export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, priceFactorEnabled = false }: { initialConfig?: InitialConfig; priceFactor?: number; priceFactorEnabled?: boolean }) {
   const router = useRouter()
   const isEditing = !!initialConfig
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
@@ -105,6 +107,7 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
   const [reference, setReference] = useState(initialConfig?.reference ?? '')
   const [description, setDescription] = useState(initialConfig?.description ?? '')
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
+  const [schunineZijdenFile, setSchunineZijdenFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; orderId: string } | null>(null)
@@ -394,6 +397,7 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
                 {step === 3 && (
                   <StepOpties
                     shape={shape}
+                    diameter={diameter}
                     selectedOptions={selectedOptions}
                     onChange={setSelectedOptions}
                     optionSubChoices={optionSubChoices}
@@ -408,12 +412,15 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
                     glasKleur={glasKleur}
                     directLight={directLight} indirectLight={indirectLight}
                     selectedOptions={selectedOptions}
+                    optionSubChoices={optionSubChoices}
                     projectName={projectName} reference={reference}
                     description={description} quantity={quantity} saving={saving}
+                    schunineZijdenFile={schunineZijdenFile}
                     onProjectNameChange={setProjectName}
                     onReferenceChange={setReference}
                     onDescriptionChange={setDescription}
                     onQuantityChange={setQuantity}
+                    onSchunineZijdenFileChange={setSchunineZijdenFile}
                     onGoToStep={setStep}
                     onSave={handleSave}
                     onOrder={handleOrder}
@@ -459,6 +466,9 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
                 glasKleur={glasKleur}
                 directLight={directLight} indirectLight={indirectLight}
                 selectedOptions={selectedOptions}
+                optionSubChoices={optionSubChoices}
+                priceFactor={priceFactor}
+                priceFactorEnabled={priceFactorEnabled}
               />
             </div>
           </div>
@@ -471,6 +481,9 @@ export default function ConfiguratorWizard({ initialConfig }: { initialConfig?: 
             diameter={diameter} organicSizeKey={organicSizeKey}
             directLight={directLight} indirectLight={indirectLight}
             selectedOptions={selectedOptions}
+            optionSubChoices={optionSubChoices}
+            priceFactor={priceFactor}
+            priceFactorEnabled={priceFactorEnabled}
             step={step} isStep1Valid={step === 1 ? isStep1Valid() : step === 2 ? isStep2Valid() : isStep3Valid()}
             projectName={projectName} saving={saving}
             onNext={() => setStep(step + 1)}

@@ -30,13 +30,13 @@ function GlaskleurPicker({ glasKleur, onChange }: { glasKleur: GlasKleur; onChan
   return (
     <div className="space-y-3">
       <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Glaskleur</p>
-      <div className="flex gap-3">
+      <div className="flex gap-5">
         {GLAS_KLEUREN.map((g) => (
           <button
             key={g.id}
             type="button"
             onClick={() => onChange(g.id)}
-            className={`flex flex-col items-center gap-1.5 group transition-all`}
+            className={`flex flex-col items-center gap-1.5 group transition-all w-20`}
           >
             <span
               className={`block w-10 h-10 rounded-xl border-2 transition-all ${

@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     { count: totalConfigCount },
     { data: notificationItems },
   ] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, tier, notifications_read_at').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name, company, tier, notifications_read_at, price_factor, price_factor_enabled').eq('id', user.id).single(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
     supabase.from('orders').select('id', { count: 'exact' }).eq('user_id', user.id),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', user.id).in('status', ['pending', 'confirmed']),
@@ -49,6 +49,8 @@ export default async function DashboardPage() {
   const firstName = profile?.full_name?.split(' ')[0] ?? 'daar'
   const company = profile?.company ?? ''
   const tier = profile?.tier ?? 'Studio'
+  const priceFactor = profile?.price_factor ?? 1
+  const priceFactorEnabled = profile?.price_factor_enabled ?? false
 
   const configCount = configs?.length ?? 0
   const savedCount = configs?.filter(c => c.status === 'saved').length ?? 0
@@ -70,6 +72,12 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {priceFactorEnabled && priceFactor > 1 && (
+            <span className="hidden sm:flex items-center gap-1.5 bg-lx-icon-bg text-lx-cta text-[11.5px] font-semibold px-3 py-1.5 rounded-xl border border-lx-cta/20">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4m0 4h.01"/></svg>
+              Consumentenprijzen actief
+            </span>
+          )}
           <SearchButton />
           <NotificationBell
             notifications={notificationItems ?? []}
@@ -169,7 +177,10 @@ export default async function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[13px] font-semibold text-lx-text-primary">
-                        €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                        €{(priceFactorEnabled && priceFactor > 1
+                          ? Math.round(Number(config.total_price) * priceFactor)
+                          : Number(config.total_price)
+                        ).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
                       </span>
                       {config.status === 'ordered' ? (
                         <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">

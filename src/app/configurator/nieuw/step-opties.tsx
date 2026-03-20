@@ -1,6 +1,6 @@
 'use client'
 
-import { ShapeSlug, EXTRA_OPTIONS } from '@/lib/configurator-config'
+import { ShapeSlug, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN } from '@/lib/configurator-config'
 
 function OptionIcon({ id, active }: { id: string; active: boolean }) {
   const imgIds: Record<string, string> = {
@@ -44,13 +44,14 @@ function OptionIcon({ id, active }: { id: string; active: boolean }) {
 
 interface StepOptiesProps {
   shape: ShapeSlug
+  diameter?: number | null
   selectedOptions: string[]
   onChange: (options: string[]) => void
   optionSubChoices: Record<string, string>
   onSubChoiceChange: (optionId: string, choiceId: string) => void
 }
 
-export default function StepOpties({ shape, selectedOptions, onChange, optionSubChoices, onSubChoiceChange }: StepOptiesProps) {
+export default function StepOpties({ shape, diameter, selectedOptions, onChange, optionSubChoices, onSubChoiceChange }: StepOptiesProps) {
   const available = EXTRA_OPTIONS.filter((opt) => opt.shapes.includes(shape))
 
   function getIncompatibleReason(optionId: string): string | null {
@@ -100,18 +101,30 @@ export default function StepOpties({ shape, selectedOptions, onChange, optionSub
         const selectedSubChoice = optionSubChoices[option.id]
 
         return (
-          <button
+          <div
             key={option.id}
             onClick={() => !isDisabled && toggle(option.id)}
-            disabled={isDisabled}
-            className={`relative flex flex-col p-4 rounded-2xl border-2 text-left transition-all ${
+            role="checkbox"
+            aria-checked={isSelected}
+            aria-disabled={isDisabled}
+            tabIndex={isDisabled ? -1 : 0}
+            onKeyDown={e => { if ((e.key === ' ' || e.key === 'Enter') && !isDisabled) toggle(option.id) }}
+            className={`group/card relative flex flex-col p-4 rounded-2xl border-2 text-left transition-all ${
               isDisabled
                 ? 'opacity-45 cursor-not-allowed border-black/8 bg-white'
                 : isSelected
-                ? 'border-lx-cta bg-lx-panel-bg/50'
-                : 'border-black/10 bg-white hover:border-lx-cta/50 hover:bg-lx-panel-bg'
+                ? 'border-lx-cta bg-lx-panel-bg/50 cursor-pointer'
+                : 'border-black/10 bg-white hover:border-lx-cta/50 hover:bg-lx-panel-bg cursor-pointer'
             }`}
           >
+            {/* Tooltip bij disabled */}
+            {isDisabled && incompatibleReason && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-lx-text-primary text-white text-[11px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover/card:opacity-100 transition-opacity duration-150 pointer-events-none z-50">
+                {incompatibleReason}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+              </div>
+            )}
+
             {/* Top row: icon + text + price badge */}
             <div className="flex items-start gap-4">
               {/* Prijs badge */}
@@ -131,11 +144,13 @@ export default function StepOpties({ shape, selectedOptions, onChange, optionSub
                 <p className={`text-[13.5px] font-semibold ${isSelected ? 'text-lx-cta' : 'text-lx-text-primary'}`}>
                   {option.name}
                 </p>
-                {isDisabled && incompatibleReason ? (
-                  <p className="text-[11px] text-red-400 mt-0.5">{incompatibleReason}</p>
-                ) : (
-                  <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">{option.description}</p>
+                <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">{option.description}</p>
+                {isSelected && option.id === 'schuine-zijden' && (
+                  <p className="text-[11px] text-lx-cta mt-1 font-medium">Tekening vereist — aanleveren in stap 5</p>
                 )}
+                <p className={`text-[11px] mt-0.5 ${isDisabled && incompatibleReason ? 'text-red-400' : 'invisible'}`}>
+                  Niet beschikbaar
+                </p>
               </div>
             </div>
 
@@ -157,31 +172,40 @@ export default function StepOpties({ shape, selectedOptions, onChange, optionSub
                 {/* Color swatches */}
                 {(option.subChoices.options[0]?.color !== undefined || option.subChoices.options[0]?.image !== undefined) ? (
                   <div className="flex items-center gap-2 flex-wrap">
-                    {option.subChoices.options.map((choice) => (
-                      <div key={choice.id} className="relative group">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            onSubChoiceChange(option.id, choice.id)
-                          }}
-                          className={`rounded-lg border-2 overflow-hidden transition-all ring-offset-1 ${
-                            selectedSubChoice === choice.id
-                              ? 'border-lx-cta ring-2 ring-lx-cta/20 scale-105'
-                              : 'border-transparent hover:border-lx-cta/40 hover:scale-105'
-                          } ${choice.image ? 'w-10 h-10' : 'w-7 h-7 rounded-full'}`}
-                          style={choice.image ? undefined : { backgroundColor: choice.color }}
-                        >
-                          {choice.image && (
-                            <img src={choice.image} alt={choice.name} className="w-full h-full object-cover" />
-                          )}
-                        </button>
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                          {choice.name}
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+                    {option.subChoices.options.map((choice) => {
+                      // Voor ronde spiegels: check of dit frametype beschikbaar is voor de gekozen diameter
+                      const unavailable = shape === 'rond' && option.id === 'frame-in-kleur' && diameter != null
+                        && ROND_FRAME_PRIJZEN[choice.id] !== undefined
+                        && ROND_FRAME_PRIJZEN[choice.id]![diameter] === undefined
+                      return (
+                        <div key={choice.id} className="relative group">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation()
+                              if (!unavailable) onSubChoiceChange(option.id, choice.id)
+                            }}
+                            disabled={unavailable}
+                            className={`rounded-lg border-2 overflow-hidden transition-all ring-offset-1 ${
+                              unavailable
+                                ? 'opacity-25 cursor-not-allowed border-transparent'
+                                : selectedSubChoice === choice.id
+                                  ? 'border-lx-cta ring-2 ring-lx-cta/20 scale-105'
+                                  : 'border-transparent hover:border-lx-cta/40 hover:scale-105'
+                            } ${choice.image ? 'w-10 h-10' : 'w-7 h-7 rounded-full'}`}
+                            style={choice.image ? undefined : { backgroundColor: choice.color }}
+                          >
+                            {choice.image && (
+                              <img src={choice.image} alt={choice.name} className="w-full h-full object-cover" />
+                            )}
+                          </button>
+                          {/* Tooltip */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                            {unavailable ? 'Niet beschikbaar voor deze maat' : choice.name}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
                   /* Pill buttons for position/location */
@@ -206,7 +230,7 @@ export default function StepOpties({ shape, selectedOptions, onChange, optionSub
                 )}
               </div>
             )}
-          </button>
+          </div>
         )
       })}
     </div>

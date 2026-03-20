@@ -18,7 +18,7 @@ export default async function GebruikersPage() {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, full_name, email, company, phone, tier, approval_status, created_at')
+    .select('id, full_name, email, company, phone, tier, approval_status, created_at, price_factor, price_factor_enabled')
     .order('created_at', { ascending: false })
 
   const pending  = profiles?.filter(p => p.approval_status === 'pending')  ?? []
@@ -87,6 +87,8 @@ function UserRow({ profile, showActions = false, showApprove = false }: {
     tier: string | null
     approval_status: string | null
     created_at: string | null
+    price_factor: number | null
+    price_factor_enabled: boolean | null
   }
   showActions?: boolean
   showApprove?: boolean
@@ -111,6 +113,11 @@ function UserRow({ profile, showActions = false, showApprove = false }: {
           <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${status.className}`}>
             {status.label}
           </span>
+          {profile.price_factor_enabled && (profile.price_factor ?? 1) > 1 && (
+            <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">
+              ×{Number(profile.price_factor).toFixed(2)} consument
+            </span>
+          )}
         </div>
         <p className="text-[12px] text-lx-text-secondary mt-0.5">
           {profile.company ?? '—'} · {profile.email ?? '—'}

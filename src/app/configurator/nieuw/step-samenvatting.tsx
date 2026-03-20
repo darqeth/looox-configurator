@@ -25,15 +25,18 @@ interface StepSamenvattingProps {
   directLight: LightConfig
   indirectLight: LightConfig
   selectedOptions: string[]
+  optionSubChoices: Record<string, string>
   projectName: string
   reference: string
   description: string
   quantity: number
   saving: boolean
+  schunineZijdenFile: File | null
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
   onDescriptionChange: (v: string) => void
   onQuantityChange: (v: number) => void
+  onSchunineZijdenFileChange: (f: File | null) => void
   onGoToStep: (step: number) => void
   onSave: (asConcept: boolean) => void
   onOrder: () => void
@@ -76,11 +79,13 @@ function getDimensionSummary(shape: ShapeSlug, width: number, height: number, di
 
 export default function StepSamenvatting({
   shape, width, height, diameter, organicSizeKey, glasKleur,
-  directLight, indirectLight, selectedOptions,
+  directLight, indirectLight, selectedOptions, optionSubChoices,
   projectName, reference, description, quantity,
-  saving, onProjectNameChange, onReferenceChange,
-  onDescriptionChange, onQuantityChange, onGoToStep, onSave, onOrder,
+  saving, schunineZijdenFile, onProjectNameChange, onReferenceChange,
+  onDescriptionChange, onQuantityChange, onSchunineZijdenFileChange,
+  onGoToStep, onSave, onOrder,
 }: StepSamenvattingProps) {
+  const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
   const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? shape
   const glasKleurNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? glasKleur
 
@@ -93,6 +98,7 @@ export default function StepSamenvatting({
     indirectType: indirectLight.type,
     indirectControl: indirectLight.control,
     selectedOptions,
+    optionSubChoices,
   })
   const selectedOptionNames = selectedOptions
     .map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name)
@@ -150,6 +156,55 @@ export default function StepSamenvatting({
           />
         </div>
 
+        {/* Upload maattekening — alleen bij schuine zijden */}
+        {hasSchunineZijden && (
+          <div>
+            <label className="text-[12px] font-semibold text-lx-text-secondary mb-1 block">
+              Maattekening schuine zijden <span className="text-red-400">*</span>
+            </label>
+            <p className="text-[11.5px] text-lx-text-secondary mb-2 leading-snug">
+              Upload een tekening of schets met de gewenste hoeken en zijden (PNG, JPG of PDF, max. 10 MB).
+            </p>
+            {schunineZijdenFile ? (
+              <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-lx-panel-bg border border-lx-cta/20">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                <span className="flex-1 text-[13px] text-lx-text-primary font-medium truncate">{schunineZijdenFile.name}</span>
+                <button
+                  type="button"
+                  onClick={() => onSchunineZijdenFileChange(null)}
+                  className="text-lx-text-secondary hover:text-red-400 transition-colors flex-shrink-0"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <label className="block cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) onSchunineZijdenFileChange(f)
+                  }}
+                />
+                <div className="border-2 border-dashed border-lx-cta/25 hover:border-lx-cta/50 rounded-xl p-5 text-center transition-colors hover:bg-lx-panel-bg">
+                  <svg className="mx-auto mb-2" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <p className="text-[12.5px] text-lx-text-secondary">
+                    Sleep een bestand hierheen of <span className="text-lx-cta font-semibold">klik om te uploaden</span>
+                  </p>
+                </div>
+              </label>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-4">
           <div>
             <label className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Aantal</label>
@@ -204,7 +259,7 @@ export default function StepSamenvatting({
         </button>
         <button
           onClick={onOrder}
-          disabled={!projectName.trim() || saving}
+          disabled={!projectName.trim() || saving || (hasSchunineZijden && !schunineZijdenFile)}
           className="flex-1 h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {saving
@@ -214,6 +269,9 @@ export default function StepSamenvatting({
       </div>
       {!projectName.trim() && (
         <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om door te gaan</p>
+      )}
+      {hasSchunineZijden && !schunineZijdenFile && projectName.trim() && (
+        <p className="text-[11px] text-lx-text-secondary text-center">Upload een maattekening om te kunnen bestellen</p>
       )}
     </div>
   )

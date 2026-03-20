@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ProfileForm, PasswordForm } from './profile-form'
+import { ProfileForm, PasswordForm, PrijsfactorForm } from './profile-form'
 import AvatarUpload from './avatar-upload'
 
 const tierInfo: Record<string, { label: string; description: string; color: string }> = {
@@ -42,7 +42,7 @@ export default async function AccountPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, phone, address, tier, created_at, avatar_url')
+    .select('full_name, company, phone, address, tier, created_at, avatar_url, price_factor, price_factor_enabled')
     .eq('id', user.id)
     .single()
 
@@ -96,6 +96,17 @@ export default async function AccountPage() {
             address: profile?.address ?? null,
             email: user.email ?? '',
           }} />
+        </Card>
+
+        {/* Consumentenprijzen */}
+        <Card
+          title="Consumentenprijzen"
+          description="Stel een prijsfactor in voor wanneer je de configurator gebruikt samen met een klant. Bestellingen naar LoooX blijven altijd op netto inkoopprijs."
+        >
+          <PrijsfactorForm
+            priceFactor={profile?.price_factor ?? 1}
+            priceFactorEnabled={profile?.price_factor_enabled ?? false}
+          />
         </Card>
 
         {/* Beveiliging */}

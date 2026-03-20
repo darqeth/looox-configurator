@@ -10,12 +10,10 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: config, error } = await supabase
-    .from('configurations')
-    .select('id, name, width, height, selected_options, status')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .single()
+  const [{ data: config, error }, { data: profile }] = await Promise.all([
+    supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).eq('user_id', user.id).single(),
+    supabase.from('profiles').select('price_factor, price_factor_enabled').eq('id', user.id).single(),
+  ])
 
   if (error || !config) notFound()
 
@@ -42,5 +40,11 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     quantity: (opts.quantity as number) ?? 1,
   }
 
-  return <ConfiguratorWizard initialConfig={initialConfig} />
+  return (
+    <ConfiguratorWizard
+      initialConfig={initialConfig}
+      priceFactor={profile?.price_factor ?? 1}
+      priceFactorEnabled={profile?.price_factor_enabled ?? false}
+    />
+  )
 }

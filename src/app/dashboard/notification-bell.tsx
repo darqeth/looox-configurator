@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useTransition } from 'react'
+import { useState, useRef, useEffect, useTransition, useCallback } from 'react'
 import { markAllNotificationsRead } from '@/lib/actions/notifications'
 
 type Notification = {
@@ -28,6 +28,82 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
 }
 
+// Measures whether a text element is actually clamped (overflows its visible area).
+// Used to decide whether the "Lees meer" toggle is worth showing.
+function useIsClamped(body: string | null) {
+  const ref = useRef<HTMLParagraphElement>(null)
+  const [isClamped, setIsClamped] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    setIsClamped(el.scrollHeight > el.clientHeight)
+  }, [body])
+
+  return { ref, isClamped }
+}
+
+interface NotificationRowProps {
+  n: Notification
+  isUnread: boolean
+  isExpanded: boolean
+  onToggle: (id: string) => void
+}
+
+function NotificationRow({ n, isUnread, isExpanded, onToggle }: NotificationRowProps) {
+  const cfg = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.info
+  const { ref: clampRef, isClamped } = useIsClamped(n.body)
+
+  return (
+    <div
+      className={`flex gap-3 px-4 py-3.5 transition-colors ${isUnread ? 'bg-lx-panel-bg/60' : 'bg-white'}`}
+    >
+      {/* Gekleurde dot */}
+      <div className="mt-1.5 flex-shrink-0">
+        <span className={`block w-2 h-2 rounded-full ${isUnread ? cfg.dot : 'bg-black/15'}`} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        {/* Titel + type badge */}
+        <div className="flex items-start justify-between gap-2">
+          <p className={`text-[13px] font-semibold leading-snug ${isUnread ? 'text-lx-text-primary' : 'text-lx-text-secondary'}`}>
+            {n.title}
+          </p>
+          <span className={`flex-shrink-0 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border ${cfg.color}`}>
+            {cfg.label}
+          </span>
+        </div>
+
+        {/* Body — clamped by default, expand on toggle */}
+        {n.body && (
+          <div>
+            <p
+              ref={clampRef}
+              className={`text-[11.5px] text-lx-text-secondary mt-0.5 leading-relaxed transition-all duration-200 ${
+                isExpanded ? '' : 'line-clamp-2'
+              }`}
+            >
+              {n.body}
+            </p>
+
+            {/* Only render the toggle when text is actually truncated, or when expanded */}
+            {(isClamped || isExpanded) && (
+              <button
+                onClick={() => onToggle(n.id)}
+                className="mt-1 text-[10.5px] font-medium text-lx-cta hover:underline focus:outline-none transition-colors"
+              >
+                {isExpanded ? 'Minder' : 'Lees meer'}
+              </button>
+            )}
+          </div>
+        )}
+
+        <p className="text-[10.5px] text-lx-placeholder mt-1">{timeAgo(n.published_at)}</p>
+      </div>
+    </div>
+  )
+}
+
 interface NotificationBellProps {
   notifications: Notification[]
   readAt: string | null
@@ -36,6 +112,7 @@ interface NotificationBellProps {
 export default function NotificationBell({ notifications, readAt }: NotificationBellProps) {
   const [open, setOpen] = useState(false)
   const [localReadAt, setLocalReadAt] = useState(readAt)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const panelRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -58,11 +135,20 @@ export default function NotificationBell({ notifications, readAt }: Notification
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Sluit expanded row wanneer dropdown sluit
+  useEffect(() => {
+    if (!open) setExpandedId(null)
+  }, [open])
+
   function handleReadAll() {
     const now = new Date().toISOString()
     setLocalReadAt(now) // optimistisch
     startTransition(() => markAllNotificationsRead())
   }
+
+  const handleToggle = useCallback((id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id))
+  }, [])
 
   return (
     <div className="relative">
@@ -120,33 +206,14 @@ export default function NotificationBell({ notifications, readAt }: Notification
             ) : (
               notifications.map((n) => {
                 const isUnread = !localReadAt || new Date(n.published_at) > new Date(localReadAt)
-                const cfg = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.info
                 return (
-                  <div
+                  <NotificationRow
                     key={n.id}
-                    className={`flex gap-3 px-4 py-3.5 transition-colors ${isUnread ? 'bg-lx-panel-bg/60' : 'bg-white'}`}
-                  >
-                    {/* Gekleurde dot */}
-                    <div className="mt-1.5 flex-shrink-0">
-                      <span className={`block w-2 h-2 rounded-full ${isUnread ? cfg.dot : 'bg-black/15'}`} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className={`text-[13px] font-semibold leading-snug ${isUnread ? 'text-lx-text-primary' : 'text-lx-text-secondary'}`}>
-                          {n.title}
-                        </p>
-                        <span className={`flex-shrink-0 text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border ${cfg.color}`}>
-                          {cfg.label}
-                        </span>
-                      </div>
-                      {n.body && (
-                        <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-relaxed line-clamp-2">
-                          {n.body}
-                        </p>
-                      )}
-                      <p className="text-[10.5px] text-lx-placeholder mt-1">{timeAgo(n.published_at)}</p>
-                    </div>
-                  </div>
+                    n={n}
+                    isUnread={isUnread}
+                    isExpanded={expandedId === n.id}
+                    onToggle={handleToggle}
+                  />
                 )
               })
             )}

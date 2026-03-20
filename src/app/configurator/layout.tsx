@@ -9,7 +9,7 @@ export default async function ConfiguratorLayout({ children }: { children: React
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, tier, is_admin')
+    .select('full_name, company, tier, is_admin, avatar_url')
     .eq('id', user.id)
     .single()
 
@@ -26,7 +26,7 @@ export default async function ConfiguratorLayout({ children }: { children: React
   ])
 
   return (
-    <div className="min-h-screen bg-[#F0EDE8]">
+    <div className="min-h-screen bg-lx-divider">
       <Sidebar
         userName={profile?.full_name ?? user.email ?? 'Gebruiker'}
         company={profile?.company ?? ''}
@@ -34,6 +34,7 @@ export default async function ConfiguratorLayout({ children }: { children: React
         configCount={configCount ?? 0}
         orderCount={orderCount ?? 0}
         isAdmin={profile?.is_admin ?? false}
+        avatarUrl={profile?.avatar_url ?? null}
         pendingCount={pendingCount ?? 0}
       />
       <main className="lg:ml-60 min-h-screen">

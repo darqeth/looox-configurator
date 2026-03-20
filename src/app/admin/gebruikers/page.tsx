@@ -28,8 +28,8 @@ export default async function GebruikersPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-7 w-full">
       <div className="mb-6">
-        <h1 className="text-[22px] font-semibold text-[#1A1A1A] tracking-tight">Gebruikers</h1>
-        <p className="text-[#6B7280] text-[13px] mt-1">
+        <h1 className="text-[22px] font-semibold text-lx-text-primary tracking-tight">Gebruikers</h1>
+        <p className="text-lx-text-secondary text-[13px] mt-1">
           {pending.length > 0
             ? <><span className="text-amber-600 font-medium">{pending.length} aanvra{pending.length === 1 ? 'ag' : 'gen'}</span> wacht{pending.length === 1 ? '' : 'en'} op goedkeuring</>
             : 'Geen openstaande aanvragen'}
@@ -39,7 +39,7 @@ export default async function GebruikersPage() {
       {/* Wacht op goedkeuring */}
       {pending.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-widest mb-3">Wacht op goedkeuring</h2>
+          <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Wacht op goedkeuring</h2>
           <div className="space-y-2">
             {pending.map(p => (
               <UserRow key={p.id} profile={p} showActions />
@@ -50,7 +50,7 @@ export default async function GebruikersPage() {
 
       {/* Goedgekeurde gebruikers */}
       <section className="mb-6">
-        <h2 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-widest mb-3">Goedgekeurd ({approved.length})</h2>
+        <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Goedgekeurd ({approved.length})</h2>
         {approved.length > 0 ? (
           <div className="space-y-2">
             {approved.map(p => (
@@ -58,14 +58,14 @@ export default async function GebruikersPage() {
             ))}
           </div>
         ) : (
-          <p className="text-[13px] text-[#9CA3AF]">Nog geen goedgekeurde gebruikers</p>
+          <p className="text-[13px] text-lx-text-secondary">Nog geen goedgekeurde gebruikers</p>
         )}
       </section>
 
       {/* Afgewezen */}
       {rejected.length > 0 && (
         <section>
-          <h2 className="text-[11px] font-bold text-[#6B7280] uppercase tracking-widest mb-3">Afgewezen ({rejected.length})</h2>
+          <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Afgewezen ({rejected.length})</h2>
           <div className="space-y-2">
             {rejected.map(p => (
               <UserRow key={p.id} profile={p} showApprove />
@@ -100,26 +100,26 @@ function UserRow({ profile, showActions = false, showApprove = false }: {
   return (
     <div className="bg-white rounded-[18px] border border-black/6 shadow-sm px-5 py-4 flex items-center gap-4">
       {/* Avatar */}
-      <div className="w-9 h-9 rounded-full bg-[#EFF6F1] flex items-center justify-center flex-shrink-0 text-[#3D6B4F] text-sm font-semibold">
+      <div className="w-9 h-9 rounded-full bg-lx-icon-bg flex items-center justify-center flex-shrink-0 text-lx-cta text-sm font-semibold">
         {firstLetter}
       </div>
 
       {/* Info */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-[13.5px] font-semibold text-[#1A1A1A]">{profile.full_name ?? '—'}</p>
+          <p className="text-[13.5px] font-semibold text-lx-text-primary">{profile.full_name ?? '—'}</p>
           <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${status.className}`}>
             {status.label}
           </span>
         </div>
-        <p className="text-[12px] text-[#6B7280] mt-0.5">
+        <p className="text-[12px] text-lx-text-secondary mt-0.5">
           {profile.company ?? '—'} · {profile.email ?? '—'}
           {profile.phone ? ` · ${profile.phone}` : ''}
         </p>
       </div>
 
       {/* Datum */}
-      <p className="text-[11.5px] text-[#9CA3AF] flex-shrink-0 hidden sm:block">{date}</p>
+      <p className="text-[11.5px] text-lx-text-secondary flex-shrink-0 hidden sm:block">{date}</p>
 
       {/* Acties */}
       {showActions && (
@@ -127,7 +127,7 @@ function UserRow({ profile, showActions = false, showApprove = false }: {
           <form action={updateApprovalStatus.bind(null, profile.id, 'approved')}>
             <button
               type="submit"
-              className="bg-[#3D6B4F] hover:bg-[#2e5540] text-white text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors"
+              className="bg-lx-cta hover:bg-lx-cta-hover text-white text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors"
             >
               Goedkeuren
             </button>
@@ -135,7 +135,7 @@ function UserRow({ profile, showActions = false, showApprove = false }: {
           <form action={updateApprovalStatus.bind(null, profile.id, 'rejected')}>
             <button
               type="submit"
-              className="text-[#6B7280] hover:text-red-600 hover:bg-red-50 text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors"
+              className="text-lx-text-secondary hover:text-red-600 hover:bg-red-50 text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors"
             >
               Afwijzen
             </button>
@@ -147,7 +147,7 @@ function UserRow({ profile, showActions = false, showApprove = false }: {
         <form action={updateApprovalStatus.bind(null, profile.id, 'approved')} className="flex-shrink-0">
           <button
             type="submit"
-            className="text-[#3D6B4F] hover:bg-[#EFF6F1] text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors"
+            className="text-lx-cta hover:bg-lx-icon-bg text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors"
           >
             Alsnog goedkeuren
           </button>

@@ -4,6 +4,16 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, LightType, calcTotalPrice } from '@/lib/configurator-config'
 
+function generateArticleNumber(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const year = new Date().getFullYear()
+  let result = `LX-${year}-`
+  for (let i = 0; i < 6; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return result
+}
+
 // Fixed product UUID for the default LoooX spiegel product
 // Run the seed SQL in Supabase to create this product
 const DEFAULT_PRODUCT_ID = '00000000-0000-0000-0000-000000000001'
@@ -23,6 +33,7 @@ type SaveConfigInput = {
   directLight: LightConfig
   indirectLight: LightConfig
   selectedOptions: string[]
+  optionSubChoices?: Record<string, string>
   projectName: string
   reference: string
   description: string
@@ -55,6 +66,7 @@ export async function saveConfiguration(input: SaveConfigInput) {
     directLight: input.directLight,
     indirectLight: input.indirectLight,
     extras: input.selectedOptions,
+    optionSubChoices: input.optionSubChoices ?? {},
     reference: input.reference,
     description: input.description,
     quantity: input.quantity,
@@ -69,6 +81,7 @@ export async function saveConfiguration(input: SaveConfigInput) {
     selected_options: selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: input.status,
+    article_number: generateArticleNumber(),
   })
 
   if (error) throw new Error(error.message)

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import {
   ShapeSlug,
   ROND_DIAMETERS,
@@ -31,40 +32,53 @@ function DimInput({
   onChange: (v: number) => void
 }) {
   const { min, max } = RECHTHOEK_CONSTRAINTS
-  const isValid = value >= min && value <= max
+  const [raw, setRaw] = useState(String(value))
+
+  // Sync wanneer waarde extern verandert (preset-knop, +/-)
+  useEffect(() => { setRaw(String(value)) }, [value])
+
+  function commit(str: string) {
+    const v = Math.min(max, Math.max(min, parseInt(str) || min))
+    onChange(v)
+    setRaw(String(v))
+  }
+
+  const parsed = parseInt(raw)
+  const isValid = !isNaN(parsed) && parsed >= min && parsed <= max
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide">{label}</label>
+      <label className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">{label}</label>
       <div className="flex items-center gap-2">
         <button
           onClick={() => onChange(Math.max(min, value - 1))}
-          className="w-9 h-9 rounded-xl bg-[#F5F3EF] border border-black/8 text-[#1A1A1A] text-lg font-light hover:bg-[#EDE9E3] transition-colors flex items-center justify-center flex-shrink-0"
+          tabIndex={-1}
+          className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center flex-shrink-0"
         >
           −
         </button>
         <div className="relative flex-1">
           <input
             type="number"
-            value={value}
+            value={raw}
             min={min}
             max={max}
-            onChange={(e) => {
-              const v = parseInt(e.target.value) || min
-              onChange(Math.min(max, Math.max(min, v)))
-            }}
-            className={`w-full h-9 rounded-xl border text-center text-[14px] font-semibold text-[#1A1A1A] outline-none transition-colors bg-white ${
-              isValid ? 'border-black/12 focus:border-[#3D6B4F]' : 'border-red-400 bg-red-50'
+            onChange={(e) => setRaw(e.target.value)}
+            onBlur={(e) => commit(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') commit(raw) }}
+            className={`w-full h-9 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none transition-colors bg-white ${
+              isValid ? 'border-black/12 focus:border-lx-cta' : 'border-red-400 bg-red-50'
             }`}
           />
         </div>
         <button
           onClick={() => onChange(Math.min(max, value + 1))}
-          className="w-9 h-9 rounded-xl bg-[#F5F3EF] border border-black/8 text-[#1A1A1A] text-lg font-light hover:bg-[#EDE9E3] transition-colors flex items-center justify-center flex-shrink-0"
+          tabIndex={-1}
+          className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center flex-shrink-0"
         >
           +
         </button>
-        <span className="text-[13px] text-[#6B7280] font-medium w-6">cm</span>
+        <span className="text-[13px] text-lx-text-secondary font-medium w-6">cm</span>
       </div>
       {!isValid && (
         <p className="text-[11px] text-red-500">Min. {min} cm — Max. {max} cm</p>
@@ -84,7 +98,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
     return (
       <div className="space-y-6">
         <div>
-          <p className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide mb-3">Snelle keuze</p>
+          <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide mb-3">Snelle keuze</p>
           <div className="flex flex-wrap gap-2">
             {presets.map((p) => (
               <button
@@ -92,8 +106,8 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
                 onClick={() => onChange({ width: p.w, height: p.h })}
                 className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-all ${
                   width === p.w && height === p.h
-                    ? 'bg-[#3D6B4F] text-white border-[#3D6B4F]'
-                    : 'bg-white text-[#1A1A1A] border-black/12 hover:border-[#3D6B4F] hover:text-[#3D6B4F]'
+                    ? 'bg-lx-cta text-white border-lx-cta'
+                    : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
                 }`}
               >
                 {p.w} × {p.h}
@@ -103,8 +117,8 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
               onClick={() => onChange({ width: 80, height: 60 })}
               className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-all ${
                 !isPreset
-                  ? 'bg-[#3D6B4F] text-white border-[#3D6B4F]'
-                  : 'bg-white text-[#1A1A1A] border-black/12 hover:border-[#3D6B4F]'
+                  ? 'bg-lx-cta text-white border-lx-cta'
+                  : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta'
               }`}
             >
               Maatwerk
@@ -117,7 +131,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
           <DimInput label="Hoogte" value={height} onChange={(v) => onChange({ height: v })} />
         </div>
 
-        <p className="text-[12px] text-[#9CA3AF]">
+        <p className="text-[12px] text-lx-text-secondary">
           Minimale afmeting: {RECHTHOEK_CONSTRAINTS.min} cm — Maximale afmeting: {RECHTHOEK_CONSTRAINTS.max} cm
         </p>
       </div>
@@ -127,7 +141,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
   if (shape === 'rond') {
     return (
       <div className="space-y-4">
-        <p className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide">Diameter</p>
+        <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Diameter</p>
         <div className="flex flex-wrap gap-2">
           {ROND_DIAMETERS.map((d) => (
             <button
@@ -135,8 +149,8 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
               onClick={() => onChange({ diameter: d })}
               className={`px-4 py-2.5 rounded-xl text-[13px] font-semibold border transition-all ${
                 diameter === d
-                  ? 'bg-[#3D6B4F] text-white border-[#3D6B4F]'
-                  : 'bg-white text-[#1A1A1A] border-black/12 hover:border-[#3D6B4F] hover:text-[#3D6B4F]'
+                  ? 'bg-lx-cta text-white border-lx-cta'
+                  : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
               }`}
             >
               ⌀ {d} cm
@@ -150,7 +164,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
   if (shape === 'organic') {
     return (
       <div className="space-y-4">
-        <p className="text-[12px] font-semibold text-[#6B7280] uppercase tracking-wide">Afmeting</p>
+        <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Afmeting</p>
         <div className="flex flex-wrap gap-2">
           {ORGANIC_SIZES.map((s) => (
             <button
@@ -158,8 +172,8 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
               onClick={() => onChange({ organicSizeKey: s.key })}
               className={`px-4 py-2.5 rounded-xl text-[13px] font-semibold border transition-all ${
                 organicSizeKey === s.key
-                  ? 'bg-[#3D6B4F] text-white border-[#3D6B4F]'
-                  : 'bg-white text-[#1A1A1A] border-black/12 hover:border-[#3D6B4F] hover:text-[#3D6B4F]'
+                  ? 'bg-lx-cta text-white border-lx-cta'
+                  : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
               }`}
             >
               {s.label}
@@ -177,7 +191,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
         <DimInput label="Breedte" value={width} onChange={(v) => onChange({ width: v })} />
         <DimInput label="Hoogte" value={height} onChange={(v) => onChange({ height: v })} />
       </div>
-      <p className="text-[12px] text-[#9CA3AF]">
+      <p className="text-[12px] text-lx-text-secondary">
         Vul de gewenste afmeting in. Wij nemen contact op als de maat buiten het standaard assortiment valt.
       </p>
     </div>

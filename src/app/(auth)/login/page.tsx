@@ -22,17 +22,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0EDE8] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-lx-divider flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
           <img src="/logo-looox-grey.svg" alt="LoooX" className="h-24 mx-auto mb-2" />
-          <p className="text-sm text-[#6B7280]">Configurator</p>
+          <p className="text-sm text-lx-text-secondary">Configurator</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-md border border-black/5 p-6 sm:p-8">
-          <h2 className="text-lg font-semibold text-[#1A1A1A] mb-6">
+          <h2 className="text-lg font-semibold text-lx-text-primary mb-6">
             Inloggen
           </h2>
 
@@ -40,7 +40,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-semibold text-[#374151] mb-1.5"
+                className="block text-sm font-semibold text-lx-text-secondary mb-1.5"
               >
                 E-mailadres
               </label>
@@ -50,7 +50,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 autoComplete="email"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3D6B4F]/40 focus:border-[#3D6B4F] transition-colors"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
                 placeholder="naam@bedrijf.nl"
               />
             </div>
@@ -58,7 +58,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-semibold text-[#374151] mb-1.5"
+                className="block text-sm font-semibold text-lx-text-secondary mb-1.5"
               >
                 Wachtwoord
               </label>
@@ -68,7 +68,7 @@ export default function LoginPage() {
                 type="password"
                 required
                 autoComplete="current-password"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3D6B4F]/40 focus:border-[#3D6B4F] transition-colors"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
                 placeholder="••••••••"
               />
             </div>
@@ -85,18 +85,18 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full bg-[#3D6B4F] text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3D6B4F]"
+              className="w-full bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lx-cta"
             >
               {isPending ? 'Bezig met inloggen…' : 'Inloggen'}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-sm text-[#6B7280] mt-5">
+        <p className="text-center text-sm text-lx-text-secondary mt-5">
           Nog geen toegang?{' '}
           <Link
             href="/register"
-            className="text-[#3D6B4F] font-semibold hover:underline"
+            className="text-lx-cta font-semibold hover:underline"
           >
             Account aanvragen
           </Link>

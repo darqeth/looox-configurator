@@ -78,6 +78,15 @@ export const LIGHT_TYPE_DESCRIPTIONS: Record<LightType, string> = {
   cct: 'Instelbaar — van warm naar koel',
 }
 
+export const CONTROL_PRICES: Record<string, number> = {
+  'externe-schakeling': 0,
+  'tip-touch': 57,
+  '3-staps-dimmer': 57,
+  'wip-schakelaar': 57,
+  'motion-sensor': 76,
+  'afstandsbediening': 114,
+}
+
 export const CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; auto?: boolean }[]> = {
   '3000k': [
     { id: 'externe-schakeling', name: 'Externe schakeling' },
@@ -100,6 +109,13 @@ export const CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; au
   ],
 }
 
+export type ExtraOptionSubChoice = {
+  id: string
+  name: string
+  color?: string   // hex color for swatches
+  image?: string   // image path for swatches
+}
+
 export type ExtraOption = {
   id: string
   name: string
@@ -107,6 +123,10 @@ export type ExtraOption = {
   price: number
   shapes: ShapeSlug[]
   incompatibleWith: string[]
+  subChoices?: {
+    label: string
+    options: ExtraOptionSubChoice[]
+  }
 }
 
 export const EXTRA_OPTIONS: ExtraOption[] = [
@@ -125,6 +145,14 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     price: 145,
     shapes: ['rechthoek', 'rond'],
     incompatibleWith: ['schuine-zijden'],
+    subChoices: {
+      label: 'Locatie',
+      options: [
+        { id: 'links', name: 'Links' },
+        { id: 'midden', name: 'Midden' },
+        { id: 'rechts', name: 'Rechts' },
+      ],
+    },
   },
   {
     id: 'bluetooth-speaker',
@@ -149,6 +177,14 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     price: 55,
     shapes: ['rechthoek', 'rond', 'organic'],
     incompatibleWith: [],
+    subChoices: {
+      label: 'Positie',
+      options: [
+        { id: 'links', name: 'Links' },
+        { id: 'midden', name: 'Midden' },
+        { id: 'rechts', name: 'Rechts' },
+      ],
+    },
   },
   {
     id: 'frame-in-kleur',
@@ -157,6 +193,16 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     price: 80,
     shapes: ['rechthoek', 'rond'],
     incompatibleWith: ['afgeronde-hoeken'],
+    subChoices: {
+      label: 'Kleur',
+      options: [
+        { id: 'aluminium', name: 'Aluminium', image: '/icons/spiegel_kleur_alu.png' },
+        { id: 'zwart', name: 'Zwart', image: '/icons/spiegel_kleur_zwart.png' },
+        { id: 'gun-metal', name: 'Metallic Gun Metal', image: '/icons/spiegel_kleur_gunmetal.png' },
+        { id: 'brushed-brass', name: 'Metallic Brushed Brass', image: '/icons/spiegel_kleur_brushed_brass.png' },
+        { id: 'brushed-copper', name: 'Metallic Brushed Copper', image: '/icons/spiegel_kleur_brushed_copper.png' },
+      ],
+    },
   },
   {
     id: 'schuine-zijden',
@@ -205,8 +251,10 @@ export function calcTotalPrice(state: {
   organicSizeKey: string | null
   directPosition: string
   directType: LightType | null
+  directControl?: string | null
   indirectPosition: string
   indirectType: LightType | null
+  indirectControl?: string | null
   selectedOptions: string[]
 }): number {
   let price = calcBasePrice(
@@ -219,9 +267,11 @@ export function calcTotalPrice(state: {
 
   if (state.directPosition !== 'geen' && state.directType) {
     price += LIGHT_TYPE_PRICE[state.directType]
+    if (state.directControl) price += CONTROL_PRICES[state.directControl] ?? 0
   }
   if (state.indirectPosition !== 'geen' && state.indirectType) {
     price += LIGHT_TYPE_PRICE[state.indirectType]
+    if (state.indirectControl) price += CONTROL_PRICES[state.indirectControl] ?? 0
   }
 
   for (const optId of state.selectedOptions) {

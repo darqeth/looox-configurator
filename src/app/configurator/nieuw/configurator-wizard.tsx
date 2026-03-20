@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ShapeSlug, RECHTHOEK_CONSTRAINTS, calcTotalPrice } from '@/lib/configurator-config'
+import { ShapeSlug, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS } from '@/lib/configurator-config'
 import ShapePicker from './shape-picker'
 import StepAfmeting from './step-afmeting'
 import StepVerlichting, { LightConfig } from './step-verlichting'
@@ -11,6 +11,7 @@ import StepOpties from './step-opties'
 import StepSamenvatting from './step-samenvatting'
 import PricePanel from './price-panel'
 import { saveConfiguration } from '@/lib/actions/configurator'
+import { placeOrder } from '@/lib/actions/orders'
 
 const STEPS = [
   { label: 'Afmeting' },
@@ -29,21 +30,21 @@ function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, direct
 }) {
   const total = calcTotalPrice({
     shape, width, height, diameter, organicSizeKey,
-    directPosition: directLight.position, directType: directLight.type,
-    indirectPosition: indirectLight.position, indirectType: indirectLight.type,
+    directPosition: directLight.position, directType: directLight.type, directControl: directLight.control,
+    indirectPosition: indirectLight.position, indirectType: indirectLight.type, indirectControl: indirectLight.control,
     selectedOptions,
   })
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/8 px-4 py-3 flex items-center justify-between z-30">
       <div>
-        <p className="text-[10px] text-[#9CA3AF] font-medium">Netto inkoopprijs</p>
-        <p className="text-[17px] font-bold text-[#1A1A1A]">€{total.toLocaleString('nl-NL')}</p>
+        <p className="text-[10px] text-lx-text-secondary font-medium">Netto inkoopprijs</p>
+        <p className="text-[17px] font-bold text-lx-text-primary">€{total.toLocaleString('nl-NL')}</p>
       </div>
       {step < 4 ? (
         <button
           onClick={onNext}
-          disabled={step === 1 && !isStep1Valid}
-          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-[#3D6B4F] text-white hover:bg-[#2e5540] disabled:opacity-40 transition-all"
+          disabled={!isStep1Valid}
+          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-40 transition-all"
         >
           Volgende →
         </button>
@@ -51,7 +52,7 @@ function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, direct
         <button
           onClick={onSave}
           disabled={!projectName.trim() || saving}
-          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-[#3D6B4F] text-white hover:bg-[#2e5540] disabled:opacity-40 transition-all"
+          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-40 transition-all"
         >
           Opslaan
         </button>
@@ -77,6 +78,7 @@ export default function ConfiguratorWizard() {
 
   // Step 3: options
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
+  const [optionSubChoices, setOptionSubChoices] = useState<Record<string, string>>({})
 
   // Step 4: save info
   const [projectName, setProjectName] = useState('')
@@ -85,6 +87,7 @@ export default function ConfiguratorWizard() {
   const [quantity, setQuantity] = useState(1)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [orderResult, setOrderResult] = useState<{ orderNumber: string; orderId: string } | null>(null)
 
   function handleShapeSelect(s: ShapeSlug) {
     setShape(s)
@@ -92,6 +95,7 @@ export default function ConfiguratorWizard() {
     setDirectLight(DEFAULT_LIGHT)
     setIndirectLight(DEFAULT_LIGHT)
     setSelectedOptions([])
+    setOptionSubChoices({})
   }
 
   function isStep1Valid(): boolean {
@@ -105,18 +109,34 @@ export default function ConfiguratorWizard() {
     return false
   }
 
-  async function handleSave(asConcept: boolean) {
+  function isStep2Valid(): boolean {
+    const directNeedsControl = directLight.position !== 'geen' && directLight.type !== null
+    const indirectNeedsControl = indirectLight.position !== 'geen' && indirectLight.type !== null
+    if (directNeedsControl && !directLight.control) return false
+    if (indirectNeedsControl && !indirectLight.control) return false
+    return true
+  }
+
+  function isStep3Valid(): boolean {
+    return selectedOptions.every((id) => {
+      const opt = EXTRA_OPTIONS.find((o) => o.id === id)
+      if (!opt?.subChoices) return true
+      return !!optionSubChoices[id]
+    })
+  }
+
+  async function handleSave(_asConcept: boolean) {
     if (!shape || !projectName.trim()) return
     setSaving(true)
     try {
       await saveConfiguration({
         shape, width, height, diameter, organicSizeKey,
-        directLight, indirectLight, selectedOptions,
+        directLight, indirectLight, selectedOptions, optionSubChoices,
         projectName: projectName.trim(),
         reference: reference.trim(),
         description: description.trim(),
         quantity,
-        status: asConcept ? 'draft' : 'saved',
+        status: 'saved',
       })
       setSaved(true)
       router.push('/configuraties')
@@ -126,17 +146,121 @@ export default function ConfiguratorWizard() {
     }
   }
 
+  async function handleOrder() {
+    if (!shape || !projectName.trim()) return
+    setSaving(true)
+    try {
+      const result = await placeOrder({
+        shape, width, height, diameter, organicSizeKey,
+        directLight, indirectLight, selectedOptions, optionSubChoices,
+        projectName: projectName.trim(),
+        reference: reference.trim(),
+        description: description.trim(),
+        quantity,
+      })
+      setOrderResult(result)
+    } catch (e) {
+      console.error(e)
+      setSaving(false)
+    }
+  }
+
+  if (orderResult) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh] px-4 py-8">
+        <div className="max-w-md w-full space-y-4">
+          {/* Checkmark + titel */}
+          <div className="text-center">
+            <div className="relative w-20 h-20 mx-auto mb-5">
+              <div className="absolute inset-0 rounded-full bg-lx-panel-bg/50 animate-ping" style={{ animationDuration: '1.5s', animationIterationCount: 1 }} />
+              <div className="relative w-20 h-20 rounded-full bg-lx-icon-bg flex items-center justify-center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" stroke="var(--lx-cta)" strokeWidth="2.5"
+                    strokeDasharray="28" strokeDashoffset="0"
+                    style={{ animation: 'drawCheck 0.4s ease-out 0.3s both' }}
+                  />
+                </svg>
+              </div>
+            </div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">
+              {shape === 'op-aanvraag' ? 'Offerte aangevraagd' : 'Bestelling geplaatst'}
+            </p>
+            <h2 className="text-[24px] font-bold text-lx-text-primary mb-2">{projectName}</h2>
+            <p className="text-[13.5px] text-lx-text-secondary leading-relaxed max-w-sm mx-auto">
+              {shape === 'op-aanvraag'
+                ? 'Je aanvraag is ontvangen. Je hoort binnen 1 werkdag van ons. Productietijd is ca. 10 werkdagen na bevestiging.'
+                : 'Je bestelling is ontvangen. Je ontvangt binnen 1 werkdag een orderbevestiging. Productietijd is ca. 10 werkdagen.'}
+            </p>
+          </div>
+
+          {/* Ordernummer card */}
+          <div className="bg-white rounded-2xl border border-black/8 shadow-sm px-6 py-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-[11px] text-lx-text-secondary font-medium uppercase tracking-wide mb-0.5">
+                {shape === 'op-aanvraag' ? 'Offertenummer' : 'Bestelnummer'}
+              </p>
+                <p className="text-[22px] font-bold text-lx-text-primary tracking-wide font-mono">{orderResult.orderNumber}</p>
+              </div>
+              <span className="px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11.5px] font-semibold">
+                In behandeling
+              </span>
+            </div>
+            <div className="border-t border-lx-divider pt-4 space-y-2">
+              <div className="flex justify-between text-[13px]">
+                <span className="text-lx-text-secondary">Project</span>
+                <span className="text-lx-text-primary font-medium">{projectName}</span>
+              </div>
+              {reference && (
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-lx-text-secondary">Referentie</span>
+                  <span className="text-lx-text-primary font-medium">{reference}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-[13px]">
+                <span className="text-lx-text-secondary">Aantal</span>
+                <span className="text-lx-text-primary font-medium">{quantity}×</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Knoppen */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => router.push('/bestellingen')}
+              className="flex-1 h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors"
+            >
+              {shape === 'op-aanvraag' ? 'Mijn offertes' : 'Mijn bestellingen'}
+            </button>
+            <button
+              onClick={() => router.push('/configurator/nieuw')}
+              className="flex-1 h-11 rounded-xl border border-black/12 text-lx-text-secondary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors"
+            >
+              Nieuwe spiegel
+            </button>
+          </div>
+        </div>
+        <style>{`
+          @keyframes drawCheck {
+            from { stroke-dashoffset: 28; }
+            to   { stroke-dashoffset: 0; }
+          }
+        `}</style>
+      </div>
+    )
+  }
+
   if (saved) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-3">
-          <div className="w-14 h-14 rounded-full bg-[#3D6B4F]/15 flex items-center justify-center mx-auto">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3D6B4F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <div className="w-14 h-14 rounded-full bg-lx-panel-bg flex items-center justify-center mx-auto">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
           </div>
-          <p className="text-[16px] font-semibold text-[#1A1A1A]">Configuratie opgeslagen</p>
-          <p className="text-[13px] text-[#6B7280]">Je wordt doorgestuurd…</p>
+          <p className="text-[16px] font-semibold text-lx-text-primary">Configuratie opgeslagen</p>
+          <p className="text-[13px] text-lx-text-secondary">Je wordt doorgestuurd…</p>
         </div>
       </div>
     )
@@ -144,20 +268,20 @@ export default function ConfiguratorWizard() {
 
   return (
     <>
-      {!shape && <ShapePicker onSelect={handleShapeSelect} />}
+      {!shape && <ShapePicker onSelect={handleShapeSelect} onClose={() => router.push('/configuraties')} />}
 
       <div className="px-4 sm:px-6 py-6 max-w-[1100px] mx-auto pb-24 lg:pb-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/dashboard" className="text-[#9CA3AF] hover:text-[#1A1A1A] transition-colors">
+          <Link href="/dashboard" className="text-lx-text-secondary hover:text-lx-text-primary transition-colors">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m15 18-6-6 6-6"/>
             </svg>
           </Link>
           <div>
-            <h1 className="text-[18px] font-bold text-[#1A1A1A] leading-tight">Nieuwe spiegel</h1>
+            <h1 className="text-[18px] font-bold text-lx-text-primary leading-tight">Nieuwe spiegel</h1>
             {shape && (
-              <button onClick={() => setShape(null)} className="text-[12px] text-[#3D6B4F] hover:underline font-medium">
+              <button onClick={() => setShape(null)} className="text-[12px] text-lx-cta hover:underline font-medium">
                 Vorm wijzigen
               </button>
             )}
@@ -177,13 +301,13 @@ export default function ConfiguratorWizard() {
                     onClick={() => isDone && setStep(num)}
                     disabled={!isDone}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12.5px] font-semibold transition-all ${
-                      isActive ? 'bg-[#3D6B4F] text-white'
-                        : isDone ? 'bg-[#3D6B4F]/10 text-[#3D6B4F] hover:bg-[#3D6B4F]/15 cursor-pointer'
-                        : 'bg-white/70 text-[#9CA3AF] cursor-default'
+                      isActive ? 'bg-lx-cta text-white'
+                        : isDone ? 'bg-lx-panel-bg text-lx-cta hover:bg-lx-panel-bg/70 cursor-pointer'
+                        : 'bg-white/70 text-lx-text-secondary cursor-default'
                     }`}
                   >
                     <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                      isActive ? 'bg-white/20 text-white' : isDone ? 'bg-[#3D6B4F] text-white' : 'bg-black/10 text-[#9CA3AF]'
+                      isActive ? 'bg-white/20 text-white' : isDone ? 'bg-lx-cta text-white' : 'bg-black/10 text-lx-text-secondary'
                     }`}>
                       {isDone ? (
                         <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
@@ -195,7 +319,7 @@ export default function ConfiguratorWizard() {
                     <span className="sm:hidden">{num}</span>
                   </button>
                   {i < STEPS.length - 1 && (
-                    <div className={`w-4 h-px ${step > num ? 'bg-[#3D6B4F]/30' : 'bg-black/10'}`} />
+                    <div className={`w-4 h-px ${step > num ? 'bg-lx-panel-bg' : 'bg-black/10'}`} />
                   )}
                 </div>
               )
@@ -209,7 +333,7 @@ export default function ConfiguratorWizard() {
             {/* Left: step content */}
             <div className="flex-1 min-w-0">
               <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-6">
-                <h2 className="text-[16px] font-bold text-[#1A1A1A] mb-5">
+                <h2 className="text-[16px] font-bold text-lx-text-primary mb-5">
                   {step === 1 && 'Afmeting'}
                   {step === 2 && 'Verlichting'}
                   {step === 3 && 'Extra opties'}
@@ -244,6 +368,8 @@ export default function ConfiguratorWizard() {
                     shape={shape}
                     selectedOptions={selectedOptions}
                     onChange={setSelectedOptions}
+                    optionSubChoices={optionSubChoices}
+                    onSubChoiceChange={(id, val) => setOptionSubChoices(prev => ({ ...prev, [id]: val }))}
                   />
                 )}
 
@@ -261,15 +387,16 @@ export default function ConfiguratorWizard() {
                     onQuantityChange={setQuantity}
                     onGoToStep={setStep}
                     onSave={handleSave}
+                    onOrder={handleOrder}
                   />
                 )}
 
                 {/* Navigation */}
                 {step < 4 && (
-                  <div className="flex justify-between mt-8 pt-5 border-t border-[#F0EDE8]">
+                  <div className="flex justify-between mt-8 pt-5 border-t border-lx-divider">
                     <button
                       onClick={() => step > 1 ? setStep(step - 1) : setShape(null)}
-                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F5F3EF] transition-all"
+                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg transition-all"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="m15 18-6-6 6-6"/>
@@ -278,8 +405,12 @@ export default function ConfiguratorWizard() {
                     </button>
                     <button
                       onClick={() => setStep(step + 1)}
-                      disabled={step === 1 && !isStep1Valid()}
-                      className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-[#3D6B4F] text-white hover:bg-[#2e5540] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      disabled={
+                        (step === 1 && !isStep1Valid()) ||
+                        (step === 2 && !isStep2Valid()) ||
+                        (step === 3 && !isStep3Valid())
+                      }
+                      className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       Volgende: {STEPS[step]?.label}
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -310,7 +441,7 @@ export default function ConfiguratorWizard() {
             diameter={diameter} organicSizeKey={organicSizeKey}
             directLight={directLight} indirectLight={indirectLight}
             selectedOptions={selectedOptions}
-            step={step} isStep1Valid={isStep1Valid()}
+            step={step} isStep1Valid={step === 1 ? isStep1Valid() : step === 2 ? isStep2Valid() : isStep3Valid()}
             projectName={projectName} saving={saving}
             onNext={() => setStep(step + 1)}
             onSave={() => handleSave(false)}

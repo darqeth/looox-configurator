@@ -4,7 +4,50 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * LoooX Kleurenpalet — pas hier de waarden aan om de app-brede stijl te wijzigen.
+ * Gebruik in Tailwind:  bg-lx-cta · text-lx-text-secondary · border-lx-divider
+ * Gebruik in SVG/style: stroke="var(--lx-cta)"
+ *
+ * ⚠️  Kleur wijzigen? Update BEIDE plekken (dezelfde waarde):
+ *   1. --lx-cta   in :root hieronder   (voor SVG en inline styles)
+ *   2. --color-lx-cta  in @theme inline (voor Tailwind utilities)
+ */
+:root {
+  --lx-page-bg:           #F5F3EF;
+  --lx-panel-bg:          #F0EDE8;
+  --lx-sidebar-bg:        #1C1C1E;
+  --lx-cta:               #3D6B4F;
+  --lx-cta-hover:         #2e5540;
+  --lx-icon-bg:           #EFF6F1;
+  --lx-divider:           #F0EDE8;
+  --lx-border:            #EDE9E3;
+  --lx-text-primary:      #1A1A1A;
+  --lx-text-secondary:    #6B7280;
+  --lx-text-muted:        #9CA3AF;
+  --lx-placeholder:       #9CA3AF;
+  --lx-inactive:          #9CA3AF;
+}
+
 @theme inline {
+  /*
+   * LoooX brand utilities — bg-lx-*, text-lx-*, border-lx-*
+   * Waarden moeten gelijk zijn aan de --lx-* variabelen in :root hierboven.
+   */
+  --color-lx-page-bg:        #F5F3EF;
+  --color-lx-panel-bg:       #F0EDE8;
+  --color-lx-sidebar-bg:     #1C1C1E;
+  --color-lx-cta:            #3D6B4F;
+  --color-lx-cta-hover:      #2e5540;
+  --color-lx-icon-bg:        #EFF6F1;
+  --color-lx-divider:        #F0EDE8;
+  --color-lx-border:         #EDE9E3;
+  --color-lx-text-primary:   #1A1A1A;
+  --color-lx-text-secondary: #6B7280;
+  --color-lx-text-muted:     #9CA3AF;
+  --color-lx-placeholder:    #9CA3AF;
+  --color-lx-inactive:       #9CA3AF;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);

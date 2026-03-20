@@ -45,21 +45,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0EDE8] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-lx-divider flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
           <img src="/logo-looox-grey.svg" alt="LoooX" className="h-24 mx-auto mb-2" />
-          <p className="text-sm text-[#6B7280]">Configurator</p>
+          <p className="text-sm text-lx-text-secondary">Configurator</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-md border border-black/5 p-6 sm:p-8">
           <div className="mb-5">
-            <h2 className="text-lg font-semibold text-[#1A1A1A]">
+            <h2 className="text-lg font-semibold text-lx-text-primary">
               Account aanvragen
             </h2>
-            <p className="text-sm text-[#6B7280] mt-1">
+            <p className="text-sm text-lx-text-secondary mt-1">
               Na goedkeuring krijg je toegang tot de configurator.
             </p>
           </div>
@@ -68,7 +68,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="fullName"
-                className="block text-sm font-semibold text-[#374151] mb-1.5"
+                className="block text-sm font-semibold text-lx-text-primary mb-1.5"
               >
                 Naam
               </label>
@@ -78,7 +78,7 @@ export default function RegisterPage() {
                 type="text"
                 required
                 autoComplete="name"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3D6B4F]/40 focus:border-[#3D6B4F] transition-colors"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
                 placeholder="Jan de Vries"
               />
             </div>
@@ -86,7 +86,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="company"
-                className="block text-sm font-semibold text-[#374151] mb-1.5"
+                className="block text-sm font-semibold text-lx-text-primary mb-1.5"
               >
                 Bedrijfsnaam
               </label>
@@ -96,7 +96,7 @@ export default function RegisterPage() {
                 type="text"
                 required
                 autoComplete="organization"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3D6B4F]/40 focus:border-[#3D6B4F] transition-colors"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
                 placeholder="Sanitair BV"
               />
             </div>
@@ -104,17 +104,17 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="phone"
-                className="block text-sm font-semibold text-[#374151] mb-1.5"
+                className="block text-sm font-semibold text-lx-text-primary mb-1.5"
               >
                 Telefoonnummer{' '}
-                <span className="text-xs text-[#9CA3AF] font-normal">(optioneel)</span>
+                <span className="text-xs text-lx-text-secondary font-normal">(optioneel)</span>
               </label>
               <input
                 id="phone"
                 name="phone"
                 type="tel"
                 autoComplete="tel"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3D6B4F]/40 focus:border-[#3D6B4F] transition-colors"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
                 placeholder="06 12345678"
               />
             </div>
@@ -122,7 +122,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-semibold text-[#374151] mb-1.5"
+                className="block text-sm font-semibold text-lx-text-primary mb-1.5"
               >
                 E-mailadres
               </label>
@@ -132,7 +132,7 @@ export default function RegisterPage() {
                 type="email"
                 required
                 autoComplete="email"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3D6B4F]/40 focus:border-[#3D6B4F] transition-colors"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
                 placeholder="jan@sanitairbv.nl"
               />
             </div>
@@ -140,7 +140,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-semibold text-[#374151] mb-1.5"
+                className="block text-sm font-semibold text-lx-text-primary mb-1.5"
               >
                 Wachtwoord
               </label>
@@ -153,7 +153,7 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3D6B4F]/40 focus:border-[#3D6B4F] transition-colors"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
                 placeholder="Minimaal 8 tekens"
               />
               {password.length > 0 && <PasswordStrength password={password} />}
@@ -162,7 +162,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="confirm"
-                className="block text-sm font-semibold text-[#374151] mb-1.5"
+                className="block text-sm font-semibold text-lx-text-primary mb-1.5"
               >
                 Wachtwoord bevestigen
               </label>
@@ -172,7 +172,7 @@ export default function RegisterPage() {
                 type="password"
                 required
                 autoComplete="new-password"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3D6B4F]/40 focus:border-[#3D6B4F] transition-colors"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
                 placeholder="••••••••"
               />
             </div>
@@ -189,18 +189,18 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full bg-[#3D6B4F] text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3D6B4F] mt-1"
+              className="w-full bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lx-cta mt-1"
             >
               {isPending ? 'Aanvraag versturen…' : 'Account aanvragen'}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-sm text-[#6B7280] mt-5">
+        <p className="text-center text-sm text-lx-text-secondary mt-5">
           Al een account?{' '}
           <Link
             href="/login"
-            className="text-[#3D6B4F] font-semibold hover:underline"
+            className="text-lx-cta font-semibold hover:underline"
           >
             Inloggen
           </Link>
@@ -214,11 +214,11 @@ function PasswordStrength({ password }: { password: string }) {
   const { criteria, score } = getStrength(password)
 
   const barColor =
-    score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-orange-400' : score === 3 ? 'bg-yellow-400' : 'bg-[#3D6B4F]'
+    score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-orange-400' : score === 3 ? 'bg-yellow-400' : 'bg-lx-panel-bg'
   const label =
     score <= 1 ? 'Zwak' : score === 2 ? 'Matig' : score === 3 ? 'Goed' : 'Sterk'
   const labelColor =
-    score <= 1 ? 'text-red-500' : score === 2 ? 'text-orange-400' : score === 3 ? 'text-yellow-500' : 'text-[#3D6B4F]'
+    score <= 1 ? 'text-red-500' : score === 2 ? 'text-orange-400' : score === 3 ? 'text-yellow-500' : 'text-lx-cta'
 
   return (
     <div className="mt-2 space-y-2">
@@ -242,12 +242,12 @@ function PasswordStrength({ password }: { password: string }) {
         {criteria.map((c) => (
           <li key={c.label} className="flex items-center gap-1.5">
             <svg
-              className={`w-3.5 h-3.5 flex-shrink-0 ${c.met ? 'text-[#3D6B4F]' : 'text-gray-300'}`}
+              className={`w-3.5 h-3.5 flex-shrink-0 ${c.met ? 'text-lx-cta' : 'text-gray-300'}`}
               fill="none" viewBox="0 0 24 24" stroke="currentColor"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
-            <span className={`text-xs ${c.met ? 'text-[#374151]' : 'text-[#9CA3AF]'}`}>
+            <span className={`text-xs ${c.met ? 'text-lx-text-primary' : 'text-lx-text-secondary'}`}>
               {c.label}
             </span>
           </li>

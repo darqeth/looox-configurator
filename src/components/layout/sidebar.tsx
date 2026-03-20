@@ -13,17 +13,17 @@ interface SidebarProps {
   configCount: number
   isAdmin: boolean
   pendingCount?: number
+  avatarUrl?: string | null
 }
 
-export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, pendingCount = 0 }: SidebarProps) {
+export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, pendingCount = 0, avatarUrl }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
   const firstLetter = userName?.charAt(0)?.toUpperCase() ?? 'U'
 
   const tierProgress = tier === 'Studio' ? 30 : tier === 'Signature' ? 65 : 100
-  const tierNext = tier === 'Studio' ? 'Signature' : tier === 'Signature' ? 'Atelier' : null
-  const tierLabel = tier === 'Studio'
+const tierLabel = tier === 'Studio'
     ? `${orderCount}/10 orders → Signature`
     : tier === 'Signature'
     ? `${orderCount}/25 orders → Atelier`
@@ -41,11 +41,6 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
       badge: configCount > 0 ? String(configCount) : null,
       badgeStyle: 'default',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>,
-    },
-    {
-      href: '/offertes',
-      label: 'Offertes',
-      icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
     },
     {
       href: '/bestellingen',
@@ -73,6 +68,11 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
       badge: pendingCount > 0 ? String(pendingCount) : null,
       badgeStyle: 'pending',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    },
+    {
+      href: '/admin/configuraties',
+      label: 'Klantconfiguraties',
+      icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 10h18"/><path d="M8 15h4"/></svg>,
     },
     {
       href: '/admin/producten',
@@ -111,7 +111,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
   }
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-[#1C1C1E]">
+    <div className="flex flex-col h-full bg-lx-sidebar-bg">
       {/* Logo */}
       <div className="px-5 py-6 border-b border-white/8 text-center">
         <img src="/logo-looox-grey.svg" alt="LoooX" className="h-14 brightness-0 invert opacity-90 mx-auto" />
@@ -152,7 +152,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
         <Link
           href="/configurator/nieuw"
           onClick={() => setOpen(false)}
-          className="flex items-center justify-center gap-1.5 bg-[#3D6B4F] hover:bg-[#2e5540] text-white rounded-xl py-2.5 text-[13.5px] font-semibold transition-colors"
+          className="flex items-center justify-center gap-1.5 bg-lx-cta hover:bg-lx-cta-hover text-white rounded-xl py-2.5 text-[13.5px] font-semibold transition-colors"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
           Nieuwe spiegel
@@ -162,8 +162,11 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
       {/* User */}
       <div className="border-t border-white/8 px-4 py-3.5">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#5DA87A]/25 flex items-center justify-center flex-shrink-0 text-[#6EBD8E] text-sm font-semibold">
-            {firstLetter}
+          <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden">
+            {avatarUrl
+              ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              : <div className="w-full h-full bg-[#5DA87A]/25 flex items-center justify-center text-[#6EBD8E] text-sm font-semibold">{firstLetter}</div>
+            }
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-white text-[13px] font-medium truncate">{userName}</p>
@@ -195,7 +198,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
         <button
           onClick={() => setOpen(true)}
           aria-label="Menu openen"
-          className="text-[#1A1A1A] p-1"
+          className="text-lx-text-primary p-1"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>

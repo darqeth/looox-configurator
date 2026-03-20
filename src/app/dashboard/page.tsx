@@ -4,6 +4,7 @@ import Link from 'next/link'
 import SearchButton from '@/components/layout/search-button'
 import ChangelogModal from '@/components/dashboard/changelog-modal'
 import OrderButton from '@/app/configuraties/order-button'
+import NotificationBell from './notification-bell'
 
 function getGreeting() {
   const h = new Date().getHours()
@@ -33,14 +34,16 @@ export default async function DashboardPage() {
     { data: changelogs },
     { data: rssItems },
     { count: totalConfigCount },
+    { data: notificationItems },
   ] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, tier').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name, company, tier, notifications_read_at').eq('id', user.id).single(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
     supabase.from('orders').select('id', { count: 'exact' }).eq('user_id', user.id),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', user.id).in('status', ['pending', 'confirmed']),
     supabase.from('changelogs').select('id, title, body, published_at').order('published_at', { ascending: false }),
     supabase.from('rss_cache').select('id, title, url, summary, image_url, published_at').order('published_at', { ascending: false }).limit(4),
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('notifications').select('id, title, body, type, published_at').order('published_at', { ascending: false }).limit(20),
   ])
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'daar'
@@ -68,10 +71,10 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <SearchButton />
-          {/* Notificatie bel */}
-          <button className="w-9 h-9 rounded-xl bg-white border border-black/8 shadow-sm flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary transition-colors">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          </button>
+          <NotificationBell
+            notifications={notificationItems ?? []}
+            readAt={profile?.notifications_read_at ?? null}
+          />
         </div>
       </div>
 

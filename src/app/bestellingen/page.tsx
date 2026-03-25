@@ -122,6 +122,20 @@ export default async function BestellingenPage() {
                     {STATUS_LABELS[order.status] ?? order.status}
                   </span>
                 </div>
+
+                {/* Download PDF */}
+                <a
+                  href={`/api/pdf/order/${order.id}`}
+                  download
+                  title="Download orderbevestiging (PDF)"
+                  className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </a>
               </div>
             )
           })}

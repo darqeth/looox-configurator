@@ -180,6 +180,19 @@ export default async function ConfiguratiesPage({
 
                   {/* Acties */}
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Offerte PDF download — altijd beschikbaar */}
+                    <a
+                      href={`/api/pdf/offerte/${config.id}`}
+                      download
+                      title="Download offerte (PDF)"
+                      className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-cta transition-colors"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                    </a>
                     {config.status === 'ordered' ? (
                       <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">
                         Besteld

@@ -382,8 +382,8 @@ export default function OfferteDocument({
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>{dealer.company ?? dealer.name ?? ''} · {dealer.email}</Text>
-          <Text style={styles.footerText}>Offerte {configName ?? ''} · {today}</Text>
+          <Text style={styles.footerText}>{dealer.company ?? dealer.name ?? ''} - {dealer.email}</Text>
+          <Text style={styles.footerText}>Offerte {configName ?? ''} - {today}</Text>
         </View>
 
       </Page>

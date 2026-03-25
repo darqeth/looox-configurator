@@ -380,7 +380,7 @@ export default function OrderDocument({
               <Text style={styles.totalLabel}>Totaal</Text>
               <Text style={styles.totalValue}>{formatPrice(totalPrice)}</Text>
             </View>
-            <Text style={styles.vatNote}>Alle prijzen excl. BTW · Netto inkoopprijs</Text>
+            <Text style={styles.vatNote}>Alle prijzen excl. BTW - Netto inkoopprijs</Text>
           </View>
         </View>
 
@@ -396,8 +396,8 @@ export default function OrderDocument({
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>LoooX · Spiegel op maat · info@looox.nl</Text>
-          <Text style={styles.footerText}>{orderNumber} · {formatDate(orderDate)}</Text>
+          <Text style={styles.footerText}>LoooX - Spiegel op maat - info@looox.nl</Text>
+          <Text style={styles.footerText}>{orderNumber} - {formatDate(orderDate)}</Text>
         </View>
 
       </Page>

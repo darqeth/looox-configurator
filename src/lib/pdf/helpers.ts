@@ -90,7 +90,7 @@ export function formatDimensions(
   height: number | null,
   opts: ConfigOptions
 ): string {
-  if (shape === 'rond') return opts.diameter ? `⌀ ${opts.diameter} cm` : '—'
+  if (shape === 'rond') return opts.diameter ? `O ${opts.diameter} cm` : '—'
   if (shape === 'organic') return opts.organicSizeKey ? (ORGANIC_LABELS[opts.organicSizeKey] ?? opts.organicSizeKey) : '—'
   if (shape === 'op-aanvraag') return 'Op aanvraag'
   if (width && height) return `${width} × ${height} cm`
@@ -106,7 +106,7 @@ export function formatLight(light?: ConfigOptions['directLight']): string {
   const pos = POSITION_LABELS[light.position] ?? light.position
   const type = light.type ? (TYPE_LABELS[light.type] ?? light.type) : ''
   const ctrl = light.control ? (CONTROL_LABELS[light.control] ?? light.control) : ''
-  return [pos, type, ctrl].filter(Boolean).join(' · ')
+  return [pos, type, ctrl].filter(Boolean).join(' / ')
 }
 
 export function formatExtras(extras?: string[], optionSubChoices?: Record<string, string>): string {
@@ -130,5 +130,5 @@ export function formatDate(iso: string): string {
 }
 
 export function formatPrice(amount: number): string {
-  return `€\u202F${amount.toLocaleString('nl-NL')}`
+  return `€ ${new Intl.NumberFormat('nl-NL').format(amount)}`
 }

@@ -419,7 +419,7 @@ export default function OrderDocument({
           </View>
           <Image
             src={attachmentUrl}
-            style={{ width: '100%', objectFit: 'contain', maxHeight: 680 }}
+            style={{ width: 515, height: 680, objectFit: 'contain' }}
           />
           <View style={styles.footer} fixed>
             <Text style={styles.footerText}>LoooX - Spiegel op maat - info@looox.nl</Text>

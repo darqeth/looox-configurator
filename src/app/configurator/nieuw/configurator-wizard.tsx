@@ -189,9 +189,12 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
         const { error: uploadError } = await supabase.storage
           .from('attachments')
           .upload(path, schunineZijdenFile, { upsert: false })
-        if (!uploadError) {
+        if (uploadError) {
+          console.error('[upload] Supabase Storage fout:', uploadError)
+        } else {
           const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path)
           attachmentUrl = urlData.publicUrl
+          console.log('[upload] Bijlage opgeslagen:', attachmentUrl)
         }
       }
 

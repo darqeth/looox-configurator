@@ -150,10 +150,27 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
     })
   }
 
+  async function uploadAttachment(): Promise<string | null> {
+    if (!schunineZijdenFile) return null
+    const supabase = createClient()
+    const ext = schunineZijdenFile.name.split('.').pop() ?? 'bin'
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('attachments')
+      .upload(path, schunineZijdenFile, { upsert: false })
+    if (uploadError) {
+      console.error('[upload] Supabase Storage fout:', uploadError)
+      return null
+    }
+    const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path)
+    return urlData.publicUrl
+  }
+
   async function handleSave() {
     if (!shape || !projectName.trim()) return
     setSaving(true)
     try {
+      const attachmentUrl = await uploadAttachment()
       const payload = {
         shape, width, height, diameter, organicSizeKey, glasKleur,
         directLight, indirectLight, selectedOptions, optionSubChoices,
@@ -162,6 +179,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
         description: description.trim(),
         quantity,
         status: 'saved' as const,
+        attachmentUrl,
       }
       if (isEditing && initialConfig) {
         await updateConfiguration({ ...payload, configId: initialConfig.id })
@@ -180,23 +198,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
     if (!shape || !projectName.trim()) return
     setSaving(true)
     try {
-      // Upload bijlage naar Supabase Storage (indien aanwezig)
-      let attachmentUrl: string | null = null
-      if (schunineZijdenFile) {
-        const supabase = createClient()
-        const ext = schunineZijdenFile.name.split('.').pop() ?? 'bin'
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('attachments')
-          .upload(path, schunineZijdenFile, { upsert: false })
-        if (uploadError) {
-          console.error('[upload] Supabase Storage fout:', uploadError)
-        } else {
-          const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path)
-          attachmentUrl = urlData.publicUrl
-          console.log('[upload] Bijlage opgeslagen:', attachmentUrl)
-        }
-      }
+      const attachmentUrl = await uploadAttachment()
 
       const result = await placeOrder({
         shape, width, height, diameter, organicSizeKey, glasKleur,

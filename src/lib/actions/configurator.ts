@@ -40,6 +40,7 @@ type SaveConfigInput = {
   description: string
   quantity: number
   status: 'draft' | 'saved'
+  attachmentUrl?: string | null
 }
 
 export async function saveConfiguration(input: SaveConfigInput) {
@@ -75,6 +76,7 @@ export async function saveConfiguration(input: SaveConfigInput) {
     reference: input.reference,
     description: input.description,
     quantity: input.quantity,
+    attachmentUrl: input.attachmentUrl ?? null,
   }
 
   const { error } = await supabase.from('configurations').insert({
@@ -162,6 +164,7 @@ export async function updateConfiguration(input: UpdateConfigInput) {
     reference: input.reference,
     description: input.description,
     quantity: input.quantity,
+    attachmentUrl: input.attachmentUrl ?? null,
   }
 
   const { error } = await supabase.from('configurations').update({

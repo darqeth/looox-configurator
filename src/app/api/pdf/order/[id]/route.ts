@@ -85,6 +85,7 @@ export async function GET(
     totalPrice: Number(order.total_price),
     quantity: order.quantity,
     notes: order.notes,
+    attachmentUrl: (opts.attachmentUrl as string | null) ?? null,
   }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const filename = `LoooX-Order-${order.order_number}.pdf`

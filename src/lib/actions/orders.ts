@@ -27,6 +27,7 @@ type PlaceOrderInput = {
   reference: string
   description: string
   quantity: number
+  attachmentUrl?: string | null
 }
 
 async function generateOrderNumber(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
@@ -71,6 +72,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     reference: input.reference,
     description: input.description,
     quantity: input.quantity,
+    attachmentUrl: input.attachmentUrl ?? null,
   }
 
   // 1. Sla configuratie op met status 'ordered'

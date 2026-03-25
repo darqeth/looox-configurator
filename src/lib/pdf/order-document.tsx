@@ -4,6 +4,7 @@ import {
   Page,
   View,
   Text,
+  Image,
   StyleSheet,
 } from '@react-pdf/renderer'
 import {
@@ -231,6 +232,7 @@ export type OrderDocumentProps = {
   totalPrice: number
   quantity: number
   notes?: string | null
+  attachmentUrl?: string | null
 }
 
 const STATUS_NL: Record<string, string> = {
@@ -243,7 +245,7 @@ const STATUS_NL: Record<string, string> = {
 
 export default function OrderDocument({
   orderNumber, orderDate, articleNumber, status,
-  dealer, config, unitPrice, totalPrice, quantity, notes,
+  dealer, config, unitPrice, totalPrice, quantity, notes, attachmentUrl,
 }: OrderDocumentProps) {
   const opts = config.options
 
@@ -401,6 +403,31 @@ export default function OrderDocument({
         </View>
 
       </Page>
+
+      {/* Bijlage: maattekening schuine zijden */}
+      {attachmentUrl && (
+        <Page size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.logo}>LoooX</Text>
+            </View>
+            <View style={styles.headerRight}>
+              <Text style={styles.docTitle}>Bijlage - Maattekening</Text>
+              <Text style={styles.headerMeta}>Ordernummer: {orderNumber}</Text>
+              <Text style={styles.headerMeta}>{config.name ?? ''}</Text>
+            </View>
+          </View>
+          <Image
+            src={attachmentUrl}
+            style={{ width: '100%', objectFit: 'contain', maxHeight: 680 }}
+          />
+          <View style={styles.footer} fixed>
+            <Text style={styles.footerText}>LoooX - Spiegel op maat - info@looox.nl</Text>
+            <Text style={styles.footerText}>{orderNumber} - Bijlage maattekening</Text>
+          </View>
+        </Page>
+      )}
+
     </Document>
   )
 }

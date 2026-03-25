@@ -12,6 +12,7 @@ import StepSamenvatting from './step-samenvatting'
 import PricePanel from './price-panel'
 import { saveConfiguration, updateConfiguration } from '@/lib/actions/configurator'
 import { placeOrder } from '@/lib/actions/orders'
+import { createClient } from '@/lib/supabase/client'
 
 interface InitialConfig {
   id: string
@@ -179,6 +180,21 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
     if (!shape || !projectName.trim()) return
     setSaving(true)
     try {
+      // Upload bijlage naar Supabase Storage (indien aanwezig)
+      let attachmentUrl: string | null = null
+      if (schunineZijdenFile) {
+        const supabase = createClient()
+        const ext = schunineZijdenFile.name.split('.').pop() ?? 'bin'
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('attachments')
+          .upload(path, schunineZijdenFile, { upsert: false })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path)
+          attachmentUrl = urlData.publicUrl
+        }
+      }
+
       const result = await placeOrder({
         shape, width, height, diameter, organicSizeKey, glasKleur,
         directLight, indirectLight, selectedOptions, optionSubChoices,
@@ -186,6 +202,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
         reference: reference.trim(),
         description: description.trim(),
         quantity,
+        attachmentUrl,
       })
       setOrderResult(result)
     } catch (e) {

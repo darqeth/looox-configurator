@@ -12,6 +12,7 @@ export type ConfigOptions = {
   reference?: string
   description?: string
   quantity?: number
+  attachmentUrl?: string | null
 }
 
 const SHAPE_LABELS: Record<string, string> = {

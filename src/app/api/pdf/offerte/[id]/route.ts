@@ -39,6 +39,7 @@ export async function GET(
 
   const priceFactor = Number(profile?.price_factor ?? 1)
   const priceFactorEnabled = profile?.price_factor_enabled ?? false
+  const attachmentUrl = (opts.attachmentUrl as string | null) ?? null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(React.createElement(OfferteDocument, {
@@ -62,6 +63,7 @@ export async function GET(
     quantity,
     priceFactor,
     priceFactorEnabled,
+    attachmentUrl,
   }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const safeName = (config.name ?? 'offerte').replace(/[^a-z0-9\-_]/gi, '-')

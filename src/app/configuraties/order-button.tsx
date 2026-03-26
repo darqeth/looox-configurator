@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { placeOrderFromConfig } from '@/lib/actions/orders'
+import { useDiscountCode } from '@/hooks/useDiscountCode'
 
 interface OrderButtonProps {
   configId: string
@@ -20,11 +21,21 @@ export default function OrderButton({ configId, configName, metaSummary, price }
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
 
+  const subtotal = price * quantity
+  const { input: discountInput, setInput: setDiscountInput, validating: discountValidating, error: discountError, setError: setDiscountError, applied: appliedDiscount, setApplied: setAppliedDiscount, discountAmount, validate: handleValidate, reset: resetDiscount } = useDiscountCode(subtotal)
+  const finalTotal = subtotal - discountAmount
+
   async function handleOrder() {
     if (!checked) return
     setLoading(true)
     try {
-      const { orderNumber } = await placeOrderFromConfig(configId, quantity, notes)
+      const { orderNumber } = await placeOrderFromConfig(
+        configId, quantity, notes,
+        appliedDiscount?.id ?? null,
+        appliedDiscount?.type ?? null,
+        appliedDiscount?.value ?? null,
+        appliedDiscount?.useType ?? null,
+      )
       setResult(orderNumber)
       router.refresh()
     } catch (e) {
@@ -40,11 +51,12 @@ export default function OrderButton({ configId, configName, metaSummary, price }
     setChecked(false)
     setLoading(false)
     setResult(null)
+    resetDiscount()
   }
 
   return (
     <>
-      {/* Trigger knop — altijd zichtbaar */}
+      {/* Trigger knop */}
       <button
         onClick={() => setOpen(true)}
         className="px-3 py-1.5 rounded-lg bg-lx-cta text-white text-[12.5px] font-semibold hover:bg-lx-cta-hover transition-colors whitespace-nowrap"
@@ -108,10 +120,28 @@ export default function OrderButton({ configId, configName, metaSummary, price }
                 </div>
 
                 <div className="px-6 py-5 space-y-4">
-                  {/* Prijs */}
-                  <div className="bg-lx-panel-bg rounded-xl px-4 py-3 flex items-center justify-between">
-                    <span className="text-[12.5px] text-lx-text-secondary">Eenheidsprijs</span>
-                    <span className="text-[15px] font-bold text-lx-cta">€{price.toLocaleString('nl-NL')} <span className="text-[11px] font-normal text-lx-text-secondary">excl. btw</span></span>
+                  {/* Prijs samenvatting */}
+                  <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12.5px] text-lx-text-secondary">Eenheidsprijs</span>
+                      <span className="text-[14px] font-bold text-lx-cta">€{price.toLocaleString('nl-NL')} <span className="text-[11px] font-normal text-lx-text-secondary">excl. btw</span></span>
+                    </div>
+                    {appliedDiscount && (
+                      <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                        <span className="text-[12px] text-green-600">
+                          Korting ({appliedDiscount.type === 'pct' ? `${appliedDiscount.value}%` : `€${appliedDiscount.value} eenmalig`})
+                        </span>
+                        <span className="text-[12px] font-semibold text-green-600">
+                          −€{discountAmount.toLocaleString('nl-NL')}
+                        </span>
+                      </div>
+                    )}
+                    {(appliedDiscount || quantity > 1) && (
+                      <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                        <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal {quantity}×</span>
+                        <span className="text-[15px] font-bold text-lx-text-primary">€{finalTotal.toLocaleString('nl-NL')}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Aantal */}
@@ -135,10 +165,48 @@ export default function OrderButton({ configId, configName, metaSummary, price }
                         className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
                         tabIndex={-1}
                       >+</button>
-                      {quantity > 1 && (
-                        <span className="text-[13px] text-lx-text-secondary">= €{(price * quantity).toLocaleString('nl-NL')} totaal</span>
-                      )}
                     </div>
+                  </div>
+
+                  {/* Kortingscode */}
+                  <div>
+                    <label className="text-[12px] font-semibold text-lx-text-secondary mb-2 block">
+                      Kortingscode <span className="font-normal">(optioneel)</span>
+                    </label>
+                    {appliedDiscount ? (
+                      <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-green-50 border border-green-200">
+                        <span className="text-[12.5px] text-green-700 font-semibold font-mono">{appliedDiscount.code}</span>
+                        <button
+                          onClick={() => { setAppliedDiscount(null); setDiscountInput('') }}
+                          className="text-[11px] text-lx-text-secondary hover:text-red-400 transition-colors"
+                        >
+                          Verwijderen
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={discountInput}
+                            onChange={(e) => { setDiscountInput(e.target.value); setDiscountError('') }}
+                            onKeyDown={(e) => e.key === 'Enter' && discountInput.trim() && handleValidate()}
+                            placeholder="Bijv. LX-ABCD-1234"
+                            className="flex-1 h-9 rounded-xl border border-black/12 px-3.5 text-[13px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
+                          />
+                          <button
+                            onClick={handleValidate}
+                            disabled={!discountInput.trim() || discountValidating}
+                            className="px-3.5 h-9 rounded-xl bg-lx-panel-bg border border-black/12 text-[12.5px] font-semibold text-lx-text-secondary hover:text-lx-text-primary disabled:opacity-40 transition-colors whitespace-nowrap"
+                          >
+                            {discountValidating ? '…' : 'Valideer'}
+                          </button>
+                        </div>
+                        {discountError && (
+                          <p className="text-[11px] text-red-500 mt-1">{discountError}</p>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   {/* Opmerkingen */}
@@ -163,7 +231,7 @@ export default function OrderButton({ configId, configName, metaSummary, price }
                         className="sr-only"
                       />
                       <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
-                        checked ? 'bg-lx-panel-bg border-lx-panel-bg' : 'bg-white border-black/20'
+                        checked ? 'bg-lx-cta border-lx-cta' : 'bg-white border-black/20'
                       }`}>
                         {checked && (
                           <svg width="10" height="10" viewBox="0 0 10 10" fill="none">

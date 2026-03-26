@@ -49,21 +49,34 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check approval status (niet op pending pagina zelf)
+  // approval_status is synced to auth.users.raw_app_meta_data via DB trigger,
+  // so it's available directly from getUser() without an extra profiles query.
+  // Run `supabase/improvements-migration.sql` to enable this optimisation.
   if (!isPendingPage) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('approval_status')
-      .eq('id', user.id)
-      .single()
+    const approvalStatus = (user.app_metadata?.approval_status as string | undefined) ?? null
 
-    if (!profile || profile.approval_status === 'pending') {
-      return NextResponse.redirect(new URL('/pending', request.url))
-    }
+    if (approvalStatus === null) {
+      // Fallback: trigger not yet run — query profiles table directly
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('approval_status')
+        .eq('id', user.id)
+        .single()
 
-    if (profile.approval_status === 'rejected') {
-      return NextResponse.redirect(
-        new URL('/pending?rejected=true', request.url)
-      )
+      const status = profile?.approval_status ?? null
+      if (!status || status === 'pending') {
+        return NextResponse.redirect(new URL('/pending', request.url))
+      }
+      if (status === 'rejected') {
+        return NextResponse.redirect(new URL('/pending?rejected=true', request.url))
+      }
+    } else {
+      if (approvalStatus === 'pending') {
+        return NextResponse.redirect(new URL('/pending', request.url))
+      }
+      if (approvalStatus === 'rejected') {
+        return NextResponse.redirect(new URL('/pending?rejected=true', request.url))
+      }
     }
   }
 

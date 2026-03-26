@@ -13,6 +13,9 @@ export type ConfigOptions = {
   description?: string
   quantity?: number
   attachmentUrl?: string | null
+  discountType?: 'pct' | 'fixed' | null
+  discountValue?: number | null
+  discountAmount?: number | null
 }
 
 const SHAPE_LABELS: Record<string, string> = {

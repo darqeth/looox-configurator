@@ -7,9 +7,10 @@ import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configura
 function generateArticleNumber(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   const year = new Date().getFullYear()
+  const randomBytes = crypto.getRandomValues(new Uint8Array(6))
   let result = `LX-${year}-`
   for (let i = 0; i < 6; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)]
+    result += chars[randomBytes[i] % chars.length]
   }
   return result
 }
@@ -132,6 +133,10 @@ export async function adminDeleteConfiguration(configId: string) {
 type UpdateConfigInput = SaveConfigInput & { configId: string }
 
 export async function updateConfiguration(input: UpdateConfigInput) {
+  if (!(['draft', 'saved'] as const).includes(input.status)) {
+    throw new Error('Ongeldige status')
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')

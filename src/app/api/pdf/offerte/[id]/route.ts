@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { renderToBuffer } from '@react-pdf/renderer'
+import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import OfferteDocument from '@/lib/pdf/offerte-document'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
@@ -34,14 +35,14 @@ export async function GET(
 
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const quantity = (opts.quantity as number | undefined) ?? 1
-  const totalPrice = Number(config.total_price)
-  const unitPrice = quantity > 1 ? Math.round(totalPrice / quantity) : totalPrice
+  const unitPrice = Number(config.total_price) // total_price stores the per-unit price
+  const totalPrice = unitPrice * quantity
 
   const priceFactor = Number(profile?.price_factor ?? 1)
-  const priceFactorEnabled = profile?.price_factor_enabled ?? false
+  // Offerte toont altijd consumentenprijs als factor > 1 (ongeacht toggle)
+  const priceFactorEnabled = priceFactor > 1
   const attachmentUrl = (opts.attachmentUrl as string | null) ?? null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(React.createElement(OfferteDocument, {
     configName: config.name,
     configDate: config.created_at,
@@ -64,7 +65,7 @@ export async function GET(
     priceFactor,
     priceFactorEnabled,
     attachmentUrl,
-  }) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+  }) as React.ReactElement<DocumentProps>)
 
   const safeName = (config.name ?? 'offerte').replace(/[^a-z0-9\-_]/gi, '-')
   const filename = `LoooX-Offerte-${safeName}.pdf`
@@ -73,7 +74,7 @@ export async function GET(
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
       'Content-Length': buffer.length.toString(),
     },
   })

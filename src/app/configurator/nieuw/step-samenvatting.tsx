@@ -14,6 +14,7 @@ import {
   calcTotalPrice,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
+import BestelModal from './bestel-modal'
 
 interface StepSamenvattingProps {
   shape: ShapeSlug
@@ -29,17 +30,18 @@ interface StepSamenvattingProps {
   projectName: string
   reference: string
   description: string
-  quantity: number
   saving: boolean
   schunineZijdenFile: File | null
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
   onDescriptionChange: (v: string) => void
-  onQuantityChange: (v: number) => void
   onSchunineZijdenFileChange: (f: File | null) => void
   onGoToStep: (step: number) => void
   onSave: (asConcept: boolean) => void
-  onOrder: () => void
+  onOrder: (params: {
+    quantity: number
+    discount: { id: string; type: 'pct' | 'fixed'; value: number } | null
+  }) => void
 }
 
 function Row({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
@@ -80,16 +82,16 @@ function getDimensionSummary(shape: ShapeSlug, width: number, height: number, di
 export default function StepSamenvatting({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
-  projectName, reference, description, quantity,
+  projectName, reference, description,
   saving, schunineZijdenFile, onProjectNameChange, onReferenceChange,
-  onDescriptionChange, onQuantityChange, onSchunineZijdenFileChange,
+  onDescriptionChange, onSchunineZijdenFileChange,
   onGoToStep, onSave, onOrder,
 }: StepSamenvattingProps) {
   const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
   const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? shape
   const glasKleurNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? glasKleur
 
-  const totalPrice = calcTotalPrice({
+  const unitPrice = calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur,
     directPosition: directLight.position,
     directType: directLight.type,
@@ -100,10 +102,13 @@ export default function StepSamenvatting({
     selectedOptions,
     optionSubChoices,
   })
+
   const selectedOptionNames = selectedOptions
     .map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name)
     .filter(Boolean)
     .join(', ')
+
+  const orderDisabled = !projectName.trim() || saving || (hasSchunineZijden && !schunineZijdenFile)
 
   return (
     <div className="space-y-6">
@@ -115,6 +120,12 @@ export default function StepSamenvatting({
         <Row label="Directe verlichting" value={getLightSummary(directLight)} onEdit={() => onGoToStep(2)} />
         <Row label="Indirecte verlichting" value={getLightSummary(indirectLight)} onEdit={() => onGoToStep(2)} />
         <Row label="Extra opties" value={selectedOptionNames || 'Geen'} onEdit={() => onGoToStep(3)} />
+      </div>
+
+      {/* Prijs */}
+      <div className="flex items-center justify-between bg-lx-panel-bg rounded-xl px-4 py-3">
+        <span className="text-[12.5px] text-lx-text-secondary">Eenheidsprijs excl. btw</span>
+        <span className="text-[17px] font-bold text-lx-cta">€{unitPrice.toLocaleString('nl-NL')}</span>
       </div>
 
       {/* Project details */}
@@ -204,36 +215,6 @@ export default function StepSamenvatting({
             )}
           </div>
         )}
-
-        <div className="flex items-center gap-4">
-          <div>
-            <label className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Aantal</label>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
-                className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
-              >−</button>
-              <input
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(e) => onQuantityChange(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-16 h-9 rounded-xl border border-black/12 text-center text-[14px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white"
-              />
-              <button
-                onClick={() => onQuantityChange(quantity + 1)}
-                className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
-              >+</button>
-            </div>
-          </div>
-          <div className="flex-1">
-            <p className="text-[12px] text-lx-text-secondary mb-1">Totaal project</p>
-            <p className="text-[18px] font-bold text-lx-cta">
-              €{(totalPrice * quantity).toLocaleString('nl-NL')}
-            </p>
-            <p className="text-[10.5px] text-lx-text-secondary">{quantity}× €{totalPrice.toLocaleString('nl-NL')} p.st. excl. btw</p>
-          </div>
-        </div>
       </div>
 
       {/* Volgende stappen info */}
@@ -257,15 +238,14 @@ export default function StepSamenvatting({
         >
           {saving ? 'Opslaan…' : 'Opslaan'}
         </button>
-        <button
-          onClick={onOrder}
-          disabled={!projectName.trim() || saving || (hasSchunineZijden && !schunineZijdenFile)}
-          className="flex-1 h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {saving
-            ? (shape === 'op-aanvraag' ? 'Aanvraag indienen…' : 'Bestelling plaatsen…')
-            : (shape === 'op-aanvraag' ? 'Offerte aanvragen →' : 'Bestellen →')}
-        </button>
+        <BestelModal
+          shape={shape}
+          unitPrice={unitPrice}
+          projectName={projectName}
+          saving={saving}
+          disabled={orderDisabled}
+          onOrder={onOrder}
+        />
       </div>
       {!projectName.trim() && (
         <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om door te gaan</p>

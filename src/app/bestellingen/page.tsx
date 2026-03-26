@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+const PAGE_SIZE = 20
+
 const STATUS_LABELS: Record<string, string> = {
   pending:   'In behandeling',
   confirmed: 'Bevestigd',
@@ -22,12 +24,21 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default async function BestellingenPage() {
+export default async function BestellingenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: orders } = await supabase
+  const { page } = await searchParams
+  const currentPage = Math.max(1, parseInt(page ?? '1', 10) || 1)
+  const from = (currentPage - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
+  const { data: orders, count } = await supabase
     .from('orders')
     .select(`
       id,
@@ -45,9 +56,12 @@ export default async function BestellingenPage() {
         height,
         selected_options
       )
-    `)
+    `, { count: 'exact' })
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
+    .range(from, to)
+
+  const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
 
   return (
     <div className="p-4 sm:p-6 lg:p-7">
@@ -93,7 +107,7 @@ export default async function BestellingenPage() {
               : '—'
 
             return (
-              <div key={order.id} className="px-5 py-4 flex items-center gap-4 group">
+              <div key={order.id} className="px-5 py-4 flex items-center gap-4">
                 {/* Ordernummer + datum */}
                 <div className="flex-shrink-0 w-36">
                   <p className="text-[13.5px] font-bold text-lx-text-primary font-mono tracking-wide">{order.order_number}</p>
@@ -126,29 +140,39 @@ export default async function BestellingenPage() {
                 {/* Download knoppen */}
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {config && (
+                    <div className="relative group">
+                      <a
+                        href={`/api/pdf/offerte/${config.id}`}
+                        download
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                        </svg>
+                      </a>
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        Klantofferte downloaden
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+                      </div>
+                    </div>
+                  )}
+                  <div className="relative group">
                     <a
-                      href={`/api/pdf/offerte/${config.id}`}
+                      href={`/api/pdf/order/${order.id}`}
                       download
-                      title="Download klantofferte (PDF)"
                       className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
                       </svg>
                     </a>
-                  )}
-                  <a
-                    href={`/api/pdf/order/${order.id}`}
-                    download
-                    title="Download orderbevestiging netto (PDF)"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                  </a>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      Orderbevestiging downloaden
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+                    </div>
+                  </div>
                 </div>
               </div>
             )
@@ -156,16 +180,35 @@ export default async function BestellingenPage() {
         </div>
       )}
 
-      {orders && orders.length > 0 && (
-        <div className="mt-5 flex justify-end">
+      {/* Paginering + nieuwe spiegel */}
+      <div className="mt-5 flex items-center justify-between gap-4">
+        {totalPages > 1 ? (
+          <div className="flex items-center gap-1">
+            {currentPage > 1 && (
+              <Link href={`/bestellingen?page=${currentPage - 1}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">
+                ← Vorige
+              </Link>
+            )}
+            <span className="px-3 py-1.5 text-[12.5px] text-lx-text-secondary">
+              {currentPage} / {totalPages}
+            </span>
+            {currentPage < totalPages && (
+              <Link href={`/bestellingen?page=${currentPage + 1}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">
+                Volgende →
+              </Link>
+            )}
+          </div>
+        ) : <div />}
+
+        {orders && orders.length > 0 && (
           <Link
             href="/configurator/nieuw"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors"
           >
             + Nieuwe spiegel
           </Link>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

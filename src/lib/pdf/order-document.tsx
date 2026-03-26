@@ -394,6 +394,22 @@ export default function OrderDocument({
               <Text style={styles.pricingLabel}>Aantal</Text>
               <Text style={styles.pricingValue}>{quantity}×</Text>
             </View>
+            {opts.discountType && opts.discountAmount ? (
+              <>
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>Subtotaal</Text>
+                  <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice * quantity)}</Text>
+                </View>
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>
+                    Korting ({opts.discountType === 'pct' ? `${opts.discountValue}%` : `${formatPrice(opts.discountValue ?? 0)} eenmalig`})
+                  </Text>
+                  <Text style={[styles.pricingValue, { color: BRAND }]}>
+                    -{formatPrice(opts.discountAmount)}
+                  </Text>
+                </View>
+              </>
+            ) : null}
             <View style={styles.pricingDivider} />
             <View style={styles.pricingRow}>
               <Text style={styles.totalLabel}>Totaal</Text>

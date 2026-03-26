@@ -336,6 +336,12 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
   },
 ]
 
+// ─── Organic basisprijs per maat ─────────────────────────────────────────────
+
+export const ORGANIC_BASE_PRICES: Record<string, number> = {
+  '60x40': 281, '80x60': 345, '100x70': 420, '120x80': 510,
+}
+
 // ─── Prijsberekening ─────────────────────────────────────────────────────────
 
 export function calcBasePrice(
@@ -354,8 +360,7 @@ export function calcBasePrice(
     return (ROND_BASIS_GLAS[diameter] ?? 92) + VASTE_TOESLAG
   }
   if (shape === 'organic') {
-    const prices: Record<string, number> = { '60x40': 281, '80x60': 345, '100x70': 420, '120x80': 510 }
-    return prices[organicSizeKey ?? '60x40'] ?? 281
+    return ORGANIC_BASE_PRICES[organicSizeKey ?? '60x40'] ?? 281
   }
   return 0
 }

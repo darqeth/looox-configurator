@@ -12,6 +12,7 @@ import StepSamenvatting from './step-samenvatting'
 import PricePanel from './price-panel'
 import { saveConfiguration, updateConfiguration } from '@/lib/actions/configurator'
 import { placeOrder } from '@/lib/actions/orders'
+import { checkAndAwardMilestones } from '@/lib/actions/milestones'
 import { createClient } from '@/lib/supabase/client'
 
 interface InitialConfig {
@@ -187,6 +188,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
         await saveConfiguration(payload)
       }
       setSaved(true)
+      await checkAndAwardMilestones()
       router.push('/configuraties')
     } catch (e) {
       console.error(e)
@@ -194,8 +196,12 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
     }
   }
 
-  async function handleOrder() {
+  async function handleOrder({ quantity: qty, discount }: {
+    quantity: number
+    discount: { id: string; type: 'pct' | 'fixed'; value: number; useType: 'single' | 'per_user' } | null
+  }) {
     if (!shape || !projectName.trim()) return
+    setQuantity(qty)
     setSaving(true)
     try {
       const attachmentUrl = await uploadAttachment()
@@ -206,9 +212,14 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
         projectName: projectName.trim(),
         reference: reference.trim(),
         description: description.trim(),
-        quantity,
+        quantity: qty,
         attachmentUrl,
+        discountCodeId: discount?.id ?? null,
+        discountType: discount?.type ?? null,
+        discountValue: discount?.value ?? null,
+        discountUseType: discount?.useType ?? null,
       })
+      await checkAndAwardMilestones()
       setOrderResult(result)
     } catch (e) {
       console.error(e)
@@ -436,12 +447,11 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
                     selectedOptions={selectedOptions}
                     optionSubChoices={optionSubChoices}
                     projectName={projectName} reference={reference}
-                    description={description} quantity={quantity} saving={saving}
+                    description={description} saving={saving}
                     schunineZijdenFile={schunineZijdenFile}
                     onProjectNameChange={setProjectName}
                     onReferenceChange={setReference}
                     onDescriptionChange={setDescription}
-                    onQuantityChange={setQuantity}
                     onSchunineZijdenFileChange={setSchunineZijdenFile}
                     onGoToStep={setStep}
                     onSave={handleSave}

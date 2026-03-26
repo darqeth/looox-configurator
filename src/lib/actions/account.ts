@@ -8,13 +8,18 @@ export async function updateProfile(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
+  const fullName = (formData.get('full_name') as string ?? '').slice(0, 100)
+  const company  = (formData.get('company')   as string ?? '').slice(0, 100)
+  const phone    = (formData.get('phone')     as string ?? '').slice(0, 30)
+  const address  = (formData.get('address')   as string ?? '').slice(0, 200)
+
   const { error } = await supabase
     .from('profiles')
     .update({
-      full_name: formData.get('full_name') as string,
-      company: formData.get('company') as string,
-      phone: formData.get('phone') as string,
-      address: formData.get('address') as string,
+      full_name: fullName,
+      company,
+      phone,
+      address,
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id)
@@ -31,7 +36,7 @@ export async function updatePriceFactor(formData: FormData) {
   const factor  = parseFloat(formData.get('price_factor') as string)
   const enabled = formData.get('price_factor_enabled') === 'on'
 
-  if (isNaN(factor) || factor < 1 || factor > 10) throw new Error('Ongeldige factor (moet tussen 1 en 10 liggen)')
+  if (isNaN(factor) || factor < 1 || factor > 5) throw new Error('Ongeldige factor (moet tussen 1 en 5 liggen)')
 
   const { error } = await supabase
     .from('profiles')

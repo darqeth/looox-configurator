@@ -6,18 +6,18 @@ import { redirect } from 'next/navigation'
 export async function signIn(email: string, password: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) {
-    if (error.message.toLowerCase().includes('email not confirmed'))
+    // Use error.code (stable) with message fallback for older Supabase versions
+    const code = (error as { code?: string }).code
+    if (code === 'email_not_confirmed' || error.message.toLowerCase().includes('email not confirmed'))
       return { error: 'Je e-mailadres is nog niet bevestigd. Check je inbox voor de bevestigingsmail.' }
-    if (error.message.toLowerCase().includes('invalid login credentials'))
+    if (code === 'invalid_credentials' || error.message.toLowerCase().includes('invalid login credentials'))
       return { error: 'E-mailadres of wachtwoord klopt niet.' }
     return { error: error.message }
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = signInData.user
   if (!user) return { error: 'Inloggen mislukt.' }
 
   const { data: profile } = await supabase
@@ -55,14 +55,16 @@ export async function signUp(data: {
   }
   if (!authData.user) return { error: 'Registratie mislukt.' }
 
-  const { error: profileError } = await supabase.from('profiles').insert({
+  // Use upsert so a retry after a failed insert doesn't create a zombie auth user
+  // without a profile row.
+  const { error: profileError } = await supabase.from('profiles').upsert({
     id: authData.user.id,
     email: data.email,
     full_name: data.fullName,
     company: data.company,
     phone: data.phone,
     approval_status: 'pending',
-  })
+  }, { onConflict: 'id' })
 
   if (profileError) return { error: 'Profiel aanmaken mislukt.' }
 

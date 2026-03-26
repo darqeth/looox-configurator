@@ -40,7 +40,7 @@ interface StepSamenvattingProps {
   onSave: (asConcept: boolean) => void
   onOrder: (params: {
     quantity: number
-    discount: { id: string; type: 'pct' | 'fixed'; value: number } | null
+    discount: { id: string; type: 'pct' | 'fixed'; value: number; useType: 'single' | 'per_user' } | null
   }) => void
 }
 

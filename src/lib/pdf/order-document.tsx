@@ -277,7 +277,7 @@ export default function OrderDocument({
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <LoooXLogo width={80} />
+            <LoooXLogo width={110} />
             <Text style={[styles.headerMeta, { marginTop: 4 }]}>Spiegel op maat</Text>
           </View>
           <View style={styles.headerRight}>
@@ -425,7 +425,7 @@ export default function OrderDocument({
       {attachmentUrl && (
         <Page size="A4" style={styles.page}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <LoooXLogo width={60} />
+            <LoooXLogo width={90} />
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK }}>Bijlage - Maattekening</Text>
               <Text style={{ fontSize: 8, color: GRAY, marginTop: 2 }}>{orderNumber} - {config.name ?? ''}</Text>

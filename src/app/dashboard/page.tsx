@@ -473,12 +473,23 @@ export default async function DashboardPage() {
               ))}
 
               {/* Unclaimed achieved milestones */}
-              {circle.unclaimedAchieved.map(m => (
+              {circle.unclaimedAchieved.map(m => {
+                const benefitLabel = m.benefit_type === 'discount_pct'
+                  ? `${m.benefit_value}% korting`
+                  : m.benefit_type === 'discount_fixed'
+                  ? `€${m.benefit_value} korting`
+                  : (m.benefit_description ?? null)
+                return (
                 <div key={m.id} className="flex items-center gap-3 px-5 py-3">
                   <span className="w-5 h-5 rounded-full border-2 border-lx-cta/60 bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   </span>
-                  <span className="text-[13px] font-medium text-lx-text-primary flex-1 truncate min-w-0">{m.title}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-lx-text-primary truncate">{m.title}</p>
+                    {benefitLabel && (
+                      <p className="text-[11px] text-lx-cta font-medium truncate">{benefitLabel}</p>
+                    )}
+                  </div>
                   {(m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') && m.discountCode ? (
                     m.isCodeUsed ? (
                       <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lx-panel-bg text-lx-text-secondary text-[11px] font-mono tracking-widest line-through flex-shrink-0">
@@ -504,7 +515,8 @@ export default async function DashboardPage() {
                     </Link>
                   )}
                 </div>
-              ))}
+                )
+              })}
 
               {/* Upcoming milestones */}
               {circle.upcoming.map(m => {

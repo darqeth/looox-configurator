@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/lib/actions/auth'
+import type { ClosestMilestone } from '@/lib/sidebar-data'
 
 interface SidebarProps {
   userName: string
@@ -15,20 +16,14 @@ interface SidebarProps {
   isAdmin: boolean
   pendingCount?: number
   avatarUrl?: string | null
+  closestMilestone?: ClosestMilestone | null
 }
 
-export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, pendingCount = 0, avatarUrl }: SidebarProps) {
+export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, pendingCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
   const firstLetter = userName?.charAt(0)?.toUpperCase() ?? 'U'
-
-  const tierProgress = tier === 'Studio' ? 30 : tier === 'Signature' ? 65 : 100
-const tierLabel = tier === 'Studio'
-    ? `${orderCount}/10 orders → Signature`
-    : tier === 'Signature'
-    ? `${orderCount}/25 orders → Atelier`
-    : 'Hoogste tier bereikt'
 
   const navItems = [
     {
@@ -144,18 +139,34 @@ const tierLabel = tier === 'Studio'
 
       {/* LoooX Circle widget */}
       <div className="px-3 pb-3">
-        <div className="bg-white/7 rounded-xl p-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-white/45 text-[9px] font-bold tracking-widest uppercase">LoooX Circle</span>
-            <span className="bg-[#5DA87A]/22 text-[#6EBD8E] text-[9.5px] font-bold px-2 py-px rounded-full">{tier}</span>
+        <Link href="/looox-circle" onClick={() => setOpen(false)} className="block">
+          <div className="bg-white/7 hover:bg-white/10 rounded-xl p-3 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/45 text-[9px] font-bold tracking-widest uppercase">LoooX Circle</span>
+              {closestMilestone ? (
+                <span className="text-[#6EBD8E] text-[9.5px] font-semibold tabular-nums">{closestMilestone.pct}%</span>
+              ) : (
+                <span className="bg-[#5DA87A]/22 text-[#6EBD8E] text-[9.5px] font-bold px-2 py-px rounded-full">{tier}</span>
+              )}
+            </div>
+            {closestMilestone ? (
+              <>
+                <p className="text-white/80 text-[11px] font-medium truncate mb-1.5">{closestMilestone.title}</p>
+                <div className="bg-white/10 rounded-full h-1 overflow-hidden mb-1.5">
+                  <div className="bg-[#5FA87A] h-full rounded-full transition-all" style={{ width: `${closestMilestone.pct}%` }} />
+                </div>
+                <p className="text-white/32 text-[9.5px]">{closestMilestone.progressLabel}</p>
+              </>
+            ) : (
+              <>
+                <div className="bg-white/10 rounded-full h-1 overflow-hidden mb-1.5">
+                  <div className="bg-[#5FA87A] h-full rounded-full" style={{ width: '100%' }} />
+                </div>
+                <p className="text-white/32 text-[9.5px]">Alle mijlpalen behaald</p>
+              </>
+            )}
           </div>
-          <div className="bg-white/10 rounded-full h-1 overflow-hidden mb-1.5">
-            <div className="bg-[#5FA87A] h-full rounded-full transition-all" style={{ width: `${tierProgress}%` }} />
-          </div>
-          <p className="text-white/32 text-[9.5px] m-0">
-            {tierLabel}
-          </p>
-        </div>
+        </Link>
       </div>
 
       {/* CTA */}

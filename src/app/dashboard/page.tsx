@@ -41,6 +41,7 @@ export default async function DashboardPage() {
     { data: userMilestonesData },
     { data: revenueSum },
     { data: streakData },
+    { data: usedDiscountCodes },
   ] = await Promise.all([
     supabase.from('profiles').select('full_name, company, tier, notifications_read_at, price_factor, price_factor_enabled').eq('id', user.id).single(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
@@ -54,6 +55,7 @@ export default async function DashboardPage() {
     supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', user.id),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', user.id).single(),
+    supabase.from('discount_codes').select('code').eq('user_id', user.id).not('used_at', 'is', null),
   ])
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'daar'
@@ -73,6 +75,7 @@ export default async function DashboardPage() {
 
     const totalRevenue = Number(revenueSum ?? 0)
     const currentStreak = streakData?.current_streak ?? 0
+    const usedCodesSet = new Set((usedDiscountCodes ?? []).map(c => c.code as string))
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
 
     // Build lookup: milestone_id → { id, achieved_at, claimed_at, discount_code }
@@ -107,9 +110,10 @@ export default async function DashboardPage() {
       const claimedAt = um?.claimed_at ?? null
       const umId = um?.id ?? null
       const discountCode = um?.discount_code ?? null
+      const isCodeUsed = discountCode ? usedCodesSet.has(discountCode) : false
       const current = currentByType[m.goal_type] ?? 0
       const pct = done ? 100 : Math.min(Math.round((current / m.goal_value) * 100), 99)
-      return { ...m, done, isRecent, claimedAt, umId, discountCode, current, pct }
+      return { ...m, done, isRecent, claimedAt, umId, discountCode, isCodeUsed, current, pct }
     })
 
     const doneCount = enriched.filter(m => m.done).length
@@ -119,9 +123,9 @@ export default async function DashboardPage() {
     // 1. Recently achieved: max 1 (newest first)
     const recentlyDone = enriched.filter(m => m.done && m.isRecent).slice(0, 1)
 
-    // 2. Unclaimed achieved: done, not recent, benefit still available
+    // 2. Achieved with benefit: done, not recent
     //    - custom: only if claimed_at IS NULL (PDF not yet downloaded)
-    //    - discount: always show (code available to use)
+    //    - discount: always show (used codes get strikethrough, unused get copy button)
     const unclaimedAchieved = enriched
       .filter(m => m.done && !m.isRecent && (
         (m.benefit_type === 'custom' && m.claimedAt === null) ||
@@ -476,7 +480,13 @@ export default async function DashboardPage() {
                   </span>
                   <span className="text-[13px] font-medium text-lx-text-primary flex-1 truncate min-w-0">{m.title}</span>
                   {(m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') && m.discountCode ? (
-                    <CopyButton text={m.discountCode} label="kortingscode" />
+                    m.isCodeUsed ? (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lx-panel-bg text-lx-text-secondary text-[11px] font-mono tracking-widest line-through flex-shrink-0">
+                        {m.discountCode}
+                      </span>
+                    ) : (
+                      <CopyButton text={m.discountCode} label="kortingscode" />
+                    )
                   ) : m.benefit_type === 'custom' && m.umId ? (
                     <a
                       href={`/api/pdf/milestone/${m.umId}`}

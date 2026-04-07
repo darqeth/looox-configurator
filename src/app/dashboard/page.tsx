@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import SearchButton from '@/components/layout/search-button'
+import CopyButton from '@/components/copy-button'
 import ChangelogModal from '@/components/dashboard/changelog-modal'
 import OrderButton from '@/app/configuraties/order-button'
 import NotificationBell from './notification-bell'
@@ -50,7 +51,7 @@ export default async function DashboardPage() {
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('notifications').select('id, title, body, type, published_at').order('published_at', { ascending: false }).limit(20),
     supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
-    supabase.from('user_milestones').select('milestone_id, achieved_at, claimed_at').eq('user_id', user.id),
+    supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', user.id),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', user.id).single(),
   ])
@@ -74,11 +75,16 @@ export default async function DashboardPage() {
     const currentStreak = streakData?.current_streak ?? 0
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
 
-    // Build lookup: milestone_id → { achieved_at, claimed_at }
+    // Build lookup: milestone_id → { id, achieved_at, claimed_at, discount_code }
     const userMilestoneMap = Object.fromEntries(
       (userMilestonesData ?? []).map(um => [
         um.milestone_id,
-        { achieved_at: um.achieved_at as string | null, claimed_at: um.claimed_at as string | null },
+        {
+          id: um.id as string,
+          achieved_at: um.achieved_at as string | null,
+          claimed_at: um.claimed_at as string | null,
+          discount_code: um.discount_code as string | null,
+        },
       ])
     )
 
@@ -99,9 +105,11 @@ export default async function DashboardPage() {
       const done = !!um?.achieved_at
       const isRecent = done && new Date(um.achieved_at!).getTime() > sevenDaysAgo
       const claimedAt = um?.claimed_at ?? null
+      const umId = um?.id ?? null
+      const discountCode = um?.discount_code ?? null
       const current = currentByType[m.goal_type] ?? 0
       const pct = done ? 100 : Math.min(Math.round((current / m.goal_value) * 100), 99)
-      return { ...m, done, isRecent, claimedAt, current, pct }
+      return { ...m, done, isRecent, claimedAt, umId, discountCode, current, pct }
     })
 
     const doneCount = enriched.filter(m => m.done).length
@@ -461,24 +469,32 @@ export default async function DashboardPage() {
               ))}
 
               {/* Unclaimed achieved milestones */}
-              {circle.unclaimedAchieved.map(m => {
-                const benefitLabel = m.benefit_type === 'discount_pct'
-                  ? `${m.benefit_value}% korting`
-                  : m.benefit_type === 'discount_fixed'
-                  ? `€${m.benefit_value} korting`
-                  : (m.benefit_description ?? 'Voordeel beschikbaar')
-                return (
-                  <div key={m.id} className="flex items-center gap-3 px-5 py-3">
-                    <span className="w-5 h-5 rounded-full border-2 border-lx-cta/60 bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    </span>
-                    <span className="text-[13px] font-medium text-lx-text-primary flex-1 truncate">{m.title}</span>
+              {circle.unclaimedAchieved.map(m => (
+                <div key={m.id} className="flex items-center gap-3 px-5 py-3">
+                  <span className="w-5 h-5 rounded-full border-2 border-lx-cta/60 bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <span className="text-[13px] font-medium text-lx-text-primary flex-1 truncate min-w-0">{m.title}</span>
+                  {(m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') && m.discountCode ? (
+                    <CopyButton text={m.discountCode} label="kortingscode" />
+                  ) : m.benefit_type === 'custom' && m.umId ? (
+                    <a
+                      href={`/api/pdf/milestone/${m.umId}`}
+                      download
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lx-icon-bg hover:bg-lx-divider text-lx-cta text-[11px] font-semibold transition-colors flex-shrink-0"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Download
+                    </a>
+                  ) : (
                     <Link href="/looox-circle" className="text-[11px] text-lx-cta font-medium flex-shrink-0 hover:underline">
-                      {benefitLabel}
+                      Bekijken →
                     </Link>
-                  </div>
-                )
-              })}
+                  )}
+                </div>
+              ))}
 
               {/* Upcoming milestones */}
               {circle.upcoming.map(m => {

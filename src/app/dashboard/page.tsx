@@ -50,7 +50,7 @@ export default async function DashboardPage() {
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('notifications').select('id, title, body, type, published_at').order('published_at', { ascending: false }).limit(20),
     supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
-    supabase.from('user_milestones').select('milestone_id, achieved_at').eq('user_id', user.id),
+    supabase.from('user_milestones').select('milestone_id, achieved_at, claimed_at').eq('user_id', user.id),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', user.id).single(),
   ])
@@ -72,12 +72,14 @@ export default async function DashboardPage() {
 
     const totalRevenue = Number(revenueSum ?? 0)
     const currentStreak = streakData?.current_streak ?? 0
-    const achievedIds = new Set((userMilestonesData ?? []).map(um => um.milestone_id))
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-    const recentIds = new Set(
-      (userMilestonesData ?? [])
-        .filter(um => um.achieved_at && new Date(um.achieved_at).getTime() > sevenDaysAgo)
-        .map(um => um.milestone_id)
+
+    // Build lookup: milestone_id → { achieved_at, claimed_at }
+    const userMilestoneMap = Object.fromEntries(
+      (userMilestonesData ?? []).map(um => [
+        um.milestone_id,
+        { achieved_at: um.achieved_at as string | null, claimed_at: um.claimed_at as string | null },
+      ])
     )
 
     const currentByType: Record<string, number> = {
@@ -93,27 +95,41 @@ export default async function DashboardPage() {
     }
 
     const enriched = (circleMilestones as CircleMilestone[]).map(m => {
-      const done = achievedIds.has(m.id)
-      const isRecent = recentIds.has(m.id)
+      const um = userMilestoneMap[m.id]
+      const done = !!um?.achieved_at
+      const isRecent = done && new Date(um.achieved_at!).getTime() > sevenDaysAgo
+      const claimedAt = um?.claimed_at ?? null
       const current = currentByType[m.goal_type] ?? 0
       const pct = done ? 100 : Math.min(Math.round((current / m.goal_value) * 100), 99)
-      return { ...m, done, isRecent, current, pct }
+      return { ...m, done, isRecent, claimedAt, current, pct }
     })
 
     const doneCount = enriched.filter(m => m.done).length
     const total = enriched.length
     const overallPct = total > 0 ? Math.round((doneCount / total) * 100) : 0
 
-    // Recently achieved: max 1, most recent first
+    // 1. Recently achieved: max 1 (newest first)
     const recentlyDone = enriched.filter(m => m.done && m.isRecent).slice(0, 1)
 
-    // Upcoming: not done, skip shape (can't compute on dashboard), sort by pct desc
+    // 2. Unclaimed achieved: done, not recent, benefit still available
+    //    - custom: only if claimed_at IS NULL (PDF not yet downloaded)
+    //    - discount: always show (code available to use)
+    const unclaimedAchieved = enriched
+      .filter(m => m.done && !m.isRecent && (
+        (m.benefit_type === 'custom' && m.claimedAt === null) ||
+        m.benefit_type === 'discount_pct' ||
+        m.benefit_type === 'discount_fixed'
+      ))
+      .slice(0, 2)
+
+    // 3. Upcoming: fill remaining slots up to max 5 rows total
+    const usedRows = recentlyDone.length + unclaimedAchieved.length
     const upcoming = enriched
       .filter(m => !m.done && m.goal_type !== 'shape')
       .sort((a, b) => b.pct - a.pct)
-      .slice(0, recentlyDone.length > 0 ? 2 : 3)
+      .slice(0, Math.max(0, 3 - usedRows))
 
-    return { doneCount, total, overallPct, recentlyDone, upcoming }
+    return { doneCount, total, overallPct, recentlyDone, unclaimedAchieved, upcoming }
   })()
 
 
@@ -443,6 +459,26 @@ export default async function DashboardPage() {
                   <span className="text-[10px] font-bold text-lx-cta bg-lx-icon-bg px-2 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">Nieuw</span>
                 </div>
               ))}
+
+              {/* Unclaimed achieved milestones */}
+              {circle.unclaimedAchieved.map(m => {
+                const benefitLabel = m.benefit_type === 'discount_pct'
+                  ? `${m.benefit_value}% korting`
+                  : m.benefit_type === 'discount_fixed'
+                  ? `€${m.benefit_value} korting`
+                  : (m.benefit_description ?? 'Voordeel beschikbaar')
+                return (
+                  <div key={m.id} className="flex items-center gap-3 px-5 py-3">
+                    <span className="w-5 h-5 rounded-full border-2 border-lx-cta/60 bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                    <span className="text-[13px] font-medium text-lx-text-primary flex-1 truncate">{m.title}</span>
+                    <Link href="/looox-circle" className="text-[11px] text-lx-cta font-medium flex-shrink-0 hover:underline">
+                      {benefitLabel}
+                    </Link>
+                  </div>
+                )
+              })}
 
               {/* Upcoming milestones */}
               {circle.upcoming.map(m => {

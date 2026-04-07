@@ -36,6 +36,10 @@ export default async function DashboardPage() {
     { data: rssItems },
     { count: totalConfigCount },
     { data: notificationItems },
+    { data: circleMilestones },
+    { data: userMilestonesData },
+    { data: revenueSum },
+    { data: streakData },
   ] = await Promise.all([
     supabase.from('profiles').select('full_name, company, tier, notifications_read_at, price_factor, price_factor_enabled').eq('id', user.id).single(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
@@ -45,6 +49,10 @@ export default async function DashboardPage() {
     supabase.from('rss_cache').select('id, title, url, summary, image_url, published_at').order('published_at', { ascending: false }).limit(4),
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('notifications').select('id, title, body, type, published_at').order('published_at', { ascending: false }).limit(20),
+    supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
+    supabase.from('user_milestones').select('milestone_id, achieved_at').eq('user_id', user.id),
+    supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
+    supabase.from('login_streaks').select('current_streak').eq('user_id', user.id).single(),
   ])
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'daar'
@@ -57,6 +65,56 @@ export default async function DashboardPage() {
   const savedCount = configs?.filter(c => c.status === 'saved').length ?? 0
   const orderCount = orders?.length ?? 0
   const totalConfigs = totalConfigCount ?? 0
+
+  // LoooX Circle widget data
+  const circle = (() => {
+    if (!circleMilestones?.length) return null
+
+    const totalRevenue = Number(revenueSum ?? 0)
+    const currentStreak = streakData?.current_streak ?? 0
+    const achievedIds = new Set((userMilestonesData ?? []).map(um => um.milestone_id))
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const recentIds = new Set(
+      (userMilestonesData ?? [])
+        .filter(um => um.achieved_at && new Date(um.achieved_at).getTime() > sevenDaysAgo)
+        .map(um => um.milestone_id)
+    )
+
+    const currentByType: Record<string, number> = {
+      configs: totalConfigs,
+      orders: orderCount,
+      order_revenue: totalRevenue,
+      streak: currentStreak,
+    }
+
+    type CircleMilestone = {
+      id: string; title: string; goal_type: string; goal_value: number
+      benefit_type: string; benefit_value: number | null; benefit_description: string | null
+    }
+
+    const enriched = (circleMilestones as CircleMilestone[]).map(m => {
+      const done = achievedIds.has(m.id)
+      const isRecent = recentIds.has(m.id)
+      const current = currentByType[m.goal_type] ?? 0
+      const pct = done ? 100 : Math.min(Math.round((current / m.goal_value) * 100), 99)
+      return { ...m, done, isRecent, current, pct }
+    })
+
+    const doneCount = enriched.filter(m => m.done).length
+    const total = enriched.length
+    const overallPct = total > 0 ? Math.round((doneCount / total) * 100) : 0
+
+    // Recently achieved: max 1, most recent first
+    const recentlyDone = enriched.filter(m => m.done && m.isRecent).slice(0, 1)
+
+    // Upcoming: not done, skip shape (can't compute on dashboard), sort by pct desc
+    const upcoming = enriched
+      .filter(m => !m.done && m.goal_type !== 'shape')
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, recentlyDone.length > 0 ? 2 : 3)
+
+    return { doneCount, total, overallPct, recentlyDone, upcoming }
+  })()
 
 
   return (
@@ -340,80 +398,115 @@ export default async function DashboardPage() {
       </div>
 
       {/* LoooX Circle */}
-      {(() => {
-        const milestones = [
-          { title: 'Ontwerper',        desc: '5 configuraties',  current: totalConfigs, goal: 5,  perk: '5% introductiekorting' },
-          { title: 'Eerste bestelling', desc: '1 bestelling',    current: orderCount,   goal: 1,  perk: 'Persoonlijke onboarding call' },
-          { title: 'Vaste partner',    desc: '5 bestellingen',  current: orderCount,   goal: 5,  perk: 'Gratis verzending' },
-          { title: 'Signature',        desc: '10 bestellingen', current: orderCount,   goal: 10, perk: '12% korting op alle orders' },
-        ]
-        const nextTierLabel = tier === 'Studio' ? 'Signature' : tier === 'Signature' ? 'Atelier' : null
-        const ordersToNext = tier === 'Studio' ? Math.max(10 - orderCount, 0) : tier === 'Signature' ? Math.max(30 - orderCount, 0) : 0
-        const progressToNext = tier === 'Studio' ? Math.min(Math.round((orderCount / 10) * 100), 100) :
-                               tier === 'Signature' ? Math.min(Math.round((orderCount / 30) * 100), 100) : 100
-        return (
-          <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
-            {/* Header */}
-            <div className="px-5 py-3.5 border-b border-lx-divider">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-[13.5px] font-semibold text-lx-text-primary">LoooX Circle</span>
-                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">{tier}</span>
-                </div>
-                <Link href="/looox-circle" className="text-[12px] text-lx-cta font-medium hover:text-lx-cta-hover transition-colors">
-                  Mijn voortgang →
-                </Link>
+      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-3.5 border-b border-lx-divider flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[13.5px] font-semibold text-lx-text-primary">LoooX Circle</span>
+            {circle && (
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta tabular-nums">
+                {circle.doneCount} van {circle.total}
+              </span>
+            )}
+          </div>
+          <Link href="/looox-circle" className="text-[12px] text-lx-cta font-medium hover:text-lx-cta-hover transition-colors">
+            Mijn voortgang →
+          </Link>
+        </div>
+
+        {circle ? (
+          <>
+            {/* Overall progress bar */}
+            <div className="px-5 py-3 border-b border-lx-divider">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] text-lx-text-secondary">
+                  {circle.doneCount === circle.total
+                    ? 'Alle mijlpalen behaald'
+                    : `${circle.total - circle.doneCount} mijlpa${circle.total - circle.doneCount === 1 ? 'al' : 'len'} te gaan`}
+                </span>
+                <span className="text-[11px] font-semibold text-lx-cta tabular-nums">{circle.overallPct}%</span>
               </div>
-              {nextTierLabel && (
-                <div className="mt-2.5">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11.5px] text-lx-text-secondary">
-                      {ordersToNext === 0 ? `${nextTierLabel} bereikt` : `Nog ${ordersToNext} order${ordersToNext !== 1 ? 's' : ''} voor ${nextTierLabel}`}
-                    </span>
-                    <span className="text-[11.5px] font-semibold text-lx-cta">{progressToNext}%</span>
-                  </div>
-                  <div className="h-1.5 bg-lx-divider rounded-full overflow-hidden">
-                    <div className="h-full bg-lx-cta rounded-full transition-all" style={{ width: `${progressToNext}%` }} />
-                  </div>
-                </div>
-              )}
-              {!nextTierLabel && (
-                <p className="text-[12px] text-lx-cta font-medium mt-1">Hoogste niveau bereikt ✓</p>
-              )}
+              <div className="h-1.5 bg-lx-divider rounded-full overflow-hidden">
+                <div className="h-full bg-lx-cta rounded-full transition-all duration-500" style={{ width: `${circle.overallPct}%` }} />
+              </div>
             </div>
-            {/* Milestones */}
-            <div className="p-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {milestones.map((m) => {
-                const pct = Math.min(Math.round((m.current / m.goal) * 100), 100)
-                const done = m.current >= m.goal
+
+            {/* Milestone rows */}
+            <div className="divide-y divide-lx-divider">
+              {/* Recently achieved */}
+              {circle.recentlyDone.map(m => (
+                <div key={m.id} className="flex items-center gap-3 px-5 py-3 bg-[#F0F4F1]">
+                  <span className="w-5 h-5 rounded-full bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <span className="text-[13px] font-semibold text-lx-cta flex-1 truncate">{m.title}</span>
+                  <span className="text-[10px] font-bold text-lx-cta bg-lx-icon-bg px-2 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">Nieuw</span>
+                </div>
+              ))}
+
+              {/* Upcoming milestones */}
+              {circle.upcoming.map(m => {
+                const progressLabel = (() => {
+                  const v = m.goal_value
+                  const c = Math.min(m.current, v)
+                  if (m.goal_type === 'configs') return `${c} van ${v} config${v !== 1 ? 's' : ''}`
+                  if (m.goal_type === 'orders') return `${c} van ${v} order${v !== 1 ? 's' : ''}`
+                  if (m.goal_type === 'order_revenue') return `€${Math.round(c / 1000 * 10) / 10}k van €${Math.round(v / 1000)}k`
+                  if (m.goal_type === 'streak') return `${c} van ${v} dag${v !== 1 ? 'en' : ''}`
+                  return ''
+                })()
+                // SVG ring indicator: r=7, circumference≈44
+                const circ = 44
+                const dash = Math.round((m.pct / 100) * circ)
                 return (
-                  <div key={m.title} className="bg-lx-panel-bg rounded-[14px] p-3.5">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      {done ? (
-                        <span className="w-3.5 h-3.5 rounded-full bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </span>
-                      ) : (
-                        <span className="w-3.5 h-3.5 rounded-full border-2 border-lx-cta/40 flex-shrink-0" />
+                  <div key={m.id} className="flex items-center gap-3 px-5 py-3">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="flex-shrink-0 -rotate-90">
+                      <circle cx="9" cy="9" r="7" stroke="var(--lx-divider)" strokeWidth="2.5"/>
+                      <circle cx="9" cy="9" r="7" stroke="var(--lx-cta)" strokeWidth="2.5"
+                        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+                        opacity={m.pct === 0 ? 0 : 1}
+                      />
+                    </svg>
+                    <span className="text-[13px] font-medium text-lx-text-primary flex-1 truncate">{m.title}</span>
+                    <div className="flex items-center gap-2.5 flex-shrink-0">
+                      {progressLabel && (
+                        <span className="text-[11px] text-lx-text-secondary tabular-nums">{progressLabel}</span>
                       )}
-                      <p className={`text-[12.5px] font-semibold leading-tight ${done ? 'text-lx-cta' : 'text-lx-text-primary'}`}>{m.title}</p>
+                      {m.pct > 0 && (
+                        <div className="w-14 h-1.5 bg-lx-divider rounded-full overflow-hidden">
+                          <div className="h-full bg-lx-cta rounded-full" style={{ width: `${m.pct}%` }} />
+                        </div>
+                      )}
                     </div>
-                    <p className="text-[11px] text-lx-text-secondary mb-2.5 ml-5">
-                      {m.current}/{m.goal} {m.desc.includes('configuratie') ? 'config.' : 'order' + (m.goal !== 1 ? 's' : '')}
-                    </p>
-                    {!done && (
-                      <div className="h-1 bg-white rounded-full overflow-hidden mb-2">
-                        <div className="h-full bg-lx-cta rounded-full transition-all" style={{ width: `${pct}%` }} />
-                      </div>
-                    )}
-                    <p className="text-[10.5px] text-lx-text-secondary leading-snug">{m.perk}</p>
                   </div>
                 )
               })}
+
+              {/* All done state */}
+              {circle.doneCount === circle.total && circle.recentlyDone.length === 0 && (
+                <div className="px-5 py-4 text-center">
+                  <p className="text-[12.5px] font-semibold text-lx-cta">Alle mijlpalen behaald</p>
+                  <p className="text-[11.5px] text-lx-text-secondary mt-0.5">Bekijk je voordelen op de Circle pagina.</p>
+                </div>
+              )}
+
+              {/* No upcoming, some done */}
+              {circle.upcoming.length === 0 && circle.recentlyDone.length === 0 && circle.doneCount < circle.total && (
+                <div className="px-5 py-4 text-center">
+                  <p className="text-[12px] text-lx-text-secondary">Shape-mijlpalen staan open.</p>
+                  <Link href="/looox-circle" className="text-[12px] text-lx-cta font-medium hover:underline">
+                    Bekijk details →
+                  </Link>
+                </div>
+              )}
             </div>
+          </>
+        ) : (
+          <div className="px-5 py-8 text-center">
+            <p className="text-[13px] text-lx-text-secondary">Mijlpalen worden binnenkort geconfigureerd.</p>
           </div>
-        )
-      })()}
+        )}
+      </div>
     </div>
   )
 }

@@ -529,6 +529,11 @@ export default async function DashboardPage() {
                   if (m.goal_type === 'streak') return `${c} van ${v} dag${v !== 1 ? 'en' : ''}`
                   return ''
                 })()
+                const benefitLabel = m.benefit_type === 'discount_pct'
+                  ? `${m.benefit_value}% korting`
+                  : m.benefit_type === 'discount_fixed'
+                  ? `€${m.benefit_value} korting`
+                  : (m.benefit_description ?? null)
                 // SVG ring indicator: r=7, circumference≈44
                 const circ = 44
                 const dash = Math.round((m.pct / 100) * circ)
@@ -541,7 +546,12 @@ export default async function DashboardPage() {
                         opacity={m.pct === 0 ? 0 : 1}
                       />
                     </svg>
-                    <span className="text-[13px] font-medium text-lx-text-primary flex-1 truncate">{m.title}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-lx-text-primary truncate">{m.title}</p>
+                      {benefitLabel && (
+                        <p className="text-[11px] text-lx-text-secondary truncate">{benefitLabel}</p>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2.5 flex-shrink-0">
                       {progressLabel && (
                         <span className="text-[11px] text-lx-text-secondary tabular-nums">{progressLabel}</span>

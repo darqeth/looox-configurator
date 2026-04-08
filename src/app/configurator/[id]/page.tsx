@@ -10,9 +10,10 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: config, error }, { data: profile }] = await Promise.all([
+  const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([
     supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).eq('user_id', user.id).single(),
-    supabase.from('profiles').select('price_factor, price_factor_enabled').eq('id', user.id).single(),
+    supabase.from('profiles').select('company_id').eq('id', user.id).single(),
+    supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', user.id).maybeSingle(),
   ])
 
   if (error || !config) notFound()
@@ -40,11 +41,27 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     quantity: (opts.quantity as number) ?? 1,
   }
 
+  const isManager = !memberData || memberData.role === 'manager'
+  const canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
+
+  let priceFactor = 1
+  let priceFactorEnabled = false
+  if (profile?.company_id) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('price_factor, price_factor_enabled')
+      .eq('id', profile.company_id)
+      .single()
+    priceFactor = Number(company?.price_factor ?? 1)
+    priceFactorEnabled = company?.price_factor_enabled ?? false
+  }
+
   return (
     <ConfiguratorWizard
       initialConfig={initialConfig}
-      priceFactor={profile?.price_factor ?? 1}
-      priceFactorEnabled={profile?.price_factor_enabled ?? false}
+      priceFactor={priceFactor}
+      priceFactorEnabled={priceFactorEnabled}
+      canSeePurchasePrices={canSeePurchasePrices}
     />
   )
 }

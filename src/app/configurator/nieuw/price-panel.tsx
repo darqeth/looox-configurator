@@ -341,12 +341,13 @@ interface PricePanelProps {
   optionSubChoices: Record<string, string>
   priceFactor?: number
   priceFactorEnabled?: boolean
+  canSeePurchasePrices?: boolean
 }
 
 export default function PricePanel({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
-  priceFactor = 1, priceFactorEnabled = false,
+  priceFactor = 1, priceFactorEnabled = false, canSeePurchasePrices = true,
 }: PricePanelProps) {
   const netto = calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur,
@@ -489,10 +490,10 @@ export default function PricePanel({
       <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-5 space-y-4">
           <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">
-            {showConsumer ? 'Consumentenprijs' : 'Netto inkoopprijs'}
+            {showConsumer ? 'Consumentenprijs' : (canSeePurchasePrices ? 'Netto inkoopprijs' : 'Prijs')}
           </p>
           <AnimatedPrice price={total} />
-          {showConsumer ? (
+          {showConsumer && canSeePurchasePrices ? (
             <p className="text-[11px] text-lx-text-secondary mt-0.5">Netto inkoop: €{netto.toLocaleString('nl-NL')} · excl. btw</p>
           ) : (
             <p className="text-[11px] text-lx-text-secondary mt-0.5">Excl. btw</p>
@@ -507,13 +508,21 @@ export default function PricePanel({
                 <span className="text-lx-text-primary font-semibold flex-shrink-0">€{item.price.toLocaleString('nl-NL')}</span>
               </div>
             ))}
-            <div className="flex justify-between gap-2 text-[13px] font-bold pt-1.5 border-t border-lx-divider mt-1.5">
-              <span className="text-lx-text-primary">Netto totaal</span>
-              <span className="text-lx-cta">€{netto.toLocaleString('nl-NL')}</span>
-            </div>
+            {canSeePurchasePrices && (
+              <div className="flex justify-between gap-2 text-[13px] font-bold pt-1.5 border-t border-lx-divider mt-1.5">
+                <span className="text-lx-text-primary">Netto totaal</span>
+                <span className="text-lx-cta">€{netto.toLocaleString('nl-NL')}</span>
+              </div>
+            )}
             {showConsumer && (
-              <div className="flex justify-between gap-2 text-[13px] font-bold">
+              <div className={`flex justify-between gap-2 text-[13px] font-bold ${canSeePurchasePrices ? '' : 'pt-1.5 border-t border-lx-divider mt-1.5'}`}>
                 <span className="text-lx-text-primary">Consument totaal</span>
+                <span className="text-lx-cta">€{total.toLocaleString('nl-NL')}</span>
+              </div>
+            )}
+            {!showConsumer && !canSeePurchasePrices && (
+              <div className="flex justify-between gap-2 text-[13px] font-bold pt-1.5 border-t border-lx-divider mt-1.5">
+                <span className="text-lx-text-primary">Totaal</span>
                 <span className="text-lx-cta">€{total.toLocaleString('nl-NL')}</span>
               </div>
             )}

@@ -42,10 +42,10 @@ const STEPS = [
 
 const DEFAULT_LIGHT: LightConfig = { position: 'geen', type: null, control: null }
 
-function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, priceFactor, priceFactorEnabled, step, isStep1Valid, projectName, saving, onNext, onSave }: {
+function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, priceFactor, priceFactorEnabled, canSeePurchasePrices, step, isStep1Valid, projectName, saving, onNext, onSave }: {
   shape: ShapeSlug; width: number; height: number; diameter: number | null; organicSizeKey: string | null
   directLight: LightConfig; indirectLight: LightConfig; selectedOptions: string[]; optionSubChoices: Record<string, string>
-  priceFactor: number; priceFactorEnabled: boolean
+  priceFactor: number; priceFactorEnabled: boolean; canSeePurchasePrices: boolean
   step: number; isStep1Valid: boolean; projectName: string; saving: boolean
   onNext: () => void; onSave: () => void
 }) {
@@ -55,11 +55,15 @@ function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, direct
     indirectPosition: indirectLight.position, indirectType: indirectLight.type, indirectControl: indirectLight.control,
     selectedOptions, optionSubChoices,
   })
-  const total = priceFactorEnabled && priceFactor > 1 ? Math.round(netto * priceFactor) : netto
+  const showConsumer = priceFactorEnabled && priceFactor > 1
+  const total = showConsumer ? Math.round(netto * priceFactor) : netto
+  const priceLabel = canSeePurchasePrices
+    ? (showConsumer ? 'Consumentenprijs' : 'Netto inkoopprijs')
+    : (showConsumer ? 'Consumentenprijs' : 'Prijs')
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/8 px-4 py-3 flex items-center justify-between z-30">
       <div>
-        <p className="text-[10px] text-lx-text-secondary font-medium">Netto inkoopprijs</p>
+        <p className="text-[10px] text-lx-text-secondary font-medium">{priceLabel}</p>
         <p className="text-[17px] font-bold text-lx-text-primary">€{total.toLocaleString('nl-NL')}</p>
       </div>
       {step < 4 ? (
@@ -83,7 +87,7 @@ function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, direct
   )
 }
 
-export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, priceFactorEnabled = false }: { initialConfig?: InitialConfig; priceFactor?: number; priceFactorEnabled?: boolean }) {
+export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, priceFactorEnabled = false, canSeePurchasePrices = true }: { initialConfig?: InitialConfig; priceFactor?: number; priceFactorEnabled?: boolean; canSeePurchasePrices?: boolean }) {
   const router = useRouter()
   const isEditing = !!initialConfig
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
@@ -501,6 +505,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
                 optionSubChoices={optionSubChoices}
                 priceFactor={priceFactor}
                 priceFactorEnabled={priceFactorEnabled}
+                canSeePurchasePrices={canSeePurchasePrices}
               />
             </div>
           </div>
@@ -516,6 +521,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
             optionSubChoices={optionSubChoices}
             priceFactor={priceFactor}
             priceFactorEnabled={priceFactorEnabled}
+            canSeePurchasePrices={canSeePurchasePrices}
             step={step} isStep1Valid={step === 1 ? isStep1Valid() : step === 2 ? isStep2Valid() : isStep3Valid()}
             projectName={projectName} saving={saving}
             onNext={() => setStep(step + 1)}

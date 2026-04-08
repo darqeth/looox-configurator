@@ -36,12 +36,29 @@ export async function updatePriceFactor(formData: FormData) {
   const factor  = parseFloat(formData.get('price_factor') as string)
   const enabled = formData.get('price_factor_enabled') === 'on'
 
-  if (isNaN(factor) || factor < 1 || factor > 5) throw new Error('Ongeldige factor (moet tussen 1 en 5 liggen)')
+  if (isNaN(factor) || factor < 1 || factor > 10) throw new Error('Ongeldige factor (moet tussen 1 en 10 liggen)')
+
+  // Alleen managers mogen de factor instellen
+  const { data: member } = await supabase
+    .from('company_members')
+    .select('company_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  // Haal company_id op: via company_members (manager) of via profiles (solo)
+  let companyId: string | null = member?.company_id ?? null
+  if (!companyId) {
+    const { data: profile } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
+    companyId = profile?.company_id ?? null
+  }
+
+  if (member && member.role !== 'manager') throw new Error('Alleen managers kunnen de prijsfactor instellen.')
+  if (!companyId) throw new Error('Geen bedrijf gevonden.')
 
   const { error } = await supabase
-    .from('profiles')
-    .update({ price_factor: factor, price_factor_enabled: enabled, updated_at: new Date().toISOString() })
-    .eq('id', user.id)
+    .from('companies')
+    .update({ price_factor: factor, price_factor_enabled: enabled })
+    .eq('id', companyId)
 
   if (error) throw new Error(error.message)
   revalidatePath('/account')

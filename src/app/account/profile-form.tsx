@@ -103,12 +103,17 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   )
 }
 
-export function PrijsfactorForm({ priceFactor, priceFactorEnabled }: { priceFactor: number; priceFactorEnabled: boolean }) {
+export function PrijsfactorForm({ priceFactor, priceFactorEnabled, isManager = true }: {
+  priceFactor: number
+  priceFactorEnabled: boolean
+  isManager?: boolean
+}) {
   const [status, setStatus]   = useState<'idle' | 'success' | 'error'>('idle')
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
   const [factor, setFactor]   = useState(priceFactor)
   const [factorRaw, setFactorRaw] = useState(String(priceFactor))
+  const [enabled, setEnabled] = useState(priceFactorEnabled)
 
   function handleFactorBlur() {
     const parsed = parseFloat(factorRaw)
@@ -116,10 +121,10 @@ export function PrijsfactorForm({ priceFactor, priceFactorEnabled }: { priceFact
     setFactor(clamped)
     setFactorRaw(String(clamped))
   }
-  const [enabled, setEnabled] = useState(priceFactorEnabled)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!isManager) return
     setLoading(true)
     setStatus('idle')
     try {
@@ -146,13 +151,14 @@ export function PrijsfactorForm({ priceFactor, priceFactorEnabled }: { priceFact
             Wanneer actief worden prijzen in de configurator vermenigvuldigd met de factor. Bestellingen naar LoooX blijven altijd op netto inkoopprijs.
           </p>
         </div>
-        {/* Toggle switch */}
-        <label className="relative flex-shrink-0 cursor-pointer">
+        {/* Toggle switch — grijs en niet klikbaar als niet-manager */}
+        <label className={`relative flex-shrink-0 ${isManager ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
           <input
             type="checkbox"
             name="price_factor_enabled"
             checked={enabled}
-            onChange={e => setEnabled(e.target.checked)}
+            onChange={e => isManager && setEnabled(e.target.checked)}
+            disabled={!isManager}
             className="sr-only peer"
           />
           <div className="w-11 h-6 bg-black/12 peer-checked:bg-lx-cta rounded-full transition-colors duration-200" />
@@ -175,16 +181,24 @@ export function PrijsfactorForm({ priceFactor, priceFactorEnabled }: { priceFact
               max="10"
               step="0.01"
               value={factorRaw}
-              onChange={e => setFactorRaw(e.target.value)}
-              onBlur={handleFactorBlur}
-              className="w-full pl-8 pr-3 py-2.5 text-[13px] font-semibold rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10 outline-none transition-colors"
+              onChange={e => isManager && setFactorRaw(e.target.value)}
+              onBlur={isManager ? handleFactorBlur : undefined}
+              readOnly={!isManager}
+              className={`w-full pl-8 pr-3 py-2.5 text-[13px] font-semibold rounded-xl border outline-none transition-colors ${
+                isManager
+                  ? 'border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10'
+                  : 'border-lx-border bg-lx-panel-bg text-lx-text-secondary cursor-not-allowed'
+              }`}
             />
           </div>
           <p className="text-[12px] text-lx-text-secondary">
             = {factor >= 1 ? `+${Math.round((factor - 1) * 100)}%` : '—'} marge
           </p>
         </div>
-        <p className="text-[11.5px] text-lx-text-secondary mt-1.5">Voer een getal in ≥ 1 in. Bijv. 1.35 = 35% opslag.</p>
+        {isManager
+          ? <p className="text-[11.5px] text-lx-text-secondary mt-1.5">Voer een getal in ≥ 1 in. Bijv. 1.35 = 35% opslag.</p>
+          : <p className="text-[11.5px] text-lx-text-secondary mt-1.5">Alleen managers kunnen de prijsfactor aanpassen.</p>
+        }
       </div>
 
       {/* Live preview */}
@@ -215,15 +229,17 @@ export function PrijsfactorForm({ priceFactor, priceFactorEnabled }: { priceFact
       {status === 'success' && <SuccessBanner message="Consumentenprijzen opgeslagen" />}
       {status === 'error' && <ErrorBanner message={error} />}
 
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
-        >
-          {loading ? 'Opslaan...' : 'Opslaan'}
-        </button>
-      </div>
+      {isManager && (
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors cursor-pointer"
+          >
+            {loading ? 'Opslaan...' : 'Opslaan'}
+          </button>
+        </div>
+      )}
     </form>
   )
 }

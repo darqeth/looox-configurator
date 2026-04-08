@@ -43,9 +43,32 @@ export default async function AccountPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, phone, address, tier, created_at, avatar_url, price_factor, price_factor_enabled')
+    .select('full_name, company, phone, address, tier, created_at, avatar_url, company_id')
     .eq('id', user.id)
     .single()
+
+  const { data: memberData } = await supabase
+    .from('company_members')
+    .select('role, can_see_purchase_prices')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const isManager = !memberData || memberData.role === 'manager'
+  const canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
+
+  // Lees prijsfactor van het bedrijf (bedrijfsbreed)
+  let priceFactor = 1
+  let priceFactorEnabled = false
+  const companyId = profile?.company_id ?? null
+  if (companyId) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('price_factor, price_factor_enabled')
+      .eq('id', companyId)
+      .single()
+    priceFactor = Number(company?.price_factor ?? 1)
+    priceFactorEnabled = company?.price_factor_enabled ?? false
+  }
 
   const tier = tierInfo[profile?.tier ?? 'Studio'] ?? tierInfo.Studio
   const memberSince = profile?.created_at
@@ -100,16 +123,21 @@ export default async function AccountPage() {
           }} />
         </Card>
 
-        {/* Consumentenprijzen */}
-        <Card
-          title="Consumentenprijzen"
-          description="Stel een prijsfactor in voor wanneer je de configurator gebruikt samen met een klant. Bestellingen naar LoooX blijven altijd op netto inkoopprijs."
-        >
-          <PrijsfactorForm
-            priceFactor={profile?.price_factor ?? 1}
-            priceFactorEnabled={profile?.price_factor_enabled ?? false}
-          />
-        </Card>
+        {/* Consumentenprijzen — verborgen voor leden zonder inkoop-permissie */}
+        {canSeePurchasePrices && (
+          <Card
+            title="Consumentenprijzen"
+            description={isManager
+              ? "Stel een prijsfactor in voor wanneer je de configurator gebruikt samen met een klant. Bestellingen naar LoooX blijven altijd op netto inkoopprijs."
+              : "De prijsfactor is ingesteld door de manager van je bedrijf."}
+          >
+            <PrijsfactorForm
+              priceFactor={priceFactor}
+              priceFactorEnabled={priceFactorEnabled}
+              isManager={isManager}
+            />
+          </Card>
+        )}
 
         {/* Beveiliging */}
         <Card title="Beveiliging" description="Kies een sterk wachtwoord van minimaal 8 tekens.">

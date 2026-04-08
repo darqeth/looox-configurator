@@ -16,31 +16,40 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new NextResponse('Unauthorized', { status: 401 })
 
-  // Fetch configuration
+  // Fetch configuration — RLS regelt toegang (eigen configs + bedrijfscollega's)
   const { data: config, error } = await supabase
     .from('configurations')
     .select('id, name, article_number, width, height, total_price, selected_options, created_at')
     .eq('id', id)
-    .eq('user_id', user.id)
     .single()
 
   if (error || !config) return new NextResponse('Not found', { status: 404 })
 
-  // Fetch dealer profile (met price factor)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, company, phone, address, price_factor, price_factor_enabled')
-    .eq('id', user.id)
-    .single()
+  // Fetch dealer profile + bedrijf voor prijsfactor
+  const [{ data: profile }, { data: profileFull }] = await Promise.all([
+    supabase.from('profiles').select('full_name, company, phone, address, company_id').eq('id', user.id).single(),
+    supabase.from('profiles').select('company_id').eq('id', user.id).single(),
+  ])
+
+  // Prijsfactor van het bedrijf (bedrijfsbreed)
+  let priceFactor = 1
+  let priceFactorEnabled = false
+  const companyId = profileFull?.company_id ?? null
+  if (companyId) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('price_factor, price_factor_enabled')
+      .eq('id', companyId)
+      .single()
+    priceFactor = Number(company?.price_factor ?? 1)
+    // Offerte toont altijd consumentenprijs als factor > 1 (ongeacht toggle)
+    priceFactorEnabled = priceFactor > 1
+  }
 
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const quantity = (opts.quantity as number | undefined) ?? 1
   const unitPrice = Number(config.total_price) // total_price stores the per-unit price
   const totalPrice = unitPrice * quantity
-
-  const priceFactor = Number(profile?.price_factor ?? 1)
-  // Offerte toont altijd consumentenprijs als factor > 1 (ongeacht toggle)
-  const priceFactorEnabled = priceFactor > 1
   const attachmentUrl = (opts.attachmentUrl as string | null) ?? null
 
   const buffer = await renderToBuffer(React.createElement(OfferteDocument, {

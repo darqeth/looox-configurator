@@ -13,6 +13,7 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new NextResponse('Unauthorized', { status: 401 })
 
+  // RLS regelt toegang — geen user_id filter nodig voor collega-ondersteuning
   const { data: order, error } = await supabase
     .from('orders')
     .select(`
@@ -34,7 +35,6 @@ export async function GET(
       )
     `)
     .eq('configuration_id', id)
-    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
     .single()

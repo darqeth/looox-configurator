@@ -129,8 +129,9 @@ export default async function DashboardPage() {
     const enriched = (circleMilestones as CircleMilestone[]).map(m => {
       const um = userMilestoneMap[m.id]
       // Behaald als bedrijf het heeft gehaald OF eigen user_milestone bestaat
-      const done = companyAchievedIds.has(m.id) || !!um?.achieved_at
-      const isRecent = done && new Date(um.achieved_at!).getTime() > sevenDaysAgo
+      const done = companyAchievedIds.has(m.id) || !!um?.achieved_at ||
+        (m.goal_type !== 'shape' && (currentByType[m.goal_type] ?? 0) >= m.goal_value)
+      const isRecent = done && !!um?.achieved_at && new Date(um.achieved_at).getTime() > sevenDaysAgo
       const claimedAt = um?.claimed_at ?? null
       const umId = um?.id ?? null
       const discountCode = um?.discount_code ?? null
@@ -158,14 +159,20 @@ export default async function DashboardPage() {
       ))
       .slice(0, 2)
 
-    // 3. Upcoming: fill remaining slots up to max 5 rows total
-    const usedRows = recentlyDone.length + unclaimedAchieved.length
+    // 3. Other achieved: done but not in the above categories (no pending benefit)
+    const shownAchievedIds = new Set([...recentlyDone, ...unclaimedAchieved].map(m => m.id))
+    const otherAchieved = enriched
+      .filter(m => m.done && !shownAchievedIds.has(m.id))
+      .slice(0, 3)
+
+    // 4. Upcoming: fill remaining slots up to max 5 rows total
+    const usedRows = recentlyDone.length + unclaimedAchieved.length + otherAchieved.length
     const upcoming = enriched
       .filter(m => !m.done && m.goal_type !== 'shape')
       .sort((a, b) => b.pct - a.pct)
-      .slice(0, Math.max(0, 3 - usedRows))
+      .slice(0, Math.max(0, 5 - usedRows))
 
-    return { doneCount, total, overallPct, recentlyDone, unclaimedAchieved, upcoming }
+    return { doneCount, total, overallPct, recentlyDone, unclaimedAchieved, otherAchieved, upcoming }
   })()
 
 
@@ -541,6 +548,16 @@ export default async function DashboardPage() {
                 </div>
                 )
               })}
+
+              {/* Other achieved milestones (no pending benefit) */}
+              {circle.otherAchieved.map(m => (
+                <div key={m.id} className="flex items-center gap-3 px-5 py-3">
+                  <span className="w-5 h-5 rounded-full bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  <span className="text-[13px] text-lx-text-primary flex-1 truncate">{m.title}</span>
+                </div>
+              ))}
 
               {/* Upcoming milestones */}
               {circle.upcoming.map(m => {

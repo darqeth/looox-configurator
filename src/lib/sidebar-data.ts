@@ -93,7 +93,7 @@ export async function fetchSidebarData(
   type Milestone = { id: string; title: string; goal_type: string; goal_value: number }
 
   const closest = (milestones as Milestone[] ?? [])
-    .filter(m => !achievedIds.has(m.id) && m.goal_type !== 'shape')
+    .filter(m => !achievedIds.has(m.id) && m.goal_type !== 'shape' && (currentByType[m.goal_type] ?? 0) < m.goal_value)
     .map(m => {
       const current = currentByType[m.goal_type] ?? 0
       const pct = Math.min(Math.round((current / m.goal_value) * 100), 99)

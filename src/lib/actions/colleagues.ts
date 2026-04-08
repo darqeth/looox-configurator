@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { randomBytes } from 'crypto'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,7 +42,11 @@ export async function inviteColleague(email: string): Promise<
 
   if (existing) return { success: false, error: 'Dit e-mailadres is al geregistreerd.' }
 
-  // Insert invite (UNIQUE constraint op company_id+email voorkomt duplicaten)
+  // Genereer token in JS (DEFAULT werkt niet bij upsert met expliciete null)
+  const token = randomBytes(32).toString('hex')
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  // Insert invite; bij conflict (zelfde email+bedrijf) token en datum verversen
   const { data: invite, error } = await supabase
     .from('company_invites')
     .upsert(
@@ -49,9 +54,8 @@ export async function inviteColleague(email: string): Promise<
         company_id: member.company_id,
         invited_by: user.id,
         email,
-        // Reset token en verloopdatum bij opnieuw uitnodigen
-        token: null as unknown as string,  // DB genereert nieuwe token via DEFAULT
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        token,
+        expires_at: expiresAt,
         accepted_at: null,
       },
       { onConflict: 'company_id,email', ignoreDuplicates: false }

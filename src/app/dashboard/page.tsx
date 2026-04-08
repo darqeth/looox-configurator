@@ -28,17 +28,19 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Bedrijfsbrede user_ids voor milestone-check
-  const { data: profileBase } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
-  const companyId = profileBase?.company_id ?? null
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, company, tier, notifications_read_at, price_factor, price_factor_enabled, company_id')
+    .eq('id', user.id).single()
+
+  const companyId = profile?.company_id ?? null
   let companyUserIds: string[] = [user.id]
   if (companyId) {
     const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
-    companyUserIds = [...new Set([user.id, ...(members ?? []).map((m: { user_id: string }) => m.user_id)])]
+    companyUserIds = [...new Set([user.id, ...(members ?? []).map(m => m.user_id as string)])]
   }
 
   const [
-    { data: profile },
     { data: memberData },
     { data: configs },
     { data: orders },
@@ -56,7 +58,6 @@ export default async function DashboardPage() {
     { data: streakData },
     { data: usedDiscountCodes },
   ] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, tier, notifications_read_at, price_factor, price_factor_enabled').eq('id', user.id).single(),
     supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
     supabase.from('orders').select('id', { count: 'exact' }).eq('user_id', user.id),
@@ -67,7 +68,6 @@ export default async function DashboardPage() {
     supabase.from('notifications').select('id, title, body, type, published_at').order('published_at', { ascending: false }).limit(20),
     supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
     supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', user.id),
-    // Bedrijfsbreed: welke milestones zijn door iemand behaald?
     supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.rpc('count_company_configs', { p_user_id: user.id }),
@@ -150,16 +150,13 @@ export default async function DashboardPage() {
 
     // 2. All other achieved: not recent, deduped by id, actionable benefits first, max 3
     const recentIds = new Set(recentlyDone.map(m => m.id))
+    const hasAction = (m: typeof enriched[0]) =>
+      ((m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') && !m.isCodeUsed && !!m.discountCode) ||
+      (m.benefit_type === 'custom' && !m.claimedAt && !!m.umId)
+
     const achieved = enriched
       .filter(m => m.done && !recentIds.has(m.id))
-      .sort((a, b) => {
-        // Actionable benefit first (unused discount or unclaimed custom PDF)
-        const aActionable = (a.benefit_type === 'discount_pct' || a.benefit_type === 'discount_fixed') && !a.isCodeUsed && a.discountCode
-          ? 1 : (a.benefit_type === 'custom' && !a.claimedAt && a.umId ? 1 : 0)
-        const bActionable = (b.benefit_type === 'discount_pct' || b.benefit_type === 'discount_fixed') && !b.isCodeUsed && b.discountCode
-          ? 1 : (b.benefit_type === 'custom' && !b.claimedAt && b.umId ? 1 : 0)
-        return bActionable - aActionable
-      })
+      .sort((a, b) => Number(hasAction(b)) - Number(hasAction(a)))
       .slice(0, 3)
 
     // 3. Upcoming: fill remaining slots up to max 6 total

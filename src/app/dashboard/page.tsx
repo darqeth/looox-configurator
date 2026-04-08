@@ -28,6 +28,15 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Bedrijfsbrede user_ids voor milestone-check
+  const { data: profileBase } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
+  const companyId = profileBase?.company_id ?? null
+  let companyUserIds: string[] = [user.id]
+  if (companyId) {
+    const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
+    companyUserIds = [...new Set([user.id, ...(members ?? []).map((m: { user_id: string }) => m.user_id)])]
+  }
+
   const [
     { data: profile },
     { data: memberData },
@@ -40,7 +49,10 @@ export default async function DashboardPage() {
     { data: notificationItems },
     { data: circleMilestones },
     { data: userMilestonesData },
+    { data: companyMilestonesData },
     { data: revenueSum },
+    { data: companyConfigCount },
+    { data: companyOrderCount },
     { data: streakData },
     { data: usedDiscountCodes },
   ] = await Promise.all([
@@ -55,7 +67,11 @@ export default async function DashboardPage() {
     supabase.from('notifications').select('id, title, body, type, published_at').order('published_at', { ascending: false }).limit(20),
     supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
     supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', user.id),
+    // Bedrijfsbreed: welke milestones zijn door iemand behaald?
+    supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
+    supabase.rpc('count_company_configs', { p_user_id: user.id }),
+    supabase.rpc('count_company_orders', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', user.id).single(),
     supabase.from('discount_codes').select('code').eq('user_id', user.id).not('used_at', 'is', null),
   ])
@@ -82,7 +98,10 @@ export default async function DashboardPage() {
     const usedCodesSet = new Set((usedDiscountCodes ?? []).map(c => c.code as string))
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
 
-    // Build lookup: milestone_id → { id, achieved_at, claimed_at, discount_code }
+    // Bedrijfsbrede achieved milestone_ids
+    const companyAchievedIds = new Set((companyMilestonesData ?? []).map(m => m.milestone_id as string))
+
+    // Eigen user_milestones voor codes en claimed_at
     const userMilestoneMap = Object.fromEntries(
       (userMilestonesData ?? []).map(um => [
         um.milestone_id,
@@ -96,8 +115,8 @@ export default async function DashboardPage() {
     )
 
     const currentByType: Record<string, number> = {
-      configs: totalConfigs,
-      orders: orderCount,
+      configs: Number(companyConfigCount ?? 0),
+      orders: Number(companyOrderCount ?? 0),
       order_revenue: totalRevenue,
       streak: currentStreak,
     }
@@ -109,7 +128,8 @@ export default async function DashboardPage() {
 
     const enriched = (circleMilestones as CircleMilestone[]).map(m => {
       const um = userMilestoneMap[m.id]
-      const done = !!um?.achieved_at
+      // Behaald als bedrijf het heeft gehaald OF eigen user_milestone bestaat
+      const done = companyAchievedIds.has(m.id) || !!um?.achieved_at
       const isRecent = done && new Date(um.achieved_at!).getTime() > sevenDaysAgo
       const claimedAt = um?.claimed_at ?? null
       const umId = um?.id ?? null

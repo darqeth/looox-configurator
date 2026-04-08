@@ -11,9 +11,9 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   if (!user) redirect('/login')
 
   const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([
-    supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).eq('user_id', user.id).single(),
+    supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).single(),
     supabase.from('profiles').select('company_id').eq('id', user.id).single(),
-    supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', user.id).maybeSingle(),
+    supabase.from('company_members').select('role, can_see_purchase_prices, can_order').eq('user_id', user.id).maybeSingle(),
   ])
 
   if (error || !config) notFound()
@@ -43,6 +43,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
 
   const isManager = !memberData || memberData.role === 'manager'
   const canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
+  const canOrder = isManager || (memberData?.can_order ?? true)
 
   let priceFactor = 1
   let priceFactorEnabled = false
@@ -62,6 +63,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
       priceFactor={priceFactor}
       priceFactorEnabled={priceFactorEnabled}
       canSeePurchasePrices={canSeePurchasePrices}
+      canOrder={canOrder}
     />
   )
 }

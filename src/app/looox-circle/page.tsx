@@ -9,39 +9,62 @@ export default async function LoooxCirclePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Haal company_id op voor bedrijfsbrede queries
+  const { data: profileFull } = await supabase.from('profiles').select('full_name, company, created_at, company_id').eq('id', user.id).single()
+  const companyId = profileFull?.company_id ?? null
+
+  // Alle user_ids in hetzelfde bedrijf
+  let companyUserIds: string[] = [user.id]
+  if (companyId) {
+    const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
+    companyUserIds = [...new Set([user.id, ...(members ?? []).map((m: { user_id: string }) => m.user_id)])]
+  }
+
   const [
-    { data: profile },
     { data: milestones },
-    { data: userMilestones },
-    { count: configCount },
-    { count: orderCount },
+    { data: companyMilestones },
+    { data: myMilestones },
+    { data: configCount },
+    { data: orderCount },
     { data: revenueSum },
     { data: streakData },
     { data: shapeData },
     { data: usedDiscountCodes },
   ] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, created_at').eq('id', user.id).single(),
     supabase.from('milestones').select('*').eq('is_active', true).order('sort_order').order('created_at'),
+    // Bedrijfsbreed: welke milestones zijn door iemand in het bedrijf behaald?
+    supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
+    // Huidig gebruiker: eigen codes en claimed_at
     supabase.from('user_milestones').select('*').eq('user_id', user.id),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    // Bedrijfsbrede counts via RPCs
+    supabase.rpc('count_company_configs', { p_user_id: user.id }),
+    supabase.rpc('count_company_orders', { p_user_id: user.id }),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak, longest_streak').eq('user_id', user.id).single(),
     supabase.from('configurations').select('selected_options').eq('user_id', user.id),
     supabase.from('discount_codes').select('code').eq('user_id', user.id).not('used_at', 'is', null),
   ])
 
+  const profile = profileFull
   const company = profile?.company ?? profile?.full_name ?? 'jouw bedrijf'
-  const configs = configCount ?? 0
-  const orders = orderCount ?? 0
+  const configs = Number(configCount ?? 0)
+  const orders = Number(orderCount ?? 0)
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = streakData?.current_streak ?? 0
   const configuredShapes = new Set(
     (shapeData ?? []).map(c => (c.selected_options as { shape?: string })?.shape).filter(Boolean)
   )
 
-  const achievedMap = new Map((userMilestones ?? []).map(um => [um.milestone_id, um]))
+  // Bedrijfsbreed behaalde milestones (als set van milestone_ids)
+  const companyAchievedIds = new Set((companyMilestones ?? []).map(m => m.milestone_id))
+  // Eigen user_milestones (voor codes en claimed_at)
+  const myMilestoneMap = new Map((myMilestones ?? []).map(um => [um.milestone_id, um]))
   const usedCodesSet = new Set((usedDiscountCodes ?? []).map(c => c.code))
+
+  // achievedMap: combineer bedrijfsbrede status met eigen data
+  const achievedMap = new Map(
+    [...companyAchievedIds].map(mid => [mid, myMilestoneMap.get(mid) ?? null])
+  )
 
   function getProgress(m: { goal_type: string; goal_value: number; goal_shape: string | null }) {
     let current = 0
@@ -58,7 +81,9 @@ export default async function LoooxCirclePage() {
   }
 
   const milestonesWithProgress = (milestones ?? []).map(m => {
-    const { current, pct, done } = getProgress(m)
+    const { current, pct, done: progressDone } = getProgress(m)
+    // Behaald = bedrijfsbreed (iemand in het bedrijf heeft het gehaald) OF voortgang voltooid
+    const done = companyAchievedIds.has(m.id) || progressDone
     const um = achievedMap.get(m.id) ?? null
     const discountUsed = um?.discount_code ? usedCodesSet.has(um.discount_code) : false
     return { ...m, current, pct, done, userMilestone: um, discountUsed }

@@ -147,6 +147,17 @@ export async function checkAndAwardMilestones() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
+  // Haal company_id op om bedrijfsbreed te controleren
+  const { data: profileData } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
+  const companyId = profileData?.company_id ?? null
+
+  // Alle user_ids in hetzelfde bedrijf (voor bedrijfsbrede milestone-check)
+  let companyUserIds: string[] = [user.id]
+  if (companyId) {
+    const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
+    companyUserIds = [...new Set([user.id, ...(members ?? []).map(m => m.user_id)])]
+  }
+
   const [
     { data: milestones },
     { data: alreadyAchieved },
@@ -157,8 +168,9 @@ export async function checkAndAwardMilestones() {
     { data: shapeData },
   ] = await Promise.all([
     supabase.from('milestones').select('*').eq('is_active', true),
-    supabase.from('user_milestones').select('milestone_id').eq('user_id', user.id),
-    // Company-brede counts via RPCs (solo user telt alleen eigen data)
+    // Bedrijfsbreed: als IEMAND in het bedrijf de milestone al heeft, niet opnieuw toekennen
+    supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
+    // Company-brede counts via RPCs
     supabase.rpc('count_company_configs', { p_user_id: user.id }),
     supabase.rpc('count_company_orders', { p_user_id: user.id }),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),

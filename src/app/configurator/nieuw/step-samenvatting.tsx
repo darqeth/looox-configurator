@@ -42,6 +42,7 @@ interface StepSamenvattingProps {
     quantity: number
     discount: { id: string; type: 'pct' | 'fixed'; value: number; useType: 'single' | 'per_user' } | null
   }) => void
+  canOrder?: boolean
 }
 
 function Row({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
@@ -85,7 +86,7 @@ export default function StepSamenvatting({
   projectName, reference, description,
   saving, schunineZijdenFile, onProjectNameChange, onReferenceChange,
   onDescriptionChange, onSchunineZijdenFileChange,
-  onGoToStep, onSave, onOrder,
+  onGoToStep, onSave, onOrder, canOrder = true,
 }: StepSamenvattingProps) {
   const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
   const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? shape
@@ -238,14 +239,16 @@ export default function StepSamenvatting({
         >
           {saving ? 'Opslaan…' : 'Opslaan'}
         </button>
-        <BestelModal
-          shape={shape}
-          unitPrice={unitPrice}
-          projectName={projectName}
-          saving={saving}
-          disabled={orderDisabled}
-          onOrder={onOrder}
-        />
+        {canOrder && (
+          <BestelModal
+            shape={shape}
+            unitPrice={unitPrice}
+            projectName={projectName}
+            saving={saving}
+            disabled={orderDisabled}
+            onOrder={onOrder}
+          />
+        )}
       </div>
       {!projectName.trim() && (
         <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om door te gaan</p>

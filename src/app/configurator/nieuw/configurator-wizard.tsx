@@ -87,7 +87,7 @@ function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, direct
   )
 }
 
-export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, priceFactorEnabled = false, canSeePurchasePrices = true }: { initialConfig?: InitialConfig; priceFactor?: number; priceFactorEnabled?: boolean; canSeePurchasePrices?: boolean }) {
+export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, priceFactorEnabled = false, canSeePurchasePrices = true, canOrder = true }: { initialConfig?: InitialConfig; priceFactor?: number; priceFactorEnabled?: boolean; canSeePurchasePrices?: boolean; canOrder?: boolean }) {
   const router = useRouter()
   const isEditing = !!initialConfig
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
@@ -460,6 +460,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
                     onGoToStep={setStep}
                     onSave={handleSave}
                     onOrder={handleOrder}
+                    canOrder={canOrder}
                   />
                 )}
 

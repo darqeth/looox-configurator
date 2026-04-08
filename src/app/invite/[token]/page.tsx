@@ -1,13 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Image from 'next/image'
 import InviteRegisterForm from './invite-register-form'
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
-  const supabase = await createClient()
+  // Gebruik admin client — invite-tabel heeft RLS die auth vereist,
+  // maar de bezoeker van de invite-link is nog niet ingelogd.
+  const admin = createAdminClient()
 
   // Valideer de token server-side
-  const { data: invite } = await supabase
+  const { data: invite } = await admin
     .from('company_invites')
     .select('id, email, company_id, invited_by, expires_at, accepted_at, companies(name)')
     .eq('token', token)
@@ -34,7 +36,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   }
 
   const inviterName = invite.invited_by
-    ? await supabase.from('profiles').select('full_name').eq('id', invite.invited_by).single()
+    ? await admin.from('profiles').select('full_name').eq('id', invite.invited_by).single()
         .then(r => r.data?.full_name ?? null)
     : null
 

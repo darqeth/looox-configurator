@@ -148,31 +148,28 @@ export default async function DashboardPage() {
     // 1. Recently achieved: max 1 (newest first)
     const recentlyDone = enriched.filter(m => m.done && m.isRecent).slice(0, 1)
 
-    // 2. Achieved with benefit: done, not recent
-    //    - custom: only if claimed_at IS NULL (PDF not yet downloaded)
-    //    - discount: always show (used codes get strikethrough, unused get copy button)
-    const unclaimedAchieved = enriched
-      .filter(m => m.done && !m.isRecent && (
-        (m.benefit_type === 'custom' && m.claimedAt === null) ||
-        m.benefit_type === 'discount_pct' ||
-        m.benefit_type === 'discount_fixed'
-      ))
-      .slice(0, 2)
-
-    // 3. Other achieved: done but not in the above categories (no pending benefit)
-    const shownAchievedIds = new Set([...recentlyDone, ...unclaimedAchieved].map(m => m.id))
-    const otherAchieved = enriched
-      .filter(m => m.done && !shownAchievedIds.has(m.id))
+    // 2. All other achieved: not recent, deduped by id, actionable benefits first, max 3
+    const recentIds = new Set(recentlyDone.map(m => m.id))
+    const achieved = enriched
+      .filter(m => m.done && !recentIds.has(m.id))
+      .sort((a, b) => {
+        // Actionable benefit first (unused discount or unclaimed custom PDF)
+        const aActionable = (a.benefit_type === 'discount_pct' || a.benefit_type === 'discount_fixed') && !a.isCodeUsed && a.discountCode
+          ? 1 : (a.benefit_type === 'custom' && !a.claimedAt && a.umId ? 1 : 0)
+        const bActionable = (b.benefit_type === 'discount_pct' || b.benefit_type === 'discount_fixed') && !b.isCodeUsed && b.discountCode
+          ? 1 : (b.benefit_type === 'custom' && !b.claimedAt && b.umId ? 1 : 0)
+        return bActionable - aActionable
+      })
       .slice(0, 3)
 
-    // 4. Upcoming: fill remaining slots up to max 5 rows total
-    const usedRows = recentlyDone.length + unclaimedAchieved.length + otherAchieved.length
+    // 3. Upcoming: fill remaining slots up to max 6 total
+    const usedRows = recentlyDone.length + achieved.length
     const upcoming = enriched
       .filter(m => !m.done && m.goal_type !== 'shape')
       .sort((a, b) => b.pct - a.pct)
-      .slice(0, Math.max(0, 5 - usedRows))
+      .slice(0, Math.max(0, 6 - usedRows))
 
-    return { doneCount, total, overallPct, recentlyDone, unclaimedAchieved, otherAchieved, upcoming }
+    return { doneCount, total, overallPct, recentlyDone, achieved, upcoming }
   })()
 
 
@@ -503,61 +500,49 @@ export default async function DashboardPage() {
                 </div>
               ))}
 
-              {/* Unclaimed achieved milestones */}
-              {circle.unclaimedAchieved.map(m => {
+              {/* Achieved milestones */}
+              {circle.achieved.map(m => {
                 const benefitLabel = m.benefit_type === 'discount_pct'
                   ? `${m.benefit_value}% korting`
                   : m.benefit_type === 'discount_fixed'
                   ? `€${m.benefit_value} korting`
-                  : (m.benefit_description ?? null)
+                  : m.benefit_type === 'custom'
+                  ? (m.benefit_description ?? null)
+                  : null
                 return (
-                <div key={m.id} className="flex items-center gap-3 px-5 py-3">
-                  <span className="w-5 h-5 rounded-full border-2 border-lx-cta/60 bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-lx-text-primary truncate">{m.title}</p>
-                    {benefitLabel && (
-                      <p className="text-[11px] text-lx-cta font-medium truncate">{benefitLabel}</p>
-                    )}
+                  <div key={m.id} className="flex items-center gap-3 px-5 py-3">
+                    <span className="w-5 h-5 rounded-full border-2 border-lx-cta/60 bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-lx-text-primary truncate">{m.title}</p>
+                      {benefitLabel && (
+                        <p className="text-[11px] text-lx-cta font-medium truncate">{benefitLabel}</p>
+                      )}
+                    </div>
+                    {(m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') && m.discountCode ? (
+                      m.isCodeUsed ? (
+                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lx-panel-bg text-lx-text-secondary text-[11px] font-mono tracking-widest line-through flex-shrink-0">
+                          {m.discountCode}
+                        </span>
+                      ) : (
+                        <CopyButton text={m.discountCode} label="kortingscode" />
+                      )
+                    ) : m.benefit_type === 'custom' && m.umId && !m.claimedAt ? (
+                      <a
+                        href={`/api/pdf/milestone/${m.umId}`}
+                        download
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lx-icon-bg hover:bg-lx-divider text-lx-cta text-[11px] font-semibold transition-colors flex-shrink-0"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download
+                      </a>
+                    ) : null}
                   </div>
-                  {(m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') && m.discountCode ? (
-                    m.isCodeUsed ? (
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lx-panel-bg text-lx-text-secondary text-[11px] font-mono tracking-widest line-through flex-shrink-0">
-                        {m.discountCode}
-                      </span>
-                    ) : (
-                      <CopyButton text={m.discountCode} label="kortingscode" />
-                    )
-                  ) : m.benefit_type === 'custom' && m.umId ? (
-                    <a
-                      href={`/api/pdf/milestone/${m.umId}`}
-                      download
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lx-icon-bg hover:bg-lx-divider text-lx-cta text-[11px] font-semibold transition-colors flex-shrink-0"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                      </svg>
-                      Download
-                    </a>
-                  ) : (
-                    <Link href="/looox-circle" className="text-[11px] text-lx-cta font-medium flex-shrink-0 hover:underline">
-                      Bekijken →
-                    </Link>
-                  )}
-                </div>
                 )
               })}
-
-              {/* Other achieved milestones (no pending benefit) */}
-              {circle.otherAchieved.map(m => (
-                <div key={m.id} className="flex items-center gap-3 px-5 py-3">
-                  <span className="w-5 h-5 rounded-full bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </span>
-                  <span className="text-[13px] text-lx-text-primary flex-1 truncate">{m.title}</span>
-                </div>
-              ))}
 
               {/* Upcoming milestones */}
               {circle.upcoming.map(m => {
@@ -607,23 +592,12 @@ export default async function DashboardPage() {
                 )
               })}
 
-              {/* All done state */}
-              {circle.doneCount === circle.total && circle.recentlyDone.length === 0 && (
-                <div className="px-5 py-4 text-center">
-                  <p className="text-[12.5px] font-semibold text-lx-cta">Alle mijlpalen behaald</p>
-                  <p className="text-[11.5px] text-lx-text-secondary mt-0.5">Bekijk je voordelen op de Circle pagina.</p>
-                </div>
-              )}
-
-              {/* No upcoming, some done */}
-              {circle.upcoming.length === 0 && circle.recentlyDone.length === 0 && circle.doneCount < circle.total && (
-                <div className="px-5 py-4 text-center">
-                  <p className="text-[12px] text-lx-text-secondary">Shape-mijlpalen staan open.</p>
-                  <Link href="/looox-circle" className="text-[12px] text-lx-cta font-medium hover:underline">
-                    Bekijk details →
-                  </Link>
-                </div>
-              )}
+              {/* Footer link — always show when there are milestones */}
+              <div className="flex items-center justify-center px-5 py-3">
+                <Link href="/looox-circle" className="text-[12px] text-lx-cta font-medium hover:underline">
+                  Bekijk alle mijlpalen →
+                </Link>
+              </div>
             </div>
           </>
         ) : (

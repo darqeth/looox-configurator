@@ -42,6 +42,13 @@ export async function fetchSidebarData(
   const isManager = memberData?.role === 'manager'
   const companyId = profile?.company_id ?? memberData?.company_id ?? null
 
+  // Bedrijfsbrede user_ids voor milestone-check
+  let companyUserIds: string[] = [userId]
+  if (companyId) {
+    const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
+    companyUserIds = [...new Set([userId, ...(members ?? []).map((m: { user_id: string }) => m.user_id)])]
+  }
+
   const [
     { data: configCount },
     { data: orderCount },
@@ -64,7 +71,7 @@ export async function fetchSidebarData(
           .eq('approval_status', 'pending')
       : Promise.resolve({ count: 0, data: null, error: null }),
     supabase.from('milestones').select('id, title, goal_type, goal_value').eq('is_active', true).order('sort_order'),
-    supabase.from('user_milestones').select('milestone_id').eq('user_id', userId),
+    supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
     supabase.rpc('sum_order_revenue', { p_user_id: userId }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
   ])

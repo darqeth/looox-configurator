@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCompanyUserIds } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import MilestoneCelebration from './milestone-celebration'
@@ -13,12 +14,7 @@ export default async function LoooxCirclePage() {
   const { data: profileFull } = await supabase.from('profiles').select('full_name, company, created_at, company_id').eq('id', user.id).single()
   const companyId = profileFull?.company_id ?? null
 
-  // Alle user_ids in hetzelfde bedrijf
-  let companyUserIds: string[] = [user.id]
-  if (companyId) {
-    const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
-    companyUserIds = [...new Set([user.id, ...(members ?? []).map((m: { user_id: string }) => m.user_id)])]
-  }
+  const companyUserIds = await getCompanyUserIds(supabase, user.id, companyId)
 
   const [
     { data: milestones },

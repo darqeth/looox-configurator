@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCompanyUserIds } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -34,11 +35,7 @@ export default async function DashboardPage() {
     .eq('id', user.id).single()
 
   const companyId = profile?.company_id ?? null
-  let companyUserIds: string[] = [user.id]
-  if (companyId) {
-    const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
-    companyUserIds = [...new Set([user.id, ...(members ?? []).map(m => m.user_id as string)])]
-  }
+  const companyUserIds = await getCompanyUserIds(supabase, user.id, companyId)
 
   const [
     { data: memberData },

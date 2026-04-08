@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getCompanyUserIds } from './company-utils'
 
 export type ClosestMilestone = {
   title: string
@@ -42,12 +43,7 @@ export async function fetchSidebarData(
   const isManager = memberData?.role === 'manager'
   const companyId = profile?.company_id ?? memberData?.company_id ?? null
 
-  // Bedrijfsbrede user_ids voor milestone-check
-  let companyUserIds: string[] = [userId]
-  if (companyId) {
-    const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
-    companyUserIds = [...new Set([userId, ...(members ?? []).map((m: { user_id: string }) => m.user_id)])]
-  }
+  const companyUserIds = await getCompanyUserIds(supabase, userId, companyId)
 
   const [
     { data: configCount },

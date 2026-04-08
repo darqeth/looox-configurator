@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getCompanyUserIds } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -151,12 +152,7 @@ export async function checkAndAwardMilestones() {
   const { data: profileData } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
   const companyId = profileData?.company_id ?? null
 
-  // Alle user_ids in hetzelfde bedrijf (voor bedrijfsbrede milestone-check)
-  let companyUserIds: string[] = [user.id]
-  if (companyId) {
-    const { data: members } = await supabase.from('company_members').select('user_id').eq('company_id', companyId)
-    companyUserIds = [...new Set([user.id, ...(members ?? []).map(m => m.user_id)])]
-  }
+  const companyUserIds = await getCompanyUserIds(supabase, user.id, companyId)
 
   const [
     { data: milestones },

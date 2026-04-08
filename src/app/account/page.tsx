@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ProfileForm, PasswordForm, PrijsfactorForm } from './profile-form'
 import AvatarUpload from './avatar-upload'
+import { TabNav } from './collegas/page'
 
 const tierInfo: Record<string, { label: string; description: string; color: string }> = {
   Studio: {
@@ -53,6 +54,7 @@ export default async function AccountPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 max-w-3xl">
+      <TabNav active="profiel" />
       <div className="mb-6">
         <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">Mijn account</h1>
         <p className="text-[13px] text-lx-text-secondary mt-0.5">Beheer je profielgegevens en beveiliging</p>

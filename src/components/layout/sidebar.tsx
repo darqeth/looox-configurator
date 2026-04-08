@@ -14,12 +14,15 @@ interface SidebarProps {
   orderCount: number
   configCount: number
   isAdmin: boolean
+  isManager?: boolean
+  canConfigure?: boolean
   pendingCount?: number
+  pendingColleaguesCount?: number
   avatarUrl?: string | null
   closestMilestone?: ClosestMilestone | null
 }
 
-export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, pendingCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
+export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isManager = false, canConfigure = true, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
@@ -53,6 +56,8 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
     {
       href: '/account',
       label: 'Mijn account',
+      badge: isManager && pendingColleaguesCount > 0 ? String(pendingColleaguesCount) : null,
+      badgeStyle: 'pending',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
     },
   ]
@@ -169,17 +174,19 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
         </Link>
       </div>
 
-      {/* CTA */}
-      <div className="px-3 pb-3">
-        <Link
-          href="/configurator/nieuw"
-          onClick={() => setOpen(false)}
-          className="flex items-center justify-center gap-1.5 bg-lx-cta hover:bg-lx-cta-hover text-white rounded-xl py-2.5 text-[13.5px] font-semibold transition-colors"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-          Nieuwe spiegel
-        </Link>
-      </div>
+      {/* CTA — verborgen als collega geen configureerrecht heeft */}
+      {canConfigure && (
+        <div className="px-3 pb-3">
+          <Link
+            href="/configurator/nieuw"
+            onClick={() => setOpen(false)}
+            className="flex items-center justify-center gap-1.5 bg-lx-cta hover:bg-lx-cta-hover text-white rounded-xl py-2.5 text-[13.5px] font-semibold transition-colors"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+            Nieuwe spiegel
+          </Link>
+        </div>
+      )}
 
       {/* User */}
       <div className="border-t border-white/8 px-4 py-3.5">

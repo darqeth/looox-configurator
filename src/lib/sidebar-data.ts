@@ -13,7 +13,10 @@ export type SidebarData = {
   configCount: number
   orderCount: number
   isAdmin: boolean
+  isManager: boolean
+  canConfigure: boolean
   pendingCount: number
+  pendingColleaguesCount: number
   avatarUrl: string | null
   closestMilestone: ClosestMilestone | null
 }
@@ -24,25 +27,41 @@ export async function fetchSidebarData(
 ): Promise<SidebarData> {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, tier, is_admin, avatar_url')
+    .select('full_name, company, company_id, tier, is_admin, avatar_url')
     .eq('id', userId)
     .single()
 
   const isAdmin = profile?.is_admin ?? false
 
+  const { data: memberData } = await supabase
+    .from('company_members')
+    .select('role, company_id, can_configure')
+    .eq('user_id', userId)
+    .single()
+
+  const isManager = memberData?.role === 'manager'
+  const companyId = profile?.company_id ?? memberData?.company_id ?? null
+
   const [
-    { count: configCount },
-    { count: orderCount },
+    { data: configCount },
+    { data: orderCount },
     { count: pendingCount },
+    { count: pendingColleaguesCount },
     { data: milestones },
     { data: userMilestonesData },
     { data: revenueSum },
     { data: streakData },
   ] = await Promise.all([
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.rpc('count_company_configs', { p_user_id: userId }),
+    supabase.rpc('count_company_orders', { p_user_id: userId }),
     isAdmin
       ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending')
+      : Promise.resolve({ count: 0, data: null, error: null }),
+    isManager && companyId
+      ? supabase.from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('approval_status', 'pending')
       : Promise.resolve({ count: 0, data: null, error: null }),
     supabase.from('milestones').select('id, title, goal_type, goal_value').eq('is_active', true).order('sort_order'),
     supabase.from('user_milestones').select('milestone_id').eq('user_id', userId),
@@ -52,8 +71,8 @@ export async function fetchSidebarData(
 
   // Compute closest unachieved milestone
   const achievedIds = new Set((userMilestonesData ?? []).map((um: { milestone_id: string }) => um.milestone_id))
-  const totalConfigs = configCount ?? 0
-  const totalOrders = orderCount ?? 0
+  const totalConfigs = Number(configCount ?? 0)
+  const totalOrders = Number(orderCount ?? 0)
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = (streakData as { current_streak?: number } | null)?.current_streak ?? 0
 
@@ -82,6 +101,8 @@ export async function fetchSidebarData(
     })
     .sort((a, b) => b.pct - a.pct)[0] ?? null
 
+  const canConfigure = !memberData || memberData.role === 'manager' || memberData.can_configure !== false
+
   return {
     userName: profile?.full_name ?? '',
     company: profile?.company ?? '',
@@ -89,7 +110,10 @@ export async function fetchSidebarData(
     configCount: totalConfigs,
     orderCount: totalOrders,
     isAdmin,
+    isManager,
+    canConfigure,
     pendingCount: pendingCount ?? 0,
+    pendingColleaguesCount: pendingColleaguesCount ?? 0,
     avatarUrl: profile?.avatar_url ?? null,
     closestMilestone: closest,
   }

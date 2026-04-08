@@ -39,8 +39,25 @@ export async function signUp(data: {
   fullName: string
   company: string
   phone: string
+  inviteToken?: string
 }) {
   const supabase = await createClient()
+
+  // Validate invite token before registering (fail fast)
+  let invite: { id: string; company_id: string } | null = null
+  if (data.inviteToken) {
+    const { data: inviteRow } = await supabase
+      .from('company_invites')
+      .select('id, company_id')
+      .eq('token', data.inviteToken)
+      .eq('email', data.email)
+      .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .single()
+
+    if (!inviteRow) return { error: 'Deze uitnodigingslink is ongeldig of verlopen.' }
+    invite = inviteRow
+  }
 
   const { data: authData, error } = await supabase.auth.signUp({
     email: data.email,
@@ -64,9 +81,23 @@ export async function signUp(data: {
     company: data.company,
     phone: data.phone,
     approval_status: 'pending',
+    ...(invite ? { company_id: invite.company_id } : {}),
   }, { onConflict: 'id' })
 
   if (profileError) return { error: 'Profiel aanmaken mislukt.' }
+
+  // Koppel aan company en markeer invite als geaccepteerd
+  if (invite) {
+    await supabase.from('company_members').insert({
+      company_id: invite.company_id,
+      user_id: authData.user.id,
+      role: 'member',
+    })
+    await supabase
+      .from('company_invites')
+      .update({ accepted_at: new Date().toISOString() })
+      .eq('id', invite.id)
+  }
 
   redirect('/pending')
 }

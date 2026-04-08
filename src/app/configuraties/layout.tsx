@@ -19,8 +19,11 @@ export default async function ConfiguratiesLayout({ children }: { children: Reac
         configCount={sidebar.configCount}
         orderCount={sidebar.orderCount}
         isAdmin={sidebar.isAdmin}
+        isManager={sidebar.isManager}
+        canConfigure={sidebar.canConfigure}
         avatarUrl={sidebar.avatarUrl}
         pendingCount={sidebar.pendingCount}
+        pendingColleaguesCount={sidebar.pendingColleaguesCount}
         closestMilestone={sidebar.closestMilestone}
       />
       <main className="lg:ml-60 min-h-screen">

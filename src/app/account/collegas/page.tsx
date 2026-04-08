@@ -48,7 +48,7 @@ export default async function CollegasPage() {
   const { data: invites } = isManager
     ? await supabase
         .from('company_invites')
-        .select('id, email, token, expires_at, created_at')
+        .select('id, email, token, expires_at, created_at, can_order, can_see_purchase_prices, can_configure, own_configs_only')
         .eq('company_id', profile.company_id)
         .is('accepted_at', null)
         .order('created_at', { ascending: false })
@@ -79,6 +79,10 @@ export default async function CollegasPage() {
     email: i.email,
     token: i.token,
     expiresAt: i.expires_at,
+    can_order: i.can_order as boolean,
+    can_see_purchase_prices: i.can_see_purchase_prices as boolean,
+    can_configure: i.can_configure as boolean,
+    own_configs_only: i.own_configs_only as boolean,
   }))
 
   return (

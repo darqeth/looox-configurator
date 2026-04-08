@@ -14,11 +14,24 @@ export type MemberPermissions = {
   own_configs_only: boolean
 }
 
+export type InvitePermissions = {
+  can_order: boolean
+  can_see_purchase_prices: boolean
+  can_configure: boolean
+  own_configs_only: boolean
+}
+
 // ─── Collega uitnodigen ────────────────────────────────────────────────────────
 
-export async function inviteColleague(email: string): Promise<
-  { success: true; token: string } | { success: false; error: string }
-> {
+export async function inviteColleague(
+  email: string,
+  permissions: InvitePermissions = {
+    can_order: false,
+    can_see_purchase_prices: false,
+    can_configure: true,
+    own_configs_only: true,
+  }
+): Promise<{ success: true; token: string } | { success: false; error: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Niet ingelogd.' }
@@ -46,7 +59,7 @@ export async function inviteColleague(email: string): Promise<
   const token = randomBytes(32).toString('hex')
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  // Insert invite; bij conflict (zelfde email+bedrijf) token en datum verversen
+  // Insert invite; bij conflict (zelfde email+bedrijf) token, datum en rechten verversen
   const { data: invite, error } = await supabase
     .from('company_invites')
     .upsert(
@@ -57,6 +70,7 @@ export async function inviteColleague(email: string): Promise<
         token,
         expires_at: expiresAt,
         accepted_at: null,
+        ...permissions,
       },
       { onConflict: 'company_id,email', ignoreDuplicates: false }
     )
@@ -206,6 +220,38 @@ export async function revokeInvite(
     .is('accepted_at', null)
 
   if (error) return { success: false, error: 'Intrekken mislukt.' }
+
+  revalidatePath('/account/collegas')
+  return { success: true }
+}
+
+// ─── Rechten op pending invite bijwerken ──────────────────────────────────────
+
+export async function updateInvitePermissions(
+  inviteId: string,
+  permissions: InvitePermissions
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Niet ingelogd.' }
+
+  const { data: myMember } = await supabase
+    .from('company_members')
+    .select('company_id, role')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!myMember || myMember.role !== 'manager')
+    return { success: false, error: 'Alleen managers kunnen rechten aanpassen.' }
+
+  const { error } = await supabase
+    .from('company_invites')
+    .update(permissions)
+    .eq('id', inviteId)
+    .eq('company_id', myMember.company_id)
+    .is('accepted_at', null)
+
+  if (error) return { success: false, error: 'Bijwerken mislukt.' }
 
   revalidatePath('/account/collegas')
   return { success: true }

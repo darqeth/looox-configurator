@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 
 export async function signIn(email: string, password: string) {
@@ -44,11 +45,14 @@ export async function signUp(data: {
   const supabase = await createClient()
 
   // Validate invite token before registering (fail fast)
-  let invite: { id: string; company_id: string } | null = null
+  // Gebruik admin client — invite-tabel heeft RLS die auth.uid() vereist,
+  // maar de registrerende gebruiker is nog niet ingelogd.
+  let invite: { id: string; company_id: string; can_order: boolean; can_see_purchase_prices: boolean; can_configure: boolean; own_configs_only: boolean } | null = null
   if (data.inviteToken) {
-    const { data: inviteRow } = await supabase
+    const admin = createAdminClient()
+    const { data: inviteRow } = await admin
       .from('company_invites')
-      .select('id, company_id')
+      .select('id, company_id, can_order, can_see_purchase_prices, can_configure, own_configs_only')
       .eq('token', data.inviteToken)
       .eq('email', data.email)
       .is('accepted_at', null)
@@ -87,13 +91,19 @@ export async function signUp(data: {
   if (profileError) return { error: 'Profiel aanmaken mislukt.' }
 
   // Koppel aan company en markeer invite als geaccepteerd
+  // Gebruik admin client — nieuwe user heeft nog geen RLS-rechten op deze tabellen
   if (invite) {
-    await supabase.from('company_members').insert({
+    const admin = createAdminClient()
+    await admin.from('company_members').insert({
       company_id: invite.company_id,
       user_id: authData.user.id,
       role: 'member',
+      can_order: invite.can_order,
+      can_see_purchase_prices: invite.can_see_purchase_prices,
+      can_configure: invite.can_configure,
+      own_configs_only: invite.own_configs_only,
     })
-    await supabase
+    await admin
       .from('company_invites')
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invite.id)

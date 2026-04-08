@@ -56,7 +56,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
     {
       href: '/account',
       label: 'Mijn account',
-      badge: isManager && pendingColleaguesCount > 0 ? String(pendingColleaguesCount) : null,
+      badge: isManager && !isAdmin && pendingColleaguesCount > 0 ? String(pendingColleaguesCount) : null,
       badgeStyle: 'pending',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
     },

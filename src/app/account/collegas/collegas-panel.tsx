@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
-import { inviteColleague, updateMemberPermissions, removeMember, revokeInvite } from '@/lib/actions/colleagues'
-import type { MemberPermissions } from '@/lib/actions/colleagues'
+import { inviteColleague, updateMemberPermissions, removeMember, revokeInvite, updateInvitePermissions } from '@/lib/actions/colleagues'
+import type { MemberPermissions, InvitePermissions } from '@/lib/actions/colleagues'
 
 type Member = {
   id: string
@@ -25,6 +25,10 @@ type Invite = {
   email: string
   token: string
   expiresAt: string
+  can_order: boolean
+  can_see_purchase_prices: boolean
+  can_configure: boolean
+  own_configs_only: boolean
 }
 
 interface CollegasPanelProps {
@@ -37,6 +41,7 @@ interface CollegasPanelProps {
 export default function CollegasPanel({ isManager, members, invites }: CollegasPanelProps) {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
+  const [editingInvite, setEditingInvite] = useState<Invite | null>(null)
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
 
   return (
@@ -91,6 +96,7 @@ export default function CollegasPanel({ isManager, members, invites }: CollegasP
                     setTimeout(() => setCopiedToken(null), 2000)
                   })
                 }}
+                onEditPerms={(inv) => setEditingInvite(inv)}
               />
             ))}
           </div>
@@ -102,11 +108,19 @@ export default function CollegasPanel({ isManager, members, invites }: CollegasP
         <InviteModal onClose={() => setShowInviteModal(false)} />
       )}
 
-      {/* Rechten modal */}
+      {/* Rechten modal — bestaand lid */}
       {editingMember && (
         <PermissionsModal
           member={editingMember}
           onClose={() => setEditingMember(null)}
+        />
+      )}
+
+      {/* Rechten modal — pending invite */}
+      {editingInvite && (
+        <InvitePermissionsModal
+          invite={editingInvite}
+          onClose={() => setEditingInvite(null)}
         />
       )}
     </>
@@ -208,7 +222,12 @@ function PermBadge({ label, active }: { label: string; active: boolean }) {
 
 // ─── Invite Row ───────────────────────────────────────────────────────────────
 
-function InviteRow({ invite, copiedToken, onCopy }: { invite: Invite; copiedToken: string | null; onCopy: (token: string) => void }) {
+function InviteRow({ invite, copiedToken, onCopy, onEditPerms }: {
+  invite: Invite
+  copiedToken: string | null
+  onCopy: (token: string) => void
+  onEditPerms: (invite: Invite) => void
+}) {
   const [isPending, startTransition] = useTransition()
   const isCopied = copiedToken === invite.token
   const expiresDate = new Date(invite.expiresAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
@@ -219,13 +238,19 @@ function InviteRow({ invite, copiedToken, onCopy }: { invite: Invite; copiedToke
   }
 
   return (
-    <div className={`bg-white rounded-[18px] border border-black/6 shadow-sm px-5 py-3.5 flex items-center gap-3 ${isPending ? 'opacity-60' : ''}`}>
+    <div className={`bg-white rounded-[18px] border border-black/6 shadow-sm px-5 py-4 flex items-center gap-3 ${isPending ? 'opacity-60' : ''}`}>
       <div className="w-9 h-9 rounded-full flex-shrink-0 bg-amber-50 flex items-center justify-center">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" className="text-amber-500" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-medium text-lx-text-primary">{invite.email}</p>
-        <p className="text-[11px] text-lx-text-secondary">Verloopt {expiresDate}</p>
+        <div className="flex flex-wrap gap-1 mt-1">
+          <PermBadge label="Bestellen" active={invite.can_order} />
+          <PermBadge label="Inkoopprijzen" active={invite.can_see_purchase_prices} />
+          <PermBadge label="Configureren" active={invite.can_configure} />
+          <PermBadge label="Eigen configs" active={invite.own_configs_only} />
+        </div>
+        <p className="text-[11px] text-lx-text-secondary mt-1">Verloopt {expiresDate}</p>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
@@ -233,6 +258,12 @@ function InviteRow({ invite, copiedToken, onCopy }: { invite: Invite; copiedToke
           className="text-[12px] font-medium text-lx-cta hover:bg-lx-icon-bg px-3 py-1.5 rounded-lg transition-colors"
         >
           {isCopied ? 'Gekopieerd!' : 'Kopieer link'}
+        </button>
+        <button
+          onClick={() => onEditPerms(invite)}
+          className="text-[12px] font-medium text-lx-text-secondary hover:text-lx-cta hover:bg-lx-icon-bg px-3 py-1.5 rounded-lg transition-colors"
+        >
+          Rechten
         </button>
         <button
           onClick={handleRevoke}
@@ -246,20 +277,38 @@ function InviteRow({ invite, copiedToken, onCopy }: { invite: Invite; copiedToke
   )
 }
 
-// ─── Invite Modal ─────────────────────────────────────────────────────────────
+// ─── Invite Modal (2 stappen) ─────────────────────────────────────────────────
+
+const PRESETS = {
+  beperkt:   { can_order: false, can_see_purchase_prices: false, can_configure: false, own_configs_only: true },
+  standaard: { can_order: false, can_see_purchase_prices: false, can_configure: true,  own_configs_only: true },
+  volledig:  { can_order: true,  can_see_purchase_prices: true,  can_configure: true,  own_configs_only: false },
+}
+type Preset = keyof typeof PRESETS
+
+function detectPreset(p: InvitePermissions): Preset | null {
+  for (const [key, vals] of Object.entries(PRESETS)) {
+    if (Object.entries(vals).every(([k, v]) => p[k as keyof InvitePermissions] === v))
+      return key as Preset
+  }
+  return null
+}
 
 function InviteModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<1 | 2>(1)
   const [email, setEmail] = useState('')
+  const [perms, setPerms] = useState<InvitePermissions>(PRESETS.standaard)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  const activePreset = detectPreset(perms)
+
+  function handleSend() {
     setError(null)
     startTransition(async () => {
-      const result = await inviteColleague(email)
+      const result = await inviteColleague(email, perms)
       if (!result.success) {
         setError(result.error)
       } else {
@@ -276,41 +325,9 @@ function InviteModal({ onClose }: { onClose: () => void }) {
     })
   }
 
-  return (
-    <ModalShell onClose={onClose} title="Collega uitnodigen">
-      {!inviteLink ? (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[12px] font-semibold text-lx-text-secondary mb-1.5">
-              E-mailadres collega
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="naam@bedrijf.nl"
-              required
-              className="w-full border border-black/10 rounded-xl px-3.5 py-2.5 text-[13.5px] text-lx-text-primary placeholder:text-lx-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
-            />
-          </div>
-          {error && <p className="text-red-500 text-[12px]">{error}</p>}
-          <p className="text-lx-text-secondary text-[11.5px]">
-            Je krijgt een link die je zelf kunt doorsturen. LoooX moet de collega daarna nog goedkeuren.
-          </p>
-          <div className="flex gap-2 pt-1">
-            <button
-              type="submit"
-              disabled={isPending || !email}
-              className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
-            >
-              {isPending ? 'Aanmaken…' : 'Uitnodiging aanmaken'}
-            </button>
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-lx-text-secondary hover:bg-lx-divider text-[13.5px] transition-colors">
-              Annuleren
-            </button>
-          </div>
-        </form>
-      ) : (
+  if (inviteLink) {
+    return (
+      <ModalShell onClose={onClose} title="Uitnodiging aangemaakt">
         <div className="space-y-4">
           <p className="text-[13px] text-lx-text-secondary">
             Stuur deze link zelf door aan je collega. De link is 7 dagen geldig.
@@ -324,14 +341,202 @@ function InviteModal({ onClose }: { onClose: () => void }) {
               {copied ? 'Gekopieerd!' : 'Kopieer'}
             </button>
           </div>
-          <button
-            onClick={onClose}
-            className="w-full bg-lx-divider hover:bg-black/6 text-lx-text-primary text-[13.5px] font-medium py-2.5 rounded-xl transition-colors"
-          >
+          <button onClick={onClose} className="w-full bg-lx-divider hover:bg-black/6 text-lx-text-primary text-[13.5px] font-medium py-2.5 rounded-xl transition-colors">
             Sluiten
           </button>
         </div>
+      </ModalShell>
+    )
+  }
+
+  return (
+    <ModalShell onClose={onClose} title="Collega uitnodigen">
+      {/* Stap-indicator */}
+      <div className="flex items-center gap-2 mb-5">
+        {([1, 2] as const).map(s => (
+          <div key={s} className="flex items-center gap-2">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${
+              step === s ? 'bg-lx-cta text-white' : step > s ? 'bg-[#5DA87A]/20 text-[#3d8a5c]' : 'bg-lx-divider text-lx-text-secondary'
+            }`}>{s}</div>
+            <span className={`text-[11.5px] font-medium ${step === s ? 'text-lx-text-primary' : 'text-lx-text-secondary'}`}>
+              {s === 1 ? 'E-mailadres' : 'Rechten'}
+            </span>
+            {s < 2 && <div className="w-6 h-px bg-black/10 mx-1" />}
+          </div>
+        ))}
+      </div>
+
+      {step === 1 ? (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[12px] font-semibold text-lx-text-secondary mb-1.5">
+              E-mailadres collega
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && email && setStep(2)}
+              placeholder="naam@bedrijf.nl"
+              autoFocus
+              className="w-full border border-black/10 rounded-xl px-3.5 py-2.5 text-[13.5px] text-lx-text-primary placeholder:text-lx-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setStep(2)}
+              disabled={!email}
+              className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+            >
+              Volgende →
+            </button>
+            <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-lx-text-secondary hover:bg-lx-divider text-[13.5px] transition-colors">
+              Annuleren
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Presets */}
+          <div>
+            <p className="text-[12px] font-semibold text-lx-text-secondary mb-2">Snel instellen</p>
+            <div className="flex gap-2">
+              {(Object.keys(PRESETS) as Preset[]).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPerms(PRESETS[p])}
+                  className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium border transition-colors capitalize ${
+                    activePreset === p
+                      ? 'bg-lx-icon-bg text-lx-cta border-lx-cta/30'
+                      : 'border-black/8 text-lx-text-secondary hover:border-black/15'
+                  }`}
+                >
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Individuele toggles */}
+          <div className="space-y-3 pt-1">
+            <InvitePermToggle label="Mag bestellingen plaatsen" description="Kan configuraties omzetten naar bestellingen"
+              checked={perms.can_order} onChange={v => setPerms(p => ({ ...p, can_order: v }))} />
+            <InvitePermToggle label="Mag inkoopprijzen zien" description="Ziet dealer-prijzen; anders alleen klantprijzen"
+              checked={perms.can_see_purchase_prices} onChange={v => setPerms(p => ({ ...p, can_see_purchase_prices: v }))} />
+            <InvitePermToggle label="Mag configuraties aanmaken" description="Kan nieuwe spiegels configureren"
+              checked={perms.can_configure} onChange={v => setPerms(p => ({ ...p, can_configure: v }))} />
+            <InvitePermToggle label="Ziet alleen eigen configuraties" description="Kan geen configuraties van collega's inzien"
+              checked={perms.own_configs_only} onChange={v => setPerms(p => ({ ...p, own_configs_only: v }))} />
+          </div>
+
+          {error && <p className="text-red-500 text-[12px]">{error}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <button onClick={() => setStep(1)} className="px-4 py-2.5 rounded-xl text-lx-text-secondary hover:bg-lx-divider text-[13.5px] transition-colors">
+              ← Terug
+            </button>
+            <button
+              onClick={handleSend}
+              disabled={isPending}
+              className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+            >
+              {isPending ? 'Aanmaken…' : 'Uitnodiging aanmaken'}
+            </button>
+          </div>
+          <p className="text-lx-text-secondary text-[11px] text-center">
+            Rechten zijn ook achteraf aanpasbaar zolang de collega nog niet heeft ingelogd.
+          </p>
+        </div>
       )}
+    </ModalShell>
+  )
+}
+
+function InvitePermToggle({ label, description, checked, onChange }: {
+  label: string; description: string; checked: boolean; onChange: (v: boolean) => void
+}) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer">
+      <div className="mt-0.5 flex-shrink-0" onClick={() => onChange(!checked)}>
+        <div className={`w-9 h-5 rounded-full transition-colors relative ${checked ? 'bg-lx-cta' : 'bg-black/15'}`}>
+          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${checked ? 'left-4' : 'left-0.5'}`} />
+        </div>
+      </div>
+      <div onClick={() => onChange(!checked)}>
+        <p className="text-[13px] font-medium text-lx-text-primary">{label}</p>
+        <p className="text-[11px] text-lx-text-secondary mt-0.5">{description}</p>
+      </div>
+    </label>
+  )
+}
+
+// ─── Invite Permissions Modal (voor bestaande pending invites) ────────────────
+
+function InvitePermissionsModal({ invite, onClose }: { invite: Invite; onClose: () => void }) {
+  const [perms, setPerms] = useState<InvitePermissions>({
+    can_order: invite.can_order,
+    can_see_purchase_prices: invite.can_see_purchase_prices,
+    can_configure: invite.can_configure,
+    own_configs_only: invite.own_configs_only,
+  })
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const activePreset = detectPreset(perms)
+
+  function handleSave() {
+    setError(null)
+    startTransition(async () => {
+      const result = await updateInvitePermissions(invite.id, perms)
+      if (!result.success) setError(result.error ?? 'Onbekende fout')
+      else onClose()
+    })
+  }
+
+  return (
+    <ModalShell onClose={onClose} title={`Rechten — ${invite.email}`}>
+      <div className="space-y-4">
+        <div>
+          <p className="text-[12px] font-semibold text-lx-text-secondary mb-2">Snel instellen</p>
+          <div className="flex gap-2">
+            {(Object.keys(PRESETS) as Preset[]).map(p => (
+              <button
+                key={p}
+                onClick={() => setPerms(PRESETS[p])}
+                className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${
+                  activePreset === p
+                    ? 'bg-lx-icon-bg text-lx-cta border-lx-cta/30'
+                    : 'border-black/8 text-lx-text-secondary hover:border-black/15'
+                }`}
+              >
+                {p.charAt(0).toUpperCase() + p.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-3">
+          <InvitePermToggle label="Mag bestellingen plaatsen" description="Kan configuraties omzetten naar bestellingen"
+            checked={perms.can_order} onChange={v => setPerms(p => ({ ...p, can_order: v }))} />
+          <InvitePermToggle label="Mag inkoopprijzen zien" description="Ziet dealer-prijzen; anders alleen klantprijzen"
+            checked={perms.can_see_purchase_prices} onChange={v => setPerms(p => ({ ...p, can_see_purchase_prices: v }))} />
+          <InvitePermToggle label="Mag configuraties aanmaken" description="Kan nieuwe spiegels configureren"
+            checked={perms.can_configure} onChange={v => setPerms(p => ({ ...p, can_configure: v }))} />
+          <InvitePermToggle label="Ziet alleen eigen configuraties" description="Kan geen configuraties van collega's inzien"
+            checked={perms.own_configs_only} onChange={v => setPerms(p => ({ ...p, own_configs_only: v }))} />
+        </div>
+        {error && <p className="text-red-500 text-[12px]">{error}</p>}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+          >
+            {isPending ? 'Opslaan…' : 'Opslaan'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-lx-text-secondary hover:bg-lx-divider text-[13.5px] transition-colors">
+            Annuleren
+          </button>
+        </div>
+      </div>
     </ModalShell>
   )
 }

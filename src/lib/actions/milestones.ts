@@ -150,24 +150,28 @@ export async function checkAndAwardMilestones() {
   const [
     { data: milestones },
     { data: alreadyAchieved },
-    { count: configCount },
-    { count: orderCount },
+    { data: configCount },
+    { data: orderCount },
     { data: revenueSum },
     { data: streakData },
     { data: shapeData },
   ] = await Promise.all([
     supabase.from('milestones').select('*').eq('is_active', true),
     supabase.from('user_milestones').select('milestone_id').eq('user_id', user.id),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-    supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    // Company-brede counts via RPCs (solo user telt alleen eigen data)
+    supabase.rpc('count_company_configs', { p_user_id: user.id }),
+    supabase.rpc('count_company_orders', { p_user_id: user.id }),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', user.id).single(),
+    // Shape milestone blijft per user (eigen spiegel-ervaring)
     supabase.from('configurations').select('selected_options').eq('user_id', user.id),
   ])
 
   if (!milestones) return
 
   const achievedIds = new Set((alreadyAchieved ?? []).map(a => a.milestone_id))
+  const totalConfigs = Number(configCount ?? 0)
+  const totalOrders = Number(orderCount ?? 0)
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = streakData?.current_streak ?? 0
   const configuredShapes = new Set(
@@ -178,8 +182,8 @@ export async function checkAndAwardMilestones() {
     if (achievedIds.has(m.id)) continue
 
     let achieved = false
-    if (m.goal_type === 'configs') achieved = (configCount ?? 0) >= m.goal_value
-    else if (m.goal_type === 'orders') achieved = (orderCount ?? 0) >= m.goal_value
+    if (m.goal_type === 'configs') achieved = totalConfigs >= m.goal_value
+    else if (m.goal_type === 'orders') achieved = totalOrders >= m.goal_value
     else if (m.goal_type === 'order_revenue') achieved = totalRevenue >= m.goal_value
     else if (m.goal_type === 'streak') achieved = currentStreak >= m.goal_value
     else if (m.goal_type === 'shape') achieved = m.goal_shape ? configuredShapes.has(m.goal_shape) : false

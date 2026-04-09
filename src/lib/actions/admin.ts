@@ -76,5 +76,9 @@ export async function generatePasswordResetLink(email: string): Promise<{ link?:
 
   if (error || !data) return { error: error?.message ?? 'Link genereren mislukt.' }
 
-  return { link: data.properties.action_link }
+  // Vervang redirect_to met de correcte app-URL (Supabase gebruikt anders SITE_URL = localhost)
+  const actionLink = new URL(data.properties.action_link)
+  actionLink.searchParams.set('redirect_to', getAppUrl())
+
+  return { link: actionLink.toString() }
 }

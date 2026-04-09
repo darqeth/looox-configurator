@@ -14,19 +14,25 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState('')
   const [passwordDone, setPasswordDone] = useState(false)
   const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
-    const supabase = createClient()
+    let recovered = false
 
-    // Methode 1: Supabase event (meest betrouwbaar)
+    const clearHash = () => window.history.replaceState(null, '', window.location.pathname)
+
+    const enterRecovery = () => {
+      if (recovered) return
+      recovered = true
+      setIsRecovery(true)
+      clearHash()
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecovery(true)
-        window.history.replaceState(null, '', window.location.pathname)
-      }
+      if (event === 'PASSWORD_RECOVERY') enterRecovery()
     })
 
-    // Methode 2: directe hash-parse als fallback
+    // Fallback: @supabase/ssr may not fire PASSWORD_RECOVERY on implicit-flow hash
     const hash = window.location.hash
     if (hash.includes('type=recovery')) {
       const params = new URLSearchParams(hash.slice(1))
@@ -34,16 +40,12 @@ export default function LoginPage() {
       const refreshToken = params.get('refresh_token')
       if (accessToken && refreshToken) {
         supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-          .then(({ error }) => {
-            if (!error) {
-              setIsRecovery(true)
-              window.history.replaceState(null, '', window.location.pathname)
-            }
-          })
+          .then(({ error }) => { if (!error) enterRecovery() })
       }
     }
 
     return () => subscription.unsubscribe()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -63,13 +65,12 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     startTransition(async () => {
-      const supabase = createClient()
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) {
         setError(error.message)
       } else {
         setPasswordDone(true)
-        setTimeout(() => router.push('/dashboard'), 2000)
+        router.push('/dashboard')
       }
     })
   }

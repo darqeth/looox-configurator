@@ -16,20 +16,34 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const hash = window.location.hash
-    if (!hash.includes('type=recovery')) return
-
-    const params = new URLSearchParams(hash.slice(1))
-    const accessToken = params.get('access_token')
-    const refreshToken = params.get('refresh_token')
-    if (!accessToken || !refreshToken) return
-
     const supabase = createClient()
-    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(() => {
-      setIsRecovery(true)
-      // Verwijder tokens uit de URL zonder pagina-reload
-      window.history.replaceState(null, '', window.location.pathname)
+
+    // Methode 1: Supabase event (meest betrouwbaar)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true)
+        window.history.replaceState(null, '', window.location.pathname)
+      }
     })
+
+    // Methode 2: directe hash-parse als fallback
+    const hash = window.location.hash
+    if (hash.includes('type=recovery')) {
+      const params = new URLSearchParams(hash.slice(1))
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ error }) => {
+            if (!error) {
+              setIsRecovery(true)
+              window.history.replaceState(null, '', window.location.pathname)
+            }
+          })
+      }
+    }
+
+    return () => subscription.unsubscribe()
   }, [])
 
   function handleLogin(e: React.FormEvent<HTMLFormElement>) {

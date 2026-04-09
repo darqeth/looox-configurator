@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 
 export async function updateApprovalStatus(userId: string, status: 'approved' | 'rejected'): Promise<void> {
   const supabase = await createClient()
@@ -53,8 +54,12 @@ export async function deleteUser(userId: string): Promise<{ success: boolean; er
   return { success: true }
 }
 
-function getAppUrl(): string {
+async function getAppUrl(): Promise<string> {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
+  const h = await headers()
+  const host = h.get('host')
+  const proto = h.get('x-forwarded-proto') ?? 'http'
+  if (host) return `${proto}://${host}`
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
   return 'http://localhost:3000'
 }
@@ -67,18 +72,19 @@ export async function generatePasswordResetLink(email: string): Promise<{ link?:
   const { data: self } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
   if (!self?.is_admin) return { error: 'Geen toegang.' }
 
+  const appUrl = await getAppUrl()
   const admin = createAdminClient()
   const { data, error } = await admin.auth.admin.generateLink({
     type: 'recovery',
     email,
-    options: { redirectTo: getAppUrl() },
+    options: { redirectTo: appUrl },
   })
 
   if (error || !data) return { error: error?.message ?? 'Link genereren mislukt.' }
 
   // Vervang redirect_to met de correcte app-URL (Supabase gebruikt anders SITE_URL = localhost)
   const actionLink = new URL(data.properties.action_link)
-  actionLink.searchParams.set('redirect_to', getAppUrl())
+  actionLink.searchParams.set('redirect_to', appUrl)
 
   return { link: actionLink.toString() }
 }

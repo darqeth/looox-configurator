@@ -53,6 +53,12 @@ export async function deleteUser(userId: string): Promise<{ success: boolean; er
   return { success: true }
 }
 
+function getAppUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  return 'http://localhost:3000'
+}
+
 export async function generatePasswordResetLink(email: string): Promise<{ link?: string; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -65,6 +71,7 @@ export async function generatePasswordResetLink(email: string): Promise<{ link?:
   const { data, error } = await admin.auth.admin.generateLink({
     type: 'recovery',
     email,
+    options: { redirectTo: getAppUrl() },
   })
 
   if (error || !data) return { error: error?.message ?? 'Link genereren mislukt.' }

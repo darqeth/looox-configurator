@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/sidebar'
 import { fetchSidebarData } from '@/lib/sidebar-data'
 
-export default async function AccountLayout({ children }: { children: React.ReactNode }) {
+export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')

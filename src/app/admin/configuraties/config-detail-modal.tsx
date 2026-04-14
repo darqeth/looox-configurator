@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import DeleteButton from '@/app/configuraties/delete-button'
+import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
   SHAPES,
   ORGANIC_SIZES,

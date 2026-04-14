@@ -26,20 +26,12 @@ export async function fetchSidebarData(
   supabase: SupabaseClient,
   userId: string
 ): Promise<SidebarData> {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, company, company_id, tier, is_admin, avatar_url')
-    .eq('id', userId)
-    .single()
+  const [{ data: profile }, { data: memberData }] = await Promise.all([
+    supabase.from('profiles').select('full_name, company, company_id, tier, is_admin, avatar_url').eq('id', userId).single(),
+    supabase.from('company_members').select('role, company_id, can_configure').eq('user_id', userId).single(),
+  ])
 
   const isAdmin = profile?.is_admin ?? false
-
-  const { data: memberData } = await supabase
-    .from('company_members')
-    .select('role, company_id, can_configure')
-    .eq('user_id', userId)
-    .single()
-
   const isManager = memberData?.role === 'manager'
   const companyId = profile?.company_id ?? memberData?.company_id ?? null
 

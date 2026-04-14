@@ -6,7 +6,7 @@ import Image from 'next/image'
 import SearchButton from '@/components/layout/search-button'
 import CopyButton from '@/components/copy-button'
 import ChangelogModal from '@/components/dashboard/changelog-modal'
-import OrderButton from '@/app/configuraties/order-button'
+import OrderButton from '@/app/(main)/configuraties/order-button'
 import NotificationBell from './notification-bell'
 
 function getGreeting() {

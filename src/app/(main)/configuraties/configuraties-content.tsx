@@ -1,0 +1,257 @@
+import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import OrderButton from './order-button'
+import DeleteButton from './delete-button'
+import ConfiguratiesTabs from './configuraties-tabs'
+
+const PAGE_SIZE = 20
+
+const statusLabels: Record<string, { label: string; className: string }> = {
+  saved:   { label: 'Opgeslagen',  className: 'bg-blue-50 text-blue-700' },
+  ordered: { label: 'Besteld',     className: 'bg-green-50 text-green-700' },
+}
+
+const shapeLabel: Record<string, string> = {
+  rechthoek: 'Rechthoek',
+  rond: 'Rond',
+  organic: 'Organic',
+  'op-aanvraag': 'Op aanvraag',
+}
+
+function ShapeIcon({ shape }: { shape: string }) {
+  if (shape === 'rond') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><circle cx="12" cy="12" r="9"/></svg>
+  )
+  if (shape === 'organic') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><path d="M12 3c4 0 9 2 9 7s-3 9-7 11c-3 1-8-1-10-5S2 7 6 4c1.5-1 4-1 6-1z"/></svg>
+  )
+  if (shape === 'op-aanvraag') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2"/><path d="M12 8v4m0 4h.01"/></svg>
+  )
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="1.5"/></svg>
+  )
+}
+
+export async function ConfiguratiesContent({
+  filter,
+  page,
+}: {
+  filter: string
+  page: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const currentPage = Math.max(1, parseInt(page) || 1)
+  const from = (currentPage - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
+  const [
+    { data: memberPerms },
+    { data: configs, count: filteredCount },
+    { count: allCount },
+    { count: savedCount },
+    { count: orderedCount },
+  ] = await Promise.all([
+    supabase
+      .from('company_members')
+      .select('role, can_order, can_configure, can_see_purchase_prices, own_configs_only')
+      .eq('user_id', user.id)
+      .single(),
+    (() => {
+      let q = supabase
+        .from('configurations')
+        .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
+        .order('updated_at', { ascending: false })
+        .range(from, to)
+      if (filter && ['saved', 'ordered'].includes(filter)) q = q.eq('status', filter)
+      return q
+    })(),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('status', 'saved'),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('status', 'ordered'),
+  ])
+
+  const canOrder = !memberPerms || memberPerms.role === 'manager' || memberPerms.can_order
+  const canConfigure = !memberPerms || memberPerms.role === 'manager' || memberPerms.can_configure
+  const canSeePurchasePrices = !memberPerms || memberPerms.role === 'manager' || memberPerms.can_see_purchase_prices
+
+  const totalPages = Math.ceil((filteredCount ?? 0) / PAGE_SIZE)
+  const tabs = [
+    { key: '', label: 'Alle', count: allCount ?? 0 },
+    { key: 'saved', label: 'Opgeslagen', count: savedCount ?? 0 },
+    { key: 'ordered', label: 'Besteld', count: orderedCount ?? 0 },
+  ]
+
+  return (
+    <>
+      <ConfiguratiesTabs tabs={tabs} currentFilter={filter} />
+
+      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm">
+        {configs && configs.length > 0 ? (
+          <div className="divide-y divide-lx-divider">
+            {configs.map((config) => {
+              const date = new Date(config.updated_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+              const opts = config.selected_options as Record<string, unknown> | null
+              const shape = (opts?.shape as string) ?? 'rechthoek'
+              const diameter = opts?.diameter as number | null
+              const organicKey = opts?.organicSize as string | null
+              const extras = (opts?.extras as string[]) ?? []
+              const direct = opts?.directLight as { position: string } | null
+              const indirect = opts?.indirectLight as { position: string } | null
+
+              let dimensionLabel = ''
+              if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
+              else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
+              else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
+
+              const lightParts = []
+              if (direct?.position && direct.position !== 'geen') lightParts.push('Directe verlichting')
+              if (indirect?.position && indirect.position !== 'geen') lightParts.push('Indirecte verlichting')
+
+              const metaParts = [
+                shapeLabel[shape] ?? shape,
+                dimensionLabel,
+                ...lightParts,
+                extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : '',
+              ].filter(Boolean)
+
+              return (
+                <div key={config.id} className="flex items-center gap-4 px-5 py-4 hover:bg-lx-panel-bg transition-colors first:rounded-t-[18px] last:rounded-b-[18px]">
+                  <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                    <ShapeIcon shape={shape} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-[13.5px] font-semibold text-lx-text-primary truncate leading-snug">
+                        {config.name ?? 'Naamloze configuratie'}
+                      </p>
+                      {config.article_number && (
+                        <span className="text-[10.5px] font-mono font-medium text-lx-text-muted flex-shrink-0">{config.article_number}</span>
+                      )}
+                    </div>
+                    <p className="text-[11.5px] text-lx-text-secondary mt-0.5 truncate">
+                      {metaParts.join(' · ')}
+                      <span className="text-lx-placeholder"> · {date}</span>
+                    </p>
+                  </div>
+                  {canSeePurchasePrices && (
+                    <div className="text-right flex-shrink-0 w-20">
+                      <p className="text-[13.5px] font-bold text-lx-text-primary">
+                        €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                      </p>
+                      <p className="text-[10.5px] text-lx-text-secondary">excl. btw</p>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="relative group">
+                      <a href={`/api/pdf/offerte/${config.id}`} download className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-cta transition-colors">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      </a>
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        Klantofferte downloaden
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+                      </div>
+                    </div>
+                    {config.status === 'ordered' ? (
+                      <>
+                        {canSeePurchasePrices && (
+                          <div className="relative group">
+                            <a href={`/api/pdf/order/by-config/${config.id}`} download className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-cta transition-colors">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            </a>
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                              Orderbevestiging downloaden
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+                            </div>
+                          </div>
+                        )}
+                        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">Besteld</span>
+                      </>
+                    ) : (
+                      <>
+                        {canConfigure && (
+                          <Link href={`/configurator/${config.id}`} title="Bewerken" className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary transition-colors">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+                          </Link>
+                        )}
+                        {(config.user_id === user.id || memberPerms?.role === 'manager') && (
+                          <DeleteButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} />
+                        )}
+                        {canOrder && shape !== 'op-aanvraag' && (
+                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="px-5 py-16 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-lx-icon-bg flex items-center justify-center mx-auto mb-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/></svg>
+            </div>
+            <p className="text-[14px] font-semibold text-lx-text-primary mb-1">
+              {filter ? `Geen ${statusLabels[filter]?.label.toLowerCase() ?? filter} configuraties` : 'Nog geen configuraties'}
+            </p>
+            <p className="text-[13px] text-lx-text-secondary mb-5">Configureer je eerste spiegel en sla hem hier op.</p>
+            <Link href="/configurator/nieuw" className="inline-flex items-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors">
+              Nieuwe spiegel configureren
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-1">
+          {currentPage > 1 && (
+            <Link href={filter ? `/configuraties?filter=${filter}&page=${currentPage - 1}` : `/configuraties?page=${currentPage - 1}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">← Vorige</Link>
+          )}
+          <span className="px-3 py-1.5 text-[12.5px] text-lx-text-secondary">{currentPage} / {totalPages}</span>
+          {currentPage < totalPages && (
+            <Link href={filter ? `/configuraties?filter=${filter}&page=${currentPage + 1}` : `/configuraties?page=${currentPage + 1}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">Volgende →</Link>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
+export function ConfiguratiesContentSkeleton() {
+  return (
+    <div className="animate-pulse">
+      {/* Tabs skeleton */}
+      <div className="flex gap-1 mb-4 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
+        {[72, 100, 72].map((w, i) => (
+          <div key={i} className="h-7 rounded-lg bg-lx-divider" style={{ width: w }} />
+        ))}
+      </div>
+
+      {/* Lijst skeleton */}
+      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm divide-y divide-lx-divider">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 px-5 py-4">
+            <div className="w-9 h-9 rounded-xl bg-lx-divider flex-shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-4 w-48 bg-lx-divider rounded" />
+              <div className="h-3 w-72 bg-lx-divider rounded" />
+            </div>
+            <div className="w-16 space-y-1">
+              <div className="h-4 w-full bg-lx-divider rounded" />
+              <div className="h-3 w-10 bg-lx-divider rounded" />
+            </div>
+            <div className="flex gap-2">
+              <div className="w-7 h-7 rounded-lg bg-lx-divider" />
+              <div className="w-7 h-7 rounded-lg bg-lx-divider" />
+              <div className="w-16 h-7 rounded-lg bg-lx-divider" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

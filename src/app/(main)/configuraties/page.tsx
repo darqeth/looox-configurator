@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import OrderButton from './order-button'
 import DeleteButton from './delete-button'
+import ConfiguratiesTabs from './configuraties-tabs'
 
 const PAGE_SIZE = 20
 
@@ -116,31 +117,7 @@ export default async function ConfiguratiesPage({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
-        {tabs.map((tab) => {
-          const isActive = (filter ?? '') === tab.key
-          return (
-            <Link
-              key={tab.key}
-              href={tab.key ? `/configuraties?filter=${tab.key}` : '/configuraties'}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors ${
-                isActive
-                  ? 'bg-lx-text-primary text-white'
-                  : 'text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg'
-              }`}
-            >
-              {tab.label}
-              {tab.count > 0 && (
-                <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-lx-divider text-lx-text-secondary'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
-            </Link>
-          )
-        })}
-      </div>
+      <ConfiguratiesTabs tabs={tabs} currentFilter={filter ?? ''} />
 
       {/* Lijst */}
       <div className="bg-white rounded-[18px] border border-black/6 shadow-sm">

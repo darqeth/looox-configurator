@@ -86,7 +86,12 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
       {/* Lichttype */}
       {config.position !== 'geen' && (
         <div className="pl-0.5 space-y-3">
-          <p className="text-[11.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Lichttype</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Lichttype</p>
+            {!config.type && (
+              <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Verplicht</span>
+            )}
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {lightTypes.map((lt) => (
               <button

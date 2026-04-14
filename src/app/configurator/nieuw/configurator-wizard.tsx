@@ -140,10 +140,10 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
   }
 
   function isStep2Valid(): boolean {
-    const directNeedsControl = directLight.position !== 'geen' && directLight.type !== null
-    const indirectNeedsControl = indirectLight.position !== 'geen' && indirectLight.type !== null
-    if (directNeedsControl && !directLight.control) return false
-    if (indirectNeedsControl && !indirectLight.control) return false
+    if (directLight.position !== 'geen' && !directLight.type) return false
+    if (indirectLight.position !== 'geen' && !indirectLight.type) return false
+    if (directLight.position !== 'geen' && directLight.type && !directLight.control) return false
+    if (indirectLight.position !== 'geen' && indirectLight.type && !indirectLight.control) return false
     return true
   }
 

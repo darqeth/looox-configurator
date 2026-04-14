@@ -31,7 +31,7 @@ export default async function LoooxCirclePage() {
     // Bedrijfsbreed: welke milestones zijn door iemand in het bedrijf behaald?
     supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
     // Huidig gebruiker: eigen codes en claimed_at
-    supabase.from('user_milestones').select('*').eq('user_id', user.id),
+    supabase.from('user_milestones').select('id, milestone_id, discount_code, claimed_at').eq('user_id', user.id),
     // Bedrijfsbrede counts via RPCs
     supabase.rpc('count_company_configs', { p_user_id: user.id }),
     supabase.rpc('count_company_orders', { p_user_id: user.id }),

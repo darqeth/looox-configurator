@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isAdmin } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import { UserRow } from './user-row'
 
@@ -7,8 +8,7 @@ export default async function GebruikersPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: self } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!self?.is_admin) redirect('/dashboard')
+  if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
 
   const [{ data: profiles }, { data: pendingColleagues }] = await Promise.all([
     supabase

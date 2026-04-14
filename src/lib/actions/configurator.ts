@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 
@@ -17,7 +18,30 @@ function generateArticleNumber(): string {
 
 // Fixed product UUID for the default LoooX spiegel product
 // Run the seed SQL in Supabase to create this product
-const DEFAULT_PRODUCT_ID = '00000000-0000-0000-0000-000000000001'
+export const DEFAULT_PRODUCT_ID = '00000000-0000-0000-0000-000000000001'
+
+type OptionsJsonBase = Pick<SaveConfigInput,
+  'shape' | 'diameter' | 'organicSizeKey' | 'glasKleur' |
+  'directLight' | 'indirectLight' | 'selectedOptions' | 'optionSubChoices' |
+  'reference' | 'description' | 'quantity' | 'attachmentUrl'
+>
+
+export function buildSelectedOptionsJson(input: OptionsJsonBase) {
+  return {
+    shape: input.shape,
+    diameter: input.diameter,
+    organicSizeKey: input.organicSizeKey,
+    glasKleur: input.glasKleur ?? 'helder',
+    directLight: input.directLight,
+    indirectLight: input.indirectLight,
+    extras: input.selectedOptions,
+    optionSubChoices: input.optionSubChoices ?? {},
+    reference: input.reference,
+    description: input.description,
+    quantity: input.quantity,
+    attachmentUrl: input.attachmentUrl ?? null,
+  }
+}
 
 type LightConfig = {
   position: string
@@ -65,20 +89,7 @@ export async function saveConfiguration(input: SaveConfigInput) {
     selectedOptions: input.selectedOptions,
   })
 
-  const selectedOptionsJson = {
-    shape: input.shape,
-    diameter: input.diameter,
-    organicSizeKey: input.organicSizeKey,
-    glasKleur: input.glasKleur ?? 'helder',
-    directLight: input.directLight,
-    indirectLight: input.indirectLight,
-    extras: input.selectedOptions,
-    optionSubChoices: input.optionSubChoices ?? {},
-    reference: input.reference,
-    description: input.description,
-    quantity: input.quantity,
-    attachmentUrl: input.attachmentUrl ?? null,
-  }
+  const selectedOptionsJson = buildSelectedOptionsJson(input)
 
   const { error } = await supabase.from('configurations').insert({
     user_id: user.id,
@@ -120,8 +131,7 @@ export async function adminDeleteConfiguration(configId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) throw new Error('Geen toegang')
+  if (!await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
 
   const { error } = await supabase.from('configurations').delete().eq('id', configId)
   if (error) throw new Error(error.message)
@@ -157,20 +167,7 @@ export async function updateConfiguration(input: UpdateConfigInput) {
     selectedOptions: input.selectedOptions,
   })
 
-  const selectedOptionsJson = {
-    shape: input.shape,
-    diameter: input.diameter,
-    organicSizeKey: input.organicSizeKey,
-    glasKleur: input.glasKleur ?? 'helder',
-    directLight: input.directLight,
-    indirectLight: input.indirectLight,
-    extras: input.selectedOptions,
-    optionSubChoices: input.optionSubChoices ?? {},
-    reference: input.reference,
-    description: input.description,
-    quantity: input.quantity,
-    attachmentUrl: input.attachmentUrl ?? null,
-  }
+  const selectedOptionsJson = buildSelectedOptionsJson(input)
 
   const { error } = await supabase.from('configurations').update({
     name: input.projectName,

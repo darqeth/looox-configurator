@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 
 export async function markAllNotificationsRead() {
@@ -24,8 +25,7 @@ export async function createNotification(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) throw new Error('Geen toegang')
+  if (!await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
 
   const { error } = await supabase.from('notifications').insert({
     title: input.title.trim(),
@@ -44,8 +44,7 @@ export async function deleteNotification(id: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) throw new Error('Geen toegang')
+  if (!await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
 
   const { error } = await supabase.from('notifications').delete().eq('id', id)
   if (error) throw new Error(error.message)

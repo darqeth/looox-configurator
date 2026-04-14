@@ -27,6 +27,14 @@ export default function AvatarUpload({
     const file = e.target.files?.[0]
     if (!file) return
 
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+    const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp']
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+    if (!ALLOWED_TYPES.includes(file.type) || !ALLOWED_EXTS.includes(ext)) {
+      setError('Alleen JPG, PNG of WebP bestanden zijn toegestaan')
+      return
+    }
+
     if (file.size > 2 * 1024 * 1024) {
       setError('Bestand is te groot (max 2 MB)')
       return
@@ -36,7 +44,6 @@ export default function AvatarUpload({
     setError('')
 
     const supabase = createClient()
-    const ext = file.name.split('.').pop()
     const path = `${userId}/logo.${ext}`
 
     const { error: uploadError } = await supabase.storage

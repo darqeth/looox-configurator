@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCompanyPriceSettings } from '@/lib/company-utils'
 import { redirect, notFound } from 'next/navigation'
 import ConfiguratorWizard from '../nieuw/configurator-wizard'
 import { LightConfig } from '../nieuw/step-verlichting'
@@ -45,17 +46,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
   const canOrder = isManager || (memberData?.can_order ?? true)
 
-  let priceFactor = 1
-  let priceFactorEnabled = false
-  if (profile?.company_id) {
-    const { data: company } = await supabase
-      .from('companies')
-      .select('price_factor, price_factor_enabled')
-      .eq('id', profile.company_id)
-      .single()
-    priceFactor = Number(company?.price_factor ?? 1)
-    priceFactorEnabled = company?.price_factor_enabled ?? false
-  }
+  const { priceFactor, priceFactorEnabled } = await getCompanyPriceSettings(supabase, profile?.company_id ?? null)
 
   return (
     <ConfiguratorWizard

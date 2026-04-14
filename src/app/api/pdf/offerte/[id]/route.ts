@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getCompanyPriceSettings } from '@/lib/company-utils'
 import { renderToBuffer } from '@react-pdf/renderer'
 import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
@@ -25,26 +26,16 @@ export async function GET(
 
   if (error || !config) return new NextResponse('Not found', { status: 404 })
 
-  // Fetch dealer profile + bedrijf voor prijsfactor
-  const [{ data: profile }, { data: profileFull }] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, phone, address, company_id').eq('id', user.id).single(),
-    supabase.from('profiles').select('company_id').eq('id', user.id).single(),
-  ])
+  // Fetch dealer profile + prijsfactor
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, company, phone, address, company_id')
+    .eq('id', user.id)
+    .single()
 
-  // Prijsfactor van het bedrijf (bedrijfsbreed)
-  let priceFactor = 1
-  let priceFactorEnabled = false
-  const companyId = profileFull?.company_id ?? null
-  if (companyId) {
-    const { data: company } = await supabase
-      .from('companies')
-      .select('price_factor, price_factor_enabled')
-      .eq('id', companyId)
-      .single()
-    priceFactor = Number(company?.price_factor ?? 1)
-    // Offerte toont altijd consumentenprijs als factor > 1 (ongeacht toggle)
-    priceFactorEnabled = priceFactor > 1
-  }
+  const { priceFactor } = await getCompanyPriceSettings(supabase, profile?.company_id ?? null)
+  // Offerte toont altijd consumentenprijs als factor > 1 (ongeacht toggle)
+  const priceFactorEnabled = priceFactor > 1
 
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const quantity = (opts.quantity as number | undefined) ?? 1

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isAdmin } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import ConfigDetailModal from './config-detail-modal'
 
@@ -12,13 +13,7 @@ export default async function AdminConfiguratiePage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: adminProfile } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
-
-  if (!adminProfile?.is_admin) redirect('/dashboard')
+  if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
 
   const { status, q } = await searchParams
 

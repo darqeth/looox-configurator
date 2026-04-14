@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 
@@ -11,8 +12,7 @@ export async function updateApprovalStatus(userId: string, status: 'approved' | 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const { data: self } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!self?.is_admin) return
+  if (!await isAdmin(supabase, user.id)) return
 
   await supabase
     .from('profiles')
@@ -27,8 +27,7 @@ export async function deleteUser(userId: string): Promise<{ success: boolean; er
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Niet ingelogd.' }
 
-  const { data: self } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!self?.is_admin) return { success: false, error: 'Geen toegang.' }
+  if (!await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang.' }
 
   // Voorkom dat een admin zichzelf verwijdert
   if (userId === user.id) return { success: false, error: 'Je kunt jezelf niet verwijderen.' }
@@ -69,8 +68,7 @@ export async function generatePasswordResetLink(email: string): Promise<{ link?:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Niet ingelogd.' }
 
-  const { data: self } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!self?.is_admin) return { error: 'Geen toegang.' }
+  if (!await isAdmin(supabase, user.id)) return { error: 'Geen toegang.' }
 
   const appUrl = await getAppUrl()
   const admin = createAdminClient()

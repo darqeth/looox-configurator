@@ -21,14 +21,17 @@ export default function MilestoneCelebration({ milestones }: { milestones: Miles
     if (launched.current) return
     launched.current = true
 
-    const seen: string[] = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+    let seen: string[] = []
+    try {
+      seen = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+    } catch { /* ignore parse errors */ }
     const newlyDone = milestones.filter(m => m.done && !seen.includes(m.id))
 
     if (newlyDone.length === 0) return
 
     // Sla ze allemaal direct op — zodat ze niet nogmaals getoond worden
     const updated = [...new Set([...seen, ...newlyDone.map(m => m.id)])]
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)) } catch { /* ignore quota errors */ }
 
     setQueue(newlyDone)
     setCelebrating(newlyDone[0])

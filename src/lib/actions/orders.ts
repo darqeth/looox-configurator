@@ -3,8 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
-
-const DEFAULT_PRODUCT_ID = '00000000-0000-0000-0000-000000000001'
+import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID } from '@/lib/actions/configurator'
 
 type LightConfig = {
   position: string
@@ -95,18 +94,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
   const finalTotalPrice = subtotal - discountAmount
 
   const selectedOptionsJson = {
-    shape: input.shape,
-    diameter: input.diameter,
-    organicSizeKey: input.organicSizeKey,
-    glasKleur: input.glasKleur ?? 'helder',
-    directLight: input.directLight,
-    indirectLight: input.indirectLight,
-    extras: input.selectedOptions,
-    optionSubChoices: input.optionSubChoices ?? {},
-    reference: input.reference,
-    description: input.description,
-    quantity: input.quantity,
-    attachmentUrl: input.attachmentUrl ?? null,
+    ...buildSelectedOptionsJson(input),
     discountType: input.discountType ?? null,
     discountValue: input.discountValue ?? null,
     discountAmount: discountAmount > 0 ? discountAmount : null,

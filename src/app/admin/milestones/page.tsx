@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isAdmin } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import MilestoneForm from './milestone-form'
 import MilestoneList from './milestone-list'
@@ -14,8 +15,7 @@ export default async function AdminMilestonesPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) redirect('/dashboard')
+  if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
 
   const { tab } = await searchParams
   const activeTab = tab === 'kortingen' ? 'kortingen' : 'milestones'

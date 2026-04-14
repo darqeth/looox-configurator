@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCompanyPriceSettings } from '@/lib/company-utils'
 import ConfiguratorWizard from './configurator-wizard'
 
 export const metadata = { title: 'Nieuwe spiegel — LoooX Configurator' }
@@ -22,15 +23,7 @@ export default async function NieuweConfiguratiePage() {
     canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
     canOrder = isManager || (memberData?.can_order ?? true)
 
-    if (profile?.company_id) {
-      const { data: company } = await supabase
-        .from('companies')
-        .select('price_factor, price_factor_enabled')
-        .eq('id', profile.company_id)
-        .single()
-      priceFactor = Number(company?.price_factor ?? 1)
-      priceFactorEnabled = company?.price_factor_enabled ?? false
-    }
+    ;({ priceFactor, priceFactorEnabled } = await getCompanyPriceSettings(supabase, profile?.company_id ?? null))
   }
 
   return (

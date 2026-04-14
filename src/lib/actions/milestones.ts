@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getCompanyUserIds } from '@/lib/company-utils'
+import { getCompanyUserIds, isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -52,8 +52,7 @@ export async function createMilestone(data: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) return { error: 'Forbidden' }
+  if (!await isAdmin(supabase, user.id)) return { error: 'Forbidden' }
 
   const { error } = await supabase.from('milestones').insert({
     ...data,
@@ -72,8 +71,7 @@ export async function updateMilestone(id: string, data: Partial<Milestone>) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) return { error: 'Forbidden' }
+  if (!await isAdmin(supabase, user.id)) return { error: 'Forbidden' }
 
   const { error } = await supabase.from('milestones').update(data).eq('id', id)
   if (error) return { error: error.message }
@@ -86,8 +84,7 @@ export async function deleteMilestone(id: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) return { error: 'Forbidden' }
+  if (!await isAdmin(supabase, user.id)) return { error: 'Forbidden' }
 
   const { error } = await supabase.from('milestones').delete().eq('id', id)
   if (error) return { error: error.message }
@@ -108,8 +105,7 @@ export async function createDiscountCode(data: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) return { error: 'Forbidden' }
+  if (!await isAdmin(supabase, user.id)) return { error: 'Forbidden' }
 
   const code = generateCode('LX')
 
@@ -132,8 +128,7 @@ export async function deleteDiscountCode(id: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
-  if (!profile?.is_admin) return { error: 'Forbidden' }
+  if (!await isAdmin(supabase, user.id)) return { error: 'Forbidden' }
 
   const { error } = await supabase.from('discount_codes').delete().eq('id', id)
   if (error) return { error: error.message }
@@ -300,7 +295,7 @@ export async function updateLoginStreak() {
 
   const { data: streak } = await supabase
     .from('login_streaks')
-    .select('*')
+    .select('current_streak, longest_streak, last_login_date')
     .eq('user_id', user.id)
     .single()
 

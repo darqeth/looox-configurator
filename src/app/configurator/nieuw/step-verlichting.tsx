@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import Image from 'next/image'
 import {
   ShapeSlug,
@@ -33,7 +34,7 @@ const CONTROL_IMG: Record<string, string> = {
   'motion-sensor': '/icons/motion.png',
 }
 
-function ControlIcon({ id, active }: { id: string; active: boolean }) {
+const ControlIcon = memo(function ControlIcon({ id, active }: { id: string; active: boolean }) {
   if (CONTROL_IMG[id]) {
     return (
       <Image
@@ -54,9 +55,9 @@ function ControlIcon({ id, active }: { id: string; active: boolean }) {
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={svgClass}><rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="1.5" fill="currentColor"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="15" y2="18"/></svg>
   )
   return <div className="w-7 h-7" />
-}
+})
 
-function LightSection({ title, positions, config, onChange }: LightSectionProps) {
+const LightSection = memo(function LightSection({ title, positions, config, onChange }: LightSectionProps) {
   const lightTypes: LightType[] = ['3000k', '4000k', 'rgbw', 'cct']
 
   if (positions.length === 0) return null
@@ -157,7 +158,7 @@ function LightSection({ title, positions, config, onChange }: LightSectionProps)
       )}
     </div>
   )
-}
+})
 
 interface StepVerlichtingProps {
   shape: ShapeSlug

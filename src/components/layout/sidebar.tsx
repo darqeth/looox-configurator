@@ -193,7 +193,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden relative">
             {avatarUrl
-              ? <Image src={avatarUrl} alt="" fill className="object-cover" />
+              ? <Image src={avatarUrl} alt="" fill sizes="40px" className="object-cover" />
               : <div className="w-full h-full bg-[#5DA87A]/25 flex items-center justify-center text-[#6EBD8E] text-sm font-semibold">{firstLetter}</div>
             }
           </div>

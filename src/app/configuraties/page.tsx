@@ -69,18 +69,24 @@ export default async function ConfiguratiesPage({
     query = query.eq('status', filter)
   }
 
-  const { data: configs, count: filteredCount } = await query
+  // Tab-counts parallel aan de hoofdquery — head:true geeft alleen COUNT, geen rijen
+  const [
+    { data: configs, count: filteredCount },
+    { count: allCount },
+    { count: savedCount },
+    { count: orderedCount },
+  ] = await Promise.all([
+    query,
+    supabase.from('configurations').select('*', { count: 'exact', head: true }),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('status', 'saved'),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('status', 'ordered'),
+  ])
+
   const totalPages = Math.ceil((filteredCount ?? 0) / PAGE_SIZE)
-
-  const { data: allConfigs } = await supabase
-    .from('configurations')
-    .select('status')
-    .eq('user_id', user.id)
-
   const counts = {
-    all: allConfigs?.length ?? 0,
-    saved: allConfigs?.filter(c => c.status === 'saved').length ?? 0,
-    ordered: allConfigs?.filter(c => c.status === 'ordered').length ?? 0,
+    all: allCount ?? 0,
+    saved: savedCount ?? 0,
+    ordered: orderedCount ?? 0,
   }
 
   const tabs = [

@@ -120,6 +120,7 @@ export async function updateMemberPermissions(
       .select('*', { count: 'exact', head: true })
       .eq('company_id', myMember.company_id)
       .eq('role', 'manager')
+      .limit(2)
 
     if ((count ?? 0) <= 1)
       return { success: false, error: 'Je bent de enige manager. Promoveer eerst een andere collega.' }
@@ -177,6 +178,7 @@ export async function removeMember(
       .select('*', { count: 'exact', head: true })
       .eq('company_id', myMember.company_id)
       .eq('role', 'manager')
+      .limit(2)
 
     if ((count ?? 0) <= 1)
       return { success: false, error: 'Je bent de enige manager. Promoveer eerst een andere collega.' }

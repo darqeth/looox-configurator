@@ -169,21 +169,15 @@ export async function placeOrderFromConfig(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  // Haal bestaande configuratie op (RLS zorgt dat alleen eigen configs opgehaald worden)
+  // Haal bestaande configuratie op — inclusief selected_options voor eventuele kortingsupdate (RLS: alleen eigen configs)
   const { data: config, error: configError } = await supabase
     .from('configurations')
-    .select('id, total_price')
+    .select('id, total_price, selected_options')
     .eq('id', configId)
     .eq('user_id', user.id)
     .single()
 
   if (configError || !config) throw new Error('Configuratie niet gevonden')
-
-  // Zet status op 'ordered'
-  await supabase
-    .from('configurations')
-    .update({ status: 'ordered' })
-    .eq('id', configId)
 
   const unitPrice = Number(config.total_price)
   const subtotal = unitPrice * quantity
@@ -197,22 +191,21 @@ export async function placeOrderFromConfig(
   }
   const finalTotalPrice = subtotal - discountAmount
 
-  // Sla kortingsinfo op in config selected_options zodat de PDF het kan tonen
-  if (discountAmount > 0) {
-    const { data: existingConfig } = await supabase
-      .from('configurations')
-      .select('selected_options')
-      .eq('id', configId)
-      .single()
-    await supabase.from('configurations').update({
-      selected_options: {
-        ...(existingConfig?.selected_options as object ?? {}),
-        discountType,
-        discountValue,
-        discountAmount,
-      },
-    }).eq('id', configId)
-  }
+  // Zet status op 'ordered' en sla eventuele kortingsinfo op in selected_options
+  await supabase
+    .from('configurations')
+    .update({
+      status: 'ordered',
+      ...(discountAmount > 0 && {
+        selected_options: {
+          ...(config.selected_options as object ?? {}),
+          discountType,
+          discountValue,
+          discountAmount,
+        },
+      }),
+    })
+    .eq('id', configId)
 
   const orderNumber = await generateOrderNumber(supabase)
 

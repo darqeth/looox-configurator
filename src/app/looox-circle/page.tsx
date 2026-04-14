@@ -37,7 +37,7 @@ export default async function LoooxCirclePage() {
     supabase.rpc('count_company_orders', { p_user_id: user.id }),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak, longest_streak').eq('user_id', user.id).single(),
-    supabase.from('configurations').select('selected_options').eq('user_id', user.id),
+    supabase.rpc('get_user_configured_shapes', { p_user_id: user.id }),
     supabase.from('discount_codes').select('code').eq('user_id', user.id).not('used_at', 'is', null),
   ])
 
@@ -48,7 +48,7 @@ export default async function LoooxCirclePage() {
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = streakData?.current_streak ?? 0
   const configuredShapes = new Set(
-    (shapeData ?? []).map(c => (c.selected_options as { shape?: string })?.shape).filter(Boolean)
+    (shapeData ?? []).map((r: { shape: string }) => r.shape).filter(Boolean)
   )
 
   // Bedrijfsbreed behaalde milestones (als set van milestone_ids)

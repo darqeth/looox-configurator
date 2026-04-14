@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import {
   ShapeSlug,
   GlasKleur,
@@ -26,7 +26,7 @@ interface StepAfmetingProps {
   }>) => void
 }
 
-function GlaskleurPicker({ glasKleur, onChange }: { glasKleur: GlasKleur; onChange: (k: GlasKleur) => void }) {
+const GlaskleurPicker = memo(function GlaskleurPicker({ glasKleur, onChange }: { glasKleur: GlasKleur; onChange: (k: GlasKleur) => void }) {
   return (
     <div className="space-y-3">
       <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Glaskleur</p>
@@ -56,9 +56,9 @@ function GlaskleurPicker({ glasKleur, onChange }: { glasKleur: GlasKleur; onChan
       </div>
     </div>
   )
-}
+})
 
-function DimInput({
+const DimInput = memo(function DimInput({
   label,
   value,
   onChange,
@@ -69,6 +69,7 @@ function DimInput({
 }) {
   const { min, max } = RECHTHOEK_CONSTRAINTS
   const [raw, setRaw] = useState(String(value))
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sync wanneer waarde extern verandert (preset-knop, +/-)
   useEffect(() => { setRaw(String(value)) }, [value])
@@ -79,6 +80,11 @@ function DimInput({
     setRaw(String(v))
   }
 
+  const debouncedStep = useCallback((next: number) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => onChange(next), 150)
+  }, [onChange])
+
   const parsed = parseInt(raw)
   const isValid = !isNaN(parsed) && parsed >= min && parsed <= max
 
@@ -87,7 +93,7 @@ function DimInput({
       <label className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">{label}</label>
       <div className="flex items-center gap-2">
         <button
-          onClick={() => onChange(Math.max(min, value - 1))}
+          onClick={() => debouncedStep(Math.max(min, value - 1))}
           tabIndex={-1}
           className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center flex-shrink-0"
         >
@@ -108,7 +114,7 @@ function DimInput({
           />
         </div>
         <button
-          onClick={() => onChange(Math.min(max, value + 1))}
+          onClick={() => debouncedStep(Math.min(max, value + 1))}
           tabIndex={-1}
           className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center flex-shrink-0"
         >
@@ -121,7 +127,7 @@ function DimInput({
       )}
     </div>
   )
-}
+})
 
 export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, onChange }: StepAfmetingProps) {
   if (shape === 'rechthoek') {

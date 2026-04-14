@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useTransition, useCallback } from 'react'
+import { useState, useRef, useEffect, useTransition, useCallback, memo } from 'react'
 import { markAllNotificationsRead } from '@/lib/actions/notifications'
 
 type Notification = {
@@ -50,7 +50,7 @@ interface NotificationRowProps {
   onToggle: (id: string) => void
 }
 
-function NotificationRow({ n, isUnread, isExpanded, onToggle }: NotificationRowProps) {
+const NotificationRow = memo(function NotificationRow({ n, isUnread, isExpanded, onToggle }: NotificationRowProps) {
   const cfg = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.info
   const { ref: clampRef, isClamped } = useIsClamped(n.body)
 
@@ -102,7 +102,7 @@ function NotificationRow({ n, isUnread, isExpanded, onToggle }: NotificationRowP
       </div>
     </div>
   )
-}
+})
 
 interface NotificationBellProps {
   notifications: Notification[]

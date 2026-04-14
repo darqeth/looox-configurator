@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS } from '@/lib/configurator-config'
@@ -42,7 +42,7 @@ const STEPS = [
 
 const DEFAULT_LIGHT: LightConfig = { position: 'geen', type: null, control: null }
 
-function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, priceFactor, priceFactorEnabled, canSeePurchasePrices, step, isStep1Valid, projectName, saving, onNext, onSave }: {
+const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, priceFactor, priceFactorEnabled, canSeePurchasePrices, step, isStep1Valid, projectName, saving, onNext, onSave }: {
   shape: ShapeSlug; width: number; height: number; diameter: number | null; organicSizeKey: string | null
   directLight: LightConfig; indirectLight: LightConfig; selectedOptions: string[]; optionSubChoices: Record<string, string>
   priceFactor: number; priceFactorEnabled: boolean; canSeePurchasePrices: boolean
@@ -85,7 +85,7 @@ function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, direct
       )}
     </div>
   )
-}
+})
 
 export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, priceFactorEnabled = false, canSeePurchasePrices = true, canOrder = true }: { initialConfig?: InitialConfig; priceFactor?: number; priceFactorEnabled?: boolean; canSeePurchasePrices?: boolean; canOrder?: boolean }) {
   const router = useRouter()
@@ -118,7 +118,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
   const [saved, setSaved] = useState(false)
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; orderId: string } | null>(null)
 
-  function handleShapeSelect(s: ShapeSlug) {
+  const handleShapeSelect = useCallback((s: ShapeSlug) => {
     setShape(s)
     setStep(1)
     setGlasKleur('helder')
@@ -126,7 +126,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
     setIndirectLight(DEFAULT_LIGHT)
     setSelectedOptions([])
     setOptionSubChoices({})
-  }
+  }, [])
 
   function isStep1Valid(): boolean {
     if (!shape) return false
@@ -171,7 +171,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
     return urlData.publicUrl
   }
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     if (!shape || !projectName.trim()) return
     setSaving(true)
     try {
@@ -198,12 +198,12 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
       console.error(e)
       setSaving(false)
     }
-  }
+  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, description, quantity, isEditing, initialConfig, router])
 
-  async function handleOrder({ quantity: qty, discount }: {
+  const handleOrder = useCallback(async ({ quantity: qty, discount }: {
     quantity: number
     discount: { id: string; type: 'pct' | 'fixed'; value: number; useType: 'single' | 'per_user' } | null
-  }) {
+  }) => {
     if (!shape || !projectName.trim()) return
     setQuantity(qty)
     setSaving(true)
@@ -229,7 +229,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
       console.error(e)
       setSaving(false)
     }
-  }
+  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, description, router])
 
   if (orderResult) {
     return (

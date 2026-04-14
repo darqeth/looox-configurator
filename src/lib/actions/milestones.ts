@@ -166,8 +166,8 @@ export async function checkAndAwardMilestones() {
     supabase.rpc('count_company_orders', { p_user_id: user.id }),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', user.id).single(),
-    // Shape milestone blijft per user (eigen spiegel-ervaring)
-    supabase.from('configurations').select('selected_options').eq('user_id', user.id),
+    // Shape milestone: RPC geeft alleen distinct shapes terug (geen volledige selected_options)
+    supabase.rpc('get_user_configured_shapes', { p_user_id: user.id }),
   ])
 
   if (!milestones) return
@@ -178,7 +178,7 @@ export async function checkAndAwardMilestones() {
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = streakData?.current_streak ?? 0
   const configuredShapes = new Set(
-    (shapeData ?? []).map(c => (c.selected_options as { shape?: string })?.shape).filter(Boolean)
+    (shapeData ?? []).map((r: { shape: string }) => r.shape).filter(Boolean)
   )
 
   for (const m of milestones) {

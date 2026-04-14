@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
 import type { ShapeSlug } from '@/lib/configurator-config'
 
@@ -22,9 +22,9 @@ export default function BestelModal({ shape, unitPrice, projectName, saving, dis
   const [checked, setChecked] = useState(false)
 
   const isAanvraag = shape === 'op-aanvraag'
-  const subtotal = unitPrice * quantity
+  const subtotal = useMemo(() => unitPrice * quantity, [unitPrice, quantity])
   const { input: discountInput, setInput: setDiscountInput, validating: discountValidating, error: discountError, setError: setDiscountError, applied: appliedDiscount, setApplied: setAppliedDiscount, discountAmount, validate: handleValidate, reset: resetDiscount } = useDiscountCode(subtotal)
-  const finalTotal = subtotal - discountAmount
+  const finalTotal = useMemo(() => subtotal - discountAmount, [subtotal, discountAmount])
 
   function handleClose() {
     if (saving) return

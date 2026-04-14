@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ShapeSlug,
   GlasKleur,
@@ -31,8 +31,8 @@ const GLASS_APPEARANCE: Record<GlasKleur, { fill: string; fillOpacity: number; s
   'smoke-zwart': { fill: '#18191C', fillOpacity: 0.90, stroke: '#2C2E33', glansOpacity: 0.15 },
 }
 
-// Mirror preview SVG
-function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur }: {
+// Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen
+const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur }: {
   shape: ShapeSlug
   width: number
   height: number
@@ -292,10 +292,10 @@ function MirrorPreview({ shape, width, height, diameter, directPosition, indirec
       <text x={cx} y="116" textAnchor="middle" fill="var(--lx-text-secondary)" fontSize="13" fontWeight="500">Op aanvraag</text>
     </svg>
   )
-}
+})
 
 // Animated price display
-function AnimatedPrice({ price }: { price: number }) {
+const AnimatedPrice = memo(function AnimatedPrice({ price }: { price: number }) {
   const [display, setDisplay] = useState(price)
   const [delta, setDelta] = useState<number | null>(null)
   const prevRef = useRef(price)
@@ -326,7 +326,7 @@ function AnimatedPrice({ price }: { price: number }) {
       )}
     </div>
   )
-}
+})
 
 interface PricePanelProps {
   shape: ShapeSlug
@@ -349,7 +349,7 @@ export default function PricePanel({
   directLight, indirectLight, selectedOptions, optionSubChoices,
   priceFactor = 1, priceFactorEnabled = false, canSeePurchasePrices = true,
 }: PricePanelProps) {
-  const netto = calcTotalPrice({
+  const netto = useMemo(() => calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur,
     directPosition: directLight.position,
     directType: directLight.type,
@@ -359,7 +359,7 @@ export default function PricePanel({
     indirectControl: indirectLight.control,
     selectedOptions,
     optionSubChoices,
-  })
+  }), [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices])
   const showConsumer = priceFactorEnabled && priceFactor > 1
   const total = showConsumer ? Math.round(netto * priceFactor) : netto
 

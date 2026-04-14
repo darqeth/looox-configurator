@@ -1,12 +1,11 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { signIn } from '@/lib/actions/auth'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -16,7 +15,11 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState('')
   const [passwordDone, setPasswordDone] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef<SupabaseClient | null>(null)
+  const getSupabase = () => {
+    if (!supabaseRef.current) supabaseRef.current = createClient()
+    return supabaseRef.current
+  }
 
   useEffect(() => {
     let recovered = false
@@ -30,7 +33,7 @@ export default function LoginPage() {
       clearHash()
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = getSupabase().auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') enterRecovery()
     })
 
@@ -41,7 +44,7 @@ export default function LoginPage() {
       const accessToken = params.get('access_token')
       const refreshToken = params.get('refresh_token')
       if (accessToken && refreshToken) {
-        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        getSupabase().auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
           .then(({ error }) => { if (!error) enterRecovery() })
       }
     }
@@ -67,7 +70,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     startTransition(async () => {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      const { error } = await getSupabase().auth.updateUser({ password: newPassword })
       if (error) {
         setError(error.message)
       } else {

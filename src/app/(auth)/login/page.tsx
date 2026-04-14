@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useTransition, useEffect } from 'react'
 import Image from 'next/image'
 import { signIn } from '@/lib/actions/auth'

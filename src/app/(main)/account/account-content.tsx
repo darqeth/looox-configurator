@@ -66,7 +66,7 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
     { data: profile },
     { data: memberData },
   ] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, phone, address, tier, created_at, avatar_url, company_id').eq('id', userId).single(),
+    supabase.from('profiles').select('full_name, company, phone, address, tier, created_at, avatar_url, company_id, price_factor, price_factor_enabled').eq('id', userId).single(),
     supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', userId).maybeSingle(),
   ])
 

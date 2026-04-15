@@ -9,13 +9,24 @@ interface Tab {
   count: number
 }
 
-export default function ConfiguratiesTabs({ tabs, currentFilter }: { tabs: Tab[]; currentFilter: string }) {
+export default function ConfiguratiesTabs({
+  tabs,
+  currentFilter,
+  view,
+}: {
+  tabs: Tab[]
+  currentFilter: string
+  view?: string
+}) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   function handleTab(key: string) {
     startTransition(() => {
-      router.push(key ? `/configuraties?filter=${key}` : '/configuraties')
+      const viewPart = view ? `view=${view}` : ''
+      const filterPart = key ? `filter=${key}` : ''
+      const query = [viewPart, filterPart].filter(Boolean).join('&')
+      router.push(query ? `/configuraties?${query}` : '/configuraties')
     })
   }
 

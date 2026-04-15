@@ -36,9 +36,11 @@ function ShapeIcon({ shape }: { shape: string }) {
 export async function ConfiguratiesContent({
   filter,
   page,
+  view,
 }: {
   filter: string
   page: string
+  view: string
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -48,46 +50,141 @@ export async function ConfiguratiesContent({
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
+  // Haal eigen rechten op
+  const { data: memberPerms } = await supabase
+    .from('company_members')
+    .select('role, can_order, can_configure, can_see_purchase_prices, own_configs_only, company_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const isManager = !memberPerms || memberPerms.role === 'manager'
+  const canOrder = isManager || (memberPerms?.can_order ?? true)
+  const canConfigure = isManager || (memberPerms?.can_configure ?? true)
+  const canSeePurchasePrices = isManager || (memberPerms?.can_see_purchase_prices ?? false)
+
+  // Haal teamleden op als de user manager is
+  type TeamMember = { userId: string; name: string; count: number }
+  let teamMembers: TeamMember[] = []
+
+  if (isManager && memberPerms?.company_id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rawMembers } = await supabase
+      .from('company_members')
+      .select('user_id, profiles!inner(full_name)')
+      .eq('company_id', memberPerms.company_id)
+      .neq('user_id', user.id)
+
+    const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
+
+    // Haal config-aantallen op per teamlid
+    const countResults = await Promise.all(
+      memberUserIds.map(uid =>
+        supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', uid)
+      )
+    )
+
+    teamMembers = (rawMembers ?? []).map((m, i) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const profile = Array.isArray(m.profiles) ? (m.profiles as any[])[0] : m.profiles
+      return {
+        userId: m.user_id as string,
+        name: (profile?.full_name as string | null) ?? 'Onbekend',
+        count: countResults[i]?.count ?? 0,
+      }
+    })
+  }
+
+  // Bepaal welke user we laten zien
+  const validView = view && teamMembers.some(m => m.userId === view)
+  const viewUserId = isManager && validView ? view : user.id
+
   const [
-    { data: memberPerms },
     { data: configs, count: filteredCount },
     { count: allCount },
     { count: savedCount },
     { count: orderedCount },
   ] = await Promise.all([
-    supabase
-      .from('company_members')
-      .select('role, can_order, can_configure, can_see_purchase_prices, own_configs_only')
-      .eq('user_id', user.id)
-      .single(),
     (() => {
       let q = supabase
         .from('configurations')
         .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
+        .eq('user_id', viewUserId)
         .order('updated_at', { ascending: false })
         .range(from, to)
       if (filter && ['saved', 'ordered'].includes(filter)) q = q.eq('status', filter)
       return q
     })(),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('status', 'saved'),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('status', 'ordered'),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved'),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'ordered'),
   ])
 
-  const canOrder = !memberPerms || memberPerms.role === 'manager' || memberPerms.can_order
-  const canConfigure = !memberPerms || memberPerms.role === 'manager' || memberPerms.can_configure
-  const canSeePurchasePrices = !memberPerms || memberPerms.role === 'manager' || memberPerms.can_see_purchase_prices
-
   const totalPages = Math.ceil((filteredCount ?? 0) / PAGE_SIZE)
-  const tabs = [
+  const statusTabs = [
     { key: '', label: 'Alle', count: allCount ?? 0 },
     { key: 'saved', label: 'Opgeslagen', count: savedCount ?? 0 },
     { key: 'ordered', label: 'Besteld', count: orderedCount ?? 0 },
   ]
 
+  // Eigen config-count voor member tab header
+  const ownCount = isManager
+    ? (await supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id)).count ?? 0
+    : 0
+
+  // Geef aan wie er bekeken wordt (voor lege-state tekst)
+  const viewingName = validView
+    ? teamMembers.find(m => m.userId === view)?.name.split(' ')[0] ?? 'collega'
+    : null
+
   return (
     <>
-      <ConfiguratiesTabs tabs={tabs} currentFilter={filter} />
+      {/* Member tabs — alleen voor managers met teamleden */}
+      {isManager && teamMembers.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
+          {/* Eigen tab */}
+          <a
+            href="/configuraties"
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors ${
+              !validView
+                ? 'bg-lx-text-primary text-white'
+                : 'text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg'
+            }`}
+          >
+            Mijn configuraties
+            {ownCount > 0 && (
+              <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-full ${
+                !validView ? 'bg-white/20 text-white' : 'bg-lx-divider text-lx-text-secondary'
+              }`}>{ownCount}</span>
+            )}
+          </a>
+          {/* Teamlid tabs */}
+          {teamMembers.map((m) => {
+            const isActive = validView && view === m.userId
+            const firstName = m.name.split(' ')[0]
+            return (
+              <a
+                key={m.userId}
+                href={`/configuraties?view=${m.userId}`}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors ${
+                  isActive
+                    ? 'bg-lx-text-primary text-white'
+                    : 'text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg'
+                }`}
+              >
+                {firstName}
+                {m.count > 0 && (
+                  <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-full ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-lx-divider text-lx-text-secondary'
+                  }`}>{m.count}</span>
+                )}
+              </a>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Status filter tabs */}
+      <ConfiguratiesTabs tabs={statusTabs} currentFilter={filter} view={validView ? view : undefined} />
 
       <div className="bg-white rounded-[18px] border border-black/6 shadow-sm">
         {configs && configs.length > 0 ? (
@@ -196,12 +293,20 @@ export async function ConfiguratiesContent({
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/></svg>
             </div>
             <p className="text-[14px] font-semibold text-lx-text-primary mb-1">
-              {filter ? `Geen ${statusLabels[filter]?.label.toLowerCase() ?? filter} configuraties` : 'Nog geen configuraties'}
+              {filter
+                ? `Geen ${statusLabels[filter]?.label.toLowerCase() ?? filter} configuraties`
+                : viewingName
+                  ? `${viewingName} heeft nog geen configuraties`
+                  : 'Nog geen configuraties'}
             </p>
-            <p className="text-[13px] text-lx-text-secondary mb-5">Configureer je eerste spiegel en sla hem hier op.</p>
-            <Link href="/configurator/nieuw" className="inline-flex items-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors">
-              Nieuwe spiegel configureren
-            </Link>
+            {!viewingName && (
+              <>
+                <p className="text-[13px] text-lx-text-secondary mb-5">Configureer je eerste spiegel en sla hem hier op.</p>
+                <Link href="/configurator/nieuw" className="inline-flex items-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                  Nieuwe spiegel configureren
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -209,11 +314,11 @@ export async function ConfiguratiesContent({
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-center gap-1">
           {currentPage > 1 && (
-            <Link href={filter ? `/configuraties?filter=${filter}&page=${currentPage - 1}` : `/configuraties?page=${currentPage - 1}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">← Vorige</Link>
+            <Link href={(() => { const p = [validView ? `view=${view}` : '', filter ? `filter=${filter}` : '', `page=${currentPage - 1}`].filter(Boolean).join('&'); return `/configuraties${p ? '?' + p : ''}` })()} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">← Vorige</Link>
           )}
           <span className="px-3 py-1.5 text-[12.5px] text-lx-text-secondary">{currentPage} / {totalPages}</span>
           {currentPage < totalPages && (
-            <Link href={filter ? `/configuraties?filter=${filter}&page=${currentPage + 1}` : `/configuraties?page=${currentPage + 1}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">Volgende →</Link>
+            <Link href={(() => { const p = [validView ? `view=${view}` : '', filter ? `filter=${filter}` : '', `page=${currentPage + 1}`].filter(Boolean).join('&'); return `/configuraties${p ? '?' + p : ''}` })()} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">Volgende →</Link>
           )}
         </div>
       )}

@@ -192,7 +192,15 @@ export async function removeMember(
 
   if (error) return { success: false, error: 'Verwijderen mislukt.' }
 
+  // Verwijder ook company_id uit het profiel zodat RLS geen toegang meer geeft
+  // tot bedrijfsconfiguraties en -data
+  await supabase
+    .from('profiles')
+    .update({ company_id: null })
+    .eq('id', target.user_id)
+
   revalidatePath('/account/collegas')
+  revalidatePath('/configuraties')
   return { success: true }
 }
 

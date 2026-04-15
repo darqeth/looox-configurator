@@ -34,9 +34,11 @@ type PlaceOrderInput = {
 }
 
 async function generateOrderNumber(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
-  const { data } = await supabase.rpc('next_order_number')
-  if (!data) throw new Error('Ordernummer genereren mislukt')
-  return data as string
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data } = await supabase.rpc('next_order_number')
+    if (data) return data as string
+  }
+  throw new Error('Ordernummer genereren mislukt')
 }
 
 async function applyDiscountCode(
@@ -207,24 +209,30 @@ export async function placeOrderFromConfig(
     })
     .eq('id', configId)
 
-  const orderNumber = await generateOrderNumber(supabase)
-
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert({
-      configuration_id: config.id,
-      user_id: user.id,
-      order_number: orderNumber,
-      quantity,
-      unit_price: unitPrice.toString(),
-      total_price: finalTotalPrice.toString(),
-      notes: notes || null,
-      status: 'pending',
-    })
-    .select('id')
-    .single()
-
-  if (orderError || !order) throw new Error(orderError?.message ?? 'Order aanmaken mislukt')
+  // Genereer ordernummer met retry bij duplicate key (23505)
+  let order: { id: string } | null = null
+  let orderNumber = ''
+  for (let attempt = 0; attempt < 5; attempt++) {
+    orderNumber = await generateOrderNumber(supabase)
+    const { data, error: insertError } = await supabase
+      .from('orders')
+      .insert({
+        configuration_id: config.id,
+        user_id: user.id,
+        order_number: orderNumber,
+        quantity,
+        unit_price: unitPrice.toString(),
+        total_price: finalTotalPrice.toString(),
+        notes: notes || null,
+        status: 'pending',
+      })
+      .select('id')
+      .single()
+    if (!insertError) { order = data; break }
+    if (insertError.code !== '23505') throw new Error(insertError.message ?? 'Order aanmaken mislukt')
+    // 23505 = duplicate order_number, nieuw nummer proberen
+  }
+  if (!order) throw new Error('Order aanmaken mislukt na meerdere pogingen')
 
   // Markeer kortingscode als gebruikt (atomisch)
   if (discountCodeId) {

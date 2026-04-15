@@ -5,9 +5,9 @@ import { ConfiguratiesContent, ConfiguratiesContentSkeleton } from './configurat
 export default async function ConfiguratiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; page?: string }>
+  searchParams: Promise<{ filter?: string; page?: string; view?: string }>
 }) {
-  const { filter, page } = await searchParams
+  const { filter, page, view } = await searchParams
 
   return (
     <div className="p-4 sm:p-6 lg:p-7">
@@ -29,7 +29,7 @@ export default async function ConfiguratiesPage({
 
       {/* Tabs + lijst — streamt zodra DB queries klaar zijn */}
       <Suspense fallback={<ConfiguratiesContentSkeleton />}>
-        <ConfiguratiesContent filter={filter ?? ''} page={page ?? '1'} />
+        <ConfiguratiesContent filter={filter ?? ''} page={page ?? '1'} view={view ?? ''} />
       </Suspense>
 
     </div>

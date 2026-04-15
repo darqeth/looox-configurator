@@ -97,6 +97,8 @@ export async function DashboardContent({
     { data: streakData },
     { data: usedDiscountCodes },
     { data: downloads },
+    { count: savedConfigCount },
+    { count: orderedConfigCount },
   ] = await Promise.all([
     supabase.from('company_members').select('role, can_order').eq('user_id', userId).maybeSingle(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', userId).order('updated_at', { ascending: false }).limit(5),
@@ -114,6 +116,8 @@ export async function DashboardContent({
     supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
     supabase.from('discount_codes').select('code').eq('user_id', userId).not('used_at', 'is', null),
     supabase.from('downloads').select('id, title, file_url, file_ext, file_size').eq('is_active', true).order('sort_order').limit(6),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'saved'),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'ordered'),
   ])
 
   const canOrder = !memberData || memberData.role === 'manager' || (memberData?.can_order ?? true)
@@ -169,25 +173,33 @@ export async function DashboardContent({
       {/* KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-5">
         <KpiCard
-          label="Actieve configuraties"
-          value={configCount}
-          sub={configCount > 0 ? <><span className="text-lx-cta font-medium">{savedCount} opgeslagen</span> · {configCount - savedCount} besteld</> : 'Nog geen configuraties'}
+          label="Configuraties"
+          value={totalConfigCount ?? 0}
+          sub={
+            (totalConfigCount ?? 0) > 0
+              ? <><span className="text-lx-cta font-medium">{savedConfigCount ?? 0} opgeslagen</span>{(orderedConfigCount ?? 0) > 0 ? <> · {orderedConfigCount} besteld</> : null}</>
+              : 'Maak je eerste configuratie'
+          }
           icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>}
           iconBg="bg-lx-icon-bg"
+          href="/configuraties"
         />
         <KpiCard
           label="In behandeling"
           value={pendingOrderCount ?? 0}
-          sub={(pendingOrderCount ?? 0) > 0 ? `${pendingOrderCount} wacht${(pendingOrderCount ?? 0) !== 1 ? 'en' : ''} op verwerking` : 'Geen openstaande bestellingen'}
+          sub={(pendingOrderCount ?? 0) > 0 ? 'Wacht op verwerking bij LoooX' : 'Geen openstaande bestellingen'}
           icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
           iconBg="bg-[#FFF7ED]"
+          href="/bestellingen"
         />
         <KpiCard
-          label="Bestellingen totaal"
-          value={orderCount}
-          sub={orderCount > 0 ? `${orderCount} order${orderCount !== 1 ? 's' : ''} geplaatst` : 'Nog geen bestellingen'}
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>}
+          label="Totale omzet"
+          displayValue={`€\u00A0${Number(revenueSum ?? 0).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
+          value={Number(revenueSum ?? 0)}
+          sub={Number(revenueSum ?? 0) > 0 ? 'Excl. BTW · alle bestellingen' : 'Nog geen bestellingen geplaatst'}
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
           iconBg="bg-[#EFF6FF]"
+          href="/bestellingen"
         />
       </div>
 
@@ -481,17 +493,31 @@ export async function DashboardContent({
   )
 }
 
-function KpiCard({ label, value, sub, icon, iconBg }: { label: string; value: number; sub: React.ReactNode; icon: React.ReactNode; iconBg: string }) {
-  return (
-    <div className="bg-white rounded-[18px] border border-black/6 shadow-sm p-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[11px] font-semibold text-lx-text-secondary uppercase tracking-wide mb-2.5">{label}</p>
-          <p className="text-[32px] font-bold text-lx-text-primary leading-none tracking-tight">{value}</p>
-          <p className="text-[11.5px] text-lx-text-secondary mt-1.5">{sub}</p>
-        </div>
-        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center`}>{icon}</div>
+function KpiCard({ label, value, displayValue, sub, icon, iconBg, href }: {
+  label: string
+  value: number
+  displayValue?: string
+  sub: React.ReactNode
+  icon: React.ReactNode
+  iconBg: string
+  href?: string
+}) {
+  const inner = (
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-[11px] font-semibold text-lx-text-secondary uppercase tracking-wide mb-2.5">{label}</p>
+        <p className="text-[32px] font-bold text-lx-text-primary leading-none tracking-tight">{displayValue ?? value}</p>
+        <p className="text-[11.5px] text-lx-text-secondary mt-1.5">{sub}</p>
       </div>
+      <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0`}>{icon}</div>
     </div>
   )
+  if (href) {
+    return (
+      <Link href={href} className="block bg-white rounded-[18px] border border-black/6 shadow-sm p-5 hover:shadow-md hover:border-black/10 transition-all cursor-pointer">
+        {inner}
+      </Link>
+    )
+  }
+  return <div className="bg-white rounded-[18px] border border-black/6 shadow-sm p-5">{inner}</div>
 }

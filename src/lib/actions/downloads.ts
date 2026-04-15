@@ -44,6 +44,28 @@ export async function deleteDownload(id: string) {
   revalidatePath('/dashboard')
 }
 
+export async function updateDownload(id: string, data: {
+  title: string
+  file_url: string
+  file_ext: string
+  file_size: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+  if (!await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
+
+  await supabase.from('downloads').update({
+    title: data.title.trim(),
+    file_url: data.file_url.trim(),
+    file_ext: data.file_ext.toUpperCase(),
+    file_size: data.file_size.trim(),
+  }).eq('id', id)
+
+  revalidatePath('/admin/downloads')
+  revalidatePath('/dashboard')
+}
+
 export async function moveDownload(id: string, direction: 'up' | 'down') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

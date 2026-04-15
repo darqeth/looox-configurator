@@ -91,7 +91,7 @@ export async function DashboardContent({
     { data: circleMilestones },
     { data: userMilestonesData },
     { data: companyMilestonesData },
-    { data: revenueSum },
+    { data: ownOrders },
     { data: companyConfigCount },
     { data: companyOrderCount },
     { data: streakData },
@@ -110,7 +110,7 @@ export async function DashboardContent({
     supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
     supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', userId),
     supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
-    supabase.rpc('sum_order_revenue', { p_user_id: userId }),
+    supabase.from('orders').select('total_price').eq('user_id', userId),
     supabase.rpc('count_company_configs', { p_user_id: userId }),
     supabase.rpc('count_company_orders', { p_user_id: userId }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
@@ -125,10 +125,13 @@ export async function DashboardContent({
   const savedCount = configs?.filter(c => c.status === 'saved').length ?? 0
   const orderCount = orders?.length ?? 0
 
+  // Eigen omzet berekend uit directe orders-query (geen company-aggregatie)
+  const revenueSum = (ownOrders ?? []).reduce((sum, o) => sum + Number(o.total_price), 0)
+
   // LoooX Circle widget data
   const circle = (() => {
     if (!circleMilestones?.length) return null
-    const totalRevenue = Number(revenueSum ?? 0)
+    const totalRevenue = revenueSum
     const currentStreak = streakData?.current_streak ?? 0
     const usedCodesSet = new Set((usedDiscountCodes ?? []).map(c => c.code as string))
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -194,9 +197,9 @@ export async function DashboardContent({
         />
         <KpiCard
           label="Totale omzet"
-          displayValue={`€\u00A0${Number(revenueSum ?? 0).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
-          value={Number(revenueSum ?? 0)}
-          sub={Number(revenueSum ?? 0) > 0 ? 'Excl. BTW · alle bestellingen' : 'Nog geen bestellingen geplaatst'}
+          displayValue={`€\u00A0${revenueSum.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
+          value={revenueSum}
+          sub={revenueSum > 0 ? 'Excl. BTW · alle bestellingen' : 'Nog geen bestellingen geplaatst'}
           icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
           iconBg="bg-[#EFF6FF]"
           href="/bestellingen"

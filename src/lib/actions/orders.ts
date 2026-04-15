@@ -34,11 +34,16 @@ type PlaceOrderInput = {
 }
 
 async function generateOrderNumber(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const { data } = await supabase.rpc('next_order_number')
-    if (data) return data as string
-  }
-  throw new Error('Ordernummer genereren mislukt')
+  const { data } = await supabase.rpc('next_order_number')
+  if (data) return data as string
+  return generateFallbackOrderNumber()
+}
+
+function generateFallbackOrderNumber(): string {
+  // Timestamp (ms) + 3-digit random → effectief uniek, zelfde formaat als RPC
+  const ts = Date.now()
+  const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+  return `LX-${ts}-${rand}`
 }
 
 async function applyDiscountCode(
@@ -193,27 +198,14 @@ export async function placeOrderFromConfig(
   }
   const finalTotalPrice = subtotal - discountAmount
 
-  // Zet status op 'ordered' en sla eventuele kortingsinfo op in selected_options
-  await supabase
-    .from('configurations')
-    .update({
-      status: 'ordered',
-      ...(discountAmount > 0 && {
-        selected_options: {
-          ...(config.selected_options as object ?? {}),
-          discountType,
-          discountValue,
-          discountAmount,
-        },
-      }),
-    })
-    .eq('id', configId)
-
+  // Maak eerst de order aan — als dit mislukt blijft de config op 'saved'
   // Genereer ordernummer met retry bij duplicate key (23505)
   let order: { id: string } | null = null
   let orderNumber = ''
-  for (let attempt = 0; attempt < 5; attempt++) {
-    orderNumber = await generateOrderNumber(supabase)
+  for (let attempt = 0; attempt < 10; attempt++) {
+    orderNumber = attempt < 5
+      ? await generateOrderNumber(supabase)          // RPC-gebaseerd
+      : generateFallbackOrderNumber()                // timestamp-gebaseerd als RPC blijft falen
     const { data, error: insertError } = await supabase
       .from('orders')
       .insert({
@@ -232,7 +224,23 @@ export async function placeOrderFromConfig(
     if (insertError.code !== '23505') throw new Error(insertError.message ?? 'Order aanmaken mislukt')
     // 23505 = duplicate order_number, nieuw nummer proberen
   }
-  if (!order) throw new Error('Order aanmaken mislukt na meerdere pogingen')
+  if (!order) throw new Error('Order aanmaken mislukt. Probeer het opnieuw.')
+
+  // Order is aangemaakt — zet config status op 'ordered'
+  await supabase
+    .from('configurations')
+    .update({
+      status: 'ordered',
+      ...(discountAmount > 0 && {
+        selected_options: {
+          ...(config.selected_options as object ?? {}),
+          discountType,
+          discountValue,
+          discountAmount,
+        },
+      }),
+    })
+    .eq('id', configId)
 
   // Markeer kortingscode als gebruikt (atomisch)
   if (discountCodeId) {

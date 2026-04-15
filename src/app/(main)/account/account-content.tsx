@@ -73,18 +73,9 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
   const isManager = !memberData || memberData.role === 'manager'
   const canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
 
-  let priceFactor = 1
-  let priceFactorEnabled = false
-  const companyId = profile?.company_id ?? null
-  if (companyId) {
-    const { data: company } = await supabase
-      .from('companies')
-      .select('price_factor, price_factor_enabled')
-      .eq('id', companyId)
-      .single()
-    priceFactor = Number(company?.price_factor ?? 1)
-    priceFactorEnabled = company?.price_factor_enabled ?? false
-  }
+  // Lees prijsfactor uit profiles — werkt voor iedereen (solo én bedrijf)
+  const priceFactor = Number(profile?.price_factor ?? 1)
+  const priceFactorEnabled = profile?.price_factor_enabled ?? false
 
   const tier = tierInfo[profile?.tier ?? 'Studio'] ?? tierInfo.Studio
   const memberSince = profile?.created_at
@@ -132,8 +123,8 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
         }} />
       </Card>
 
-      {/* Consumentenprijzen — alleen tonen als er een bedrijf gekoppeld is */}
-      {canSeePurchasePrices && companyId && (
+      {/* Consumentenprijzen — voor alle gebruikers met inkoopprijstoegang */}
+      {canSeePurchasePrices && (
         <Card
           title="Consumentenprijzen"
           description={isManager

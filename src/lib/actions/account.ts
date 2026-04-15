@@ -63,6 +63,7 @@ export async function updatePriceFactor(formData: FormData) {
   if (error) throw new Error(error.message)
   if (count === 0) throw new Error('Opslaan mislukt — geen toegang tot het bedrijfsrecord.')
   revalidatePath('/account')
+  revalidatePath('/dashboard')
   revalidatePath('/configurator')
 }
 

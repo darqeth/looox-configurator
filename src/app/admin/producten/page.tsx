@@ -397,18 +397,18 @@ export default function ProductenPage() {
       </div>
 
       {/* Productcategorie */}
-      <div className="flex items-center gap-2 mb-5">
+      <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
         {PRODUCT_CATS.map(c => (
           <button
             key={c.id}
             onClick={() => c.available && setCat(c.id)}
             disabled={!c.available}
-            className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-semibold transition-all ${
+            className={`relative flex items-center gap-2 px-4 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors ${
               !c.available
-                ? 'text-lx-text-secondary cursor-not-allowed opacity-50'
+                ? 'text-lx-text-secondary cursor-not-allowed opacity-40'
                 : cat === c.id
-                ? 'bg-lx-cta text-white'
-                : 'bg-white border border-black/10 text-lx-text-secondary hover:border-lx-cta/40 hover:text-lx-cta cursor-pointer'
+                ? 'bg-lx-text-primary text-white'
+                : 'text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg cursor-pointer'
             }`}
           >
             {c.label}
@@ -424,15 +424,15 @@ export default function ProductenPage() {
       {cat === 'spiegels' && (
         <>
           {/* Shape tabs */}
-          <div className="flex items-center gap-1 mb-5 overflow-x-auto pb-1">
+          <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit overflow-x-auto">
             {SHAPE_TABS.map(t => (
               <button
                 key={t.id}
                 onClick={() => setShape(t.id)}
-                className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold transition-all cursor-pointer ${
+                className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors cursor-pointer ${
                   shape === t.id
-                    ? 'bg-lx-icon-bg text-lx-cta'
-                    : 'text-lx-text-secondary hover:text-lx-text-primary hover:bg-white'
+                    ? 'bg-lx-text-primary text-white'
+                    : 'text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg'
                 }`}
               >
                 {t.label}

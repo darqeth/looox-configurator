@@ -52,7 +52,7 @@ export default async function AdminMilestonesPage({
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
         {[
-          { key: 'milestones', label: 'Mijlpalen' },
+          { key: 'milestones', label: 'Milestones' },
           { key: 'kortingen', label: 'Kortingscodes' },
         ].map((t) => (
           <a

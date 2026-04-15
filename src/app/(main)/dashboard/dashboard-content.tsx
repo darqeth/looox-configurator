@@ -96,6 +96,7 @@ export async function DashboardContent({
     { data: companyOrderCount },
     { data: streakData },
     { data: usedDiscountCodes },
+    { data: downloads },
   ] = await Promise.all([
     supabase.from('company_members').select('role, can_order').eq('user_id', userId).maybeSingle(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', userId).order('updated_at', { ascending: false }).limit(5),
@@ -112,6 +113,7 @@ export async function DashboardContent({
     supabase.rpc('count_company_orders', { p_user_id: userId }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
     supabase.from('discount_codes').select('code').eq('user_id', userId).not('used_at', 'is', null),
+    supabase.from('downloads').select('id, title, file_url, file_ext, file_size').eq('is_active', true).order('sort_order').limit(6),
   ])
 
   const canOrder = !memberData || memberData.role === 'manager' || (memberData?.can_order ?? true)
@@ -323,24 +325,47 @@ export async function DashboardContent({
           <div className="px-5 py-3.5 border-b border-lx-divider">
             <span className="text-[13.5px] font-semibold text-lx-text-primary">Downloads</span>
           </div>
-          <div className="px-5 py-4 space-y-1">
-            {[
-              { label: 'LoooX Catalogus 2025', ext: 'PDF', size: '12 MB' },
-              { label: 'Prijslijst dealers', ext: 'PDF', size: '1.2 MB' },
-              { label: 'Montage handleiding', ext: 'PDF', size: '4.5 MB' },
-              { label: 'Productafbeeldingen', ext: 'ZIP', size: '68 MB' },
-            ].map((dl) => (
-              <a key={dl.label} href="#" className="flex items-center gap-2.5 py-2 group">
-                <div className="w-7 h-7 rounded-lg bg-lx-panel-bg flex items-center justify-center flex-shrink-0">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--lx-text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12px] text-lx-text-primary group-hover:text-lx-cta transition-colors truncate">{dl.label}</p>
-                  <p className="text-[10.5px] text-lx-text-secondary">{dl.ext} · {dl.size}</p>
-                </div>
-              </a>
-            ))}
-          </div>
+          {downloads && downloads.length > 0 ? (
+            <div className="px-3 py-2 space-y-0.5">
+              {downloads.map((dl) => {
+                const extColors: Record<string, string> = {
+                  PDF:  'bg-red-50 text-red-600',
+                  ZIP:  'bg-blue-50 text-blue-600',
+                  DOCX: 'bg-sky-50 text-sky-600',
+                  XLSX: 'bg-green-50 text-green-700',
+                  DWG:  'bg-orange-50 text-orange-600',
+                  AI:   'bg-amber-50 text-amber-700',
+                  EPS:  'bg-purple-50 text-purple-600',
+                }
+                const extStyle = extColors[dl.file_ext] ?? 'bg-lx-panel-bg text-lx-text-secondary'
+                return (
+                  <a
+                    key={dl.id}
+                    href={dl.file_url}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-lx-panel-bg transition-colors group cursor-pointer"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-lx-panel-bg group-hover:bg-lx-icon-bg flex items-center justify-center flex-shrink-0 transition-colors">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 group-hover:opacity-100 transition-opacity"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-medium text-lx-text-primary group-hover:text-lx-cta transition-colors truncate leading-snug">{dl.title}</p>
+                      {dl.file_size && <p className="text-[10.5px] text-lx-text-muted">{dl.file_size}</p>}
+                    </div>
+                    <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ${extStyle}`}>
+                      {dl.file_ext}
+                    </span>
+                  </a>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="px-5 py-8 text-center">
+              <p className="text-[12.5px] text-lx-text-secondary">Nog geen downloads beschikbaar</p>
+            </div>
+          )}
         </div>
 
         {/* Snel starten */}

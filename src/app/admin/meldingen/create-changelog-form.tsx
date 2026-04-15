@@ -7,6 +7,7 @@ export default function CreateChangelogForm() {
   const [version, setVersion] = useState('')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [sendEmail, setSendEmail] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [done, setDone] = useState(false)
 
@@ -14,10 +15,11 @@ export default function CreateChangelogForm() {
     e.preventDefault()
     if (!title.trim()) return
     startTransition(async () => {
-      await createChangelog({ version, title, body })
+      await createChangelog({ version, title, body, sendEmail })
       setVersion('')
       setTitle('')
       setBody('')
+      setSendEmail(false)
       setDone(true)
       setTimeout(() => setDone(false), 2000)
     })
@@ -82,6 +84,19 @@ export default function CreateChangelogForm() {
         />
         <p className="text-[10.5px] text-lx-text-muted mt-1 text-right">{body.length}/400</p>
       </div>
+
+      {/* E-mail notificatie */}
+      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={sendEmail}
+          onChange={e => setSendEmail(e.target.checked)}
+          className="w-4 h-4 rounded accent-lx-cta cursor-pointer"
+        />
+        <span className="text-[13px] text-lx-text-secondary">
+          Stuur e-mailnotificatie naar marketing@rmsanitair.nl
+        </span>
+      </label>
 
       <button
         type="submit"

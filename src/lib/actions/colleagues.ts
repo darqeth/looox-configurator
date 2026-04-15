@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { randomBytes } from 'crypto'
+import { sendInviteEmail } from '@/lib/email'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,19 @@ export async function inviteColleague(
     .single()
 
   if (error || !invite) return { success: false, error: 'Uitnodiging aanmaken mislukt.' }
+
+  // Haal naam van de uitnodiger + bedrijfsnaam op voor de mail
+  const [{ data: inviterProfile }, { data: company }] = await Promise.all([
+    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    supabase.from('companies').select('name').eq('id', member.company_id).single(),
+  ])
+
+  sendInviteEmail({
+    to: email,
+    inviterName: inviterProfile?.full_name ?? 'Iemand van je team',
+    companyName: company?.name ?? 'je bedrijf',
+    token: invite.token,
+  }).catch(() => {})
 
   revalidatePath('/account/collegas')
   return { success: true, token: invite.token }

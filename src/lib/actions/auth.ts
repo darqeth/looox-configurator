@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
+import { sendWelcomeEmail, sendPasswordResetEmail } from '@/lib/email'
 
 export async function signIn(email: string, password: string) {
   const supabase = await createClient()
@@ -109,7 +110,50 @@ export async function signUp(data: {
       .eq('id', invite.id)
   }
 
+  // Welkomstmail — fire and forget (niet blokkeren bij mail-fout)
+  sendWelcomeEmail({
+    to: data.email,
+    name: data.fullName,
+    isInvited: !!invite,
+  }).catch(() => {})
+
   redirect('/pending')
+}
+
+// ─── Wachtwoord vergeten ──────────────────────────────────────────────────────
+
+export async function requestPasswordReset(
+  email: string
+): Promise<{ success: boolean; error?: string }> {
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://configurator.looox.nl'
+  const admin = createAdminClient()
+
+  // Haal naam op voor persoonlijke aanhef
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('full_name')
+    .eq('email', email)
+    .maybeSingle()
+
+  // Genereer reset link via admin (omzeilt Supabase e-mail)
+  const { data: linkData, error } = await admin.auth.admin.generateLink({
+    type: 'recovery',
+    email,
+    options: { redirectTo: `${SITE_URL}/login` },
+  })
+
+  if (error || !linkData?.properties?.action_link) {
+    // Geef altijd succes terug (security: niet lekken of email bestaat)
+    return { success: true }
+  }
+
+  await sendPasswordResetEmail({
+    to: email,
+    name: profile?.full_name ?? 'Gebruiker',
+    resetLink: linkData.properties.action_link,
+  }).catch(() => {})
+
+  return { success: true }
 }
 
 export async function signOut() {

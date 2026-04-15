@@ -3,11 +3,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
+import { sendUpdateNotificationEmail } from '@/lib/email'
 
 export async function createChangelog(data: {
   version: string
   title: string
   body: string
+  sendEmail?: boolean
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -23,6 +25,14 @@ export async function createChangelog(data: {
     body: data.body.trim() || null,
     published_at: new Date().toISOString(),
   })
+
+  if (data.sendEmail) {
+    sendUpdateNotificationEmail({
+      to: 'marketing@rmsanitair.nl',
+      title: fullTitle,
+      body: data.body.trim() || null,
+    }).catch(() => {})
+  }
 
   revalidatePath('/admin/meldingen')
   revalidatePath('/dashboard')

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID } from '@/lib/actions/configurator-helpers'
+import { sendOrderConfirmationEmail } from '@/lib/email'
 
 type LightConfig = {
   position: string
@@ -160,6 +161,19 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
   revalidatePath('/dashboard')
   revalidatePath('/configuraties')
 
+  // Bestellingsbevestiging mailen
+  const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single()
+  if (profile?.email) {
+    sendOrderConfirmationEmail({
+      to: profile.email,
+      name: profile.full_name ?? 'Gebruiker',
+      orderNumber,
+      projectName: input.projectName,
+      quantity: input.quantity,
+      totalPrice: finalTotalPrice,
+    }).catch(() => {})
+  }
+
   return { orderNumber, orderId: order.id }
 }
 
@@ -256,6 +270,20 @@ export async function placeOrderFromConfig(
   revalidatePath('/bestellingen')
   revalidatePath('/dashboard')
   revalidatePath('/configuraties')
+
+  // Bestellingsbevestiging mailen
+  const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single()
+  const configName = (config.selected_options as Record<string, unknown> | null)?.projectName as string | undefined
+  if (profile?.email) {
+    sendOrderConfirmationEmail({
+      to: profile.email,
+      name: profile.full_name ?? 'Gebruiker',
+      orderNumber,
+      projectName: configName ?? 'Configuratie',
+      quantity,
+      totalPrice: finalTotalPrice,
+    }).catch(() => {})
+  }
 
   return { orderNumber, orderId: order.id }
 }

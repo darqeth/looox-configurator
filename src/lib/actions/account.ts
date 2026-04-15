@@ -55,13 +55,12 @@ export async function updatePriceFactor(formData: FormData) {
   if (member && member.role !== 'manager') throw new Error('Alleen managers kunnen de prijsfactor instellen.')
   if (!companyId) throw new Error('Geen bedrijf gevonden.')
 
-  const { error, count } = await supabase
+  const { error } = await supabase
     .from('companies')
-    .update({ price_factor: factor, price_factor_enabled: enabled }, { count: 'exact' })
+    .update({ price_factor: factor, price_factor_enabled: enabled })
     .eq('id', companyId)
 
   if (error) throw new Error(error.message)
-  if (count === 0) throw new Error('Opslaan mislukt — geen toegang tot het bedrijfsrecord.')
   revalidatePath('/account')
   revalidatePath('/dashboard')
   revalidatePath('/configurator')

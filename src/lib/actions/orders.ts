@@ -169,12 +169,12 @@ export async function placeOrderFromConfig(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  // Haal bestaande configuratie op — inclusief selected_options voor eventuele kortingsupdate (RLS: alleen eigen configs)
+  // Haal bestaande configuratie op — RLS bepaalt toegang, user_id filter weggelaten
+  // zodat managers ook configs van teamleden kunnen bestellen
   const { data: config, error: configError } = await supabase
     .from('configurations')
-    .select('id, total_price, selected_options')
+    .select('id, total_price, selected_options, user_id')
     .eq('id', configId)
-    .eq('user_id', user.id)
     .single()
 
   if (configError || !config) throw new Error('Configuratie niet gevonden')

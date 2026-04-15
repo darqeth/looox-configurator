@@ -132,8 +132,8 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
         }} />
       </Card>
 
-      {/* Consumentenprijzen */}
-      {canSeePurchasePrices && (
+      {/* Consumentenprijzen — alleen tonen als er een bedrijf gekoppeld is */}
+      {canSeePurchasePrices && companyId && (
         <Card
           title="Consumentenprijzen"
           description={isManager

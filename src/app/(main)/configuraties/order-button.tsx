@@ -20,6 +20,7 @@ export default function OrderButton({ configId, configName, metaSummary, price }
   const [checked, setChecked] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
+  const [orderError, setOrderError] = useState<string | null>(null)
 
   const subtotal = price * quantity
   const { input: discountInput, setInput: setDiscountInput, validating: discountValidating, error: discountError, setError: setDiscountError, applied: appliedDiscount, setApplied: setAppliedDiscount, discountAmount, validate: handleValidate, reset: resetDiscount } = useDiscountCode(subtotal)
@@ -28,6 +29,7 @@ export default function OrderButton({ configId, configName, metaSummary, price }
   async function handleOrder() {
     if (!checked) return
     setLoading(true)
+    setOrderError(null)
     try {
       const { orderNumber } = await placeOrderFromConfig(
         configId, quantity, notes,
@@ -40,6 +42,8 @@ export default function OrderButton({ configId, configName, metaSummary, price }
       router.refresh()
     } catch (e) {
       console.error(e)
+      setOrderError(e instanceof Error ? e.message : 'Er is iets misgegaan. Probeer het opnieuw.')
+    } finally {
       setLoading(false)
     }
   }
@@ -51,6 +55,7 @@ export default function OrderButton({ configId, configName, metaSummary, price }
     setChecked(false)
     setLoading(false)
     setResult(null)
+    setOrderError(null)
     resetDiscount()
   }
 
@@ -245,6 +250,15 @@ export default function OrderButton({ configId, configName, metaSummary, price }
                     </span>
                   </label>
                 </div>
+
+                {orderError && (
+                  <div className="px-6 pb-2">
+                    <div className="flex items-center gap-2 text-[12.5px] text-red-600 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {orderError}
+                    </div>
+                  </div>
+                )}
 
                 <div className="px-6 pb-6 flex gap-3">
                   <button

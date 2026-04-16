@@ -264,7 +264,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     description: 'Anti-condensverwarming achter de spiegel',
     price: 0,
     priceDisplay: 'v.a. €76',
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc'],
     incompatibleWith: [],
   },
   {
@@ -272,7 +272,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Make-up spiegel',
     description: 'Ingebouwde vergrotingsspiegel',
     price: 155,
-    shapes: ['rechthoek', 'rond', 'rounded-rect'],
+    shapes: ['rechthoek', 'rond', 'rounded-rect', 'ovaal', 'arc'],
     incompatibleWith: [],
     subChoices: {
       label: 'Locatie',
@@ -288,7 +288,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Bluetooth speaker',
     description: 'Verborgen speaker in het frame',
     price: 459,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc'],
     incompatibleWith: [],
   },
   {
@@ -305,7 +305,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Digitale klok',
     description: 'LED tijdweergave geïntegreerd in de spiegel',
     price: 155,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc'],
     incompatibleWith: [],
     subChoices: {
       label: 'Positie',

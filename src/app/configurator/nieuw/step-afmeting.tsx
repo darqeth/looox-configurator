@@ -130,7 +130,7 @@ const DimInput = memo(function DimInput({
 })
 
 export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, onChange }: StepAfmetingProps) {
-  if (shape === 'rechthoek') {
+  if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     const presets = [
       { w: 60, h: 80 }, { w: 80, h: 60 }, { w: 100, h: 70 },
       { w: 60, h: 120 }, { w: 80, h: 120 }, { w: 100, h: 80 },

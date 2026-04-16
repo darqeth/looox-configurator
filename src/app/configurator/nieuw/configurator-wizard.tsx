@@ -130,7 +130,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
 
   function isStep1Valid(): boolean {
     if (!shape) return false
-    if (shape === 'rechthoek' || shape === 'op-aanvraag') {
+    if (shape === 'rechthoek' || shape === 'op-aanvraag' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
       const { min, max } = RECHTHOEK_CONSTRAINTS
       return width >= min && width <= max && height >= min && height <= max
     }

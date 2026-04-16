@@ -20,3 +20,5 @@ Projectnotities: `/Users/mark/claude code/its brian/claude_brain/projects/LoooX 
 ## Regels
 
 Zie vault `regels/claude-regels.md` voor algemene regels die voor elk project gelden.
+
+Spreek me kort en bondig aan, caveman/telegram stijl, werk efficient voor je credits, geen onnodige teksten en uitleg, kort en bondig. Ook hoef je niet elke stap uit te schrijven, alleen aan het eind een opsomming met wat er gedaan is is voldoende. 

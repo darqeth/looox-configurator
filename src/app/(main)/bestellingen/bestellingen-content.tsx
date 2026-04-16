@@ -42,6 +42,16 @@ export async function BestellingenContent({ page }: { page: string }) {
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('price_factor, price_factor_enabled')
+    .eq('id', user.id)
+    .single()
+
+  const priceFactor = profileData?.price_factor ?? 1
+  const priceFactorEnabled = profileData?.price_factor_enabled ?? false
+  const showConsumer = priceFactorEnabled && priceFactor > 1
+
   const { data: orders, count } = await supabase
     .from('orders')
     .select(`
@@ -130,10 +140,10 @@ export async function BestellingenContent({ page }: { page: string }) {
               {/* Prijs */}
               <div className="hidden sm:block flex-shrink-0 text-right w-28">
                 <p className="text-[14px] font-bold text-lx-text-primary">
-                  €{Number(order.total_price).toLocaleString('nl-NL')}
+                  €{(showConsumer ? Math.round(Number(order.total_price) * priceFactor) : Number(order.total_price)).toLocaleString('nl-NL')}
                 </p>
                 <p className="text-[11px] text-lx-text-secondary">
-                  {order.quantity > 1 ? `€${Number(order.unit_price).toLocaleString('nl-NL')} p.st. · ` : ''}excl. BTW
+                  {order.quantity > 1 ? `€${(showConsumer ? Math.round(Number(order.unit_price) * priceFactor) : Number(order.unit_price)).toLocaleString('nl-NL')} p.st. · ` : ''}{showConsumer ? 'consument excl. BTW' : 'excl. BTW'}
                 </p>
               </div>
 

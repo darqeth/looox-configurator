@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { randomBytes } from 'crypto'
 import { sendInviteEmail } from '@/lib/email'
@@ -206,11 +207,12 @@ export async function removeMember(
 
   if (error) return { success: false, error: 'Verwijderen mislukt.' }
 
-  // Verwijder ook company_id uit het profiel zodat RLS geen toegang meer geeft
-  // tot bedrijfsconfiguraties en -data
-  await supabase
+  // Verwijder ook company_id uit het profiel — gebruik admin client want RLS
+  // staat niet toe dat een manager het profiel van een andere user updatet
+  const admin = createAdminClient()
+  await admin
     .from('profiles')
-    .update({ company_id: null })
+    .update({ company_id: null, company: null })
     .eq('id', target.user_id)
 
   revalidatePath('/account/collegas')

@@ -210,10 +210,10 @@ export async function removeMember(
   // Verwijder ook company_id uit het profiel — gebruik admin client want RLS
   // staat niet toe dat een manager het profiel van een andere user updatet
   const admin = createAdminClient()
-  await admin
-    .from('profiles')
-    .update({ company_id: null, company: null })
-    .eq('id', target.user_id)
+  await Promise.all([
+    admin.from('profiles').update({ company_id: null, company: null }).eq('id', target.user_id),
+    admin.from('user_milestones').delete().eq('user_id', target.user_id),
+  ])
 
   revalidatePath('/account/collegas')
   revalidatePath('/configuraties')

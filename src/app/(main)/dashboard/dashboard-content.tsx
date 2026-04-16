@@ -200,7 +200,7 @@ export async function DashboardContent({
           displayValue={`€\u00A0${revenueSum.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
           value={revenueSum}
           sub={revenueSum > 0 ? 'Excl. BTW · alle bestellingen' : 'Nog geen bestellingen geplaatst'}
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>}
+          icon={<svg width="18" height="18" viewBox="95.5 96.5 6.5 6.5" fill="#2563EB"><path d="M100.6,102.1c-.3.2-.7.4-1.3.4s-1.3-.3-1.7-.8c-.3-.4-.5-.9-.6-1.5h-.5v-.4h.5c0-.3,0-.4,0-.5h-.5v-.4h.6c.1-.6.4-1.1.7-1.4.4-.5,1-.7,1.7-.7s.9.1,1.1.3l-.2.6c-.2-.1-.6-.2-1-.2s-.8.2-1.1.5c-.3.2-.4.6-.5,1.1h2.4v.4h-2.5c0,.1,0,.2,0,.4v.2h2.5v.4h-2.4c0,.5.2.9.5,1.1.3.3.7.5,1.2.5s.8-.2,1-.3v.5Z"/></svg>}
           iconBg="bg-[#EFF6FF]"
           href="/bestellingen"
         />

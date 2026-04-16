@@ -8,6 +8,9 @@ import {
   Svg,
   Path,
   Polygon,
+  Rect,
+  Circle,
+  Line,
   StyleSheet,
 } from '@react-pdf/renderer'
 
@@ -34,6 +37,117 @@ import {
   formatDate,
   formatPrice,
 } from './helpers'
+
+// ─── PDF Mirror Preview ───────────────────────────────────────────────────────
+
+const GLASS_FILL: Record<string, { fill: string; fillOpacity: number; stroke: string }> = {
+  'helder':      { fill: '#C8D4DC', fillOpacity: 0.55, stroke: '#A8B4BC' },
+  'smoke-grijs': { fill: '#5A6068', fillOpacity: 0.80, stroke: '#464C54' },
+  'smoke-zwart': { fill: '#18191C', fillOpacity: 0.92, stroke: '#2C2E33' },
+}
+
+function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
+  opts: ConfigOptions
+  width: number | null
+  height: number | null
+}) {
+  const SIZE = 110
+  const PAD = 14
+  const available = SIZE - PAD * 2
+  const shape = opts.shape ?? 'rechthoek'
+  const glasKleur = (opts.glasKleur as string) ?? 'helder'
+  const glass = GLASS_FILL[glasKleur] ?? GLASS_FILL['helder']
+  const indirectPos = (opts.indirectLight as { position?: string } | null)?.position ?? 'geen'
+  const hasDirect   = (opts.directLight as { position?: string } | null)?.position !== 'geen' && (opts.directLight as { position?: string } | null)?.position != null
+  const hasIndirect = indirectPos !== 'geen'
+  const GLOW = '#FEF3C7'
+  const GLOW_W = 5
+
+  const w0 = configWidth ?? 80
+  const h0 = configHeight ?? 60
+  const ratio = Math.min(available / w0, available / h0)
+  const w = Math.round(w0 * ratio)
+  const h = Math.round(h0 * ratio)
+  const x = (SIZE - w) / 2
+  const y = (SIZE - h) / 2
+
+  if (shape === 'rond') {
+    const r = Math.min(available / 2, (opts.diameter as number ?? 60) * 0.95 * ratio)
+    const cx2 = SIZE / 2
+    const cy2 = SIZE / 2
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        {hasIndirect && <Circle cx={cx2} cy={cy2} r={r + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        <Circle cx={cx2} cy={cy2} r={r} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+        <Circle cx={cx2} cy={cy2} r={r} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
+        {hasDirect && <Circle cx={cx2} cy={cy2} r={r * 0.82} fill="none" stroke="white" strokeWidth="3" opacity={0.45} />}
+        <Line x1={cx2 - r*0.15} y1={cy2 - r*0.45} x2={cx2 + r*0.25} y2={cy2 + r*0.35} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  if (shape === 'ovaal') {
+    const rx = h / 2
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        {hasIndirect && <Rect x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={rx + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        <Rect x={x} y={y} width={w} height={h} rx={rx} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+        <Rect x={x} y={y} width={w} height={h} rx={rx} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
+        {hasDirect && <Rect x={x + 6} y={y + 4} width={w - 12} height={h - 8} rx={Math.max(2, rx - 5)} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+        <Line x1={x + w*0.2} y1={y + h*0.15} x2={x + w*0.55} y2={y + h*0.7} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  if (shape === 'arc') {
+    const arcR = w / 2
+    const mirrorPath = `M ${x},${y + arcR} A ${arcR},${arcR} 0 0 1 ${x + w},${y + arcR} L ${x + w},${y + h} L ${x},${y + h} Z`
+    const glowPath   = `M ${x-4},${y + arcR} A ${arcR+4},${arcR+4} 0 0 1 ${x + w+4},${y + arcR} L ${x + w+4},${y + h+4} L ${x-4},${y + h+4} Z`
+    const innerPath  = `M ${x+5},${y + arcR} A ${arcR-5},${arcR-5} 0 0 1 ${x + w-5},${y + arcR} L ${x + w-5},${y + h-5} L ${x+5},${y + h-5} Z`
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        {hasIndirect && <Path d={glowPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        <Path d={mirrorPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+        <Path d={mirrorPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
+        {hasDirect && <Path d={innerPath} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+        <Line x1={x + w*0.25} y1={y + arcR*0.25} x2={x + w*0.5} y2={y + h*0.6} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  if (shape === 'rounded-rect') {
+    const rx = Math.round(Math.min(w, h) * 0.18)
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        {hasIndirect && <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx+4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        <Rect x={x} y={y} width={w} height={h} rx={rx} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+        <Rect x={x} y={y} width={w} height={h} rx={rx} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
+        {hasDirect && <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={Math.max(2, rx-4)} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+        <Line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  // organic
+  const organicPath = shape === 'organic'
+    ? `M ${x+w*0.45} ${y} C ${x+w*0.9} ${y} ${x+w} ${y+h*0.2} ${x+w*0.97} ${y+h*0.55} C ${x+w*0.94} ${y+h*0.9} ${x+w*0.55} ${y+h} ${x+w*0.18} ${y+h*0.97} C ${x-w*0.05} ${y+h*0.93} ${x} ${y+h*0.65} ${x+w*0.03} ${y+h*0.28} C ${x+w*0.06} ${y} ${x+w*0.22} ${y} ${x+w*0.45} ${y} Z`
+    : null
+  const rx2 = 2
+  return (
+    <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+      {hasIndirect && (organicPath
+        ? <Path d={organicPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
+        : <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx2} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
+      )}
+      {organicPath
+        ? <><Path d={organicPath} fill={glass.fill} fillOpacity={glass.fillOpacity} /><Path d={organicPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" /></>
+        : <><Rect x={x} y={y} width={w} height={h} rx={rx2} fill={glass.fill} fillOpacity={glass.fillOpacity} /><Rect x={x} y={y} width={w} height={h} rx={rx2} fill="none" stroke={glass.stroke} strokeWidth="1.2" /></>
+      }
+      {hasDirect && !organicPath && <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={1} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+      <Line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+    </Svg>
+  )
+}
 
 const BRAND = '#3D6B4F'
 const BRAND_LIGHT = '#EAF0EC'
@@ -345,6 +459,11 @@ export default function OrderDocument({
               </View>
             </View>
           </View>
+        </View>
+
+        {/* Spiegel preview */}
+        <View style={[styles.section, { alignItems: 'center' }]}>
+          <PdfMirrorPreview opts={config.options} width={config.width} height={config.height} />
         </View>
 
         {/* Specificaties */}

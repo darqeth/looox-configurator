@@ -12,6 +12,9 @@ const shapeLabel: Record<string, string> = {
   rond: 'Rond',
   organic: 'Organic',
   'op-aanvraag': 'Op aanvraag',
+  'rounded-rect': 'Afgerond',
+  ovaal: 'Ovaal',
+  arc: 'Boog',
 }
 
 function ShapeIcon({ shape }: { shape: string }) {
@@ -23,6 +26,15 @@ function ShapeIcon({ shape }: { shape: string }) {
   )
   if (shape === 'op-aanvraag') return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2"/><path d="M12 8v4m0 4h.01"/></svg>
+  )
+  if (shape === 'rounded-rect') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="4"/></svg>
+  )
+  if (shape === 'ovaal') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="7" width="18" height="10" rx="5"/></svg>
+  )
+  if (shape === 'arc') return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><path d="M3 18 L3 12 A9 9 0 0 1 21 12 L21 18 Z"/></svg>
   )
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="1.5"/></svg>

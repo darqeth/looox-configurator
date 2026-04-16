@@ -199,7 +199,7 @@ export async function DashboardContent({
           label="Totale omzet"
           displayValue={`€\u00A0${revenueSum.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
           value={revenueSum}
-          sub={revenueSum > 0 ? 'Excl. BTW · alle bestellingen' : 'Nog geen bestellingen geplaatst'}
+          sub={revenueSum > 0 ? 'Netto inkoopprijs · excl. BTW' : 'Nog geen bestellingen geplaatst'}
           icon={<svg width="18" height="18" viewBox="0 0 76.6 86.2" fill="#2563EB" stroke="#2563EB" strokeWidth="3" strokeLinejoin="round"><path d="M75.7,9c0-2.5-2.5-4.6-7.2-6.1-4.3-1.4-9.9-2.1-15.9-2.1s-11.6.8-15.9,2.1c-4.7,1.5-7.2,3.6-7.2,6.1v16.8c-1.6-.1-3.3-.2-5-.2-6,0-11.6.8-15.9,2.1-4.7,1.5-7.2,3.6-7.2,6.1v21c0,.2,0,.4,0,.6,0,.1,0,.2,0,.3v21c0,2.5,2.5,4.6,7.2,6.1,4.3,1.4,9.9,2.1,15.9,2.1s11.6-.8,15.9-2.1c4.7-1.5,7.2-3.6,7.2-6.1v-6.8c1.6.1,3.3.2,5,.2,6,0,11.6-.8,15.9-2.1,4.7-1.5,7.2-3.6,7.2-6.1v-31.1c0-.1,0-.2,0-.3,0-.2,0-.4,0-.6V9ZM47.6,49c1.6.1,3.3.2,5,.2,6,0,11.6-.8,15.9-2.1,2-.7,3.7-1.4,4.9-2.3v7.2c0,2.4-7.9,5.8-20.7,5.8s-3.4,0-5-.2v-8.6ZM73.4,41c0,2.4-7.9,5.8-20.7,5.8s-3.4,0-5-.2v-1.8c0-.1,0-.2,0-.3,0-.2,0-.4,0-.6v-5.9c1.6.1,3.3.2,5,.2,6,0,11.6-.8,15.9-2.1,2.1-.7,3.7-1.4,4.9-2.3v7.2ZM31.9,12.8c1.2.9,2.8,1.6,4.9,2.3,4.3,1.4,9.9,2.1,15.9,2.1s11.6-.8,15.9-2.1c2.1-.7,3.7-1.4,4.9-2.3v6.2c0,2.4-7.9,5.8-20.7,5.8s-20.7-3.4-20.7-5.8v-6.2ZM52.6,3.1c12.9,0,20.7,3.4,20.7,5.8s-7.9,5.8-20.7,5.8-20.7-3.4-20.7-5.8,7.9-5.8,20.7-5.8ZM31.9,22.8c1.2.9,2.8,1.6,4.9,2.3,4.3,1.4,9.9,2.1,15.9,2.1s11.6-.8,15.9-2.1c2-.7,3.7-1.4,4.9-2.3v7.2c0,2.4-7.9,5.8-20.7,5.8s-3.4,0-5-.2v-1.8c0-2.5-2.5-4.6-7.2-6.1-2.4-.8-5.3-1.4-8.5-1.7v-3.2ZM24.5,28c12.9,0,20.7,3.4,20.7,5.8s-7.9,5.8-20.7,5.8-20.7-3.4-20.7-5.8,7.9-5.8,20.7-5.8ZM45.3,76.8c0,2.4-7.9,5.8-20.7,5.8s-20.7-3.4-20.7-5.8v-7.2c1.2.9,2.8,1.6,4.9,2.3,4.3,1.4,9.9,2.1,15.9,2.1s11.6-.8,15.9-2.1c2-.7,3.7-1.4,4.9-2.3v7.2ZM45.3,65.9c0,2.4-7.9,5.8-20.7,5.8s-20.7-3.4-20.7-5.8v-7.2c1.2.9,2.8,1.6,4.9,2.3,4.3,1.4,9.9,2.1,15.9,2.1s11.6-.8,15.9-2.1c2-.7,3.7-1.4,4.9-2.3v7.2ZM45.3,54.9c0,2.4-7.9,5.8-20.7,5.8s-20.7-3.4-20.7-5.8v-7.2c1.2.9,2.8,1.6,4.9,2.3,4.3,1.4,9.9,2.1,15.9,2.1s11.6-.8,15.9-2.1c2-.7,3.7-1.4,4.9-2.3v7.2ZM24.5,49.7c-12.9,0-20.7-3.4-20.7-5.8v-6.2c1.2.9,2.8,1.6,4.9,2.3,4.3,1.4,9.9,2.1,15.9,2.1s11.6-.8,15.9-2.1c2.1-.7,3.7-1.4,4.9-2.3v6.2c0,2.4-7.9,5.8-20.7,5.8ZM52.6,67.9c-1.7,0-3.4,0-5-.2v-.9c0-.1,0-.2,0-.3,0-.2,0-.4,0-.6v-5.9c1.6.1,3.3.2,5,.2,6,0,11.6-.8,15.9-2.1,2.1-.7,3.7-1.4,4.9-2.3v6.2c0,2.4-7.9,5.8-20.7,5.8Z"/></svg>}
           iconBg="bg-[#EFF6FF]"
           href="/bestellingen"
@@ -227,11 +227,14 @@ export async function DashboardContent({
                 if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
-                const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag' }
+                const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', arc: 'Boog' }
                 const ShapeIcon = () => {
                   if (shape === 'rond') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><circle cx="12" cy="12" r="9"/></svg>
                   if (shape === 'organic') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><path d="M12 3c4 0 9 2 9 7s-3 9-7 11c-3 1-8-1-10-5S2 7 6 4c1.5-1 4-1 6-1z"/></svg>
                   if (shape === 'op-aanvraag') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2"/><path d="M12 8v4m0 4h.01"/></svg>
+                  if (shape === 'rounded-rect') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="4"/></svg>
+                  if (shape === 'ovaal') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="7" width="18" height="10" rx="5"/></svg>
+                  if (shape === 'arc') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><path d="M3 18 L3 12 A9 9 0 0 1 21 12 L21 18 Z"/></svg>
                   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="1.5"/></svg>
                 }
                 return (
@@ -248,7 +251,7 @@ export async function DashboardContent({
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[13px] font-semibold text-lx-text-primary">
-                        €{(priceFactorEnabled && priceFactor > 1 ? Math.round(Number(config.total_price) * priceFactor) : Number(config.total_price)).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                        €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
                       </span>
                       {config.status === 'ordered' ? (
                         <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">Besteld</span>

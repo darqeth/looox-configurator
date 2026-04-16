@@ -23,6 +23,9 @@ const SHAPE_LABELS: Record<string, string> = {
   rond: 'Rond',
   organic: 'Organic',
   'op-aanvraag': 'Op aanvraag',
+  'rounded-rect': 'Rechthoek afgerond',
+  ovaal: 'Ovaal',
+  arc: 'Boog (Arc)',
 }
 
 const GLAS_LABELS: Record<string, string> = {
@@ -113,12 +116,26 @@ export function formatLight(light?: ConfigOptions['directLight']): string {
   return [pos, type, ctrl].filter(Boolean).join(' / ')
 }
 
+const POSITION_CHOICE_LABELS: Record<string, string> = {
+  links: 'Links',
+  midden: 'Midden',
+  rechts: 'Rechts',
+}
+
 export function formatExtras(extras?: string[], optionSubChoices?: Record<string, string>): string {
   if (!extras || extras.length === 0) return 'Geen'
   const parts = extras.map(id => {
     if (id === 'frame-in-kleur') {
       const color = optionSubChoices?.['frame-in-kleur']
       return color ? `Frame in kleur (${FRAME_LABELS[color] ?? color})` : 'Frame in kleur'
+    }
+    if (id === 'digitale-klok') {
+      const pos = optionSubChoices?.['digitale-klok']
+      return pos ? `Digitale klok (${POSITION_CHOICE_LABELS[pos] ?? pos})` : 'Digitale klok'
+    }
+    if (id === 'makeup-spiegel') {
+      const pos = optionSubChoices?.['makeup-spiegel']
+      return pos ? `Make-up spiegel (${POSITION_CHOICE_LABELS[pos] ?? pos})` : 'Make-up spiegel'
     }
     return EXTRA_LABELS[id] ?? id
   })

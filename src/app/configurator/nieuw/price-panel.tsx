@@ -558,11 +558,12 @@ export default function PricePanel({
 
   const lineItems: { label: string; price: number }[] = []
 
-  if (shape === 'rechthoek') {
+  if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     // Glaskosten
     const glasKosten = calcGlasKosten(width, height, glasKleur, directLight.position)
     const glasNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? 'Helder'
-    lineItems.push({ label: `Glas ${width}×${height} cm · ${glasNaam}`, price: Math.round(glasKosten) + 105 })
+    const shapePrefix = shape === 'rounded-rect' ? 'Afgerond' : shape === 'ovaal' ? 'Ovaal' : shape === 'arc' ? 'Boog' : 'Glas'
+    lineItems.push({ label: `${shapePrefix} ${width}×${height} cm · ${glasNaam}`, price: Math.round(glasKosten) + 105 })
 
     if (directLight.position !== 'geen' && directLight.type) {
       const m = calcDirectLEDMeters(directLight.position, width, height)

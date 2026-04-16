@@ -251,7 +251,7 @@ export default function StepSamenvatting({
         {canOrder && (
           <BestelModal
             shape={shape}
-            unitPrice={displayPrice}
+            unitPrice={unitPrice}
             projectName={projectName}
             saving={saving}
             disabled={orderDisabled}

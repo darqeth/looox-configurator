@@ -3,6 +3,16 @@ import Link from 'next/link'
 
 const PAGE_SIZE = 20
 
+function ShapeIcon({ shape }: { shape: string }) {
+  if (shape === 'rond') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><circle cx="12" cy="12" r="9"/></svg>
+  if (shape === 'organic') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><path d="M12 3c4 0 9 2 9 7s-3 9-7 11c-3 1-8-1-10-5S2 7 6 4c1.5-1 4-1 6-1z"/></svg>
+  if (shape === 'op-aanvraag') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2"/><path d="M12 8v4m0 4h.01"/></svg>
+  if (shape === 'rounded-rect') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="4"/></svg>
+  if (shape === 'ovaal') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="7" width="18" height="10" rx="5"/></svg>
+  if (shape === 'arc') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><path d="M3 18 L3 12 A9 9 0 0 1 21 12 L21 18 Z"/></svg>
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="1.5"/></svg>
+}
+
 const STATUS_LABELS: Record<string, string> = {
   pending:   'In behandeling',
   confirmed: 'Bevestigd',
@@ -100,6 +110,11 @@ export async function BestellingenContent({ page }: { page: string }) {
 
           return (
             <div key={order.id} className="px-5 py-4 flex items-center gap-4">
+              {/* Shape icon */}
+              <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                <ShapeIcon shape={shape} />
+              </div>
+
               {/* Ordernummer + datum */}
               <div className="flex-shrink-0 w-36">
                 <p className="text-[13.5px] font-bold text-lx-text-primary font-mono tracking-wide">{order.order_number}</p>

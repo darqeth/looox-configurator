@@ -111,7 +111,6 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
   // Step 4: save info
   const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
   const [reference, setReference] = useState(initialConfig?.reference ?? '')
-  const [description, setDescription] = useState(initialConfig?.description ?? '')
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [schunineZijdenFile, setSchunineZijdenFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
@@ -181,7 +180,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
         directLight, indirectLight, selectedOptions, optionSubChoices,
         projectName: projectName.trim(),
         reference: reference.trim(),
-        description: description.trim(),
+        description: '',
         quantity,
         status: 'saved' as const,
         attachmentUrl,
@@ -198,10 +197,11 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
       console.error(e)
       setSaving(false)
     }
-  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, description, quantity, isEditing, initialConfig, router])
+  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity, isEditing, initialConfig, router])
 
-  const handleOrder = useCallback(async ({ quantity: qty, discount }: {
+  const handleOrder = useCallback(async ({ quantity: qty, notes, discount }: {
     quantity: number
+    notes: string
     discount: { id: string; type: 'pct' | 'fixed'; value: number; useType: 'single' | 'per_user' } | null
   }) => {
     if (!shape || !projectName.trim()) return
@@ -215,7 +215,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
         directLight, indirectLight, selectedOptions, optionSubChoices,
         projectName: projectName.trim(),
         reference: reference.trim(),
-        description: description.trim(),
+        description: notes.trim(),
         quantity: qty,
         attachmentUrl,
         discountCodeId: discount?.id ?? null,
@@ -229,7 +229,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
       console.error(e)
       setSaving(false)
     }
-  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, description, router])
+  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, router])
 
   if (orderResult) {
     return (
@@ -451,11 +451,10 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
                     selectedOptions={selectedOptions}
                     optionSubChoices={optionSubChoices}
                     projectName={projectName} reference={reference}
-                    description={description} saving={saving}
+                    saving={saving}
                     schunineZijdenFile={schunineZijdenFile}
                     onProjectNameChange={setProjectName}
                     onReferenceChange={setReference}
-                    onDescriptionChange={setDescription}
                     onSchunineZijdenFileChange={setSchunineZijdenFile}
                     onGoToStep={setStep}
                     onSave={handleSave}

@@ -12,6 +12,7 @@ interface BestelModalProps {
   disabled?: boolean
   onOrder: (params: {
     quantity: number
+    notes: string
     discount: { id: string; type: 'pct' | 'fixed'; value: number; useType: 'single' | 'per_user' } | null
   }) => void
 }
@@ -19,6 +20,7 @@ interface BestelModalProps {
 export default function BestelModal({ shape, unitPrice, projectName, saving, disabled, onOrder }: BestelModalProps) {
   const [open, setOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
+  const [notes, setNotes] = useState('')
   const [checked, setChecked] = useState(false)
 
   const isAanvraag = shape === 'op-aanvraag'
@@ -30,6 +32,7 @@ export default function BestelModal({ shape, unitPrice, projectName, saving, dis
     if (saving) return
     setOpen(false)
     setQuantity(1)
+    setNotes('')
     setChecked(false)
     resetDiscount()
   }
@@ -38,6 +41,7 @@ export default function BestelModal({ shape, unitPrice, projectName, saving, dis
     if (!checked || saving) return
     onOrder({
       quantity,
+      notes,
       discount: appliedDiscount
         ? { id: appliedDiscount.id, type: appliedDiscount.type, value: appliedDiscount.value, useType: appliedDiscount.useType }
         : null,
@@ -53,7 +57,7 @@ export default function BestelModal({ shape, unitPrice, projectName, saving, dis
         className="flex-1 h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {saving
-          ? (isAanvraag ? 'Aanvraag indienen…' : 'Bestelling plaatsen…')
+          ? 'Opslaan…'
           : (isAanvraag ? 'Offerte aanvragen →' : 'Bestellen →')}
       </button>
 
@@ -173,6 +177,18 @@ export default function BestelModal({ shape, unitPrice, projectName, saving, dis
                   )}
                 </div>
               )}
+
+              {/* Bijzonderheden */}
+              <div>
+                <label className="text-[12px] font-semibold text-lx-text-secondary mb-2 block">Bijzonderheden <span className="font-normal">(optioneel)</span></label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Bijv. specifieke installatiewensen, afwijkend leveradres, deadline"
+                  rows={2}
+                  className="w-full rounded-xl border border-black/12 px-3.5 py-2.5 text-[13px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors resize-none"
+                />
+              </div>
 
               {/* Controleer checkbox */}
               <label className="flex items-start gap-3 cursor-pointer select-none">

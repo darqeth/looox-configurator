@@ -29,17 +29,16 @@ interface StepSamenvattingProps {
   optionSubChoices: Record<string, string>
   projectName: string
   reference: string
-  description: string
   saving: boolean
   schunineZijdenFile: File | null
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
-  onDescriptionChange: (v: string) => void
   onSchunineZijdenFileChange: (f: File | null) => void
   onGoToStep: (step: number) => void
   onSave: (asConcept: boolean) => void
   onOrder: (params: {
     quantity: number
+    notes: string
     discount: { id: string; type: 'pct' | 'fixed'; value: number; useType: 'single' | 'per_user' } | null
   }) => void
   canOrder?: boolean
@@ -83,9 +82,9 @@ function getDimensionSummary(shape: ShapeSlug, width: number, height: number, di
 export default function StepSamenvatting({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
-  projectName, reference, description,
+  projectName, reference,
   saving, schunineZijdenFile, onProjectNameChange, onReferenceChange,
-  onDescriptionChange, onSchunineZijdenFileChange,
+  onSchunineZijdenFileChange,
   onGoToStep, onSave, onOrder, canOrder = true,
 }: StepSamenvattingProps) {
   const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
@@ -154,17 +153,6 @@ export default function StepSamenvatting({
             onChange={(e) => onReferenceChange(e.target.value)}
             placeholder="Bijv. PO-2026-0042"
             className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
-          />
-        </div>
-
-        <div>
-          <label className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Bijzonderheden voor LoooX</label>
-          <textarea
-            value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-            placeholder="Bijv. specifieke installatiewensen, afwijkend leveradres, deadline"
-            rows={2}
-            className="w-full rounded-xl border border-black/12 px-3.5 py-2.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors resize-none"
           />
         </div>
 

@@ -213,6 +213,7 @@ export async function removeMember(
   await Promise.all([
     admin.from('profiles').update({ company_id: null, company: null }).eq('id', target.user_id),
     admin.from('user_milestones').delete().eq('user_id', target.user_id),
+    admin.from('configurations').delete().eq('user_id', target.user_id),
   ])
 
   revalidatePath('/account/collegas')

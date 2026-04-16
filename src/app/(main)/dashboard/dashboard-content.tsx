@@ -200,7 +200,7 @@ export async function DashboardContent({
           displayValue={`€\u00A0${revenueSum.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
           value={revenueSum}
           sub={revenueSum > 0 ? 'Excl. BTW · alle bestellingen' : 'Nog geen bestellingen geplaatst'}
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 7a7 7 0 0 0-12.08 4.85C5.92 15.27 8.67 18 12 18a7 7 0 0 0 6.08-3.5"/><path d="M6 12h12"/><path d="M6 9h7"/></svg>}
           iconBg="bg-[#EFF6FF]"
           href="/bestellingen"
         />
@@ -317,7 +317,7 @@ export async function DashboardContent({
             <div className="px-5 py-4 space-y-3.5">
               {changelogs.slice(0, 4).map((item) => {
                 const parts = item.title.split(' — ')
-                const version = parts.length > 1 && parts[0].startsWith('v') ? parts[0] : null
+                const version = parts.length > 1 && /^v?\d/.test(parts[0]) ? parts[0] : null
                 const title = version ? parts.slice(1).join(' — ') : item.title
                 return (
                   <div key={item.id} className="flex items-start gap-2.5">

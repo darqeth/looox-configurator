@@ -87,7 +87,7 @@ export default async function AdminMeldingenPage({
             <div className="space-y-2">
               {changelogs && changelogs.length > 0 ? changelogs.map((item) => {
                 const parts = item.title.split(' — ')
-                const version = parts.length > 1 && parts[0].startsWith('v') ? parts[0] : null
+                const version = parts.length > 1 && /^v?\d/.test(parts[0]) ? parts[0] : null
                 const title = version ? parts.slice(1).join(' — ') : item.title
                 const date = new Date(item.published_at).toLocaleDateString('nl-NL', {
                   day: 'numeric', month: 'short', year: 'numeric',

@@ -16,8 +16,13 @@ export async function createChangelog(data: {
   if (!user) throw new Error('Niet ingelogd')
   if (!await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
 
-  const fullTitle = data.version.trim()
-    ? `${data.version.trim()} — ${data.title.trim()}`
+  // Normaliseer versie: voeg 'v' prefix toe als die ontbreekt (bijv. "1.5" → "v1.5")
+  const rawVersion = data.version.trim()
+  const version = rawVersion
+    ? rawVersion.startsWith('v') ? rawVersion : `v${rawVersion}`
+    : ''
+  const fullTitle = version
+    ? `${version} — ${data.title.trim()}`
     : data.title.trim()
 
   await supabase.from('changelogs').insert({

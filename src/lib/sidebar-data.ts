@@ -38,7 +38,7 @@ export async function fetchSidebarData(
   const companyUserIds = await getCompanyUserIds(supabase, userId, companyId)
 
   const [
-    { data: configCount },
+    { count: configCount },
     { data: orderCount },
     { count: pendingCount },
     { count: pendingColleaguesCount },
@@ -47,7 +47,7 @@ export async function fetchSidebarData(
     { data: revenueSum },
     { data: streakData },
   ] = await Promise.all([
-    supabase.rpc('count_company_configs', { p_user_id: userId }),
+    supabase.from('configurations').select('id', { count: 'exact', head: true }).in('user_id', companyUserIds).eq('status', 'saved'),
     supabase.rpc('count_company_orders', { p_user_id: userId }),
     isAdmin
       ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending')

@@ -6,10 +6,6 @@ import ConfiguratiesTabs from './configuraties-tabs'
 
 const PAGE_SIZE = 20
 
-const statusLabels: Record<string, { label: string; className: string }> = {
-  saved:   { label: 'Opgeslagen',  className: 'bg-blue-50 text-blue-700' },
-  ordered: { label: 'Besteld',     className: 'bg-green-50 text-green-700' },
-}
 
 const shapeLabel: Record<string, string> = {
   rechthoek: 'Rechthoek',
@@ -100,30 +96,23 @@ export async function ConfiguratiesContent({
 
   const [
     { data: configs, count: filteredCount },
-    { count: allCount },
     { count: savedCount },
-    { count: orderedCount },
   ] = await Promise.all([
-    (() => {
-      let q = supabase
-        .from('configurations')
-        .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
-        .eq('user_id', viewUserId)
-        .order('updated_at', { ascending: false })
-        .range(from, to)
-      if (filter && ['saved', 'ordered'].includes(filter)) q = q.eq('status', filter)
-      return q
-    })(),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId),
+    supabase
+      .from('configurations')
+      .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
+      .eq('user_id', viewUserId)
+      .eq('status', 'saved')
+      .order('updated_at', { ascending: false })
+      .range(from, to),
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved'),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'ordered'),
   ])
 
   const totalPages = Math.ceil((filteredCount ?? 0) / PAGE_SIZE)
-  const statusTabs = [
-    { key: '', label: 'Alle', count: allCount ?? 0 },
-    { key: 'saved', label: 'Opgeslagen', count: savedCount ?? 0 },
-    { key: 'ordered', label: 'Besteld', count: orderedCount ?? 0 },
+  // Product-type tabs — toekomstbestendig (straks meer producten toevoegen)
+  const productTabs = [
+    { key: '', label: 'Spiegels', count: savedCount ?? 0 },
+    { key: 'alle', label: 'Alle', count: savedCount ?? 0 },
   ]
 
   // Eigen config-count voor member tab header
@@ -184,7 +173,7 @@ export async function ConfiguratiesContent({
       )}
 
       {/* Status filter tabs */}
-      <ConfiguratiesTabs tabs={statusTabs} currentFilter={filter} view={validView ? view : undefined} />
+      <ConfiguratiesTabs tabs={productTabs} currentFilter={filter} view={validView ? view : undefined} />
 
       <div className="bg-white rounded-[18px] border border-black/6 shadow-sm">
         {configs && configs.length > 0 ? (
@@ -252,35 +241,16 @@ export async function ConfiguratiesContent({
                         <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
                       </div>
                     </div>
-                    {config.status === 'ordered' ? (
-                      <>
-                        {canSeePurchasePrices && (
-                          <div className="relative group">
-                            <a href={`/api/pdf/order/by-config/${config.id}`} download className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-cta transition-colors">
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                            </a>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                              Orderbevestiging downloaden
-                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
-                            </div>
-                          </div>
-                        )}
-                        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">Besteld</span>
-                      </>
-                    ) : (
-                      <>
-                        {canConfigure && (
-                          <Link href={`/configurator/${config.id}`} title="Bewerken" className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary transition-colors">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
-                          </Link>
-                        )}
-                        {(config.user_id === user.id || memberPerms?.role === 'manager') && (
-                          <DeleteButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} />
-                        )}
-                        {canOrder && shape !== 'op-aanvraag' && (
-                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
-                        )}
-                      </>
+                    {canConfigure && (
+                      <Link href={`/configurator/${config.id}`} title="Bewerken" className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary transition-colors">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+                      </Link>
+                    )}
+                    {(config.user_id === user.id || memberPerms?.role === 'manager') && (
+                      <DeleteButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} />
+                    )}
+                    {canOrder && shape !== 'op-aanvraag' && (
+                      <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
                     )}
                   </div>
                 </div>
@@ -293,11 +263,9 @@ export async function ConfiguratiesContent({
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/></svg>
             </div>
             <p className="text-[14px] font-semibold text-lx-text-primary mb-1">
-              {filter
-                ? `Geen ${statusLabels[filter]?.label.toLowerCase() ?? filter} configuraties`
-                : viewingName
-                  ? `${viewingName} heeft nog geen configuraties`
-                  : 'Nog geen configuraties'}
+              {viewingName
+                ? `${viewingName} heeft nog geen configuraties`
+                : 'Nog geen configuraties'}
             </p>
             {!viewingName && (
               <>

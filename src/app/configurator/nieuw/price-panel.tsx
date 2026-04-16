@@ -237,9 +237,9 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
   }
 
   if (shape === 'organic') {
-    const mirrorPath = "M110 24 C148 24 176 50 174 88 C172 126 146 172 100 170 C54 168 26 140 28 100 C30 60 72 24 110 24Z"
-    const indirectPath = "M110 32 C145 32 168 56 166 88 C164 120 140 162 100 162 C60 162 34 136 36 100 C38 64 75 32 110 32Z"
-    const directPath = "M110 14 C152 14 184 44 182 88 C180 132 150 182 100 180 C50 178 18 146 20 100 C22 54 68 14 110 14Z"
+    const organicPath = "M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"
+    const scale = available / 200
+    const tf = `translate(${PAD} ${PAD}) scale(${scale})`
     const hasDirect   = directPosition !== 'geen'
     const hasIndirect = indirectPosition !== 'geen'
 
@@ -253,34 +253,34 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
             <feGaussianBlur stdDeviation="2.5" />
           </filter>
           <clipPath id="organic-clip">
-            <path d={mirrorPath} />
+            <path d={organicPath} transform={tf} />
           </clipPath>
           <mask id="outside-mask-o">
             <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />
-            <path d={mirrorPath} fill="black" />
+            <path d={organicPath} transform={tf} fill="black" />
           </mask>
         </defs>
 
         {/* Indirecte verlichting: warme gloed rondom organic shape op muur */}
         {hasIndirect && (
-          <path d={directPath} fill="#FEF3C7" opacity="0.5" filter="url(#wall-glow-o)"
-            mask="url(#outside-mask-o)" />
+          <path d={organicPath} transform={tf} fill="#FEF3C7" stroke="#FEF3C7" strokeWidth="16" opacity="0.5"
+            filter="url(#wall-glow-o)" mask="url(#outside-mask-o)" />
         )}
 
         {/* Spiegelglas */}
-        <path d={mirrorPath} fill={glass.fill} opacity={glass.fillOpacity} />
-        <path d={mirrorPath} fill="none" stroke={glass.stroke} strokeWidth="1.5" />
+        <path d={organicPath} transform={tf} fill={glass.fill} opacity={glass.fillOpacity} />
+        <path d={organicPath} transform={tf} fill="none" stroke={glass.stroke} strokeWidth="1.5" />
 
         {/* Directe verlichting: gezandstraald rondom binnenin */}
         {hasDirect && (
           <>
-            <path d={indirectPath} fill="none" stroke="white" strokeWidth="10" opacity="0.45" clipPath="url(#organic-clip)" />
-            <path d={indirectPath} fill="none" stroke="white" strokeWidth="10" opacity="0.18" filter="url(#band-glow-o)" clipPath="url(#organic-clip)" />
+            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.45" clipPath="url(#organic-clip)" />
+            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.18" filter="url(#band-glow-o)" clipPath="url(#organic-clip)" />
           </>
         )}
 
         {/* Spiegelglans */}
-        <line x1="76" y1="55" x2="114" y2="124" stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round" />
+        <line x1="90" y1="72" x2="118" y2="122" stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round" />
       </svg>
     )
   }

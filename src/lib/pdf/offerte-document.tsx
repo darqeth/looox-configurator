@@ -11,8 +11,6 @@ import {
   Path,
   Circle,
   Line,
-  Defs,
-  ClipPath,
   G,
 } from '@react-pdf/renderer'
 import {
@@ -120,23 +118,29 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     )
   }
 
-  // rechthoek + overige
-  const rx = shape === 'organic' ? 0 : 2
-  const organicPath = shape === 'organic'
-    ? `M ${x+w*0.45} ${y} C ${x+w*0.9} ${y} ${x+w} ${y+h*0.2} ${x+w*0.97} ${y+h*0.55} C ${x+w*0.94} ${y+h*0.9} ${x+w*0.55} ${y+h} ${x+w*0.18} ${y+h*0.97} C ${x-w*0.05} ${y+h*0.93} ${x} ${y+h*0.65} ${x+w*0.03} ${y+h*0.28} C ${x+w*0.06} ${y} ${x+w*0.22} ${y} ${x+w*0.45} ${y} Z`
-    : null
+  if (shape === 'organic') {
+    const organicPath = "M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"
+    const scale = available / 200
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <G transform={`translate(${PAD} ${PAD}) scale(${scale})`}>
+          {hasIndirect && <Path d={organicPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W / scale} opacity={0.7} />}
+          <Path d={organicPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+          <Path d={organicPath} fill="none" stroke={glass.stroke} strokeWidth={1.2 / scale} />
+          {hasDirect && <Path d={organicPath} fill="none" stroke="white" strokeWidth={10 / scale} opacity={0.45} />}
+          <Line x1={55} y1={55} x2={90} y2={120} stroke="white" strokeWidth={9 / scale} opacity={0.09} strokeLinecap="round" />
+        </G>
+      </Svg>
+    )
+  }
 
+  // rechthoek
   return (
     <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-      {hasIndirect && (organicPath
-        ? <Path d={organicPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
-        : <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
-      )}
-      {organicPath
-        ? <><Path d={organicPath} fill={glass.fill} fillOpacity={glass.fillOpacity} /><Path d={organicPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" /></>
-        : <><Rect x={x} y={y} width={w} height={h} rx={rx} fill={glass.fill} fillOpacity={glass.fillOpacity} /><Rect x={x} y={y} width={w} height={h} rx={rx} fill="none" stroke={glass.stroke} strokeWidth="1.2" /></>
-      }
-      {hasDirect && !organicPath && <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={1} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+      {hasIndirect && <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={2} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+      <Rect x={x} y={y} width={w} height={h} rx={2} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+      <Rect x={x} y={y} width={w} height={h} rx={2} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
+      {hasDirect && <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={1} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
       <Line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
     </Svg>
   )

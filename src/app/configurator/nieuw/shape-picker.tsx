@@ -14,8 +14,8 @@ function ShapeIcon({ slug }: { slug: ShapeSlug }) {
     </svg>
   )
   if (slug === 'organic') return (
-    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-      <path d="M32 8 C48 8 58 18 56 32 C54 46 44 58 30 56 C16 54 6 44 8 30 C10 16 16 8 32 8Z" stroke="#9CA3AF" strokeWidth="2.5" fill="none" />
+    <svg width="64" height="64" viewBox="0 0 200 200" fill="none">
+      <path d="M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z" stroke="#9CA3AF" strokeWidth="8" fill="none" />
     </svg>
   )
   if (slug === 'rounded-rect') return (

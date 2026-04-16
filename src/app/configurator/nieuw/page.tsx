@@ -12,16 +12,18 @@ export default async function NieuweConfiguratiePage() {
   let priceFactorEnabled = false
   let canSeePurchasePrices = true
   let canOrder = true
+  let isInternational = false
 
   if (user) {
     const [{ data: profile }, { data: memberData }] = await Promise.all([
-      supabase.from('profiles').select('company_id').eq('id', user.id).single(),
+      supabase.from('profiles').select('company_id, is_international').eq('id', user.id).single(),
       supabase.from('company_members').select('role, can_see_purchase_prices, can_order').eq('user_id', user.id).maybeSingle(),
     ])
 
     const isManager = !memberData || memberData.role === 'manager'
     canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
     canOrder = isManager || (memberData?.can_order ?? true)
+    isInternational = profile?.is_international ?? false
 
     ;({ priceFactor, priceFactorEnabled } = await getCompanyPriceSettings(supabase, profile?.company_id ?? null))
   }
@@ -32,6 +34,7 @@ export default async function NieuweConfiguratiePage() {
       priceFactorEnabled={priceFactorEnabled}
       canSeePurchasePrices={canSeePurchasePrices}
       canOrder={canOrder}
+      isInternational={isInternational}
     />
   )
 }

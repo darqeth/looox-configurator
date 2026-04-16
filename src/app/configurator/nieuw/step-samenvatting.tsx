@@ -31,6 +31,7 @@ interface StepSamenvattingProps {
   reference: string
   saving: boolean
   schunineZijdenFile: File | null
+  isInternational?: boolean
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
   onSchunineZijdenFileChange: (f: File | null) => void
@@ -83,7 +84,7 @@ export default function StepSamenvatting({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   projectName, reference,
-  saving, schunineZijdenFile, onProjectNameChange, onReferenceChange,
+  saving, schunineZijdenFile, isInternational = false, onProjectNameChange, onReferenceChange,
   onSchunineZijdenFileChange,
   onGoToStep, onSave, onOrder, canOrder = true,
 }: StepSamenvattingProps) {
@@ -91,7 +92,7 @@ export default function StepSamenvatting({
   const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? shape
   const glasKleurNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? glasKleur
 
-  const unitPrice = calcTotalPrice({
+  const basePrice = calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur,
     directPosition: directLight.position,
     directType: directLight.type,
@@ -102,6 +103,8 @@ export default function StepSamenvatting({
     selectedOptions,
     optionSubChoices,
   })
+  const internationalSurcharge = isInternational ? Math.round(basePrice * 0.05) : 0
+  const unitPrice = basePrice + internationalSurcharge
 
   const selectedOptionNames = selectedOptions
     .map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name)
@@ -123,9 +126,23 @@ export default function StepSamenvatting({
       </div>
 
       {/* Prijs */}
-      <div className="flex items-center justify-between bg-lx-panel-bg rounded-xl px-4 py-3">
-        <span className="text-[12.5px] text-lx-text-secondary">Eenheidsprijs excl. btw</span>
-        <span className="text-[17px] font-bold text-lx-cta">€{unitPrice.toLocaleString('nl-NL')}</span>
+      <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
+        {isInternational && (
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] text-lx-text-secondary">Basisprijs</span>
+            <span className="text-[13px] text-lx-text-secondary">€{basePrice.toLocaleString('nl-NL')}</span>
+          </div>
+        )}
+        {isInternational && (
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] text-orange-600">Buitenlandtoeslag (5%)</span>
+            <span className="text-[13px] text-orange-600">+€{internationalSurcharge.toLocaleString('nl-NL')}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-[12.5px] text-lx-text-secondary">Eenheidsprijs excl. btw</span>
+          <span className="text-[17px] font-bold text-lx-cta">€{unitPrice.toLocaleString('nl-NL')}</span>
+        </div>
       </div>
 
       {/* Project details */}

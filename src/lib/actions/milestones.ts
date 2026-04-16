@@ -166,8 +166,8 @@ export async function checkAndAwardMilestones() {
     supabase.rpc('count_company_orders', { p_user_id: user.id }),
     supabase.rpc('sum_order_revenue', { p_user_id: user.id }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', user.id).single(),
-    // Shape milestone: RPC geeft alleen distinct shapes terug (geen volledige selected_options)
-    supabase.rpc('get_user_configured_shapes', { p_user_id: user.id }),
+    // Shape milestone: directe query zodat we kunnen tellen per vorm
+    supabase.from('configurations').select('selected_options').in('user_id', companyUserIds),
   ])
 
   if (!milestones) return
@@ -177,9 +177,13 @@ export async function checkAndAwardMilestones() {
   const totalOrders = Number(orderCount ?? 0)
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = streakData?.current_streak ?? 0
-  const configuredShapes = new Set(
-    (shapeData ?? []).map((r: { shape: string }) => r.shape).filter(Boolean)
-  )
+
+  // Tel configuraties per vorm
+  const shapeCounts: Record<string, number> = {}
+  for (const c of (shapeData ?? [])) {
+    const shape = (c.selected_options as Record<string, unknown> | null)?.shape as string | undefined
+    if (shape) shapeCounts[shape] = (shapeCounts[shape] ?? 0) + 1
+  }
 
   for (const m of milestones) {
     if (achievedIds.has(m.id)) continue
@@ -189,7 +193,7 @@ export async function checkAndAwardMilestones() {
     else if (m.goal_type === 'orders') achieved = totalOrders >= m.goal_value
     else if (m.goal_type === 'order_revenue') achieved = totalRevenue >= m.goal_value
     else if (m.goal_type === 'streak') achieved = currentStreak >= m.goal_value
-    else if (m.goal_type === 'shape') achieved = m.goal_shape ? configuredShapes.has(m.goal_shape) : false
+    else if (m.goal_type === 'shape') achieved = m.goal_shape ? (shapeCounts[m.goal_shape] ?? 0) >= m.goal_value : false
 
     if (!achieved) continue
 

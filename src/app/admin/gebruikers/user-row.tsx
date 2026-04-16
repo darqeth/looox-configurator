@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { deleteUser, generatePasswordResetLink, updateApprovalStatus } from '@/lib/actions/admin'
+import { deleteUser, generatePasswordResetLink, toggleInternational, updateApprovalStatus } from '@/lib/actions/admin'
 
 const statusConfig = {
   pending:  { label: 'Wacht op goedkeuring', className: 'bg-amber-50 text-amber-700' },
@@ -20,6 +20,7 @@ export type UserRowProfile = {
   created_at: string | null
   price_factor: number | null
   price_factor_enabled: boolean | null
+  is_international: boolean | null
 }
 
 export function UserRow({
@@ -40,6 +41,15 @@ export function UserRow({
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [isInternational, setIsInternational] = useState(profile.is_international ?? false)
+
+  function handleToggleInternational() {
+    const next = !isInternational
+    setIsInternational(next)
+    startTransition(async () => {
+      await toggleInternational(profile.id, next)
+    })
+  }
 
   const status = statusConfig[profile.approval_status as keyof typeof statusConfig] ?? statusConfig.pending
   const date = profile.created_at
@@ -106,6 +116,11 @@ export function UserRow({
                 ×{Number(profile.price_factor).toFixed(2)} consument{profile.price_factor_enabled ? '' : ' (uit)'}
               </span>
             )}
+            {isInternational && (
+              <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
+                Buitenland +5%
+              </span>
+            )}
           </div>
           <p className="text-[12px] text-lx-text-secondary mt-0.5">
             {profile.company ?? '—'} · {profile.email ?? '—'}
@@ -154,6 +169,23 @@ export function UserRow({
               Alsnog goedkeuren
             </button>
           )}
+
+          {/* Buitenland toggle */}
+          <button
+            onClick={handleToggleInternational}
+            disabled={isPending}
+            title={isInternational ? 'Buitenlandtoeslag uitschakelen' : 'Buitenlandtoeslag inschakelen'}
+            className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 ${
+              isInternational
+                ? 'text-orange-500 bg-orange-50 hover:bg-orange-100'
+                : 'text-lx-text-secondary hover:text-orange-500 hover:bg-orange-50'
+            }`}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </button>
 
           {/* Wachtwoord reset */}
           <button

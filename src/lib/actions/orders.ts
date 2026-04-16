@@ -179,7 +179,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  const basePrice = calcTotalPrice({
+  // Controleer buitenlandtoeslag
+  const { data: profile } = await supabase.from('profiles').select('is_international').eq('id', user.id).single()
+  const isInternational = profile?.is_international ?? false
+
+  const calcPrice = calcTotalPrice({
     shape: input.shape,
     width: input.width,
     height: input.height,
@@ -194,6 +198,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
   })
+  const basePrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
   const subtotal = basePrice * input.quantity
   let discountAmount = 0

@@ -53,7 +53,7 @@ export default function MilestoneForm() {
         title,
         description,
         goal_type: goalType,
-        goal_value: selectedGoal.hasShape ? 1 : Number(goalValue),
+        goal_value: Number(goalValue),
         goal_shape: goalType === 'shape' ? goalShape : null,
         benefit_type: benefitType,
         benefit_value: benefitType !== 'custom' ? Number(benefitValue) : null,
@@ -121,17 +121,27 @@ export default function MilestoneForm() {
               ))}
             </div>
             {selectedGoal.hasShape ? (
-              <div>
-                <label className="block text-[11.5px] text-lx-text-secondary mb-1.5">Welke vorm?</label>
-                <div className="flex gap-2 flex-wrap">
-                  {SHAPES.map(s => (
-                    <button key={s.key} type="button" onClick={() => setGoalShape(s.key)}
-                      className={`px-3 py-1.5 rounded-xl text-[12px] font-medium border transition-all ${
-                        goalShape === s.key ? 'bg-lx-cta text-white border-lx-cta' : 'bg-white text-lx-text-secondary border-black/12 hover:border-lx-cta/50'
-                      }`}>
-                      {s.label}
-                    </button>
-                  ))}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11.5px] text-lx-text-secondary mb-1.5">Welke vorm?</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {SHAPES.map(s => (
+                      <button key={s.key} type="button" onClick={() => setGoalShape(s.key)}
+                        className={`px-3 py-1.5 rounded-xl text-[12px] font-medium border transition-all ${
+                          goalShape === s.key ? 'bg-lx-cta text-white border-lx-cta' : 'bg-white text-lx-text-secondary border-black/12 hover:border-lx-cta/50'
+                        }`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number" min="1" value={goalValue} onChange={e => setGoalValue(e.target.value)} required
+                    placeholder="Bijv. 5"
+                    className="w-28 px-3.5 py-2.5 rounded-xl border border-black/12 text-[13px] text-lx-text-primary focus:outline-none focus:border-lx-cta transition-colors"
+                  />
+                  <span className="text-[13px] text-lx-text-secondary">stuks</span>
                 </div>
               </div>
             ) : (

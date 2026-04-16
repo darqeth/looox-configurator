@@ -143,9 +143,9 @@ export async function checkAndAwardMilestones() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  // Haal company_id op om bedrijfsbreed te controleren
-  const { data: profileData } = await supabase.from('profiles').select('company_id').eq('id', user.id).single()
-  const companyId = profileData?.company_id ?? null
+  // company_members is bron van waarheid — profile.company_id kan stale zijn na verwijdering
+  const { data: memberRow } = await supabase.from('company_members').select('company_id').eq('user_id', user.id).single()
+  const companyId = memberRow?.company_id ?? null
 
   const companyUserIds = await getCompanyUserIds(supabase, user.id, companyId)
 

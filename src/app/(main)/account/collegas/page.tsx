@@ -8,14 +8,15 @@ export default async function CollegasPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('company_id, company')
-    .eq('id', user.id)
+  // company_members is bron van waarheid
+  const { data: myMember } = await supabase
+    .from('company_members')
+    .select('role, company_id')
+    .eq('user_id', user.id)
     .single()
 
-  // Gebruiker heeft geen bedrijfskoppeling
-  if (!profile?.company_id) {
+  // Geen actief lidmaatschap → geen bedrijfspagina tonen
+  if (!myMember?.company_id) {
     return (
       <div className="p-4 sm:p-6 lg:p-7 w-full max-w-2xl">
         <TabNav active="collegas" />
@@ -26,13 +27,8 @@ export default async function CollegasPage() {
     )
   }
 
-  const { data: myMember } = await supabase
-    .from('company_members')
-    .select('role')
-    .eq('user_id', user.id)
-    .single()
-
-  const isManager = myMember?.role === 'manager'
+  const isManager = myMember.role === 'manager'
+  const activeCompanyId = myMember.company_id
 
   // Haal alle leden op
   const { data: members } = await supabase
@@ -41,7 +37,7 @@ export default async function CollegasPage() {
       id, role, can_order, can_see_purchase_prices, can_configure, own_configs_only, created_at,
       profiles!inner(id, full_name, email, avatar_url, approval_status)
     `)
-    .eq('company_id', profile.company_id)
+    .eq('company_id', activeCompanyId)
     .order('created_at')
 
   // Haal openstaande invites op (alleen voor managers)
@@ -49,7 +45,7 @@ export default async function CollegasPage() {
     ? await supabase
         .from('company_invites')
         .select('id, email, token, expires_at, created_at, can_order, can_see_purchase_prices, can_configure, own_configs_only')
-        .eq('company_id', profile.company_id)
+        .eq('company_id', activeCompanyId)
         .is('accepted_at', null)
         .order('created_at', { ascending: false })
     : { data: [] }
@@ -92,7 +88,7 @@ export default async function CollegasPage() {
         isManager={isManager}
         members={memberList}
         invites={inviteList}
-        companyId={profile.company_id}
+        companyId={activeCompanyId}
       />
     </div>
   )

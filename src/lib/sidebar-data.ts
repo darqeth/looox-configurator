@@ -33,7 +33,8 @@ export async function fetchSidebarData(
 
   const isAdmin = profile?.is_admin ?? false
   const isManager = memberData?.role === 'manager'
-  const companyId = profile?.company_id ?? memberData?.company_id ?? null
+  // company_members is bron van waarheid — profile.company_id kan stale zijn na verwijdering
+  const companyId = memberData?.company_id ?? null
 
   const companyUserIds = await getCompanyUserIds(supabase, userId, companyId)
 

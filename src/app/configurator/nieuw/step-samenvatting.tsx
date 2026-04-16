@@ -214,7 +214,7 @@ export default function StepSamenvatting({
         <p className="text-[12px] text-lx-text-secondary leading-relaxed">
           {shape === 'op-aanvraag'
             ? 'Dit is een offerteaanvraag — geen betaling vereist. Je ontvangt binnen 1 werkdag een bevestiging. Productietijd is ca. 10 werkdagen na akkoord.'
-            : 'Je bestelling wordt direct in behandeling genomen. Je ontvangt binnen 1 werkdag een orderbevestiging. Productietijd is ca. 10 werkdagen.'}
+            : 'Je bestelling wordt direct in behandeling genomen. We streven ernaar om binnen 1 werkdag een orderbevestiging te sturen. Productietijd is 4 tot 6 weken.'}
         </p>
       </div>
 

@@ -254,8 +254,8 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
             <h2 className="text-[24px] font-bold text-lx-text-primary mb-2">{projectName}</h2>
             <p className="text-[13.5px] text-lx-text-secondary leading-relaxed max-w-sm mx-auto">
               {shape === 'op-aanvraag'
-                ? 'Je aanvraag is ontvangen. Je hoort binnen 1 werkdag van ons. Productietijd is ca. 10 werkdagen na bevestiging.'
-                : 'Je bestelling is ontvangen. Je ontvangt binnen 1 werkdag een orderbevestiging. Productietijd is ca. 10 werkdagen.'}
+                ? 'Je aanvraag is ontvangen. We streven ernaar om binnen 1 werkdag contact op te nemen. Productietijd is 4 tot 6 weken na bevestiging.'
+                : 'Je bestelling is ontvangen. We streven ernaar om binnen 1 werkdag een orderbevestiging te sturen. Productietijd is 4 tot 6 weken.'}
             </p>
           </div>
 
@@ -299,8 +299,17 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
               {shape === 'op-aanvraag' ? 'Mijn offertes' : 'Mijn bestellingen'}
             </button>
             <button
-              onClick={() => router.push('/configurator/nieuw')}
-              className="flex-1 h-11 rounded-xl border border-black/12 text-lx-text-secondary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors"
+              onClick={() => {
+                setOrderResult(null)
+                setShape(null)
+                setStep(1)
+                setWidth(80); setHeight(60); setDiameter(60); setOrganicSizeKey('60x40'); setGlasKleur('helder')
+                setDirectLight(DEFAULT_LIGHT); setIndirectLight(DEFAULT_LIGHT)
+                setSelectedOptions([]); setOptionSubChoices({})
+                setProjectName(''); setReference(''); setQuantity(1)
+                setSaving(false); setSaved(false)
+              }}
+              className="flex-1 h-11 rounded-xl border border-black/12 text-lx-text-secondary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors cursor-pointer"
             >
               Nieuwe spiegel
             </button>

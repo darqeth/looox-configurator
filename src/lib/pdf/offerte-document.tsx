@@ -377,7 +377,7 @@ export default function OfferteDocument({
           <View style={styles.noticeBox}>
             <Text style={styles.noticeText}>
               Deze offerte is 30 dagen geldig. Prijzen zijn excl. BTW en onder voorbehoud van beschikbaarheid.
-              Productietijd na akkoord is ca. 10 werkdagen. Neem contact op voor vragen of bestelling.
+              Productietijd is 4 tot 6 weken na akkoord. Neem contact op voor vragen of bestelling.
             </Text>
           </View>
         </View>

@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID } from '@/lib/actions/configurator-helpers'
-import { sendOrderConfirmationEmail } from '@/lib/email'
+import { sendOrderConfirmationEmail, sendInternalOrderEmail, type OrderEmailDetails } from '@/lib/email'
+import { renderOrderPDF } from '@/lib/pdf/render-order'
+import type { ConfigOptions } from '@/lib/pdf/helpers'
 
 type LightConfig = {
   position: string
@@ -34,6 +36,109 @@ type PlaceOrderInput = {
   discountUseType?: 'single' | 'per_user' | null
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const POSITION_LABELS: Record<string, string> = {
+  geen: 'Geen', boven: 'Boven', onder: 'Onder', links: 'Links', rechts: 'Rechts',
+  'boven-onder': 'Boven & onder', 'links-rechts': 'Links & rechts',
+}
+
+const LIGHT_LABELS: Record<string, string> = {
+  'tl-buis': 'TL-buis', 'led-strip': 'LED-strip', 'led-spots': 'LED-spots',
+}
+
+function lightLabel(light: LightConfig | { position?: string; type?: string | null } | undefined): string | null {
+  if (!light) return null
+  const pos = light.position ?? ''
+  if (!pos || pos === 'geen') return null
+  const posLabel = POSITION_LABELS[pos] ?? pos
+  const typeLabel = light.type ? (LIGHT_LABELS[light.type] ?? light.type) : null
+  return typeLabel ? `${posLabel} — ${typeLabel}` : posLabel
+}
+
+type Profile = {
+  full_name: string | null
+  email: string | null
+  company: string | null
+  phone: string | null
+  address: string | null
+}
+
+async function sendOrderEmails(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  userEmail: string,
+  orderNumber: string,
+  orderDate: string,
+  articleNumber: string | null | undefined,
+  emailDetails: OrderEmailDetails,
+  notes: string | null,
+  attachmentUrl: string | null,
+  configOptions: ConfigOptions,
+  width: number | null,
+  height: number | null,
+) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, email, company, phone, address')
+    .eq('id', userId)
+    .single()
+
+  const email = (profile as Profile | null)?.email ?? userEmail
+
+  // PDF genereren
+  let pdfBuffer: Buffer | undefined
+  try {
+    pdfBuffer = await renderOrderPDF({
+      orderNumber,
+      orderDate,
+      articleNumber,
+      status: 'pending',
+      dealer: {
+        name: (profile as Profile | null)?.full_name ?? null,
+        company: (profile as Profile | null)?.company ?? null,
+        email,
+        phone: (profile as Profile | null)?.phone ?? null,
+        address: (profile as Profile | null)?.address ?? null,
+      },
+      config: {
+        name: emailDetails.projectName ?? null,
+        width,
+        height,
+        options: configOptions,
+      },
+      unitPrice: emailDetails.unitPrice,
+      totalPrice: emailDetails.totalPrice,
+      quantity: emailDetails.quantity,
+      notes,
+      attachmentUrl,
+    })
+  } catch {
+    // PDF fout is niet fataal — mails zonder bijlage versturen
+  }
+
+  sendOrderConfirmationEmail({
+    to: email,
+    name: (profile as Profile | null)?.full_name ?? 'Gebruiker',
+    order: emailDetails,
+    pdfBuffer,
+  }).catch(() => {})
+
+  sendInternalOrderEmail({
+    order: emailDetails,
+    customer: {
+      name: (profile as Profile | null)?.full_name ?? null,
+      company: (profile as Profile | null)?.company ?? null,
+      email,
+      phone: (profile as Profile | null)?.phone ?? null,
+      address: (profile as Profile | null)?.address ?? null,
+    },
+    pdfBuffer,
+  }).catch(() => {})
+}
+
+// ─── Order number ─────────────────────────────────────────────────────────────
+
 async function generateOrderNumber(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
   const { data } = await supabase.rpc('next_order_number')
   if (data) return data as string
@@ -41,7 +146,6 @@ async function generateOrderNumber(supabase: Awaited<ReturnType<typeof createCli
 }
 
 function generateFallbackOrderNumber(): string {
-  // Timestamp (ms) + 3-digit random → effectief uniek, zelfde formaat als RPC
   const ts = Date.now()
   const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
   return `LX-${ts}-${rand}`
@@ -68,6 +172,8 @@ async function applyDiscountCode(
   }
 }
 
+// ─── placeOrder ───────────────────────────────────────────────────────────────
+
 export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber: string; orderId: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -89,7 +195,6 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     selectedOptions: input.selectedOptions,
   })
 
-  // Korting altijd op het totaalbedrag toepassen (niet per stuk)
   const subtotal = basePrice * input.quantity
   let discountAmount = 0
   if (input.discountCodeId && input.discountType && input.discountValue) {
@@ -108,7 +213,6 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     discountAmount: discountAmount > 0 ? discountAmount : null,
   }
 
-  // 1. Sla configuratie op met status 'ordered'
   const { data: config, error: configError } = await supabase
     .from('configurations')
     .insert({
@@ -126,8 +230,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
 
   if (configError || !config) throw new Error(configError?.message ?? 'Config opslaan mislukt')
 
-  // 2. Genereer ordernummer en maak order aan
   const orderNumber = await generateOrderNumber(supabase)
+  const orderDate = new Date().toISOString()
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -146,36 +250,46 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
 
   if (orderError || !order) throw new Error(orderError?.message ?? 'Order aanmaken mislukt')
 
-  // 3. Markeer kortingscode als gebruikt (atomisch)
   if (input.discountCodeId) {
-    await applyDiscountCode(
-      supabase,
-      input.discountCodeId,
-      order.id,
-      user.id,
-      input.discountUseType ?? 'single',
-    )
+    await applyDiscountCode(supabase, input.discountCodeId, order.id, user.id, input.discountUseType ?? 'single')
   }
 
   revalidatePath('/bestellingen')
   revalidatePath('/dashboard')
   revalidatePath('/configuraties')
 
-  // Bestellingsbevestiging mailen
-  const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single()
-  if (profile?.email) {
-    sendOrderConfirmationEmail({
-      to: profile.email,
-      name: profile.full_name ?? 'Gebruiker',
-      orderNumber,
-      projectName: input.projectName,
-      quantity: input.quantity,
-      totalPrice: finalTotalPrice,
-    }).catch(() => {})
+  const emailDetails: OrderEmailDetails = {
+    orderNumber,
+    projectName: input.projectName,
+    shape: input.shape,
+    width: input.width,
+    height: input.height,
+    diameter: input.diameter,
+    organicSizeKey: input.organicSizeKey,
+    glasKleur: input.glasKleur,
+    directLight: lightLabel(input.directLight),
+    indirectLight: lightLabel(input.indirectLight),
+    quantity: input.quantity,
+    unitPrice: basePrice,
+    totalPrice: finalTotalPrice,
   }
+
+  const configOptions: ConfigOptions = selectedOptionsJson as ConfigOptions
+
+  sendOrderEmails(
+    supabase, user.id, user.email ?? '',
+    orderNumber, orderDate, null,
+    emailDetails,
+    input.description || null,
+    input.attachmentUrl ?? null,
+    configOptions,
+    input.width, input.height,
+  ).catch(() => {})
 
   return { orderNumber, orderId: order.id }
 }
+
+// ─── placeOrderFromConfig ─────────────────────────────────────────────────────
 
 export async function placeOrderFromConfig(
   configId: string,
@@ -190,11 +304,9 @@ export async function placeOrderFromConfig(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  // Haal bestaande configuratie op — RLS bepaalt toegang, user_id filter weggelaten
-  // zodat managers ook configs van teamleden kunnen bestellen
   const { data: config, error: configError } = await supabase
     .from('configurations')
-    .select('id, total_price, selected_options, user_id')
+    .select('id, name, article_number, width, height, total_price, selected_options, user_id')
     .eq('id', configId)
     .single()
 
@@ -212,14 +324,13 @@ export async function placeOrderFromConfig(
   }
   const finalTotalPrice = subtotal - discountAmount
 
-  // Maak eerst de order aan — als dit mislukt blijft de config op 'saved'
-  // Genereer ordernummer met retry bij duplicate key (23505)
   let order: { id: string } | null = null
   let orderNumber = ''
+  const orderDate = new Date().toISOString()
   for (let attempt = 0; attempt < 10; attempt++) {
     orderNumber = attempt < 5
-      ? await generateOrderNumber(supabase)          // RPC-gebaseerd
-      : generateFallbackOrderNumber()                // timestamp-gebaseerd als RPC blijft falen
+      ? await generateOrderNumber(supabase)
+      : generateFallbackOrderNumber()
     const { data, error: insertError } = await supabase
       .from('orders')
       .insert({
@@ -236,11 +347,9 @@ export async function placeOrderFromConfig(
       .single()
     if (!insertError) { order = data; break }
     if (insertError.code !== '23505') throw new Error(insertError.message ?? 'Order aanmaken mislukt')
-    // 23505 = duplicate order_number, nieuw nummer proberen
   }
   if (!order) throw new Error('Order aanmaken mislukt. Probeer het opnieuw.')
 
-  // Order is aangemaakt — zet config status op 'ordered'
   await supabase
     .from('configurations')
     .update({
@@ -256,34 +365,43 @@ export async function placeOrderFromConfig(
     })
     .eq('id', configId)
 
-  // Markeer kortingscode als gebruikt (atomisch)
   if (discountCodeId) {
-    await applyDiscountCode(
-      supabase,
-      discountCodeId,
-      order.id,
-      user.id,
-      discountUseType ?? 'single',
-    )
+    await applyDiscountCode(supabase, discountCodeId, order.id, user.id, discountUseType ?? 'single')
   }
 
   revalidatePath('/bestellingen')
   revalidatePath('/dashboard')
   revalidatePath('/configuraties')
 
-  // Bestellingsbevestiging mailen
-  const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', user.id).single()
-  const configName = (config.selected_options as Record<string, unknown> | null)?.projectName as string | undefined
-  if (profile?.email) {
-    sendOrderConfirmationEmail({
-      to: profile.email,
-      name: profile.full_name ?? 'Gebruiker',
-      orderNumber,
-      projectName: configName ?? 'Configuratie',
-      quantity,
-      totalPrice: finalTotalPrice,
-    }).catch(() => {})
+  const opts = (config.selected_options ?? {}) as ConfigOptions
+
+  const emailDetails: OrderEmailDetails = {
+    orderNumber,
+    projectName: config.name ?? (opts.description as string | undefined) ?? 'Configuratie',
+    shape: opts.shape ?? 'rechthoek',
+    width: config.width ?? null,
+    height: config.height ?? null,
+    diameter: opts.diameter ?? null,
+    organicSizeKey: opts.organicSizeKey ?? null,
+    glasKleur: opts.glasKleur ?? null,
+    directLight: lightLabel(opts.directLight),
+    indirectLight: lightLabel(opts.indirectLight),
+    quantity,
+    unitPrice,
+    totalPrice: finalTotalPrice,
   }
+
+  sendOrderEmails(
+    supabase, user.id, user.email ?? '',
+    orderNumber, orderDate,
+    (config as { article_number?: string | null }).article_number ?? null,
+    emailDetails,
+    notes || null,
+    (opts.attachmentUrl as string | null) ?? null,
+    opts,
+    config.width ?? null,
+    config.height ?? null,
+  ).catch(() => {})
 
   return { orderNumber, orderId: order.id }
 }

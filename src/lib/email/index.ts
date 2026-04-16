@@ -8,6 +8,37 @@ function getResend() {
 
 const FROM = 'LoooX Configurator <noreply@looox.nl>'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://configurator.looox.nl'
+const INTERNAL_EMAIL = 'marketing@rmsanitair.nl'
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const SHAPE_LABELS: Record<string, string> = {
+  rechthoek: 'Rechthoek',
+  rond: 'Rond',
+  organic: 'Organic',
+  'op-aanvraag': 'Op aanvraag',
+}
+
+const GLAS_LABELS: Record<string, string> = {
+  helder: 'Helder',
+  brons: 'Brons',
+  grijs: 'Grijs',
+  zwart: 'Zwart',
+}
+
+export function formatDimensions(
+  shape: string,
+  width: number | null,
+  height: number | null,
+  diameter: number | null,
+  organicSizeKey: string | null,
+) {
+  if (shape === 'rond' && diameter) return `⌀${diameter} cm`
+  if (shape === 'organic' && organicSizeKey) return organicSizeKey
+  if (shape === 'op-aanvraag') return 'Op aanvraag'
+  if (width && height) return `${width} × ${height} cm`
+  return '—'
+}
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
@@ -27,7 +58,7 @@ function baseTemplate(content: string) {
           <!-- Logo -->
           <tr>
             <td style="padding-bottom:28px;text-align:center;">
-              <img src="${SITE_URL}/logo-looox-grey.svg" alt="LoooX" height="48" style="height:48px;" />
+              <img src="${SITE_URL}/logo-looox-grey.svg" alt="LoooX" height="96" style="height:96px;" />
             </td>
           </tr>
           <!-- Card -->
@@ -64,6 +95,58 @@ function p(text: string, muted = false) {
 
 function divider() {
   return `<hr style="border:none;border-top:1px solid #ececec;margin:24px 0;" />`
+}
+
+function row(label: string, value: string, bold = false) {
+  return `<tr>
+    <td style="font-size:13px;color:#666;padding:6px 0;white-space:nowrap;padding-right:16px;">${label}</td>
+    <td style="font-size:13px;font-weight:${bold ? '700' : '600'};text-align:right;">${value}</td>
+  </tr>`
+}
+
+function orderTable(rows: string) {
+  return `<table style="width:100%;border-collapse:collapse;border-top:1px solid #ececec;margin-top:20px;padding-top:20px;">${rows}</table>`
+}
+
+// ─── Order details builder ────────────────────────────────────────────────────
+
+export type OrderEmailDetails = {
+  orderNumber: string
+  projectName: string
+  shape: string
+  width: number | null
+  height: number | null
+  diameter: number | null
+  organicSizeKey: string | null
+  glasKleur?: string | null
+  directLight?: string | null
+  indirectLight?: string | null
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+}
+
+function buildOrderRows(d: OrderEmailDetails) {
+  const fmt = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
+  const dimensions = formatDimensions(d.shape, d.width, d.height, d.diameter, d.organicSizeKey)
+  const shapeLabel = SHAPE_LABELS[d.shape] ?? d.shape
+  const glasLabel = d.glasKleur ? (GLAS_LABELS[d.glasKleur] ?? d.glasKleur) : null
+
+  return [
+    row('Ordernummer', d.orderNumber),
+    row('Project', d.projectName || '—'),
+    row('Vorm', shapeLabel),
+    row('Afmeting', dimensions),
+    glasLabel ? row('Glaskleur', glasLabel) : '',
+    d.directLight ? row('Directe verlichting', d.directLight) : '',
+    d.indirectLight ? row('Indirecte verlichting', d.indirectLight) : '',
+    row('Aantal', `${d.quantity}×`),
+    d.quantity > 1 ? row('Stukprijs', fmt(d.unitPrice)) : '',
+    `<tr style="border-top:1px solid #ececec;">
+      <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">Totaal</td>
+      <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${fmt(d.totalPrice)}</td>
+    </tr>`,
+  ].join('')
 }
 
 // ─── Email: Uitnodiging collega ───────────────────────────────────────────────
@@ -157,40 +240,85 @@ export async function sendPasswordResetEmail({
   })
 }
 
-// ─── Email: Bestellingsbevestiging ───────────────────────────────────────────
+// ─── Email: Bestellingsbevestiging (klant) ───────────────────────────────────
 
 export async function sendOrderConfirmationEmail({
   to,
   name,
-  orderNumber,
-  projectName,
-  quantity,
-  totalPrice,
+  order,
+  pdfBuffer,
 }: {
   to: string
   name: string
-  orderNumber: string
-  projectName: string
-  quantity: number
-  totalPrice: number
+  order: OrderEmailDetails
+  pdfBuffer?: Buffer
 }) {
-  const formatted = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(totalPrice)
-
   await getResend().emails.send({
     from: FROM,
     to,
-    subject: `Bestelling ontvangen — ${orderNumber}`,
+    subject: `Bestelling ontvangen — ${order.orderNumber}`,
     html: baseTemplate(`
       ${h1('Bestelling ontvangen!')}
       ${p(`Hoi ${name}, je bestelling is succesvol geplaatst. We gaan er zo snel mogelijk mee aan de slag.`)}
-      <table style="width:100%;border-top:1px solid #ececec;margin-top:20px;padding-top:20px;">
-        <tr><td style="font-size:13px;color:#666;padding:6px 0;">Ordernummer</td><td style="font-size:13px;font-weight:600;text-align:right;">${orderNumber}</td></tr>
-        <tr><td style="font-size:13px;color:#666;padding:6px 0;">Project</td><td style="font-size:13px;font-weight:600;text-align:right;">${projectName}</td></tr>
-        <tr><td style="font-size:13px;color:#666;padding:6px 0;">Aantal</td><td style="font-size:13px;font-weight:600;text-align:right;">${quantity}×</td></tr>
-        <tr style="border-top:1px solid #ececec;"><td style="font-size:14px;font-weight:700;padding:10px 0 0;">Totaal</td><td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${formatted}</td></tr>
-      </table>
+      ${orderTable(buildOrderRows(order))}
       ${btn(`${SITE_URL}/bestellingen`, 'Bestellingen bekijken')}
+      ${divider()}
+      ${p('In de bijlage vind je de volledige orderbevestiging als PDF.', true)}
     `),
+    attachments: pdfBuffer ? [{
+      filename: `LoooX-Order-${order.orderNumber}.pdf`,
+      content: pdfBuffer,
+    }] : undefined,
+  })
+}
+
+// ─── Email: Interne ordernotificatie (marketing) ──────────────────────────────
+
+export async function sendInternalOrderEmail({
+  order,
+  customer,
+  pdfBuffer,
+}: {
+  order: OrderEmailDetails
+  customer: {
+    name: string | null
+    company: string | null
+    email: string
+    phone: string | null
+    address: string | null
+  }
+  pdfBuffer?: Buffer
+}) {
+  const customerRows = [
+    customer.name ? row('Naam', customer.name) : '',
+    customer.company ? row('Bedrijf', customer.company) : '',
+    row('E-mail', `<a href="mailto:${customer.email}" style="color:#3d6b54;">${customer.email}</a>`),
+    customer.phone ? row('Telefoon', customer.phone) : '',
+    customer.address ? row('Adres', customer.address) : '',
+  ].join('')
+
+  const orderRows = buildOrderRows(order)
+
+  await getResend().emails.send({
+    from: FROM,
+    to: INTERNAL_EMAIL,
+    subject: `Nieuwe bestelling — ${order.orderNumber} (${customer.company ?? customer.name ?? customer.email})`,
+    html: baseTemplate(`
+      ${h1('Nieuwe bestelling!')}
+      ${p('Hoi Collega, er is zojuist een spiegel besteld via de configurator. In de bijlage vind je de bestelling en hieronder een kort overzicht:')}
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Klantgegevens</p>
+      ${orderTable(customerRows)}
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Bestelling</p>
+      ${orderTable(orderRows)}
+      ${divider()}
+      ${p('Liefs, de configurator', true)}
+    `),
+    attachments: pdfBuffer ? [{
+      filename: `LoooX-Order-${order.orderNumber}.pdf`,
+      content: pdfBuffer,
+    }] : undefined,
   })
 }
 

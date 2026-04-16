@@ -345,19 +345,26 @@ export default function OfferteDocument({
           <Text style={styles.sectionTitle}>Prijsoverzicht</Text>
           <View style={styles.pricingBox}>
             <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Prijs per stuk</Text>
+              <Text style={styles.pricingLabel}>Prijs per stuk (excl. btw)</Text>
               <Text style={styles.pricingValue}>{formatPrice(consumerUnit)}</Text>
             </View>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Aantal</Text>
               <Text style={styles.pricingValue}>{quantity}×</Text>
             </View>
+            <View style={styles.pricingRow}>
+              <Text style={styles.pricingLabel}>Subtotaal excl. btw</Text>
+              <Text style={styles.pricingValue}>{formatPrice(consumerTotal)}</Text>
+            </View>
+            <View style={styles.pricingRow}>
+              <Text style={styles.pricingLabel}>BTW 21%</Text>
+              <Text style={styles.pricingValue}>{formatPrice(Math.round(consumerTotal * 0.21))}</Text>
+            </View>
             <View style={styles.pricingDivider} />
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Totaal</Text>
-              <Text style={styles.totalValue}>{formatPrice(consumerTotal)}</Text>
+              <Text style={styles.totalLabel}>Totaal incl. btw</Text>
+              <Text style={styles.totalValue}>{formatPrice(Math.round(consumerTotal * 1.21))}</Text>
             </View>
-            <Text style={styles.vatNote}>Alle prijzen excl. BTW</Text>
           </View>
         </View>
 
@@ -376,8 +383,8 @@ export default function OfferteDocument({
           <Text style={styles.sectionTitle}>Voorwaarden</Text>
           <View style={styles.noticeBox}>
             <Text style={styles.noticeText}>
-              Deze offerte is 30 dagen geldig. Prijzen zijn excl. BTW en onder voorbehoud van beschikbaarheid.
-              Productietijd is 4 tot 6 weken na akkoord. Neem contact op voor vragen of bestelling.
+              Deze offerte is 30 dagen geldig. Prijzen zijn excl. btw, tenzij anders vermeld. Het totaalbedrag is inclusief 21% btw.
+              Onder voorbehoud van beschikbaarheid. Productietijd is 4 tot 6 weken na akkoord. Neem contact op voor vragen of bestelling.
             </Text>
           </View>
         </View>

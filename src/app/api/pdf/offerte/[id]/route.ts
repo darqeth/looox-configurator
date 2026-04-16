@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getCompanyPriceSettings } from '@/lib/company-utils'
 import { renderToBuffer } from '@react-pdf/renderer'
 import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
@@ -29,17 +28,17 @@ export async function GET(
   // Fetch dealer profile + prijsfactor
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, phone, address, company_id')
+    .select('full_name, company, phone, address, price_factor, price_factor_enabled')
     .eq('id', user.id)
     .single()
 
-  const { priceFactor } = await getCompanyPriceSettings(supabase, profile?.company_id ?? null)
+  const priceFactor = profile?.price_factor ?? 1
   // Offerte toont altijd consumentenprijs als factor > 1 (ongeacht toggle)
-  const priceFactorEnabled = priceFactor > 1
+  const priceFactorEnabled = (priceFactor ?? 1) > 1
 
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const quantity = (opts.quantity as number | undefined) ?? 1
-  const unitPrice = Number(config.total_price) // total_price stores the per-unit price
+  const unitPrice = Number(config.total_price) // total_price stores the per-unit price (incl. surcharges)
   const totalPrice = unitPrice * quantity
   const attachmentUrl = (opts.attachmentUrl as string | null) ?? null
 

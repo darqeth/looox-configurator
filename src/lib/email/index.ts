@@ -322,6 +322,28 @@ export async function sendInternalOrderEmail({
   })
 }
 
+// ─── Email: Account goedgekeurd ──────────────────────────────────────────────
+
+export async function sendApprovalEmail({
+  to,
+  name,
+}: {
+  to: string
+  name: string
+}) {
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: 'Je account is goedgekeurd — LoooX Configurator',
+    html: baseTemplate(`
+      ${h1(`Welkom, ${name}!`)}
+      ${p('Goed nieuws: je account is goedgekeurd en je kunt nu inloggen in de LoooX Configurator.')}
+      ${p('Configureer je eerste spiegel en sla hem op als offerte of plaats direct een bestelling.', true)}
+      ${btn(`${SITE_URL}/login`, 'Inloggen')}
+    `),
+  })
+}
+
 // ─── Email: App update notificatie ───────────────────────────────────────────
 
 export async function sendUpdateNotificationEmail({

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { sendApprovalEmail } from '@/lib/email'
 
 export async function toggleInternational(userId: string, value: boolean): Promise<void> {
   const supabase = await createClient()
@@ -22,10 +23,23 @@ export async function updateApprovalStatus(userId: string, status: 'approved' | 
 
   if (!await isAdmin(supabase, user.id)) return
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', userId)
+    .single()
+
   await supabase
     .from('profiles')
     .update({ approval_status: status })
     .eq('id', userId)
+
+  if (status === 'approved' && profile?.email) {
+    sendApprovalEmail({
+      to: profile.email,
+      name: profile.full_name ?? 'Gebruiker',
+    }).catch(() => {})
+  }
 
   revalidatePath('/admin/gebruikers')
 }

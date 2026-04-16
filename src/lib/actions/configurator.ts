@@ -48,7 +48,10 @@ export async function saveConfiguration(input: SaveConfigInput) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  const totalPrice = calcTotalPrice({
+  const { data: profile } = await supabase.from('profiles').select('is_international').eq('id', user.id).single()
+  const isInternational = profile?.is_international ?? false
+
+  const calcPrice = calcTotalPrice({
     shape: input.shape,
     width: input.width,
     height: input.height,
@@ -63,6 +66,7 @@ export async function saveConfiguration(input: SaveConfigInput) {
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
   })
+  const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
   const selectedOptionsJson = buildSelectedOptionsJson(input)
 
@@ -126,7 +130,10 @@ export async function updateConfiguration(input: UpdateConfigInput) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  const totalPrice = calcTotalPrice({
+  const { data: profile } = await supabase.from('profiles').select('is_international').eq('id', user.id).single()
+  const isInternational = profile?.is_international ?? false
+
+  const calcPrice = calcTotalPrice({
     shape: input.shape,
     width: input.width,
     height: input.height,
@@ -141,6 +148,7 @@ export async function updateConfiguration(input: UpdateConfigInput) {
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
   })
+  const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
   const selectedOptionsJson = buildSelectedOptionsJson(input)
 

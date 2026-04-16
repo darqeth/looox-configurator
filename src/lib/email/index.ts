@@ -6,7 +6,7 @@ function getResend() {
   return _resend
 }
 
-const FROM = 'LoooX Configurator <noreply@rmsanitair.com>'
+const FROM = 'LoooX Configurator <noreply@looox.nl>'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://configurator.looox.nl'
 
 // ─── Templates ────────────────────────────────────────────────────────────────

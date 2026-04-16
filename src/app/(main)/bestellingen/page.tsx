@@ -9,7 +9,7 @@ export default async function BestellingenPage({
   const { page } = await searchParams
 
   return (
-    <div className="p-4 sm:p-6 lg:p-7">
+    <div className="p-4 sm:p-6 lg:p-7 overflow-x-hidden">
 
       {/* Header — rendert direct, geen DB queries nodig */}
       <div className="mb-6">

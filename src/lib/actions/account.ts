@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export async function updateProfile(formData: FormData) {
@@ -25,7 +26,43 @@ export async function updateProfile(formData: FormData) {
     .eq('id', user.id)
 
   if (error) throw new Error(error.message)
+
+  // Als user een bedrijfsnaam heeft ingevuld maar nog geen company_members-rij heeft,
+  // maak automatisch een bedrijf aan en voeg user toe als manager
+  if (company) {
+    const { data: existingMember } = await supabase
+      .from('company_members')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!existingMember) {
+      const admin = createAdminClient()
+      const { data: newCompany } = await admin
+        .from('companies')
+        .insert({ name: company })
+        .select('id')
+        .single()
+
+      if (newCompany) {
+        await Promise.all([
+          admin.from('profiles').update({ company_id: newCompany.id }).eq('id', user.id),
+          admin.from('company_members').insert({
+            company_id: newCompany.id,
+            user_id: user.id,
+            role: 'manager',
+            can_order: true,
+            can_see_purchase_prices: true,
+            can_configure: true,
+            own_configs_only: false,
+          }),
+        ])
+      }
+    }
+  }
+
   revalidatePath('/account')
+  revalidatePath('/account/collegas')
 }
 
 export async function updatePriceFactor(formData: FormData) {

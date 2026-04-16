@@ -232,10 +232,21 @@ export async function ConfiguratiesContent({
                   </div>
                   {canSeePurchasePrices && (
                     <div className="text-right flex-shrink-0 w-20">
-                      <p className="text-[13.5px] font-bold text-lx-text-primary">
-                        €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
-                      </p>
-                      <p className="text-[10.5px] text-lx-text-secondary">excl. btw</p>
+                      {canDownloadConsumerQuote ? (
+                        <>
+                          <p className="text-[13.5px] font-bold text-lx-text-primary">
+                            €{Math.round(Number(config.total_price) * priceFactor).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                          </p>
+                          <p className="text-[10.5px] text-lx-text-secondary">consument excl. btw</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[13.5px] font-bold text-lx-text-primary">
+                            €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                          </p>
+                          <p className="text-[10.5px] text-lx-text-secondary">excl. btw</p>
+                        </>
+                      )}
                     </div>
                   )}
                   <div className="flex items-center gap-2 flex-shrink-0">

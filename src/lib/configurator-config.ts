@@ -1,12 +1,15 @@
-export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag'
+export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc'
 export type LightType = '3000k' | '4000k' | 'rgbw' | 'cct'
 export type GlasKleur = 'helder' | 'smoke-grijs' | 'smoke-zwart'
 
 export const SHAPES = [
   { slug: 'rechthoek' as ShapeSlug, name: 'Rechte hoeken',   description: 'Klassiek rechthoekig, volledig maatwerk', fromPrice: 149 },
   { slug: 'rond'      as ShapeSlug, name: 'Rond',            description: 'Perfecte cirkel, uit vaste diameters',   fromPrice: 138 },
-  { slug: 'organic'   as ShapeSlug, name: 'Organic',         description: 'Vrije organische vorm, vaste afmetingen', fromPrice: 281 },
-  { slug: 'op-aanvraag' as ShapeSlug, name: 'Op aanvraag',   description: 'Eigen ontwerp of bijzondere maat',        fromPrice: null },
+  { slug: 'organic'      as ShapeSlug, name: 'Organic',          description: 'Vrije organische vorm, vaste afmetingen',          fromPrice: 281 },
+  { slug: 'rounded-rect' as ShapeSlug, name: 'Afgeronde hoeken', description: 'Rechthoek met zacht afgeronde hoeken, volledig maatwerk', fromPrice: 149 },
+  { slug: 'ovaal'        as ShapeSlug, name: 'Ovaal',            description: 'Piltvorm — beide korte zijden volledig afgerond',      fromPrice: 149 },
+  { slug: 'arc'          as ShapeSlug, name: 'Arc',              description: 'Één korte zijde recht, de andere volledig afgerond',   fromPrice: 149 },
+  { slug: 'op-aanvraag'  as ShapeSlug, name: 'Op aanvraag',      description: 'Eigen ontwerp of bijzondere maat',                     fromPrice: null },
 ]
 
 export const ROND_DIAMETERS = [30, 40, 50, 60, 70, 80, 100, 120]
@@ -21,17 +24,23 @@ export const ORGANIC_SIZES = [
 export const RECHTHOEK_CONSTRAINTS = { min: 40, max: 300 }
 
 export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
-  rechthoek:    ['geen', 'boven', 'boven-beneden', 'links-rechts', 'rondom'],
-  rond:         ['geen', 'rondom'],
-  organic:      [],
-  'op-aanvraag': ['geen', 'indirect', 'direct'],
+  rechthoek:      ['geen', 'boven', 'boven-beneden', 'links-rechts', 'rondom'],
+  rond:           ['geen', 'rondom'],
+  organic:        [],
+  'rounded-rect': ['geen', 'boven', 'boven-beneden', 'links-rechts', 'rondom'],
+  ovaal:          ['geen', 'rondom'],
+  arc:            ['geen', 'rondom'],
+  'op-aanvraag':  ['geen', 'indirect', 'direct'],
 }
 
 export const INDIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
-  rechthoek:    ['geen', 'boven-beneden', 'onder', 'links-rechts', 'rondom'],
-  rond:         ['geen', 'rondom'],
-  organic:      ['geen', 'rondom'],
-  'op-aanvraag': [],
+  rechthoek:      ['geen', 'boven-beneden', 'onder', 'links-rechts', 'rondom'],
+  rond:           ['geen', 'rondom'],
+  organic:        ['geen', 'rondom'],
+  'rounded-rect': ['geen', 'boven-beneden', 'onder', 'links-rechts', 'rondom'],
+  ovaal:          ['geen', 'rondom'],
+  arc:            ['geen', 'rondom'],
+  'op-aanvraag':  [],
 }
 
 export const POSITION_LABELS: Record<string, string> = {
@@ -255,7 +264,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     description: 'Anti-condensverwarming achter de spiegel',
     price: 0,
     priceDisplay: 'v.a. €76',
-    shapes: ['rechthoek', 'rond', 'organic'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect'],
     incompatibleWith: [],
   },
   {
@@ -263,7 +272,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Make-up spiegel',
     description: 'Ingebouwde vergrotingsspiegel',
     price: 155,
-    shapes: ['rechthoek', 'rond'],
+    shapes: ['rechthoek', 'rond', 'rounded-rect'],
     incompatibleWith: [],
     subChoices: {
       label: 'Locatie',
@@ -279,7 +288,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Bluetooth speaker',
     description: 'Verborgen speaker in het frame',
     price: 459,
-    shapes: ['rechthoek', 'rond', 'organic'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect'],
     incompatibleWith: [],
   },
   {
@@ -296,7 +305,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Digitale klok',
     description: 'LED tijdweergave geïntegreerd in de spiegel',
     price: 155,
-    shapes: ['rechthoek', 'rond', 'organic'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect'],
     incompatibleWith: [],
     subChoices: {
       label: 'Positie',
@@ -353,7 +362,7 @@ export function calcBasePrice(
   glasKleur: GlasKleur = 'helder',
   directPosition: string = 'geen',
 ): number {
-  if (shape === 'rechthoek' || shape === 'op-aanvraag') {
+  if (shape === 'rechthoek' || shape === 'op-aanvraag' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     return Math.round(calcGlasKosten(width, height, glasKleur, directPosition) + VASTE_TOESLAG)
   }
   if (shape === 'rond' && diameter) {
@@ -383,8 +392,8 @@ export function calcTotalPrice(state: {
 }): number {
   const glasKleur: GlasKleur = state.glasKleur ?? 'helder'
 
-  // ── Rechthoek: echte prijsberekening ──────────────────────────────────────
-  if (state.shape === 'rechthoek') {
+  // ── Rechthoek / Afgeronde hoeken / Ovaal / Arc: zelfde glasprijs + LED ─────
+  if (state.shape === 'rechthoek' || state.shape === 'rounded-rect' || state.shape === 'ovaal' || state.shape === 'arc') {
     const glasKosten = calcGlasKosten(state.width, state.height, glasKleur, state.directPosition)
     let price = glasKosten + VASTE_TOESLAG
 

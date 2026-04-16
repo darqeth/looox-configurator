@@ -285,6 +285,191 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
     )
   }
 
+  if (shape === 'rounded-rect') {
+    const ratio = Math.min(available / width, available / height)
+    const w = Math.round(width * ratio)
+    const h = Math.round(height * ratio)
+    const x = (CANVAS - w) / 2
+    const y = (CANVAS - h) / 2
+    const rx = Math.round(Math.min(w, h) * 0.18)
+
+    const bandH = Math.max(3, Math.round(2 * (h / height)))
+    const bandW = Math.max(3, Math.round(2 * (w / width)))
+    const offX = Math.round(10 * (w / width))
+    const offY = Math.round(5 * (h / height))
+    const offXV = Math.round(5 * (w / width))
+    const offR = Math.round(5 * Math.min(w / width, h / height))
+
+    const dirTop    = ['boven', 'boven-beneden', 'rondom'].includes(directPosition)
+    const dirBottom = ['boven-beneden', 'onder', 'rondom'].includes(directPosition)
+    const dirLeft   = ['links-rechts', 'rondom'].includes(directPosition)
+    const dirRight  = ['links-rechts', 'rondom'].includes(directPosition)
+    const indTop    = ['boven', 'boven-beneden', 'rondom'].includes(indirectPosition)
+    const indBottom = ['boven-beneden', 'onder', 'rondom'].includes(indirectPosition)
+    const indLeft   = ['links-rechts', 'rondom'].includes(indirectPosition)
+    const indRight  = ['links-rechts', 'rondom'].includes(indirectPosition)
+    const innerY = y + offY + (dirTop ? bandH : 0)
+    const innerH = h - 2 * offY - (dirTop ? bandH : 0) - (dirBottom ? bandH : 0)
+
+    return (
+      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+        <defs>
+          <filter id="wall-glow-rr" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="7" result="blur" />
+            <feComposite in="blur" in2="SourceGraphic" operator="over" />
+          </filter>
+          <filter id="band-glow-rr" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+          <clipPath id="rr-clip">
+            <rect x={x} y={y} width={w} height={h} rx={rx} />
+          </clipPath>
+          <mask id="outside-mask-rr">
+            <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />
+            <rect x={x} y={y} width={w} height={h} rx={rx} fill="black" />
+          </mask>
+        </defs>
+        <g mask="url(#outside-mask-rr)">
+          {indirectPosition === 'rondom' ? (
+            <rect x={x} y={y} width={w} height={h} rx={rx} fill="none"
+              stroke="#FEF3C7" strokeWidth="16" opacity="0.85" filter="url(#wall-glow-rr)" />
+          ) : (
+            <>
+              {indTop    && <rect x={x+4} y={y-14} width={w-8} height={14} rx="2" fill="#FEF3C7" opacity="0.9" filter="url(#wall-glow-rr)" />}
+              {indBottom && <rect x={x+4} y={y+h}  width={w-8} height={14} rx="2" fill="#FEF3C7" opacity="0.9" filter="url(#wall-glow-rr)" />}
+              {indLeft   && <rect x={x-14} y={y+4} width={14} height={h-8} rx="2" fill="#FEF3C7" opacity="0.9" filter="url(#wall-glow-rr)" />}
+              {indRight  && <rect x={x+w}  y={y+4} width={14} height={h-8} rx="2" fill="#FEF3C7" opacity="0.9" filter="url(#wall-glow-rr)" />}
+            </>
+          )}
+        </g>
+        <rect x={x} y={y} width={w} height={h} rx={rx} fill={glass.fill} opacity={glass.fillOpacity} />
+        <rect x={x} y={y} width={w} height={h} rx={rx} fill="none" stroke={glass.stroke} strokeWidth="1.5" />
+        {directPosition === 'rondom' ? (
+          <>
+            <rect x={x+offR+bandH/2} y={y+offR+bandH/2} width={w-2*offR-bandH} height={h-2*offR-bandH} rx={Math.max(2,rx-offR)}
+              fill="none" stroke="white" strokeWidth={bandH} opacity="0.55" clipPath="url(#rr-clip)" />
+            <rect x={x+offR+bandH/2} y={y+offR+bandH/2} width={w-2*offR-bandH} height={h-2*offR-bandH} rx={Math.max(2,rx-offR)}
+              fill="none" stroke="white" strokeWidth={bandH} opacity="0.2" filter="url(#band-glow-rr)" clipPath="url(#rr-clip)" />
+          </>
+        ) : (
+          <>
+            {dirTop    && <><rect x={x+offX} y={y+offY} width={w-2*offX} height={bandH} rx="1" fill="white" opacity="0.55" clipPath="url(#rr-clip)" /><rect x={x+offX} y={y+offY} width={w-2*offX} height={bandH} rx="1" fill="white" opacity="0.2" filter="url(#band-glow-rr)" clipPath="url(#rr-clip)" /></>}
+            {dirBottom && <><rect x={x+offX} y={y+h-bandH-offY} width={w-2*offX} height={bandH} rx="1" fill="white" opacity="0.55" clipPath="url(#rr-clip)" /><rect x={x+offX} y={y+h-bandH-offY} width={w-2*offX} height={bandH} rx="1" fill="white" opacity="0.2" filter="url(#band-glow-rr)" clipPath="url(#rr-clip)" /></>}
+            {dirLeft   && <><rect x={x+offXV} y={innerY} width={bandW} height={innerH} fill="white" opacity="0.55" clipPath="url(#rr-clip)" /><rect x={x+offXV} y={innerY} width={bandW} height={innerH} fill="white" opacity="0.2" filter="url(#band-glow-rr)" clipPath="url(#rr-clip)" /></>}
+            {dirRight  && <><rect x={x+w-bandW-offXV} y={innerY} width={bandW} height={innerH} fill="white" opacity="0.55" clipPath="url(#rr-clip)" /><rect x={x+w-bandW-offXV} y={innerY} width={bandW} height={innerH} fill="white" opacity="0.2" filter="url(#band-glow-rr)" clipPath="url(#rr-clip)" /></>}
+          </>
+        )}
+        <line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58}
+          stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (shape === 'ovaal') {
+    const ratio = Math.min(available / width, available / height)
+    const w = Math.round(width * ratio)
+    const h = Math.round(height * ratio)
+    const x = (CANVAS - w) / 2
+    const y = (CANVAS - h) / 2
+    const rx = h / 2
+    const offR = Math.round(5 * Math.min(w / width, h / height))
+    const bandW2 = Math.max(3, Math.round(2 * Math.min(w / width, h / height)))
+    const hasDirect   = directPosition !== 'geen'
+    const hasIndirect = indirectPosition !== 'geen'
+
+    return (
+      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+        <defs>
+          <filter id="wall-glow-ov" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <filter id="band-glow-ov" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+          <clipPath id="oval-clip">
+            <rect x={x} y={y} width={w} height={h} rx={rx} />
+          </clipPath>
+          <mask id="outside-mask-ov">
+            <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />
+            <rect x={x} y={y} width={w} height={h} rx={rx} fill="black" />
+          </mask>
+        </defs>
+        {hasIndirect && (
+          <rect x={x} y={y} width={w} height={h} rx={rx} fill="none"
+            stroke="#FEF3C7" strokeWidth="14" opacity="0.85" filter="url(#wall-glow-ov)"
+            mask="url(#outside-mask-ov)" />
+        )}
+        <rect x={x} y={y} width={w} height={h} rx={rx} fill={glass.fill} opacity={glass.fillOpacity} />
+        <rect x={x} y={y} width={w} height={h} rx={rx} fill="none" stroke={glass.stroke} strokeWidth="1.5" />
+        {hasDirect && (
+          <>
+            <rect x={x+offR+bandW2/2} y={y+offR+bandW2/2} width={w-2*offR-bandW2} height={h-2*offR-bandW2} rx={Math.max(2,rx-offR)}
+              fill="none" stroke="white" strokeWidth={bandW2} opacity="0.55" clipPath="url(#oval-clip)" />
+            <rect x={x+offR+bandW2/2} y={y+offR+bandW2/2} width={w-2*offR-bandW2} height={h-2*offR-bandW2} rx={Math.max(2,rx-offR)}
+              fill="none" stroke="white" strokeWidth={bandW2} opacity="0.2" filter="url(#band-glow-ov)" clipPath="url(#oval-clip)" />
+          </>
+        )}
+        <line x1={x+w*0.25} y1={y+h*0.15} x2={x+w*0.55} y2={y+h*0.65}
+          stroke="white" strokeWidth="8" opacity={glass.glansOpacity} strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (shape === 'arc') {
+    const ratio = Math.min(available / width, available / height)
+    const w = Math.round(width * ratio)
+    const h = Math.round(height * ratio)
+    const x = (CANVAS - w) / 2
+    const y = (CANVAS - h) / 2
+    const arcR = w / 2
+    // Arc path: flat bottom, semicircle top
+    const mirrorPath = `M ${x},${y + arcR} A ${arcR},${arcR} 0 0 1 ${x + w},${y + arcR} L ${x + w},${y + h} L ${x},${y + h} Z`
+    const offR = Math.round(5 * Math.min(w / width, h / height))
+    const bandS = Math.max(3, Math.round(2 * Math.min(w / width, h / height)))
+    const innerW = w - 2 * offR
+    const innerArcR = Math.max(0, arcR - offR)
+    const ix = x + offR
+    const iy = y + arcR
+    const innerPath = `M ${ix},${iy} A ${innerArcR},${innerArcR} 0 0 1 ${ix + innerW},${iy} L ${ix + innerW},${y + h - offR} L ${ix},${y + h - offR} Z`
+    const glowPath = `M ${x - 10},${y + arcR} A ${arcR + 10},${arcR + 10} 0 0 1 ${x + w + 10},${y + arcR} L ${x + w + 10},${y + h + 10} L ${x - 10},${y + h + 10} Z`
+    const hasDirect   = directPosition !== 'geen'
+    const hasIndirect = indirectPosition !== 'geen'
+
+    return (
+      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+        <defs>
+          <filter id="wall-glow-arc" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <filter id="band-glow-arc" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" />
+          </filter>
+          <clipPath id="arc-clip">
+            <path d={mirrorPath} />
+          </clipPath>
+          <mask id="outside-mask-arc">
+            <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />
+            <path d={mirrorPath} fill="black" />
+          </mask>
+        </defs>
+        {hasIndirect && (
+          <path d={glowPath} fill="#FEF3C7" opacity="0.55" filter="url(#wall-glow-arc)"
+            mask="url(#outside-mask-arc)" />
+        )}
+        <path d={mirrorPath} fill={glass.fill} opacity={glass.fillOpacity} />
+        <path d={mirrorPath} fill="none" stroke={glass.stroke} strokeWidth="1.5" />
+        {hasDirect && (
+          <>
+            <path d={innerPath} fill="none" stroke="white" strokeWidth={bandS * 1.5} opacity="0.5" clipPath="url(#arc-clip)" />
+            <path d={innerPath} fill="none" stroke="white" strokeWidth={bandS * 1.5} opacity="0.18" filter="url(#band-glow-arc)" clipPath="url(#arc-clip)" />
+          </>
+        )}
+        <line x1={x + w * 0.25} y1={y + arcR * 0.3} x2={x + w * 0.5} y2={y + h * 0.55}
+          stroke="white" strokeWidth="8" opacity={glass.glansOpacity} strokeLinecap="round" />
+      </svg>
+    )
+  }
+
   // Op aanvraag
   return (
     <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>

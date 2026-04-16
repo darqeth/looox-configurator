@@ -18,6 +18,21 @@ function ShapeIcon({ slug }: { slug: ShapeSlug }) {
       <path d="M32 8 C48 8 58 18 56 32 C54 46 44 58 30 56 C16 54 6 44 8 30 C10 16 16 8 32 8Z" stroke="#9CA3AF" strokeWidth="2.5" fill="none" />
     </svg>
   )
+  if (slug === 'rounded-rect') return (
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+      <rect x="8" y="14" width="48" height="36" rx="12" stroke="#9CA3AF" strokeWidth="2.5" />
+    </svg>
+  )
+  if (slug === 'ovaal') return (
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+      <rect x="8" y="19" width="48" height="26" rx="13" stroke="#9CA3AF" strokeWidth="2.5" />
+    </svg>
+  )
+  if (slug === 'arc') return (
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+      <path d="M10,50 L54,50 L54,28 A22,22 0 0 0 10,28 Z" stroke="#9CA3AF" strokeWidth="2.5" fill="none" />
+    </svg>
+  )
   return (
     <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
       <rect x="8" y="14" width="48" height="36" rx="4" stroke="#9CA3AF" strokeWidth="2.5" strokeDasharray="6 3" />

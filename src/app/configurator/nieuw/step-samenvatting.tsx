@@ -32,6 +32,8 @@ interface StepSamenvattingProps {
   saving: boolean
   schunineZijdenFile: File | null
   isInternational?: boolean
+  priceFactor?: number
+  priceFactorEnabled?: boolean
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
   onSchunineZijdenFileChange: (f: File | null) => void
@@ -84,7 +86,7 @@ export default function StepSamenvatting({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   projectName, reference,
-  saving, schunineZijdenFile, isInternational = false, onProjectNameChange, onReferenceChange,
+  saving, schunineZijdenFile, isInternational = false, priceFactor = 1, priceFactorEnabled = false, onProjectNameChange, onReferenceChange,
   onSchunineZijdenFileChange,
   onGoToStep, onSave, onOrder, canOrder = true,
 }: StepSamenvattingProps) {
@@ -105,6 +107,8 @@ export default function StepSamenvatting({
   })
   const internationalSurcharge = isInternational ? Math.round(basePrice * 0.05) : 0
   const unitPrice = basePrice + internationalSurcharge
+  const showConsumer = priceFactorEnabled && priceFactor > 1
+  const displayPrice = showConsumer ? Math.round(unitPrice * priceFactor) : unitPrice
 
   const selectedOptionNames = selectedOptions
     .map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name)
@@ -139,9 +143,15 @@ export default function StepSamenvatting({
             <span className="text-[13px] text-orange-600">+€{internationalSurcharge.toLocaleString('nl-NL')}</span>
           </div>
         )}
+        {showConsumer && (
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] text-lx-text-secondary">Inkoopprijs</span>
+            <span className="text-[13px] text-lx-text-secondary">€{unitPrice.toLocaleString('nl-NL')}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between">
-          <span className="text-[12.5px] text-lx-text-secondary">Eenheidsprijs excl. btw</span>
-          <span className="text-[17px] font-bold text-lx-cta">€{unitPrice.toLocaleString('nl-NL')}</span>
+          <span className="text-[12.5px] text-lx-text-secondary">{showConsumer ? 'Consumentenprijs excl. btw' : 'Eenheidsprijs excl. btw'}</span>
+          <span className="text-[17px] font-bold text-lx-cta">€{displayPrice.toLocaleString('nl-NL')}</span>
         </div>
       </div>
 
@@ -247,7 +257,7 @@ export default function StepSamenvatting({
         {canOrder && (
           <BestelModal
             shape={shape}
-            unitPrice={unitPrice}
+            unitPrice={displayPrice}
             projectName={projectName}
             saving={saving}
             disabled={orderDisabled}

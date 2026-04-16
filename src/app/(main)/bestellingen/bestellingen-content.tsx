@@ -103,7 +103,7 @@ export async function BestellingenContent({ page }: { page: string }) {
 
   return (
     <>
-      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm divide-y divide-lx-divider">
+      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm divide-y divide-lx-divider overflow-x-clip">
         {orders.map((order) => {
           const config = (Array.isArray(order.configurations)
             ? order.configurations[0]

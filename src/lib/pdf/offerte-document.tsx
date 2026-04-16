@@ -77,13 +77,14 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
   }
 
   if (shape === 'ovaal') {
-    const rx = Math.min(w, h) / 2
+    const rx = Math.round(Math.min(w, h) / 2)
+    const ry = rx
     return (
       <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && <Rect x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={rx + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
-        <Rect x={x} y={y} width={w} height={h} rx={rx} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-        <Rect x={x} y={y} width={w} height={h} rx={rx} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && <Rect x={x + 6} y={y + 4} width={w - 12} height={h - 8} rx={Math.max(2, rx - 5)} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+        {hasIndirect && <Rect x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={rx + 4} ry={ry + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+        <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
+        {hasDirect && <Rect x={x + 6} y={y + 4} width={w - 12} height={h - 8} rx={Math.max(2, rx - 5)} ry={Math.max(2, ry - 5)} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
         <Line x1={x + w*0.2} y1={y + h*0.15} x2={x + w*0.55} y2={y + h*0.7} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
       </Svg>
     )
@@ -107,12 +108,13 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
 
   if (shape === 'rounded-rect') {
     const rx = Math.round(Math.min(w, h) * 0.18)
+    const ry = rx
     return (
       <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx+4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
-        <Rect x={x} y={y} width={w} height={h} rx={rx} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-        <Rect x={x} y={y} width={w} height={h} rx={rx} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={Math.max(2, rx-4)} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+        {hasIndirect && <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx+4} ry={ry+4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+        <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
+        {hasDirect && <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={Math.max(2, rx-4)} ry={Math.max(2, ry-4)} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
         <Line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
       </Svg>
     )

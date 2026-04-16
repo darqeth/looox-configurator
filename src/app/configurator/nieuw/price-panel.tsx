@@ -371,7 +371,7 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
     const h = Math.round(height * ratio)
     const x = (CANVAS - w) / 2
     const y = (CANVAS - h) / 2
-    const rx = h / 2
+    const rx = Math.min(w, h) / 2
     const offR = Math.round(5 * Math.min(w / width, h / height))
     const bandW2 = Math.max(3, Math.round(2 * Math.min(w / width, h / height)))
     const hasDirect   = directPosition !== 'geen'

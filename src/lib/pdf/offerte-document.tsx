@@ -77,7 +77,7 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
   }
 
   if (shape === 'ovaal') {
-    const rx = h / 2
+    const rx = Math.min(w, h) / 2
     return (
       <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
         {hasIndirect && <Rect x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={rx + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}

@@ -1,6 +1,10 @@
 import { Resend } from 'resend'
 
-export const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 const FROM = 'LoooX Configurator <noreply@rmsanitair.com>'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://configurator.looox.nl'
@@ -77,7 +81,7 @@ export async function sendInviteEmail({
 }) {
   const link = `${SITE_URL}/registreer?invite=${token}`
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `${inviterName} nodigt je uit voor LoooX Configurator`,
@@ -119,7 +123,7 @@ export async function sendWelcomeEmail({
       ${p('Zodra je account is goedgekeurd ontvang je een e-mail en kun je inloggen.', true)}
     `
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject,
@@ -138,7 +142,7 @@ export async function sendPasswordResetEmail({
   name: string
   resetLink: string
 }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: 'Wachtwoord opnieuw instellen',
@@ -172,7 +176,7 @@ export async function sendOrderConfirmationEmail({
 }) {
   const formatted = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(totalPrice)
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `Bestelling ontvangen — ${orderNumber}`,
@@ -201,7 +205,7 @@ export async function sendUpdateNotificationEmail({
   title: string
   body?: string | null
 }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `Nieuwe update: ${title}`,

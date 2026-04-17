@@ -30,7 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export async function BestellingenContent({ page }: { page: string }) {
@@ -103,92 +103,150 @@ export async function BestellingenContent({ page }: { page: string }) {
 
   return (
     <>
-      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm divide-y divide-lx-divider">
-        {orders.map((order) => {
-          const config = (Array.isArray(order.configurations)
-            ? order.configurations[0]
-            : order.configurations) as {
-            id: string; name: string | null; width: number | null; height: number | null
-            selected_options: Record<string, unknown>
-          } | null
-          const shape = (config?.selected_options as { shape?: string })?.shape ?? '—'
-          const dims = config?.width && config?.height
-            ? `${config.width} × ${config.height} cm`
-            : shape === 'rond'
-            ? `⌀ ${(config?.selected_options as { diameter?: number })?.diameter ?? '—'} cm`
-            : '—'
+      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
 
-          const price = showConsumer ? Math.round(Number(order.total_price) * priceFactor) : Number(order.total_price)
-          const unitPrice = showConsumer ? Math.round(Number(order.unit_price) * priceFactor) : Number(order.unit_price)
+        {/* Column headers — tablet+ only */}
+        <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
+          <div className="w-9 flex-shrink-0" />
+          <div className="w-[140px] flex-shrink-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Bestelling</div>
+          <div className="flex-1 min-w-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Project</div>
+          <div className="hidden lg:block w-10 flex-shrink-0 text-center text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Aantal</div>
+          <div className="w-[92px] flex-shrink-0 text-right text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Prijs</div>
+          <div className="w-[124px] flex-shrink-0 text-center text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Status</div>
+          <div className="w-[60px] flex-shrink-0" />
+        </div>
 
-          return (
-            <div key={order.id} className="px-4 py-3.5 sm:px-5">
-              <div className="flex gap-3 sm:gap-4">
-                {/* Shape icon */}
-                <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <ShapeIcon shape={shape} />
+        <div className="divide-y divide-lx-divider">
+          {orders.map((order) => {
+            const config = (Array.isArray(order.configurations)
+              ? order.configurations[0]
+              : order.configurations) as {
+              id: string; name: string | null; width: number | null; height: number | null
+              selected_options: Record<string, unknown>
+            } | null
+            const shape = (config?.selected_options as { shape?: string })?.shape ?? '—'
+            const dims = config?.width && config?.height
+              ? `${config.width} × ${config.height} cm`
+              : shape === 'rond'
+              ? `⌀ ${(config?.selected_options as { diameter?: number })?.diameter ?? '—'} cm`
+              : '—'
+
+            const price = showConsumer ? Math.round(Number(order.total_price) * priceFactor) : Number(order.total_price)
+            const unitPrice = showConsumer ? Math.round(Number(order.unit_price) * priceFactor) : Number(order.unit_price)
+            const priceSubLabel = order.quantity > 1
+              ? `€${unitPrice.toLocaleString('nl-NL')} p.st.`
+              : showConsumer ? 'consument' : 'excl. btw'
+
+            return (
+              <div key={order.id} className="hover:bg-lx-panel-bg/50 transition-colors">
+
+                {/* Mobile layout */}
+                <div className="flex gap-3 px-4 py-3.5 sm:hidden">
+                  <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <ShapeIcon shape={shape} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-[12.5px] font-bold text-lx-text-primary font-mono tracking-wide">{order.order_number}</p>
+                        <p className="text-[11px] text-lx-text-secondary mt-0.5">{formatDate(order.created_at)}</p>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10.5px] font-semibold border flex-shrink-0 mt-0.5 ${STATUS_COLORS[order.status] ?? STATUS_COLORS.pending}`}>
+                        {STATUS_LABELS[order.status] ?? order.status}
+                      </span>
+                    </div>
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[11px] text-lx-text-secondary">{dims} · {order.quantity}×</span>
+                      <span className="text-[13px] font-bold text-lx-text-primary">€{price.toLocaleString('nl-NL')}</span>
+                    </div>
+                    <div className="flex items-center justify-end gap-1 mt-2.5">
+                      {config && (
+                        <a href={`/api/pdf/offerte/${config.id}`} download className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                          </svg>
+                        </a>
+                      )}
+                      <a href={`/api/pdf/order/${order.id}`} download className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  {/* Rij 1: ordernummer + status */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-[13px] font-bold text-lx-text-primary font-mono tracking-wide leading-snug">{order.order_number}</p>
-                      <p className="text-[11px] text-lx-text-secondary mt-0.5">{formatDate(order.created_at)}</p>
-                    </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-semibold border flex-shrink-0 mt-0.5 ${STATUS_COLORS[order.status] ?? STATUS_COLORS.pending}`}>
+                {/* Tablet / Desktop layout */}
+                <div className="hidden sm:flex items-center gap-4 px-5 py-3.5">
+                  {/* Icon */}
+                  <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                    <ShapeIcon shape={shape} />
+                  </div>
+
+                  {/* Col: Order number + date */}
+                  <div className="w-[140px] flex-shrink-0 min-w-0">
+                    <p className="text-[12.5px] font-bold text-lx-text-primary font-mono tracking-wide truncate">{order.order_number}</p>
+                    <p className="text-[11px] text-lx-text-secondary mt-0.5">{formatDate(order.created_at)}</p>
+                  </div>
+
+                  {/* Col: Project name + dims */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}</p>
+                    <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">{dims}</p>
+                  </div>
+
+                  {/* Col: Qty — desktop only */}
+                  <div className="hidden lg:block w-10 flex-shrink-0 text-center">
+                    <p className="text-[12.5px] font-medium text-lx-text-primary">{order.quantity}×</p>
+                  </div>
+
+                  {/* Col: Price */}
+                  <div className="w-[92px] flex-shrink-0 text-right">
+                    <p className="text-[13px] font-bold text-lx-text-primary">€{price.toLocaleString('nl-NL')}</p>
+                    <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceSubLabel}</p>
+                  </div>
+
+                  {/* Col: Status */}
+                  <div className="w-[124px] flex-shrink-0 flex justify-center">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${STATUS_COLORS[order.status] ?? STATUS_COLORS.pending}`}>
                       {STATUS_LABELS[order.status] ?? order.status}
                     </span>
                   </div>
 
-                  {/* Rij 2: projectnaam + afmeting */}
-                  <div className="mt-2">
-                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}</p>
-                    <p className="text-[11px] text-lx-text-secondary mt-0.5">{dims} · {order.quantity}×</p>
-                  </div>
-
-                  {/* Rij 3: prijs + downloads */}
-                  <div className="flex items-center justify-between mt-2.5">
-                    <div>
-                      <span className="text-[13.5px] font-bold text-lx-text-primary">€{price.toLocaleString('nl-NL')}</span>
-                      <span className="text-[10.5px] text-lx-text-secondary ml-1.5">
-                        {order.quantity > 1 ? `€${unitPrice.toLocaleString('nl-NL')} p.st. · ` : ''}
-                        {showConsumer ? 'consument excl. BTW' : 'excl. BTW'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {config && (
-                        <div className="relative group">
-                          <a href={`/api/pdf/offerte/${config.id}`} download className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
-                            </svg>
-                          </a>
-                          <div className="absolute bottom-full right-0 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                            Klantofferte downloaden
-                            <div className="absolute top-full right-2 border-4 border-transparent border-t-lx-text-primary" />
-                          </div>
-                        </div>
-                      )}
+                  {/* Col: Actions */}
+                  <div className="w-[60px] flex-shrink-0 flex items-center gap-1 justify-end">
+                    {config && (
                       <div className="relative group">
-                        <a href={`/api/pdf/order/${order.id}`} download className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors">
+                        <a href={`/api/pdf/offerte/${config.id}`} download className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
                           </svg>
                         </a>
                         <div className="absolute bottom-full right-0 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                          Orderbevestiging downloaden
+                          Klantofferte downloaden
                           <div className="absolute top-full right-2 border-4 border-transparent border-t-lx-text-primary" />
                         </div>
+                      </div>
+                    )}
+                    <div className="relative group">
+                      <a href={`/api/pdf/order/${order.id}`} download className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                      </a>
+                      <div className="absolute bottom-full right-0 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        Orderbevestiging downloaden
+                        <div className="absolute top-full right-2 border-4 border-transparent border-t-lx-text-primary" />
                       </div>
                     </div>
                   </div>
                 </div>
+
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
       {/* Paginering + nieuwe spiegel */}
@@ -225,30 +283,41 @@ export async function BestellingenContent({ page }: { page: string }) {
 export function BestellingenContentSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm divide-y divide-lx-divider">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="px-5 py-4 flex items-center gap-4">
-            <div className="flex-shrink-0 w-36 space-y-1.5">
-              <div className="h-4 w-28 bg-lx-divider rounded" />
-              <div className="h-3 w-20 bg-lx-divider rounded" />
+      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
+        <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
+          <div className="w-9 flex-shrink-0" />
+          <div className="w-[140px] h-2.5 bg-lx-divider rounded flex-shrink-0" />
+          <div className="flex-1 h-2.5 bg-lx-divider rounded" />
+          <div className="w-[92px] h-2.5 bg-lx-divider rounded flex-shrink-0" />
+          <div className="w-[124px] h-2.5 bg-lx-divider rounded flex-shrink-0" />
+          <div className="w-[60px] flex-shrink-0" />
+        </div>
+        <div className="divide-y divide-lx-divider">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4">
+              <div className="w-9 h-9 rounded-xl bg-lx-divider flex-shrink-0" />
+              <div className="hidden sm:block w-[140px] flex-shrink-0 space-y-1.5">
+                <div className="h-3.5 w-24 bg-lx-divider rounded" />
+                <div className="h-3 w-16 bg-lx-divider rounded" />
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3.5 w-40 bg-lx-divider rounded" />
+                <div className="h-3 w-24 bg-lx-divider rounded" />
+              </div>
+              <div className="hidden sm:block w-[92px] flex-shrink-0 space-y-1 text-right">
+                <div className="h-3.5 w-full bg-lx-divider rounded" />
+                <div className="h-3 w-16 bg-lx-divider rounded ml-auto" />
+              </div>
+              <div className="hidden sm:flex w-[124px] flex-shrink-0 justify-center">
+                <div className="h-6 w-24 bg-lx-divider rounded-lg" />
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-lx-divider" />
+                <div className="w-8 h-8 rounded-lg bg-lx-divider" />
+              </div>
             </div>
-            <div className="flex-1 space-y-1.5">
-              <div className="h-4 w-48 bg-lx-divider rounded" />
-              <div className="h-3 w-32 bg-lx-divider rounded" />
-            </div>
-            <div className="hidden sm:block flex-shrink-0 w-28 space-y-1">
-              <div className="h-4 w-full bg-lx-divider rounded" />
-              <div className="h-3 w-16 bg-lx-divider rounded" />
-            </div>
-            <div className="flex-shrink-0">
-              <div className="h-7 w-24 bg-lx-divider rounded-lg" />
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <div className="w-8 h-8 rounded-lg bg-lx-divider" />
-              <div className="w-8 h-8 rounded-lg bg-lx-divider" />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )

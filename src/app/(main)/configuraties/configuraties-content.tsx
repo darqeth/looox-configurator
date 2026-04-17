@@ -194,79 +194,141 @@ export async function ConfiguratiesContent({
       {/* Status filter tabs */}
       <ConfiguratiesTabs tabs={productTabs} currentFilter={filter} view={validView ? view : undefined} />
 
-      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm">
+      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
         {configs && configs.length > 0 ? (
-          <div className="divide-y divide-lx-divider">
-            {configs.map((config) => {
-              const date = new Date(config.updated_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
-              const opts = config.selected_options as Record<string, unknown> | null
-              const shape = (opts?.shape as string) ?? 'rechthoek'
-              const diameter = opts?.diameter as number | null
-              const organicKey = opts?.organicSize as string | null
-              const extras = (opts?.extras as string[]) ?? []
-              const direct = opts?.directLight as { position: string } | null
-              const indirect = opts?.indirectLight as { position: string } | null
+          <>
+            {/* Column headers — tablet+ only */}
+            <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
+              <div className="w-9 flex-shrink-0" />
+              <div className="flex-1 min-w-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Naam</div>
+              <div className="w-[152px] flex-shrink-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider hidden lg:block">Vorm / Afmeting</div>
+              {canSeePurchasePrices && (
+                <div className="w-[92px] flex-shrink-0 text-right text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Prijs</div>
+              )}
+              {canOrder && (
+                <div className="w-[96px] flex-shrink-0" />
+              )}
+              <div className="w-8 flex-shrink-0" />
+            </div>
 
-              let dimensionLabel = ''
-              if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
-              else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
-              else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
+            <div className="divide-y divide-lx-divider">
+              {configs.map((config) => {
+                const date = new Date(config.updated_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
+                const opts = config.selected_options as Record<string, unknown> | null
+                const shape = (opts?.shape as string) ?? 'rechthoek'
+                const diameter = opts?.diameter as number | null
+                const organicKey = opts?.organicSize as string | null
+                const extras = (opts?.extras as string[]) ?? []
+                const direct = opts?.directLight as { position: string } | null
+                const indirect = opts?.indirectLight as { position: string } | null
 
-              const lightParts = []
-              if (direct?.position && direct.position !== 'geen') lightParts.push('Directe verlichting')
-              if (indirect?.position && indirect.position !== 'geen') lightParts.push('Indirecte verlichting')
+                let dimensionLabel = ''
+                if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
+                else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
+                else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
 
-              const metaParts = [
-                shapeLabel[shape] ?? shape,
-                dimensionLabel,
-                ...lightParts,
-                extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : '',
-              ].filter(Boolean)
+                const lightParts = []
+                if (direct?.position && direct.position !== 'geen') lightParts.push('Direct licht')
+                if (indirect?.position && indirect.position !== 'geen') lightParts.push('Indirect licht')
 
-              const canDelete = config.user_id === user.id || memberPerms?.role === 'manager'
-              const displayPrice = canDownloadConsumerQuote
-                ? Math.round(Number(config.total_price) * priceFactor)
-                : Number(config.total_price)
-              const priceLabel = canDownloadConsumerQuote ? 'consument excl. btw' : 'excl. btw'
+                const metaParts = [
+                  shapeLabel[shape] ?? shape,
+                  dimensionLabel,
+                  ...lightParts,
+                  extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : '',
+                ].filter(Boolean)
 
-              return (
-                <div key={config.id} className="px-4 py-3.5 sm:px-5 hover:bg-lx-panel-bg transition-colors first:rounded-t-[18px] last:rounded-b-[18px]">
-                  <div className="flex gap-3 sm:gap-4">
-                    {/* Shape icon */}
-                    <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <ShapeIcon shape={shape} />
-                    </div>
+                const canDelete = config.user_id === user.id || memberPerms?.role === 'manager'
+                const displayPrice = canDownloadConsumerQuote
+                  ? Math.round(Number(config.total_price) * priceFactor)
+                  : Number(config.total_price)
+                const priceLabel = canDownloadConsumerQuote ? 'consument' : 'excl. btw'
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      {/* Rij 1: naam + referentie */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
+                return (
+                  <div key={config.id} className="hover:bg-lx-panel-bg/50 transition-colors">
+
+                    {/* Mobile layout */}
+                    <div className="flex gap-3 px-4 py-3.5 sm:hidden">
+                      <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <ShapeIcon shape={shape} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
                           <p className="text-[13px] font-semibold text-lx-text-primary truncate leading-snug">
                             {config.name ?? 'Naamloze configuratie'}
                           </p>
-                          <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
-                            {config.article_number && <span className="font-mono">{config.article_number} · </span>}
-                            {metaParts.join(' · ')}
-                            <span className="text-lx-placeholder"> · {date}</span>
-                          </p>
-                        </div>
-                        {/* Prijs — altijd rechtsboven */}
-                        {canSeePurchasePrices && (
-                          <div className="text-right flex-shrink-0 ml-2">
-                            <p className="text-[13px] font-bold text-lx-text-primary">
+                          {canSeePurchasePrices && (
+                            <p className="text-[13px] font-bold text-lx-text-primary flex-shrink-0">
                               €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
                             </p>
-                            <p className="text-[10px] text-lx-text-secondary">{priceLabel}</p>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                        <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
+                          {config.article_number && <span className="font-mono">{config.article_number} · </span>}
+                          {metaParts.join(' · ')}
+                          <span className="text-lx-placeholder"> · {date}</span>
+                        </p>
+                        <div className="flex items-center justify-end gap-2 mt-2.5">
+                          {canOrder && shape !== 'op-aanvraag' && (
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
+                          )}
+                          <ConfigActionsMenu
+                            configId={config.id}
+                            configName={config.name ?? 'Naamloze configuratie'}
+                            canDownload={canDownloadConsumerQuote}
+                            canEdit={canConfigure}
+                            canDelete={canDelete}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tablet / Desktop layout */}
+                    <div className="hidden sm:flex items-center gap-4 px-5 py-3.5">
+                      {/* Icon */}
+                      <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
+                        <ShapeIcon shape={shape} />
                       </div>
 
-                      {/* Rij 2: primaire actie + 3-dot menu */}
-                      <div className="flex items-center justify-end gap-2 mt-2.5">
-                        {canOrder && shape !== 'op-aanvraag' && (
-                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
-                        )}
+                      {/* Col: Name + meta */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">
+                          {config.name ?? 'Naamloze configuratie'}
+                        </p>
+                        <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
+                          {config.article_number && <span className="font-mono">{config.article_number} · </span>}
+                          <span className="lg:hidden">{metaParts.join(' · ')} · </span>
+                          {date}
+                        </p>
+                      </div>
+
+                      {/* Col: Vorm + afmeting — desktop only */}
+                      <div className="hidden lg:block w-[152px] flex-shrink-0">
+                        <p className="text-[12px] font-medium text-lx-text-primary">{shapeLabel[shape] ?? shape}</p>
+                        <p className="text-[11px] text-lx-text-secondary mt-0.5">{dimensionLabel || '—'}</p>
+                      </div>
+
+                      {/* Col: Price */}
+                      {canSeePurchasePrices && (
+                        <div className="w-[92px] flex-shrink-0 text-right">
+                          <p className="text-[13px] font-bold text-lx-text-primary">
+                            €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                          </p>
+                          <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>
+                        </div>
+                      )}
+
+                      {/* Col: Bestellen CTA */}
+                      {canOrder && (
+                        <div className="w-[96px] flex-shrink-0 flex justify-end">
+                          {shape !== 'op-aanvraag' && (
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Col: 3-dot menu */}
+                      <div className="w-8 flex-shrink-0 flex justify-end">
                         <ConfigActionsMenu
                           configId={config.id}
                           configName={config.name ?? 'Naamloze configuratie'}
@@ -276,11 +338,12 @@ export async function ConfiguratiesContent({
                         />
                       </div>
                     </div>
+
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          </>
         ) : (
           <div className="px-5 py-16 text-center">
             <div className="w-12 h-12 rounded-2xl bg-lx-icon-bg flex items-center justify-center mx-auto mb-4">
@@ -329,25 +392,40 @@ export function ConfiguratiesContentSkeleton() {
       </div>
 
       {/* Lijst skeleton */}
-      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm divide-y divide-lx-divider">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 px-5 py-4">
-            <div className="w-9 h-9 rounded-xl bg-lx-divider flex-shrink-0" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-4 w-48 bg-lx-divider rounded" />
-              <div className="h-3 w-72 bg-lx-divider rounded" />
+      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
+        <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
+          <div className="w-9 flex-shrink-0" />
+          <div className="flex-1 h-2.5 bg-lx-divider rounded" />
+          <div className="hidden lg:block w-[152px] h-2.5 bg-lx-divider rounded flex-shrink-0" />
+          <div className="w-[92px] h-2.5 bg-lx-divider rounded flex-shrink-0" />
+          <div className="w-[96px] flex-shrink-0" />
+          <div className="w-8 flex-shrink-0" />
+        </div>
+        <div className="divide-y divide-lx-divider">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4">
+              <div className="w-9 h-9 rounded-xl bg-lx-divider flex-shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3.5 w-48 bg-lx-divider rounded" />
+                <div className="h-3 w-32 bg-lx-divider rounded" />
+              </div>
+              <div className="hidden lg:block w-[152px] flex-shrink-0 space-y-1.5">
+                <div className="h-3.5 w-20 bg-lx-divider rounded" />
+                <div className="h-3 w-16 bg-lx-divider rounded" />
+              </div>
+              <div className="hidden sm:block w-[92px] flex-shrink-0 space-y-1">
+                <div className="h-3.5 w-full bg-lx-divider rounded" />
+                <div className="h-3 w-12 bg-lx-divider rounded ml-auto" />
+              </div>
+              <div className="hidden sm:block w-[96px] flex-shrink-0">
+                <div className="h-8 w-full bg-lx-divider rounded-xl" />
+              </div>
+              <div className="w-8 flex-shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-lx-divider" />
+              </div>
             </div>
-            <div className="w-16 space-y-1">
-              <div className="h-4 w-full bg-lx-divider rounded" />
-              <div className="h-3 w-10 bg-lx-divider rounded" />
-            </div>
-            <div className="flex gap-2">
-              <div className="w-7 h-7 rounded-lg bg-lx-divider" />
-              <div className="w-7 h-7 rounded-lg bg-lx-divider" />
-              <div className="w-16 h-7 rounded-lg bg-lx-divider" />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )

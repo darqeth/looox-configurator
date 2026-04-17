@@ -12,7 +12,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
 
   const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([
     supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).single(),
-    supabase.from('profiles').select('price_factor, price_factor_enabled, is_international').eq('id', user.id).single(),
+    supabase.from('profiles').select('korting, is_international').eq('id', user.id).single(),
     supabase.from('company_members').select('role, can_see_purchase_prices, can_order').eq('user_id', user.id).maybeSingle(),
   ])
 
@@ -44,15 +44,13 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const isManager = !memberData || memberData.role === 'manager'
   const canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
   const canOrder = isManager || (memberData?.can_order ?? true)
-  const priceFactor = profile?.price_factor ?? 1
-  const priceFactorEnabled = profile?.price_factor_enabled ?? false
+  const korting = profile?.korting ?? 50
   const isInternational = profile?.is_international ?? false
 
   return (
     <ConfiguratorWizard
       initialConfig={initialConfig}
-      priceFactor={priceFactor}
-      priceFactorEnabled={priceFactorEnabled}
+      korting={korting}
       canSeePurchasePrices={canSeePurchasePrices}
       canOrder={canOrder}
       isInternational={isInternational}

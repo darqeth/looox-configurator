@@ -7,15 +7,14 @@ export default async function NieuweConfiguratiePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  let priceFactor = 1
-  let priceFactorEnabled = false
+  let korting = 50
   let canSeePurchasePrices = true
   let canOrder = true
   let isInternational = false
 
   if (user) {
     const [{ data: profile }, { data: memberData }] = await Promise.all([
-      supabase.from('profiles').select('is_international, price_factor, price_factor_enabled').eq('id', user.id).single(),
+      supabase.from('profiles').select('is_international, korting').eq('id', user.id).single(),
       supabase.from('company_members').select('role, can_see_purchase_prices, can_order').eq('user_id', user.id).maybeSingle(),
     ])
 
@@ -23,14 +22,12 @@ export default async function NieuweConfiguratiePage() {
     canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
     canOrder = isManager || (memberData?.can_order ?? true)
     isInternational = profile?.is_international ?? false
-    priceFactor = profile?.price_factor ?? 1
-    priceFactorEnabled = profile?.price_factor_enabled ?? false
+    korting = profile?.korting ?? 50
   }
 
   return (
     <ConfiguratorWizard
-      priceFactor={priceFactor}
-      priceFactorEnabled={priceFactorEnabled}
+      korting={korting}
       canSeePurchasePrices={canSeePurchasePrices}
       canOrder={canOrder}
       isInternational={isInternational}

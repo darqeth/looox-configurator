@@ -65,12 +65,10 @@ export async function ConfiguratiesContent({
       .select('role, can_order, can_configure, can_see_purchase_prices, own_configs_only, company_id')
       .eq('user_id', user.id)
       .maybeSingle(),
-    supabase.from('profiles').select('price_factor, price_factor_enabled').eq('id', user.id).single(),
+    supabase.from('profiles').select('korting').eq('id', user.id).single(),
   ])
 
-  const priceFactor = profileData?.price_factor ?? 1
-  const priceFactorEnabled = profileData?.price_factor_enabled ?? false
-  const canDownloadConsumerQuote = priceFactorEnabled && (priceFactor ?? 1) > 1
+  const korting = profileData?.korting ?? 50
 
   const isManager = !memberPerms || memberPerms.role === 'manager'
   const canOrder = isManager || (memberPerms?.can_order ?? true)
@@ -239,10 +237,8 @@ export async function ConfiguratiesContent({
                 ].filter(Boolean)
 
                 const canDelete = config.user_id === user.id || memberPerms?.role === 'manager'
-                const displayPrice = canDownloadConsumerQuote
-                  ? Math.round(Number(config.total_price) * priceFactor)
-                  : Number(config.total_price)
-                const priceLabel = canDownloadConsumerQuote ? 'consument' : 'excl. btw'
+                const displayPrice = Number(config.total_price)
+                const priceLabel = 'Bruto ex. BTW'
 
                 return (
                   <div key={config.id} className="hover:bg-lx-panel-bg/50 transition-colors">
@@ -270,12 +266,12 @@ export async function ConfiguratiesContent({
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
                           {canOrder && shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
                             configName={config.name ?? 'Naamloze configuratie'}
-                            canDownload={canDownloadConsumerQuote}
+                            canDownload={true}
                             canEdit={canConfigure}
                             canDelete={canDelete}
                           />
@@ -322,7 +318,7 @@ export async function ConfiguratiesContent({
                       {canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
                           {shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} />
                           )}
                         </div>
                       )}
@@ -332,7 +328,7 @@ export async function ConfiguratiesContent({
                         <ConfigActionsMenu
                           configId={config.id}
                           configName={config.name ?? 'Naamloze configuratie'}
-                          canDownload={canDownloadConsumerQuote}
+                          canDownload={true}
                           canEdit={canConfigure}
                           canDelete={canDelete}
                         />

@@ -80,7 +80,7 @@ async function sendOrderEmails(
 ) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, email, company, phone, address')
+    .select('full_name, email, company, phone, address, korting')
     .eq('id', userId)
     .single()
 
@@ -109,6 +109,7 @@ async function sendOrderEmails(
       },
       unitPrice: emailDetails.unitPrice,
       totalPrice: emailDetails.totalPrice,
+      korting: (profile as { korting?: number } | null)?.korting ?? 50,
       quantity: emailDetails.quantity,
       notes,
       attachmentUrl,

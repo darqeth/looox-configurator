@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ProfileForm, PasswordForm, PrijsfactorForm } from './profile-form'
+import { ProfileForm, PasswordForm } from './profile-form'
 import AvatarUpload from './avatar-upload'
 
 const tierInfo: Record<string, { label: string; description: string; color: string }> = {
@@ -66,16 +66,9 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
     { data: profile },
     { data: memberData },
   ] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, phone, address, tier, created_at, avatar_url, company_id, price_factor, price_factor_enabled').eq('id', userId).single(),
+    supabase.from('profiles').select('full_name, company, phone, address, tier, created_at, avatar_url, company_id').eq('id', userId).single(),
     supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', userId).maybeSingle(),
   ])
-
-  const isManager = !memberData || memberData.role === 'manager'
-  const canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
-
-  // Lees prijsfactor uit profiles — werkt voor iedereen (solo én bedrijf)
-  const priceFactor = Number(profile?.price_factor ?? 1)
-  const priceFactorEnabled = profile?.price_factor_enabled ?? false
 
   const tier = tierInfo[profile?.tier ?? 'Studio'] ?? tierInfo.Studio
   const memberSince = profile?.created_at
@@ -122,22 +115,6 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
           email: userEmail,
         }} />
       </Card>
-
-      {/* Consumentenprijzen — voor alle gebruikers met inkoopprijstoegang */}
-      {canSeePurchasePrices && (
-        <Card
-          title="Consumentenprijzen"
-          description={isManager
-            ? "Stel een prijsfactor in voor wanneer je de configurator gebruikt samen met een klant. Bestellingen naar LoooX blijven altijd op netto inkoopprijs."
-            : "De prijsfactor is ingesteld door de manager van je bedrijf."}
-        >
-          <PrijsfactorForm
-            priceFactor={priceFactor}
-            priceFactorEnabled={priceFactorEnabled}
-            isManager={isManager}
-          />
-        </Card>
-      )}
 
       {/* Beveiliging */}
       <Card title="Beveiliging" description="Kies een sterk wachtwoord van minimaal 8 tekens.">

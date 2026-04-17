@@ -42,16 +42,6 @@ export async function BestellingenContent({ page }: { page: string }) {
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('price_factor, price_factor_enabled')
-    .eq('id', user.id)
-    .single()
-
-  const priceFactor = profileData?.price_factor ?? 1
-  const priceFactorEnabled = profileData?.price_factor_enabled ?? false
-  const showConsumer = priceFactorEnabled && priceFactor > 1
-
   const { data: orders, count } = await supabase
     .from('orders')
     .select(`
@@ -131,11 +121,11 @@ export async function BestellingenContent({ page }: { page: string }) {
               ? `⌀ ${(config?.selected_options as { diameter?: number })?.diameter ?? '—'} cm`
               : '—'
 
-            const price = showConsumer ? Math.round(Number(order.total_price) * priceFactor) : Number(order.total_price)
-            const unitPrice = showConsumer ? Math.round(Number(order.unit_price) * priceFactor) : Number(order.unit_price)
+            const price = Number(order.total_price)
+            const unitPrice = Number(order.unit_price)
             const priceSubLabel = order.quantity > 1
               ? `€${unitPrice.toLocaleString('nl-NL')} p.st.`
-              : showConsumer ? 'consument' : 'excl. btw'
+              : 'Bruto ex. BTW'
 
             return (
               <div key={order.id} className="hover:bg-lx-panel-bg/50 transition-colors">

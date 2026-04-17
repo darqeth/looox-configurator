@@ -31,7 +31,7 @@ export async function buildOrderPDFResponse(
 ): Promise<NextResponse> {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, phone, address')
+    .select('full_name, company, phone, address, korting')
     .eq('id', userId)
     .single()
 
@@ -63,6 +63,7 @@ export async function buildOrderPDFResponse(
     },
     unitPrice: Number(order.unit_price),
     totalPrice: Number(order.total_price),
+    korting: profile?.korting ?? 50,
     quantity: order.quantity,
     notes: order.notes,
     attachmentUrl: (opts.attachmentUrl as string | null) ?? null,

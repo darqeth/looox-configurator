@@ -7,6 +7,7 @@ import type { ShapeSlug } from '@/lib/configurator-config'
 interface BestelModalProps {
   shape: ShapeSlug
   unitPrice: number
+  korting: number
   projectName: string
   saving: boolean
   disabled?: boolean
@@ -17,14 +18,15 @@ interface BestelModalProps {
   }) => void
 }
 
-export default function BestelModal({ shape, unitPrice, projectName, saving, disabled, onOrder }: BestelModalProps) {
+export default function BestelModal({ shape, unitPrice, korting, projectName, saving, disabled, onOrder }: BestelModalProps) {
   const [open, setOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
   const [notes, setNotes] = useState('')
   const [checked, setChecked] = useState(false)
 
   const isAanvraag = shape === 'op-aanvraag'
-  const subtotal = useMemo(() => unitPrice * quantity, [unitPrice, quantity])
+  const nettoUnitPrice = useMemo(() => Math.round(unitPrice * (1 - korting / 100)), [unitPrice, korting])
+  const subtotal = useMemo(() => nettoUnitPrice * quantity, [nettoUnitPrice, quantity])
   const { input: discountInput, setInput: setDiscountInput, validating: discountValidating, error: discountError, setError: setDiscountError, applied: appliedDiscount, setApplied: setAppliedDiscount, discountAmount, validate: handleValidate, reset: resetDiscount } = useDiscountCode(subtotal)
   const finalTotal = useMemo(() => subtotal - discountAmount, [subtotal, discountAmount])
 
@@ -88,15 +90,21 @@ export default function BestelModal({ shape, unitPrice, projectName, saving, dis
               {/* Prijs samenvatting */}
               <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[12.5px] text-lx-text-secondary">Eenheidsprijs</span>
-                  <span className="text-[14px] font-bold text-lx-cta">
-                    €{unitPrice.toLocaleString('nl-NL')} <span className="text-[11px] font-normal text-lx-text-secondary">excl. btw</span>
-                  </span>
+                  <span className="text-[12.5px] text-lx-text-secondary">Bruto ex. BTW</span>
+                  <span className="text-[13px] font-medium text-lx-text-primary">€{unitPrice.toLocaleString('nl-NL')}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] text-lx-text-secondary">Dealer korting ({korting}%)</span>
+                  <span className="text-[13px] font-medium text-lx-text-secondary">−€{(unitPrice - nettoUnitPrice).toLocaleString('nl-NL')}</span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                  <span className="text-[12.5px] text-lx-text-secondary font-medium">Netto ex. BTW</span>
+                  <span className="text-[14px] font-bold text-lx-cta">€{nettoUnitPrice.toLocaleString('nl-NL')}</span>
                 </div>
                 {appliedDiscount && (
                   <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
                     <span className="text-[12px] text-green-600">
-                      Korting ({appliedDiscount.type === 'pct' ? `${appliedDiscount.value}%` : `€${appliedDiscount.value} eenmalig`})
+                      Kortingscode ({appliedDiscount.type === 'pct' ? `${appliedDiscount.value}%` : `€${appliedDiscount.value} eenmalig`})
                     </span>
                     <span className="text-[12px] font-semibold text-green-600">
                       −€{discountAmount.toLocaleString('nl-NL')}

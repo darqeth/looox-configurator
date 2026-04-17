@@ -13,7 +13,7 @@ export default async function GebruikersPage() {
   const [{ data: profiles }, { data: pendingColleagues }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, email, company, phone, tier, approval_status, created_at, price_factor, price_factor_enabled, company_id, is_international')
+      .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international')
       .order('created_at', { ascending: false }),
     // Collega-aanvragen: goedgekeurde company + nog niet goedgekeurd
     supabase
@@ -65,7 +65,7 @@ export default async function GebruikersPage() {
               return (
                 <UserRow
                   key={p.id}
-                  profile={{ ...p, company: companyName, phone: null, tier: null, price_factor: null, price_factor_enabled: null, is_international: null }}
+                  profile={{ ...p, company: companyName, phone: null, tier: null, korting: null, is_international: null }}
                   showActions
                   isColleague
                   inviterName={inviterName}

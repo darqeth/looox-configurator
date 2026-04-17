@@ -42,10 +42,10 @@ const STEPS = [
 
 const DEFAULT_LIGHT: LightConfig = { position: 'geen', type: null, control: null }
 
-const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, priceFactor, priceFactorEnabled, canSeePurchasePrices, isInternational, step, isStep1Valid, projectName, saving, onNext, onSave }: {
+const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, isInternational, step, isStep1Valid, projectName, saving, onNext, onSave }: {
   shape: ShapeSlug; width: number; height: number; diameter: number | null; organicSizeKey: string | null
   directLight: LightConfig; indirectLight: LightConfig; selectedOptions: string[]; optionSubChoices: Record<string, string>
-  priceFactor: number; priceFactorEnabled: boolean; canSeePurchasePrices: boolean; isInternational: boolean
+  isInternational: boolean
   step: number; isStep1Valid: boolean; projectName: string; saving: boolean
   onNext: () => void; onSave: () => void
 }) {
@@ -55,12 +55,8 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
     indirectPosition: indirectLight.position, indirectType: indirectLight.type, indirectControl: indirectLight.control,
     selectedOptions, optionSubChoices,
   })
-  const withInternational = isInternational ? Math.round(netto * 1.05) : netto
-  const showConsumer = priceFactorEnabled && priceFactor > 1
-  const total = showConsumer ? Math.round(withInternational * priceFactor) : withInternational
-  const priceLabel = canSeePurchasePrices
-    ? (showConsumer ? 'Consumentenprijs' : 'Netto inkoopprijs')
-    : (showConsumer ? 'Consumentenprijs' : 'Prijs')
+  const total = isInternational ? Math.round(netto * 1.05) : netto
+  const priceLabel = 'Bruto ex. BTW'
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/8 px-4 py-3 flex items-center justify-between z-30">
       <div>
@@ -88,7 +84,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
   )
 })
 
-export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, priceFactorEnabled = false, canSeePurchasePrices = true, canOrder = true, isInternational = false }: { initialConfig?: InitialConfig; priceFactor?: number; priceFactorEnabled?: boolean; canSeePurchasePrices?: boolean; canOrder?: boolean; isInternational?: boolean }) {
+export default function ConfiguratorWizard({ initialConfig, korting = 50, canSeePurchasePrices = true, canOrder = true, isInternational = false }: { initialConfig?: InitialConfig; korting?: number; canSeePurchasePrices?: boolean; canOrder?: boolean; isInternational?: boolean }) {
   const router = useRouter()
   const isEditing = !!initialConfig
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
@@ -464,8 +460,7 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
                     saving={saving}
                     schunineZijdenFile={schunineZijdenFile}
                     isInternational={isInternational}
-                    priceFactor={priceFactor}
-                    priceFactorEnabled={priceFactorEnabled}
+                    korting={korting}
                     onProjectNameChange={setProjectName}
                     onReferenceChange={setReference}
                     onSchunineZijdenFileChange={setSchunineZijdenFile}
@@ -516,9 +511,6 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
                 directLight={directLight} indirectLight={indirectLight}
                 selectedOptions={selectedOptions}
                 optionSubChoices={optionSubChoices}
-                priceFactor={priceFactor}
-                priceFactorEnabled={priceFactorEnabled}
-                canSeePurchasePrices={canSeePurchasePrices}
               />
             </div>
           </div>
@@ -532,9 +524,6 @@ export default function ConfiguratorWizard({ initialConfig, priceFactor = 1, pri
             directLight={directLight} indirectLight={indirectLight}
             selectedOptions={selectedOptions}
             optionSubChoices={optionSubChoices}
-            priceFactor={priceFactor}
-            priceFactorEnabled={priceFactorEnabled}
-            canSeePurchasePrices={canSeePurchasePrices}
             isInternational={isInternational}
             step={step} isStep1Valid={step === 1 ? isStep1Valid() : step === 2 ? isStep2Valid() : isStep3Valid()}
             projectName={projectName} saving={saving}

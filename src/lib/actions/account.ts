@@ -65,36 +65,6 @@ export async function updateProfile(formData: FormData) {
   revalidatePath('/account/collegas')
 }
 
-export async function updatePriceFactor(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Niet ingelogd')
-
-  const factor  = parseFloat(formData.get('price_factor') as string)
-  const enabled = formData.get('price_factor_enabled') === 'on'
-
-  if (isNaN(factor) || factor < 1 || factor > 10) throw new Error('Ongeldige factor (moet tussen 1 en 10 liggen)')
-
-  // Controleer of lid niet een gewoon member is (geen manager-rechten)
-  const { data: member } = await supabase
-    .from('company_members')
-    .select('role')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (member && member.role !== 'manager') throw new Error('Alleen managers kunnen de prijsfactor instellen.')
-
-  // Sla altijd op in profiles — werkt voor solo-gebruikers én managers
-  const { error } = await supabase
-    .from('profiles')
-    .update({ price_factor: factor, price_factor_enabled: enabled })
-    .eq('id', user.id)
-
-  if (error) throw new Error(error.message)
-  revalidatePath('/account')
-  revalidatePath('/dashboard')
-  revalidatePath('/configurator')
-}
 
 export async function updatePassword(formData: FormData) {
   const supabase = await createClient()

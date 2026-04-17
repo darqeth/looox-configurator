@@ -69,19 +69,16 @@ export function DashboardContentSkeleton() {
 export async function DashboardContent({
   userId,
   companyId,
-  priceFactor,
-  priceFactorEnabled,
 }: {
   userId: string
   companyId: string | null
-  priceFactor: number
-  priceFactorEnabled: boolean
 }) {
   const supabase = await createClient()
   const companyUserIds = await getCompanyUserIds(supabase, userId, companyId)
 
   const [
     { data: memberData },
+    { data: profileData },
     { data: configs },
     { data: orders },
     { count: pendingOrderCount },
@@ -101,6 +98,7 @@ export async function DashboardContent({
     { count: orderedConfigCount },
   ] = await Promise.all([
     supabase.from('company_members').select('role, can_order').eq('user_id', userId).maybeSingle(),
+    supabase.from('profiles').select('korting').eq('id', userId).single(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', userId).order('updated_at', { ascending: false }).limit(5),
     supabase.from('orders').select('id', { count: 'exact' }).eq('user_id', userId),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', ['pending', 'confirmed']),
@@ -120,6 +118,7 @@ export async function DashboardContent({
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'ordered'),
   ])
 
+  const korting = profileData?.korting ?? 50
   const canOrder = !memberData || memberData.role === 'manager' || (memberData?.can_order ?? true)
   const configCount = configs?.length ?? 0
   const savedCount = configs?.filter(c => c.status === 'saved').length ?? 0
@@ -254,7 +253,7 @@ export async function DashboardContent({
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[13px] font-semibold text-lx-text-primary">
-                        €{(priceFactorEnabled && priceFactor > 1 ? Math.round(Number(config.total_price) * priceFactor) : Number(config.total_price)).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                        €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
                       </span>
                       {config.status === 'ordered' ? (
                         <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">Besteld</span>
@@ -264,7 +263,7 @@ export async function DashboardContent({
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
                           </Link>
                           {shape !== 'op-aanvraag' && canOrder && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={`${shapeLabelMap[shape] ?? shape}${dimensionLabel ? ` · ${dimensionLabel}` : ''}`} price={Number(config.total_price)} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={`${shapeLabelMap[shape] ?? shape}${dimensionLabel ? ` · ${dimensionLabel}` : ''}`} price={Number(config.total_price)} korting={korting} />
                           )}
                         </>
                       )}

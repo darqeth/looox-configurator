@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { deleteUser, generatePasswordResetLink, toggleInternational, updateApprovalStatus } from '@/lib/actions/admin'
+import { deleteUser, generatePasswordResetLink, toggleInternational, updateApprovalStatus, updateKorting } from '@/lib/actions/admin'
 
 const statusConfig = {
   pending:  { label: 'Wacht op goedkeuring', className: 'bg-amber-50 text-amber-700' },
@@ -18,8 +18,7 @@ export type UserRowProfile = {
   tier: string | null
   approval_status: string | null
   created_at: string | null
-  price_factor: number | null
-  price_factor_enabled: boolean | null
+  korting: number | null
   is_international: boolean | null
 }
 
@@ -42,6 +41,17 @@ export function UserRow({
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [isInternational, setIsInternational] = useState(profile.is_international ?? false)
+  const [kortingValue, setKortingValue] = useState(String(profile.korting ?? 50))
+  const [editingKorting, setEditingKorting] = useState(false)
+
+  function handleSaveKorting() {
+    const val = Math.min(100, Math.max(0, parseInt(kortingValue) || 0))
+    setKortingValue(String(val))
+    setEditingKorting(false)
+    startTransition(async () => {
+      await updateKorting(profile.id, val)
+    })
+  }
 
   function handleToggleInternational() {
     const next = !isInternational
@@ -107,14 +117,29 @@ export function UserRow({
                 Collega
               </span>
             )}
-            {(profile.price_factor ?? 1) > 1 && (
-              <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
-                profile.price_factor_enabled
-                  ? 'bg-lx-icon-bg text-lx-cta'
-                  : 'bg-lx-panel-bg text-lx-text-secondary'
-              }`}>
-                ×{Number(profile.price_factor).toFixed(2)} consument{profile.price_factor_enabled ? '' : ' (uit)'}
+            {editingKorting ? (
+              <span className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={kortingValue}
+                  onChange={e => setKortingValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveKorting(); if (e.key === 'Escape') setEditingKorting(false) }}
+                  autoFocus
+                  className="w-14 h-6 rounded-md border border-lx-cta/50 text-center text-[11.5px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white px-1"
+                />
+                <span className="text-[10.5px] text-lx-text-secondary">%</span>
+                <button onClick={handleSaveKorting} className="text-[10.5px] font-semibold text-lx-cta hover:underline">OK</button>
+                <button onClick={() => setEditingKorting(false)} className="text-[10.5px] text-lx-text-secondary hover:text-lx-text-primary">✕</button>
               </span>
+            ) : (
+              <button
+                onClick={() => setEditingKorting(true)}
+                className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta hover:bg-lx-panel-bg transition-colors"
+              >
+                Korting {kortingValue}%
+              </button>
             )}
             {isInternational && (
               <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">

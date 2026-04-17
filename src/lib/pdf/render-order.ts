@@ -24,6 +24,7 @@ export type OrderRenderInput = {
   }
   unitPrice: number
   totalPrice: number
+  korting: number
   quantity: number
   notes: string | null
   attachmentUrl: string | null

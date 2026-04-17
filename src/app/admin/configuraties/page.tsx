@@ -102,7 +102,18 @@ export default async function AdminConfiguratiePage({
       {/* Lijst */}
       <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
         {filtered.length > 0 ? (
-          <div className="divide-y divide-lx-divider">
+          <>
+            {/* Kolomkoppen — tablet+ */}
+            <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
+              <div className="w-9 flex-shrink-0" />
+              <div className="flex-1 min-w-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Naam</div>
+              <div className="hidden lg:block w-[148px] flex-shrink-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Vorm / Afmeting</div>
+              <div className="w-[156px] flex-shrink-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Klant</div>
+              <div className="w-[88px] flex-shrink-0 text-right text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Prijs</div>
+              <div className="w-[96px] flex-shrink-0 text-center text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Status</div>
+              <div className="w-4 flex-shrink-0" />
+            </div>
+            <div className="divide-y divide-lx-divider">
             {filtered.map((config) => (
               <ConfigDetailModal
                 key={config.id}
@@ -112,7 +123,8 @@ export default async function AdminConfiguratiePage({
                 }}
               />
             ))}
-          </div>
+            </div>
+          </>
         ) : (
           <div className="px-5 py-16 text-center">
             <p className="text-[14px] font-semibold text-lx-text-primary mb-1">

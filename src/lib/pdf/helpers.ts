@@ -30,6 +30,9 @@ const SHAPE_LABELS: Record<string, string> = {
 
 const GLAS_LABELS: Record<string, string> = {
   helder: 'Helder',
+  'smoke-grijs': 'Smoke Grijs',
+  'smoke-zwart': 'Smoke Zwart',
+  'smoke-brons': 'Smoke Brons',
   brons: 'Brons',
   grijs: 'Grijs',
   zwart: 'Zwart',

@@ -28,7 +28,8 @@ import { LightConfig } from './step-verlichting'
 const GLASS_APPEARANCE: Record<GlasKleur, { fill: string; fillOpacity: number; stroke: string; glansOpacity: number }> = {
   'helder':      { fill: '#C8D4DC', fillOpacity: 0.40, stroke: '#A8B4BC', glansOpacity: 0.09 },
   'smoke-grijs': { fill: '#5A6068', fillOpacity: 0.70, stroke: '#464C54', glansOpacity: 0.12 },
-  'smoke-zwart': { fill: '#18191C', fillOpacity: 0.90, stroke: '#2C2E33', glansOpacity: 0.15 },
+  'smoke-zwart': { fill: '#484C52', fillOpacity: 0.82, stroke: '#363A3F', glansOpacity: 0.13 },
+  'smoke-brons': { fill: '#7A5C2A', fillOpacity: 0.78, stroke: '#604820', glansOpacity: 0.13 },
 }
 
 // Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen

@@ -254,18 +254,46 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
               <ModalRow label="Extra opties" value={extras || 'Geen'} />
             </div>
 
-            {/* Footer: prijs + verwijderen */}
-            <div className="px-6 py-3.5 bg-lx-panel-bg border-t border-lx-divider flex items-center justify-between">
-              <DeleteButton
-                configId={config.id}
-                configName={config.name ?? 'Naamloze configuratie'}
-                isAdmin
-              />
-              <div className="text-right">
-                <span className="text-[16px] font-bold text-lx-cta">
-                  €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
-                </span>
-                <span className="text-[11px] text-lx-text-muted ml-1.5">excl. btw</span>
+            {/* Footer: downloads + prijs + verwijderen */}
+            <div className="px-6 py-3.5 bg-lx-panel-bg border-t border-lx-divider">
+              {/* PDF downloads */}
+              <div className="flex gap-2 mb-3">
+                <a
+                  href={`/api/pdf/offerte/${config.id}`}
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 flex items-center justify-center gap-2 h-9 rounded-xl border border-black/10 text-lx-text-secondary hover:text-lx-cta hover:border-lx-cta/30 hover:bg-white text-[12px] font-medium transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                  </svg>
+                  Klantofferte
+                </a>
+                <a
+                  href={`/api/pdf/order/by-config/${config.id}`}
+                  download
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 flex items-center justify-center gap-2 h-9 rounded-xl border border-black/10 text-lx-text-secondary hover:text-lx-cta hover:border-lx-cta/30 hover:bg-white text-[12px] font-medium transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Orderbevestiging
+                </a>
+              </div>
+              {/* Prijs + verwijderen */}
+              <div className="flex items-center justify-between">
+                <DeleteButton
+                  configId={config.id}
+                  configName={config.name ?? 'Naamloze configuratie'}
+                  isAdmin
+                />
+                <div className="text-right">
+                  <span className="text-[16px] font-bold text-lx-cta">
+                    €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                  </span>
+                  <span className="text-[11px] text-lx-text-muted ml-1.5">excl. btw</span>
+                </div>
               </div>
             </div>
           </div>

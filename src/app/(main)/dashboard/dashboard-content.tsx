@@ -134,7 +134,7 @@ export async function DashboardContent({
     const totalRevenue = revenueSum
     const currentStreak = streakData?.current_streak ?? 0
     const usedCodesSet = new Set((usedDiscountCodes ?? []).map(c => c.code as string))
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const sevenDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
     const companyAchievedIds = new Set((companyMilestonesData ?? []).map(m => m.milestone_id as string))
     const userMilestoneMap = Object.fromEntries(
       (userMilestonesData ?? []).map(um => [
@@ -161,14 +161,17 @@ export async function DashboardContent({
     const doneCount = enriched.filter(m => m.done).length
     const total = enriched.length
     const overallPct = total > 0 ? Math.round((doneCount / total) * 100) : 0
-    const recentlyDone = enriched.filter(m => m.done && m.isRecent).slice(0, 1)
-    const recentIds = new Set(recentlyDone.map(m => m.id))
     const hasAction = (m: typeof enriched[0]) =>
       ((m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') && !m.isCodeUsed && !!m.discountCode) ||
       (m.benefit_type === 'custom' && !m.claimedAt && !!m.umId)
-    const achieved = enriched.filter(m => m.done && !recentIds.has(m.id)).sort((a, b) => Number(hasAction(b)) - Number(hasAction(a))).slice(0, 3)
-    const upcoming = enriched.filter(m => !m.done && m.goal_type !== 'shape').sort((a, b) => b.pct - a.pct).slice(0, Math.max(0, 6 - recentlyDone.length - achieved.length))
-    return { doneCount, total, overallPct, recentlyDone, achieved, upcoming }
+    const achieved = enriched.filter(m => m.done)
+      .sort((a, b) => {
+        if (a.isRecent !== b.isRecent) return a.isRecent ? -1 : 1
+        return Number(hasAction(b)) - Number(hasAction(a))
+      })
+      .slice(0, 4)
+    const upcoming = enriched.filter(m => !m.done && m.goal_type !== 'shape').sort((a, b) => b.pct - a.pct).slice(0, Math.max(0, 6 - achieved.length))
+    return { doneCount, total, overallPct, achieved, upcoming }
   })()
 
   return (
@@ -230,7 +233,7 @@ export async function DashboardContent({
                 const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', arc: 'Boog' }
                 const ShapeIcon = () => {
                   if (shape === 'rond') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><circle cx="12" cy="12" r="9"/></svg>
-                  if (shape === 'organic') return <svg width="15" height="15" viewBox="0 0 200 200" fill="none" stroke="var(--lx-cta)" strokeWidth="25"><path d="M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"/></svg>
+                  if (shape === 'organic') return <svg width="15" height="15" viewBox="0 0 200 200" fill="none" stroke="var(--lx-cta)" strokeWidth="16"><path d="M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"/></svg>
                   if (shape === 'op-aanvraag') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2"/><path d="M12 8v4m0 4h.01"/></svg>
                   if (shape === 'rounded-rect') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="4"/></svg>
                   if (shape === 'ovaal') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="7" width="18" height="10" rx="5"/></svg>
@@ -429,24 +432,18 @@ export async function DashboardContent({
               </div>
             </div>
             <div className="divide-y divide-lx-divider">
-              {circle.recentlyDone.map(m => (
-                <div key={m.id} className="flex items-center gap-3 px-5 py-3 bg-[#F0F4F1]">
-                  <span className="w-5 h-5 rounded-full bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </span>
-                  <span className="text-[13px] font-semibold text-lx-cta flex-1 truncate">{m.title}</span>
-                  <span className="text-[10px] font-bold text-lx-cta bg-lx-icon-bg px-2 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">Nieuw</span>
-                </div>
-              ))}
               {circle.achieved.map(m => {
                 const benefitLabel = m.benefit_type === 'discount_pct' ? `${m.benefit_value}% korting` : m.benefit_type === 'discount_fixed' ? `€${m.benefit_value} korting` : m.benefit_type === 'custom' ? (m.benefit_description ?? null) : null
                 return (
                   <div key={m.id} className="flex items-center gap-3 px-5 py-3">
-                    <span className="w-5 h-5 rounded-full border-2 border-lx-cta/60 bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${m.isRecent ? 'bg-lx-cta border-2 border-lx-cta' : 'border-2 border-lx-cta/60 bg-lx-icon-bg'}`}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={m.isRecent ? 'white' : 'var(--lx-cta)'} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-lx-text-primary truncate">{m.title}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[13px] font-medium text-lx-text-primary truncate">{m.title}</p>
+                        {m.isRecent && <span className="text-[9px] font-bold text-white bg-lx-cta px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">Nieuw</span>}
+                      </div>
                       {benefitLabel && <p className="text-[11px] text-lx-cta font-medium truncate">{benefitLabel}</p>}
                     </div>
                     {(m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') && m.discountCode ? (

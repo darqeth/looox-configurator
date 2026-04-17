@@ -368,22 +368,19 @@ export type OfferteDocumentProps = {
     options: ConfigOptions
   }
   unitPrice: number
-  totalPrice: number
   quantity: number
-  priceFactor: number
-  priceFactorEnabled: boolean
   attachmentUrl?: string | null
 }
 
 export default function OfferteDocument({
   configName, configDate, articleNumber,
-  dealer, config, unitPrice, totalPrice, quantity,
-  priceFactor, priceFactorEnabled, attachmentUrl,
+  dealer, config, unitPrice, quantity,
+  attachmentUrl,
 }: OfferteDocumentProps) {
   const opts = config.options
-  const showConsumer = priceFactorEnabled && priceFactor > 1
-  const consumerUnit = showConsumer ? Math.round(unitPrice * priceFactor) : unitPrice
-  const consumerTotal = showConsumer ? Math.round(totalPrice * priceFactor) : totalPrice
+  const subtotalExclBtw = unitPrice * quantity
+  const btwBedrag = Math.round(subtotalExclBtw * 0.21)
+  const totalInclBtw = subtotalExclBtw + btwBedrag
 
   const today = formatDate(new Date().toISOString())
 
@@ -480,7 +477,7 @@ export default function OfferteDocument({
           <View style={styles.pricingBox}>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Prijs per stuk (excl. btw)</Text>
-              <Text style={styles.pricingValue}>{formatPrice(consumerUnit)}</Text>
+              <Text style={styles.pricingValue}>{formatPrice(unitPrice)}</Text>
             </View>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Aantal</Text>
@@ -488,16 +485,16 @@ export default function OfferteDocument({
             </View>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Subtotaal excl. btw</Text>
-              <Text style={styles.pricingValue}>{formatPrice(consumerTotal)}</Text>
+              <Text style={styles.pricingValue}>{formatPrice(subtotalExclBtw)}</Text>
             </View>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>BTW 21%</Text>
-              <Text style={styles.pricingValue}>{formatPrice(Math.round(consumerTotal * 0.21))}</Text>
+              <Text style={styles.pricingValue}>{formatPrice(btwBedrag)}</Text>
             </View>
             <View style={styles.pricingDivider} />
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Totaal incl. btw</Text>
-              <Text style={styles.totalValue}>{formatPrice(Math.round(consumerTotal * 1.21))}</Text>
+              <Text style={styles.totalValue}>{formatPrice(totalInclBtw)}</Text>
             </View>
           </View>
         </View>

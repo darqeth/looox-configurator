@@ -108,7 +108,6 @@ async function sendOrderEmails(
         options: configOptions,
       },
       unitPrice: emailDetails.unitPrice,
-      totalPrice: emailDetails.totalPrice,
       korting: (profile as { korting?: number } | null)?.korting ?? 50,
       quantity: emailDetails.quantity,
       notes,

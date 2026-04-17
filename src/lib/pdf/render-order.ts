@@ -23,7 +23,6 @@ export type OrderRenderInput = {
     options: ConfigOptions
   }
   unitPrice: number
-  totalPrice: number
   korting: number
   quantity: number
   notes: string | null

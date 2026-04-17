@@ -371,7 +371,6 @@ export type OrderDocumentProps = {
     options: ConfigOptions
   }
   unitPrice: number
-  totalPrice: number
   korting: number
   quantity: number
   notes?: string | null
@@ -388,9 +387,13 @@ const STATUS_NL: Record<string, string> = {
 
 export default function OrderDocument({
   orderNumber, orderDate, articleNumber, status,
-  dealer, config, unitPrice, totalPrice, korting, quantity, notes, attachmentUrl,
+  dealer, config, unitPrice, korting, quantity, notes, attachmentUrl,
 }: OrderDocumentProps) {
   const opts = config.options
+  const nettoUnitPrice = Math.round(unitPrice * (1 - korting / 100))
+  const nettoSubtotal = nettoUnitPrice * quantity
+  const discountAmount = (opts.discountAmount as number | null) ?? 0
+  const nettoTotal = nettoSubtotal - discountAmount
 
   return (
     <Document
@@ -527,7 +530,7 @@ export default function OrderDocument({
             </View>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Netto ex. BTW</Text>
-              <Text style={styles.pricingValue}>{formatPrice(Math.round(unitPrice * (1 - korting / 100)))}</Text>
+              <Text style={styles.pricingValue}>{formatPrice(nettoUnitPrice)}</Text>
             </View>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Aantal</Text>
@@ -537,14 +540,14 @@ export default function OrderDocument({
               <>
                 <View style={styles.pricingRow}>
                   <Text style={styles.pricingLabel}>Subtotaal</Text>
-                  <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(Math.round(unitPrice * (1 - korting / 100)) * quantity)}</Text>
+                  <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(nettoSubtotal)}</Text>
                 </View>
                 <View style={styles.pricingRow}>
                   <Text style={styles.pricingLabel}>
                     Kortingscode ({opts.discountType === 'pct' ? `${opts.discountValue}%` : `${formatPrice(opts.discountValue ?? 0)} eenmalig`})
                   </Text>
                   <Text style={[styles.pricingValue, { color: BRAND }]}>
-                    -{formatPrice(opts.discountAmount)}
+                    -{formatPrice(discountAmount)}
                   </Text>
                 </View>
               </>
@@ -552,7 +555,7 @@ export default function OrderDocument({
             <View style={styles.pricingDivider} />
             <View style={styles.pricingRow}>
               <Text style={styles.totalLabel}>Totaal</Text>
-              <Text style={styles.totalValue}>{formatPrice(totalPrice)}</Text>
+              <Text style={styles.totalValue}>{formatPrice(nettoTotal)}</Text>
             </View>
             <Text style={styles.vatNote}>Alle prijzen excl. BTW</Text>
           </View>

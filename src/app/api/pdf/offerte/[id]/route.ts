@@ -25,21 +25,16 @@ export async function GET(
 
   if (error || !config) return new NextResponse('Not found', { status: 404 })
 
-  // Fetch dealer profile + prijsfactor
+  // Fetch dealer profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, phone, address, price_factor, price_factor_enabled')
+    .select('full_name, company, phone, address')
     .eq('id', user.id)
     .single()
 
-  const priceFactor = profile?.price_factor ?? 1
-  // Offerte toont altijd consumentenprijs als factor > 1 (ongeacht toggle)
-  const priceFactorEnabled = (priceFactor ?? 1) > 1
-
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const quantity = (opts.quantity as number | undefined) ?? 1
-  const unitPrice = Number(config.total_price) // total_price stores the per-unit price (incl. surcharges)
-  const totalPrice = unitPrice * quantity
+  const unitPrice = Number(config.total_price)
   const attachmentUrl = (opts.attachmentUrl as string | null) ?? null
 
   const buffer = await renderToBuffer(React.createElement(OfferteDocument, {
@@ -59,10 +54,7 @@ export async function GET(
       options: opts,
     },
     unitPrice,
-    totalPrice,
     quantity,
-    priceFactor,
-    priceFactorEnabled,
     attachmentUrl,
   }) as React.ReactElement<DocumentProps>)
 

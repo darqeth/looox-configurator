@@ -62,7 +62,6 @@ export async function buildOrderPDFResponse(
       options: opts,
     },
     unitPrice: Number(order.unit_price),
-    totalPrice: Number(order.total_price),
     korting: profile?.korting ?? 50,
     quantity: order.quantity,
     notes: order.notes,

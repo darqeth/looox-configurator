@@ -1,6 +1,6 @@
 export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc'
 export type LightType = '3000k' | '4000k' | 'rgbw' | 'cct'
-export type GlasKleur = 'helder' | 'smoke-grijs' | 'smoke-zwart' | 'smoke-brons'
+export type GlasKleur = 'helder' | 'smoke-zwart' | 'smoke-brons'
 
 export const SHAPES = [
   { slug: 'rechthoek' as ShapeSlug, name: 'Rechte hoeken',   description: 'Klassiek rechthoekig, volledig maatwerk', fromPrice: 149 },
@@ -103,8 +103,7 @@ export const CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; au
 
 export const GLAS_KLEUREN: { id: GlasKleur; name: string; color: string }[] = [
   { id: 'helder',      name: 'Helder',      color: '#D4E8EF' },
-  { id: 'smoke-grijs', name: 'Smoke Grijs', color: '#707070' },
-  { id: 'smoke-zwart', name: 'Smoke Zwart', color: '#1E1E1E' },
+  { id: 'smoke-zwart', name: 'Smoke Zwart', color: '#707070' },
   { id: 'smoke-brons', name: 'Smoke Brons', color: '#8B6830' },
 ]
 
@@ -119,13 +118,6 @@ export const GLAS_PRIJS_M2: Record<GlasKleur, Record<string, number>> = {
     'boven-beneden': 255,
     'links-rechts':  255,
     'rondom':        330,
-  },
-  'smoke-grijs': {
-    'geen':          236,
-    'boven':         288,
-    'boven-beneden': 341,
-    'links-rechts':  341,
-    'rondom':        446,
   },
   'smoke-zwart': {
     'geen':          236,

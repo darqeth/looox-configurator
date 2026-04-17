@@ -29,7 +29,7 @@ import {
 const GLASS_FILL: Record<string, { fill: string; fillOpacity: number; stroke: string }> = {
   'helder':      { fill: '#C8D4DC', fillOpacity: 0.55, stroke: '#A8B4BC' },
   'smoke-grijs': { fill: '#5A6068', fillOpacity: 0.80, stroke: '#464C54' },
-  'smoke-zwart': { fill: '#484C52', fillOpacity: 0.86, stroke: '#363A3F' },
+  'smoke-zwart': { fill: '#5A6068', fillOpacity: 0.80, stroke: '#464C54' },
   'smoke-brons': { fill: '#7A5C2A', fillOpacity: 0.82, stroke: '#604820' },
 }
 

@@ -25,10 +25,10 @@ import {
 import { LightConfig } from './step-verlichting'
 
 // Glaskleur → SVG appearance
-const GLASS_APPEARANCE: Record<GlasKleur, { fill: string; fillOpacity: number; stroke: string; glansOpacity: number }> = {
+const GLASS_APPEARANCE: Record<string, { fill: string; fillOpacity: number; stroke: string; glansOpacity: number }> = {
   'helder':      { fill: '#C8D4DC', fillOpacity: 0.40, stroke: '#A8B4BC', glansOpacity: 0.09 },
   'smoke-grijs': { fill: '#5A6068', fillOpacity: 0.70, stroke: '#464C54', glansOpacity: 0.12 },
-  'smoke-zwart': { fill: '#484C52', fillOpacity: 0.82, stroke: '#363A3F', glansOpacity: 0.13 },
+  'smoke-zwart': { fill: '#5A6068', fillOpacity: 0.70, stroke: '#464C54', glansOpacity: 0.12 },
   'smoke-brons': { fill: '#7A5C2A', fillOpacity: 0.78, stroke: '#604820', glansOpacity: 0.13 },
 }
 

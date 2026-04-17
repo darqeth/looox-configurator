@@ -134,7 +134,7 @@ export async function DashboardContent({
     const totalRevenue = revenueSum
     const currentStreak = streakData?.current_streak ?? 0
     const usedCodesSet = new Set((usedDiscountCodes ?? []).map(c => c.code as string))
-    const sevenDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
     const companyAchievedIds = new Set((companyMilestonesData ?? []).map(m => m.milestone_id as string))
     const userMilestoneMap = Object.fromEntries(
       (userMilestonesData ?? []).map(um => [
@@ -442,7 +442,7 @@ export async function DashboardContent({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-[13px] font-medium text-lx-text-primary truncate">{m.title}</p>
-                        {m.isRecent && <span className="text-[9px] font-bold text-white bg-lx-cta px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">Nieuw</span>}
+                        {m.isRecent && <span className="text-[10px] font-semibold bg-lx-icon-bg text-lx-cta px-2 py-0.5 rounded-full flex-shrink-0">Nieuw</span>}
                       </div>
                       {benefitLabel && <p className="text-[11px] text-lx-cta font-medium truncate">{benefitLabel}</p>}
                     </div>

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/lib/actions/auth'
 import type { ClosestMilestone } from '@/lib/sidebar-data'
+import SearchButton from './search-button'
 
 interface SidebarProps {
   userName: string
@@ -138,7 +139,8 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto flex flex-col gap-0.5">
-        <p className="text-white/45 text-[9.5px] font-semibold tracking-widest uppercase px-3 pb-2">Menu</p>
+        <SearchButton variant="sidebar" />
+        <p className="text-white/45 text-[9.5px] font-semibold tracking-widest uppercase px-3 pb-2 pt-3">Menu</p>
         {navItems.map((item) => <NavItem key={item.href} item={item} />)}
 
         {isAdmin && (
@@ -239,7 +241,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
         <Image src="/logo-looox-grey.svg" alt="LoooX" width={160} height={56} unoptimized className="h-14" style={{ width: 'auto' }} />
-        <div className="w-8" />
+        <SearchButton />
       </div>
 
       {/* Mobile sidebar overlay */}

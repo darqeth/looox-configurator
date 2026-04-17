@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import OrderButton from './order-button'
-import DeleteButton from './delete-button'
 import ConfiguratiesTabs from './configuraties-tabs'
+import ConfigActionsMenu from './config-actions-menu'
 
 const PAGE_SIZE = 20
 
@@ -22,7 +22,7 @@ function ShapeIcon({ shape }: { shape: string }) {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><circle cx="12" cy="12" r="9"/></svg>
   )
   if (shape === 'organic') return (
-    <svg width="16" height="16" viewBox="0 0 200 200" fill="none" stroke="var(--lx-cta)" strokeWidth="24"><path d="M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"/></svg>
+    <svg width="16" height="16" viewBox="0 0 200 200" fill="none" stroke="var(--lx-cta)" strokeWidth="16"><path d="M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"/></svg>
   )
   if (shape === 'op-aanvraag') return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2"/><path d="M12 8v4m0 4h.01"/></svg>
@@ -223,67 +223,59 @@ export async function ConfiguratiesContent({
                 extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : '',
               ].filter(Boolean)
 
+              const canDelete = config.user_id === user.id || memberPerms?.role === 'manager'
+              const displayPrice = canDownloadConsumerQuote
+                ? Math.round(Number(config.total_price) * priceFactor)
+                : Number(config.total_price)
+              const priceLabel = canDownloadConsumerQuote ? 'consument excl. btw' : 'excl. btw'
+
               return (
-                <div key={config.id} className="flex items-center gap-4 px-5 py-4 hover:bg-lx-panel-bg transition-colors first:rounded-t-[18px] last:rounded-b-[18px]">
-                  <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                    <ShapeIcon shape={shape} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <p className="text-[13.5px] font-semibold text-lx-text-primary truncate leading-snug">
-                        {config.name ?? 'Naamloze configuratie'}
-                      </p>
-                      {config.article_number && (
-                        <span className="text-[10.5px] font-mono font-medium text-lx-text-muted flex-shrink-0">{config.article_number}</span>
-                      )}
+                <div key={config.id} className="px-4 py-3.5 sm:px-5 hover:bg-lx-panel-bg transition-colors first:rounded-t-[18px] last:rounded-b-[18px]">
+                  <div className="flex gap-3 sm:gap-4">
+                    {/* Shape icon */}
+                    <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <ShapeIcon shape={shape} />
                     </div>
-                    <p className="text-[11.5px] text-lx-text-secondary mt-0.5 truncate">
-                      {metaParts.join(' · ')}
-                      <span className="text-lx-placeholder"> · {date}</span>
-                    </p>
-                  </div>
-                  {canSeePurchasePrices && (
-                    <div className="text-right flex-shrink-0 w-20">
-                      {canDownloadConsumerQuote ? (
-                        <>
-                          <p className="text-[13.5px] font-bold text-lx-text-primary">
-                            €{Math.round(Number(config.total_price) * priceFactor).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Rij 1: naam + referentie */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-lx-text-primary truncate leading-snug">
+                            {config.name ?? 'Naamloze configuratie'}
                           </p>
-                          <p className="text-[10.5px] text-lx-text-secondary">consument excl. btw</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-[13.5px] font-bold text-lx-text-primary">
-                            €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                          <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
+                            {config.article_number && <span className="font-mono">{config.article_number} · </span>}
+                            {metaParts.join(' · ')}
+                            <span className="text-lx-placeholder"> · {date}</span>
                           </p>
-                          <p className="text-[10.5px] text-lx-text-secondary">excl. btw</p>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {canDownloadConsumerQuote && (
-                      <div className="relative group">
-                        <a href={`/api/pdf/offerte/${config.id}`} download className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-cta transition-colors">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        </a>
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                          Klantofferte downloaden
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
                         </div>
+                        {/* Prijs — altijd rechtsboven */}
+                        {canSeePurchasePrices && (
+                          <div className="text-right flex-shrink-0 ml-2">
+                            <p className="text-[13px] font-bold text-lx-text-primary">
+                              €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                            </p>
+                            <p className="text-[10px] text-lx-text-secondary">{priceLabel}</p>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {canConfigure && (
-                      <Link href={`/configurator/${config.id}`} title="Bewerken" className="w-7 h-7 rounded-lg hover:bg-lx-divider flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary transition-colors">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
-                      </Link>
-                    )}
-                    {(config.user_id === user.id || memberPerms?.role === 'manager') && (
-                      <DeleteButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} />
-                    )}
-                    {canOrder && shape !== 'op-aanvraag' && (
-                      <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
-                    )}
+
+                      {/* Rij 2: primaire actie + 3-dot menu */}
+                      <div className="flex items-center justify-end gap-2 mt-2.5">
+                        {canOrder && shape !== 'op-aanvraag' && (
+                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} />
+                        )}
+                        <ConfigActionsMenu
+                          configId={config.id}
+                          configName={config.name ?? 'Naamloze configuratie'}
+                          canDownload={canDownloadConsumerQuote}
+                          canEdit={canConfigure}
+                          canDelete={canDelete}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )

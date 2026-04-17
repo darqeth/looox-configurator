@@ -7,7 +7,7 @@ type ConfigResult = { id: string; name: string; shape: string; dims: string; hre
 type OrderResult = { id: string; orderNumber: string; configName: string; shape: string; dims: string; status: string; href: string }
 type SearchResults = { configs: ConfigResult[]; orders: OrderResult[] }
 
-export default function SearchButton() {
+export default function SearchButton({ variant = 'default' }: { variant?: 'default' | 'sidebar' }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
@@ -48,15 +48,29 @@ export default function SearchButton() {
   const hasResults = results && (results.configs.length > 0 || results.orders.length > 0)
   const isEmpty = results && !hasResults
 
+  const searchIcon = <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="w-9 h-9 rounded-xl bg-white border border-black/8 shadow-sm flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary transition-colors"
-        aria-label="Zoeken"
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      </button>
+      {variant === 'sidebar' ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/7 hover:bg-white/11 text-white/55 hover:text-white/90 transition-all text-[13.5px] font-medium"
+          aria-label="Zoeken"
+        >
+          {searchIcon}
+          <span>Zoeken</span>
+          <kbd className="ml-auto text-[10px] bg-white/8 text-white/38 px-1.5 py-px rounded font-mono leading-tight">⌘K</kbd>
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-9 h-9 rounded-xl bg-white border border-black/8 shadow-sm flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary transition-colors"
+          aria-label="Zoeken"
+        >
+          {searchIcon}
+        </button>
+      )}
 
       {open && (
         <>

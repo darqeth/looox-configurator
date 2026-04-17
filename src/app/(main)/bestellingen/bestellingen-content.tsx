@@ -5,7 +5,7 @@ const PAGE_SIZE = 20
 
 function ShapeIcon({ shape }: { shape: string }) {
   if (shape === 'rond') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><circle cx="12" cy="12" r="9"/></svg>
-  if (shape === 'organic') return <svg width="15" height="15" viewBox="0 0 200 200" fill="none" stroke="var(--lx-cta)" strokeWidth="25"><path d="M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"/></svg>
+  if (shape === 'organic') return <svg width="15" height="15" viewBox="0 0 200 200" fill="none" stroke="var(--lx-cta)" strokeWidth="16"><path d="M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"/></svg>
   if (shape === 'op-aanvraag') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2"/><path d="M12 8v4m0 4h.01"/></svg>
   if (shape === 'rounded-rect') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="4"/></svg>
   if (shape === 'ovaal') return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="7" width="18" height="10" rx="5"/></svg>
@@ -118,76 +118,71 @@ export async function BestellingenContent({ page }: { page: string }) {
             ? `⌀ ${(config?.selected_options as { diameter?: number })?.diameter ?? '—'} cm`
             : '—'
 
+          const price = showConsumer ? Math.round(Number(order.total_price) * priceFactor) : Number(order.total_price)
+          const unitPrice = showConsumer ? Math.round(Number(order.unit_price) * priceFactor) : Number(order.unit_price)
+
           return (
-            <div key={order.id} className="px-5 py-4 flex items-center gap-4">
-              {/* Shape icon */}
-              <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                <ShapeIcon shape={shape} />
-              </div>
+            <div key={order.id} className="px-4 py-3.5 sm:px-5">
+              <div className="flex gap-3 sm:gap-4">
+                {/* Shape icon */}
+                <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <ShapeIcon shape={shape} />
+                </div>
 
-              {/* Ordernummer + datum */}
-              <div className="flex-shrink-0 w-36">
-                <p className="text-[13.5px] font-bold text-lx-text-primary font-mono tracking-wide">{order.order_number}</p>
-                <p className="text-[11.5px] text-lx-text-secondary mt-0.5">{formatDate(order.created_at)}</p>
-              </div>
-
-              {/* Projectnaam + afmeting */}
-              <div className="flex-1 min-w-0">
-                <p className="text-[13.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}</p>
-                <p className="text-[12px] text-lx-text-secondary mt-0.5">{dims} · {order.quantity}×</p>
-              </div>
-
-              {/* Prijs */}
-              <div className="hidden sm:block flex-shrink-0 text-right w-28">
-                <p className="text-[14px] font-bold text-lx-text-primary">
-                  €{(showConsumer ? Math.round(Number(order.total_price) * priceFactor) : Number(order.total_price)).toLocaleString('nl-NL')}
-                </p>
-                <p className="text-[11px] text-lx-text-secondary">
-                  {order.quantity > 1 ? `€${(showConsumer ? Math.round(Number(order.unit_price) * priceFactor) : Number(order.unit_price)).toLocaleString('nl-NL')} p.st. · ` : ''}{showConsumer ? 'consument excl. BTW' : 'excl. BTW'}
-                </p>
-              </div>
-
-              {/* Status badge */}
-              <div className="flex-shrink-0">
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11.5px] font-semibold border ${STATUS_COLORS[order.status] ?? STATUS_COLORS.pending}`}>
-                  {STATUS_LABELS[order.status] ?? order.status}
-                </span>
-              </div>
-
-              {/* Download knoppen */}
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {config && (
-                  <div className="relative group">
-                    <a
-                      href={`/api/pdf/offerte/${config.id}`}
-                      download
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
-                      </svg>
-                    </a>
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                      Klantofferte downloaden
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  {/* Rij 1: ordernummer + status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-[13px] font-bold text-lx-text-primary font-mono tracking-wide leading-snug">{order.order_number}</p>
+                      <p className="text-[11px] text-lx-text-secondary mt-0.5">{formatDate(order.created_at)}</p>
                     </div>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-semibold border flex-shrink-0 mt-0.5 ${STATUS_COLORS[order.status] ?? STATUS_COLORS.pending}`}>
+                      {STATUS_LABELS[order.status] ?? order.status}
+                    </span>
                   </div>
-                )}
-                <div className="relative group">
-                  <a
-                    href={`/api/pdf/order/${order.id}`}
-                    download
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                  </a>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    Orderbevestiging downloaden
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+
+                  {/* Rij 2: projectnaam + afmeting */}
+                  <div className="mt-2">
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}</p>
+                    <p className="text-[11px] text-lx-text-secondary mt-0.5">{dims} · {order.quantity}×</p>
+                  </div>
+
+                  {/* Rij 3: prijs + downloads */}
+                  <div className="flex items-center justify-between mt-2.5">
+                    <div>
+                      <span className="text-[13.5px] font-bold text-lx-text-primary">€{price.toLocaleString('nl-NL')}</span>
+                      <span className="text-[10.5px] text-lx-text-secondary ml-1.5">
+                        {order.quantity > 1 ? `€${unitPrice.toLocaleString('nl-NL')} p.st. · ` : ''}
+                        {showConsumer ? 'consument excl. BTW' : 'excl. BTW'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {config && (
+                        <div className="relative group">
+                          <a href={`/api/pdf/offerte/${config.id}`} download className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                            </svg>
+                          </a>
+                          <div className="absolute bottom-full right-0 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                            Klantofferte downloaden
+                            <div className="absolute top-full right-2 border-4 border-transparent border-t-lx-text-primary" />
+                          </div>
+                        </div>
+                      )}
+                      <div className="relative group">
+                        <a href={`/api/pdf/order/${order.id}`} download className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-lx-panel-bg transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                          </svg>
+                        </a>
+                        <div className="absolute bottom-full right-0 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                          Orderbevestiging downloaden
+                          <div className="absolute top-full right-2 border-4 border-transparent border-t-lx-text-primary" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
-import SearchButton from '@/components/layout/search-button'
 import NotificationBell from './notification-bell'
 import { DashboardContent, DashboardContentSkeleton } from './dashboard-content'
 
@@ -62,13 +61,20 @@ export default async function DashboardPage() {
               Consumentenprijzen actief
             </span>
           )}
-          <SearchButton />
           <NotificationBell
             notifications={notificationItems ?? []}
             readAt={profile?.notifications_read_at ?? null}
           />
         </div>
       </div>
+
+      {/* Consumentenprijzen banner — alleen mobiel */}
+      {priceFactorEnabled && priceFactor > 1 && (
+        <div className="sm:hidden mb-4 flex items-center gap-2 bg-lx-icon-bg text-lx-cta text-[12px] font-semibold px-3.5 py-2.5 rounded-xl border border-lx-cta/20">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v4m0 4h.01"/></svg>
+          Consumentenprijzen actief
+        </div>
+      )}
 
       {/* Content — streamt zodra DB queries klaar zijn */}
       <Suspense fallback={<DashboardContentSkeleton />}>

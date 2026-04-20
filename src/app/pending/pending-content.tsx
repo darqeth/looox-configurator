@@ -1,12 +1,25 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { signOut } from '@/lib/actions/auth'
+import { signOut, getMyApprovalStatus } from '@/lib/actions/auth'
+import { useState, useEffect } from 'react'
 
 export default function PendingContent() {
   const searchParams = useSearchParams()
   const isRejected = searchParams.get('rejected') === 'true'
+  const [liveApproved, setLiveApproved] = useState(false)
+
+  useEffect(() => {
+    if (isRejected) return
+    const check = async () => {
+      const status = await getMyApprovalStatus()
+      if (status === 'approved') setLiveApproved(true)
+    }
+    const interval = setInterval(check, 5000)
+    return () => clearInterval(interval)
+  }, [isRejected])
 
   return (
     <div className="min-h-screen bg-lx-divider flex items-center justify-center p-4">
@@ -19,7 +32,28 @@ export default function PendingContent() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-md border border-black/5 p-6 sm:p-8 text-center">
-          {isRejected ? (
+          {liveApproved ? (
+            <>
+              <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-lx-text-primary mb-2">
+                Je account is goedgekeurd!
+              </h2>
+              <p className="text-sm text-lx-text-secondary leading-relaxed mb-6">
+                Je hebt nu toegang tot de LoooX Configurator.
+              </p>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm"
+              >
+                Naar dashboard
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </Link>
+            </>
+          ) : isRejected ? (
             <>
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5">
                 <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -93,15 +127,17 @@ export default function PendingContent() {
           )}
 
           {/* Contact */}
-          <div className="border-t border-gray-100 pt-5">
-            <p className="text-xs text-lx-text-secondary mb-3">Vragen?</p>
-            <a
-              href="mailto:info@looox.nl"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-lx-panel-bg text-lx-cta rounded-lg text-sm font-semibold hover:bg-lx-panel-bg/70 transition-colors"
-            >
-              info@looox.nl
-            </a>
-          </div>
+          {!liveApproved && (
+            <div className="border-t border-gray-100 pt-5">
+              <p className="text-xs text-lx-text-secondary mb-3">Vragen?</p>
+              <a
+                href="mailto:info@looox.nl"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-lx-panel-bg text-lx-cta rounded-lg text-sm font-semibold hover:bg-lx-panel-bg/70 transition-colors"
+              >
+                info@looox.nl
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Uitloggen */}

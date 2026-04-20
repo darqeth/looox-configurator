@@ -14,19 +14,21 @@ function ShapeIcon({ shape }: { shape: string }) {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending:   'In behandeling',
-  confirmed: 'Bevestigd',
-  shipped:   'Verzonden',
-  delivered: 'Geleverd',
-  cancelled: 'Geannuleerd',
+  pending:       'In behandeling',
+  confirmed:     'Bevestigd',
+  in_production: 'In productie',
+  shipped:       'Verzonden',
+  delivered:     'Geleverd',
+  cancelled:     'Geannuleerd',
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:   'bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]',
-  confirmed: 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]',
-  shipped:   'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]',
-  delivered: 'bg-[#F0F4F1] text-lx-cta border-[#A7C4B0]',
-  cancelled: 'bg-red-50 text-red-600 border-red-200',
+  pending:       'bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]',
+  confirmed:     'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]',
+  in_production: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]',
+  shipped:       'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]',
+  delivered:     'bg-[#F0F4F1] text-lx-cta border-[#A7C4B0]',
+  cancelled:     'bg-red-50 text-red-600 border-red-200',
 }
 
 function formatDate(iso: string) {

@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import { sendApprovalEmail } from '@/lib/email'
+import { sendApprovalEmail, sendOrderStatusEmail } from '@/lib/email'
 
 export async function toggleInternational(userId: string, value: boolean): Promise<void> {
   const supabase = await createClient()
@@ -52,12 +52,32 @@ export async function updateApprovalStatus(userId: string, status: 'approved' | 
   revalidatePath('/admin/gebruikers')
 }
 
-export async function linkUserToCompany(userId: string, companyId: string): Promise<{ success: boolean; error?: string }> {
+export async function linkUserToCompany(
+  userId: string,
+  companyId: string,
+  permissions?: {
+    role?: 'manager' | 'member'
+    can_order?: boolean
+    can_see_purchase_prices?: boolean
+    can_configure?: boolean
+    own_configs_only?: boolean
+  }
+): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
 
   const admin = createAdminClient()
+
+  const perms = {
+    role: permissions?.role ?? 'manager',
+    can_order: permissions?.can_order ?? true,
+    can_see_purchase_prices: permissions?.can_see_purchase_prices ?? true,
+    can_configure: permissions?.can_configure ?? true,
+    own_configs_only: permissions?.own_configs_only ?? false,
+  }
+
+  await admin.from('profiles').update({ company_id: companyId }).eq('id', userId)
 
   const { data: existingMember } = await admin
     .from('company_members')
@@ -65,19 +85,34 @@ export async function linkUserToCompany(userId: string, companyId: string): Prom
     .eq('user_id', userId)
     .maybeSingle()
 
-  await admin.from('profiles').update({ company_id: companyId }).eq('id', userId)
-
-  if (!existingMember) {
-    await admin.from('company_members').insert({
-      company_id: companyId,
-      user_id: userId,
-      role: 'manager',
-      can_order: true,
-      can_see_purchase_prices: true,
-      can_configure: true,
-      own_configs_only: false,
-    })
+  if (existingMember) {
+    await admin.from('company_members').update({ company_id: companyId, ...perms }).eq('user_id', userId)
+  } else {
+    await admin.from('company_members').insert({ company_id: companyId, user_id: userId, ...perms })
   }
+
+  revalidatePath('/admin/gebruikers')
+  return { success: true }
+}
+
+export async function updateMemberPermissions(
+  userId: string,
+  permissions: {
+    role: 'manager' | 'member'
+    can_order: boolean
+    can_see_purchase_prices: boolean
+    can_configure: boolean
+    own_configs_only: boolean
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('company_members').update(permissions).eq('user_id', userId)
+  if (error) return { success: false, error: error.message }
+
   revalidatePath('/admin/gebruikers')
   return { success: true }
 }
@@ -145,4 +180,48 @@ export async function generatePasswordResetLink(email: string): Promise<{ link?:
   actionLink.searchParams.set('redirect_to', appUrl)
 
   return { link: actionLink.toString() }
+}
+
+export type OrderStatus = 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled'
+
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+
+  // Haal order op voor e-mail (voor de update, zodat we user_id hebben)
+  const { data: order } = await supabase
+    .from('orders')
+    .select('order_number, user_id')
+    .eq('id', orderId)
+    .single()
+
+  const { error } = await supabase.from('orders').update({ status }).eq('id', orderId)
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/bestellingen')
+  revalidatePath('/bestellingen')
+
+  // Status e-mail naar dealer (niet bij pending — dat is de initiële status)
+  if (status !== 'pending' && order?.user_id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', order.user_id)
+      .single()
+
+    if (profile?.email) {
+      sendOrderStatusEmail({
+        to: profile.email,
+        name: profile.full_name ?? 'Gebruiker',
+        orderNumber: order.order_number,
+        status,
+      }).catch(() => {})
+    }
+  }
+
+  return { success: true }
 }

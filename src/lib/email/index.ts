@@ -380,6 +380,49 @@ export async function sendNewRegistrationEmail({
   })
 }
 
+// ─── Email: Bestelling statuswijziging ───────────────────────────────────────
+
+const ORDER_STATUS_CONFIG: Record<string, { label: string; message: string; color: string }> = {
+  confirmed:     { label: 'Bevestigd',     message: 'Goed nieuws! Je bestelling is ontvangen en bevestigd door LoooX.', color: '#15803D' },
+  in_production: { label: 'In productie',  message: 'Je bestelling is in productie genomen. We houden je op de hoogte.',  color: '#1D4ED8' },
+  shipped:       { label: 'Verzonden',     message: 'Je bestelling is verzonden en onderweg naar jou toe!',               color: '#6D28D9' },
+  delivered:     { label: 'Geleverd',      message: 'Je bestelling is afgeleverd. Bedankt voor je vertrouwen in LoooX!', color: '#3d6b54' },
+  cancelled:     { label: 'Geannuleerd',   message: 'Je bestelling is helaas geannuleerd. Neem contact op met LoooX voor meer informatie.', color: '#DC2626' },
+}
+
+export async function sendOrderStatusEmail({
+  to,
+  name,
+  orderNumber,
+  status,
+}: {
+  to: string
+  name: string
+  orderNumber: string
+  status: string
+}) {
+  const cfg = ORDER_STATUS_CONFIG[status]
+  if (!cfg) return
+
+  const statusBadge = `<span style="display:inline-block;background:${cfg.color}1a;color:${cfg.color};border:1px solid ${cfg.color}40;padding:4px 12px;border-radius:8px;font-size:13px;font-weight:600;">${cfg.label}</span>`
+
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Bestelling ${orderNumber} — ${cfg.label}`,
+    html: baseTemplate(`
+      ${h1(`Status bijgewerkt`)}
+      ${p(`Hoi ${name}, de status van je bestelling is bijgewerkt.`)}
+      <p style="margin:16px 0 4px;font-size:12px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Nieuwe status</p>
+      <p style="margin:0 0 4px;">${statusBadge}</p>
+      ${divider()}
+      ${orderTable([row('Ordernummer', orderNumber), row('Status', cfg.label)].join(''))}
+      ${p(cfg.message, true)}
+      ${btn(`${SITE_URL}/bestellingen`, 'Bestellingen bekijken')}
+    `),
+  })
+}
+
 // ─── Email: App update notificatie ───────────────────────────────────────────
 
 export async function sendUpdateNotificationEmail({

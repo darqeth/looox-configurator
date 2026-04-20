@@ -201,3 +201,11 @@ export async function signOut() {
   await supabase.auth.signOut()
   redirect('/login')
 }
+
+export async function getMyApprovalStatus(): Promise<'pending' | 'approved' | 'rejected' | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data } = await supabase.from('profiles').select('approval_status').eq('id', user.id).single()
+  return (data?.approval_status as 'pending' | 'approved' | 'rejected') ?? null
+}

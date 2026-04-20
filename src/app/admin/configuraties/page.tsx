@@ -52,14 +52,12 @@ export default async function AdminConfiguratiePage({
     all: configs?.length ?? 0,
     draft: configs?.filter(c => c.status === 'draft').length ?? 0,
     saved: configs?.filter(c => c.status === 'saved').length ?? 0,
-    ordered: configs?.filter(c => c.status === 'ordered').length ?? 0,
   }
 
   const tabs = [
     { key: '', label: 'Alle', count: counts.all },
     { key: 'draft', label: 'Concept', count: counts.draft },
     { key: 'saved', label: 'Opgeslagen', count: counts.saved },
-    { key: 'ordered', label: 'Besteld', count: counts.ordered },
   ]
 
   function tabHref(key: string) {

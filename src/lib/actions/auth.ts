@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { sendWelcomeEmail, sendPasswordResetEmail } from '@/lib/email'
+import { sendWelcomeEmail, sendPasswordResetEmail, sendNewRegistrationEmail } from '@/lib/email'
 
 export async function signIn(email: string, password: string) {
   const supabase = await createClient()
@@ -91,10 +91,10 @@ export async function signUp(data: {
 
   if (profileError) return { error: 'Profiel aanmaken mislukt.' }
 
-  // Koppel aan company en markeer invite als geaccepteerd
-  // Gebruik admin client — nieuwe user heeft nog geen RLS-rechten op deze tabellen
+  const admin = createAdminClient()
+
   if (invite) {
-    const admin = createAdminClient()
+    // Uitgenodigde gebruiker: koppel aan bestaand bedrijf als member
     await admin.from('company_members').insert({
       company_id: invite.company_id,
       user_id: authData.user.id,
@@ -108,13 +108,42 @@ export async function signUp(data: {
       .from('company_invites')
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invite.id)
+  } else if (data.company) {
+    // Zelfstandige aanmelding met bedrijfsnaam: maak bedrijf aan en stel in als manager
+    const { data: newCompany } = await admin
+      .from('companies')
+      .insert({ name: data.company })
+      .select('id')
+      .single()
+
+    if (newCompany) {
+      await Promise.all([
+        admin.from('profiles').update({ company_id: newCompany.id }).eq('id', authData.user.id),
+        admin.from('company_members').insert({
+          company_id: newCompany.id,
+          user_id: authData.user.id,
+          role: 'manager',
+          can_order: true,
+          can_see_purchase_prices: true,
+          can_configure: true,
+          own_configs_only: false,
+        }),
+      ])
+    }
   }
 
-  // Welkomstmail — fire and forget (niet blokkeren bij mail-fout)
+  // Welkomstmail + interne notificatie — fire and forget
   sendWelcomeEmail({
     to: data.email,
     name: data.fullName,
     isInvited: !!invite,
+  }).catch(() => {})
+
+  sendNewRegistrationEmail({
+    name: data.fullName,
+    email: data.email,
+    company: data.company,
+    phone: data.phone,
   }).catch(() => {})
 
   redirect('/pending')

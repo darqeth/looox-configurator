@@ -82,7 +82,7 @@ export async function LoooxCircleContent() {
   const orders = Number(orderCount ?? 0)
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = streakData?.current_streak ?? 0
-  const shapeCountMap = new Map(
+  const shapeCountMap = new Map<string, number>(
     (shapeData ?? []).map((r: { shape: string; shape_count: number }) => [r.shape, Number(r.shape_count)])
   )
 

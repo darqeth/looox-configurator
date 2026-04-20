@@ -344,6 +344,42 @@ export async function sendApprovalEmail({
   })
 }
 
+// ─── Email: Nieuwe aanmelding (intern) ───────────────────────────────────────
+
+export async function sendNewRegistrationEmail({
+  name,
+  email,
+  company,
+  phone,
+}: {
+  name: string
+  email: string
+  company: string
+  phone: string
+}) {
+  const customerRows = [
+    row('Naam', name),
+    row('Bedrijf', company || '—'),
+    row('E-mail', `<a href="mailto:${email}" style="color:#3d6b54;">${email}</a>`),
+    row('Telefoon', phone || '—'),
+  ].join('')
+
+  await getResend().emails.send({
+    from: FROM,
+    to: INTERNAL_EMAIL,
+    subject: `Nieuwe aanmelding — ${name} (${company || email})`,
+    html: baseTemplate(`
+      ${h1('Nieuwe aanmelding!')}
+      ${p('Er heeft zich zojuist iemand aangemeld voor de LoooX Configurator. Hieronder de gegevens:')}
+      ${divider()}
+      ${orderTable(customerRows)}
+      ${divider()}
+      ${btn(`${SITE_URL}/admin/gebruikers`, 'Bekijk in admin')}
+      ${p('Vergeet niet het account goed te keuren.', true)}
+    `),
+  })
+}
+
 // ─── Email: App update notificatie ───────────────────────────────────────────
 
 export async function sendUpdateNotificationEmail({

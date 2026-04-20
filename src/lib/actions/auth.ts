@@ -24,13 +24,46 @@ export async function signIn(email: string, password: string) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('approval_status')
+    .select('approval_status, company, company_id')
     .eq('id', user.id)
     .single()
 
   if (!profile || profile.approval_status === 'pending') redirect('/pending')
   if (profile.approval_status === 'rejected')
     redirect('/pending?rejected=true')
+
+  // Auto-manager: als goedgekeurde user een bedrijfsnaam heeft maar nog geen company_members-rij
+  if (profile.company && !profile.company_id) {
+    const { data: existingMember } = await supabase
+      .from('company_members')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!existingMember) {
+      const admin = createAdminClient()
+      const { data: newCompany } = await admin
+        .from('companies')
+        .insert({ name: profile.company })
+        .select('id')
+        .single()
+
+      if (newCompany) {
+        await Promise.all([
+          admin.from('profiles').update({ company_id: newCompany.id }).eq('id', user.id),
+          admin.from('company_members').insert({
+            company_id: newCompany.id,
+            user_id: user.id,
+            role: 'manager',
+            can_order: true,
+            can_see_purchase_prices: true,
+            can_configure: true,
+            own_configs_only: false,
+          }),
+        ])
+      }
+    }
+  }
 
   redirect('/dashboard')
 }
@@ -108,28 +141,6 @@ export async function signUp(data: {
       .from('company_invites')
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invite.id)
-  } else if (data.company) {
-    // Zelfstandige aanmelding met bedrijfsnaam: maak bedrijf aan en stel in als manager
-    const { data: newCompany } = await admin
-      .from('companies')
-      .insert({ name: data.company })
-      .select('id')
-      .single()
-
-    if (newCompany) {
-      await Promise.all([
-        admin.from('profiles').update({ company_id: newCompany.id }).eq('id', authData.user.id),
-        admin.from('company_members').insert({
-          company_id: newCompany.id,
-          user_id: authData.user.id,
-          role: 'manager',
-          can_order: true,
-          can_see_purchase_prices: true,
-          can_configure: true,
-          own_configs_only: false,
-        }),
-      ])
-    }
   }
 
   // Welkomstmail + interne notificatie — fire and forget

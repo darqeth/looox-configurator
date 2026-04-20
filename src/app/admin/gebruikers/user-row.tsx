@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { deleteUser, generatePasswordResetLink, toggleInternational, updateApprovalStatus, updateKorting } from '@/lib/actions/admin'
+import { deleteUser, generatePasswordResetLink, linkUserToCompany, toggleInternational, updateApprovalStatus, updateKorting } from '@/lib/actions/admin'
 
 const statusConfig = {
   pending:  { label: 'Wacht op goedkeuring', className: 'bg-amber-50 text-amber-700' },
@@ -20,6 +20,7 @@ export type UserRowProfile = {
   created_at: string | null
   korting: number | null
   is_international: boolean | null
+  company_id: string | null
 }
 
 export function UserRow({
@@ -28,12 +29,14 @@ export function UserRow({
   showApprove = false,
   isColleague = false,
   inviterName = null,
+  companies = [],
 }: {
   profile: UserRowProfile
   showActions?: boolean
   showApprove?: boolean
   isColleague?: boolean
   inviterName?: string | null
+  companies?: { id: string; name: string }[]
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [resetLink, setResetLink] = useState<string | null>(null)
@@ -43,6 +46,11 @@ export function UserRow({
   const [isInternational, setIsInternational] = useState(profile.is_international ?? false)
   const [kortingValue, setKortingValue] = useState(String(profile.korting ?? 50))
   const [editingKorting, setEditingKorting] = useState(false)
+
+  // Bedrijfskoppeling — pre-select bij naam-match
+  const matchedCompany = companies.find(c => c.name.toLowerCase() === (profile.company ?? '').toLowerCase())
+  const [selectedCompanyId, setSelectedCompanyId] = useState(matchedCompany?.id ?? '')
+  const [linkSuccess, setLinkSuccess] = useState(false)
 
   function handleSaveKorting() {
     const val = Math.min(100, Math.max(0, parseInt(kortingValue) || 0))
@@ -66,6 +74,15 @@ export function UserRow({
     ? new Date(profile.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
     : ''
   const firstLetter = profile.full_name?.charAt(0)?.toUpperCase() ?? '?'
+
+  function handleLinkCompany() {
+    if (!selectedCompanyId) return
+    startTransition(async () => {
+      const result = await linkUserToCompany(profile.id, selectedCompanyId)
+      if (result.success) setLinkSuccess(true)
+      else setError(result.error ?? 'Koppelen mislukt')
+    })
+  }
 
   function handleDelete() {
     startTransition(async () => {
@@ -261,6 +278,40 @@ export function UserRow({
           )}
         </div>
       </div>
+
+      {/* Bedrijfskoppeling — alleen voor pending users zonder bestaande koppeling */}
+      {showActions && !isColleague && !profile.company_id && !linkSuccess && companies.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-[14px] px-4 py-3 flex items-center gap-3 flex-wrap">
+          {matchedCompany && (
+            <span className="text-[11.5px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full flex-shrink-0">
+              Naam match gevonden
+            </span>
+          )}
+          <p className="text-[12px] text-amber-800 flex-shrink-0">Koppel aan bestaand bedrijf:</p>
+          <select
+            value={selectedCompanyId}
+            onChange={e => setSelectedCompanyId(e.target.value)}
+            className="flex-1 min-w-[160px] text-[12.5px] border border-amber-300 rounded-lg px-2.5 py-1.5 bg-white text-lx-text-primary focus:outline-none focus:border-lx-cta"
+          >
+            <option value="">— Kies bedrijf —</option>
+            {companies.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleLinkCompany}
+            disabled={!selectedCompanyId || isPending}
+            className="text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-40 transition-colors flex-shrink-0"
+          >
+            Koppelen
+          </button>
+        </div>
+      )}
+      {linkSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-[14px] px-4 py-2.5 text-[12px] text-green-700 font-medium">
+          Gekoppeld aan bestaand bedrijf.
+        </div>
+      )}
 
       {/* Reset-link modal */}
       {resetLink && (

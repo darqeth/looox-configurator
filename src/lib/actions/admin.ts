@@ -52,6 +52,36 @@ export async function updateApprovalStatus(userId: string, status: 'approved' | 
   revalidatePath('/admin/gebruikers')
 }
 
+export async function linkUserToCompany(userId: string, companyId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+
+  const admin = createAdminClient()
+
+  const { data: existingMember } = await admin
+    .from('company_members')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  await admin.from('profiles').update({ company_id: companyId }).eq('id', userId)
+
+  if (!existingMember) {
+    await admin.from('company_members').insert({
+      company_id: companyId,
+      user_id: userId,
+      role: 'manager',
+      can_order: true,
+      can_see_purchase_prices: true,
+      can_configure: true,
+      own_configs_only: false,
+    })
+  }
+  revalidatePath('/admin/gebruikers')
+  return { success: true }
+}
+
 export async function deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

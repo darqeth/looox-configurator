@@ -33,7 +33,7 @@ export async function signIn(email: string, password: string) {
     redirect('/pending?rejected=true')
 
   // Auto-manager: als goedgekeurde user een bedrijfsnaam heeft maar nog geen company_members-rij
-  if (profile.company && !profile.company_id) {
+  if (profile.company) {
     const { data: existingMember } = await supabase
       .from('company_members')
       .select('id')

@@ -10,7 +10,7 @@ export default async function GebruikersPage() {
 
   if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
 
-  const [{ data: profiles }, { data: pendingColleagues }] = await Promise.all([
+  const [{ data: profiles }, { data: pendingColleagues }, { data: companies }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international')
@@ -26,6 +26,7 @@ export default async function GebruikersPage() {
       `)
       .eq('approval_status', 'pending')
       .not('company_id', 'is', null),
+    supabase.from('companies').select('id, name').order('name'),
   ])
 
   // Splits pending in: collega-aanvragen (hebben company_id) en nieuwe dealers
@@ -65,7 +66,7 @@ export default async function GebruikersPage() {
               return (
                 <UserRow
                   key={p.id}
-                  profile={{ ...p, company: companyName, phone: null, tier: null, korting: null, is_international: null }}
+                  profile={{ ...p, company: companyName, phone: null, tier: null, korting: null, is_international: null, company_id: p.company_id ?? null }}
                   showActions
                   isColleague
                   inviterName={inviterName}
@@ -82,7 +83,7 @@ export default async function GebruikersPage() {
           <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Wacht op goedkeuring</h2>
           <div className="space-y-2">
             {pending.map(p => (
-              <UserRow key={p.id} profile={p} showActions />
+              <UserRow key={p.id} profile={p} showActions companies={companies ?? []} />
             ))}
           </div>
         </section>

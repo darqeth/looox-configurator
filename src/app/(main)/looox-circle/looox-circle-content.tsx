@@ -82,8 +82,8 @@ export async function LoooxCircleContent() {
   const orders = Number(orderCount ?? 0)
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = streakData?.current_streak ?? 0
-  const configuredShapes = new Set(
-    (shapeData ?? []).map((r: { shape: string }) => r.shape).filter(Boolean)
+  const shapeCountMap = new Map(
+    (shapeData ?? []).map((r: { shape: string; shape_count: number }) => [r.shape, Number(r.shape_count)])
   )
 
   const companyAchievedIds = new Set((companyMilestones ?? []).map(m => m.milestone_id))
@@ -100,7 +100,7 @@ export async function LoooxCircleContent() {
     else if (m.goal_type === 'orders') current = orders
     else if (m.goal_type === 'order_revenue') current = totalRevenue
     else if (m.goal_type === 'streak') current = currentStreak
-    else if (m.goal_type === 'shape') current = m.goal_shape && configuredShapes.has(m.goal_shape) ? 1 : 0
+    else if (m.goal_type === 'shape') current = m.goal_shape ? (shapeCountMap.get(m.goal_shape) ?? 0) : 0
 
     const goal = Number(m.goal_value)
     const pct = Math.min(Math.round((current / goal) * 100), 100)

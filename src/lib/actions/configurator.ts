@@ -103,6 +103,7 @@ export async function deleteConfiguration(configId: string) {
 
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
+  revalidatePath('/looox-circle')
 }
 
 export async function adminDeleteConfiguration(configId: string) {

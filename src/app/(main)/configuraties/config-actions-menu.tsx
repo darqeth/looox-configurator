@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { deleteConfiguration } from '@/lib/actions/configurator'
@@ -17,16 +18,27 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
   const [open, setOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
   const router = useRouter()
   const menuRef = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false)
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
+          btnRef.current && !btnRef.current.contains(e.target as Node)) setOpen(false)
     }
     if (open) document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
+
+  function handleOpen() {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+    }
+    setOpen(v => !v)
+  }
 
   async function handleDelete() {
     setDeleting(true)
@@ -42,9 +54,10 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
   if (!canDownload && !canEdit && !canDelete) return null
 
   return (
-    <div className="relative flex-shrink-0" ref={menuRef}>
+    <div className="flex-shrink-0">
       <button
-        onClick={() => setOpen(v => !v)}
+        ref={btnRef}
+        onClick={handleOpen}
         aria-label="Meer opties"
         className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg transition-colors cursor-pointer"
       >
@@ -53,8 +66,9 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
         </svg>
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-black/8 py-1 z-20">
+      {open && typeof window !== 'undefined' && createPortal(
+        <div ref={menuRef} className="fixed w-44 bg-white rounded-xl shadow-lg border border-black/8 py-1 z-[200]"
+          style={{ top: menuPos.top, right: menuPos.right }}>
           {canDownload && (
             <a
               href={`/api/pdf/offerte/${configId}`}
@@ -94,7 +108,8 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
               </button>
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
       {confirmDelete && (

@@ -12,10 +12,13 @@ const GOAL_TYPES: { key: MilestoneGoalType; label: string; unit: string; hasShap
 ]
 
 const SHAPES = [
-  { key: 'rechthoek', label: 'Rechthoek' },
-  { key: 'rond',      label: 'Rond' },
-  { key: 'organic',   label: 'Organic' },
-  { key: 'op-aanvraag', label: 'Op aanvraag' },
+  { key: 'rechthoek',    label: 'Rechthoek' },
+  { key: 'rond',         label: 'Rond' },
+  { key: 'organic',      label: 'Organic' },
+  { key: 'rounded-rect', label: 'Afgerond' },
+  { key: 'ovaal',        label: 'Ovaal' },
+  { key: 'arc',          label: 'Boog' },
+  { key: 'op-aanvraag',  label: 'Op aanvraag' },
 ]
 
 const BENEFIT_TYPES: { key: MilestoneBenefitType; label: string }[] = [

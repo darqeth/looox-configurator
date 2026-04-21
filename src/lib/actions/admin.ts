@@ -338,3 +338,26 @@ export async function updateSuperAdmin(
   revalidatePath('/admin/gebruikers')
   return { success: true }
 }
+
+export async function uploadDrawingFile(
+  formData: FormData,
+  orderId: string,
+): Promise<{ url: string; fileName: string } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdminOrSubAdmin(supabase, user.id)) return { error: 'Geen toegang' }
+
+  const file = formData.get('file') as File | null
+  if (!file) return { error: 'Geen bestand' }
+
+  const path = `${orderId}/${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`
+  const adminClient = createAdminClient()
+  const { error: uploadError } = await adminClient.storage
+    .from('drawings')
+    .upload(path, await file.arrayBuffer(), { contentType: 'application/pdf', upsert: false })
+
+  if (uploadError) return { error: uploadError.message }
+
+  const { data: { publicUrl } } = adminClient.storage.from('drawings').getPublicUrl(path)
+  return { url: publicUrl, fileName: file.name }
+}

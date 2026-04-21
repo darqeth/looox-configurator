@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef, useTransition } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { setControleVereist } from '@/lib/actions/admin'
+import { setControleVereist, uploadDrawingFile } from '@/lib/actions/admin'
 
 type UploadedFile = { file_url: string; file_name: string }
 
@@ -43,20 +42,14 @@ export function OrderDrawingsUploadModal({
     setError('')
 
     try {
-      const supabase = createClient()
       const uploaded: UploadedFile[] = []
 
       for (const file of files) {
-        const ext = 'pdf'
-        const path = `${orderId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('drawings')
-          .upload(path, file, { contentType: 'application/pdf', upsert: false })
-
-        if (uploadError) throw new Error(uploadError.message)
-
-        const { data: { publicUrl } } = supabase.storage.from('drawings').getPublicUrl(path)
-        uploaded.push({ file_url: publicUrl, file_name: file.name })
+        const formData = new FormData()
+        formData.append('file', file)
+        const result = await uploadDrawingFile(formData, orderId)
+        if ('error' in result) throw new Error(result.error)
+        uploaded.push({ file_url: result.url, file_name: result.fileName })
       }
 
       startTransition(async () => {

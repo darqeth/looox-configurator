@@ -43,7 +43,7 @@ export default async function AdminMilestonesPage({
   }))
 
   return (
-    <div className="p-4 sm:p-6 lg:p-7 w-full max-w-3xl">
+    <div className="p-4 sm:p-6 lg:p-7 w-full max-w-5xl">
       <h1 className="text-[20px] font-bold text-lx-text-primary mb-1">Milestones &amp; Korting</h1>
       <p className="text-[13px] text-lx-text-secondary mb-6">
         Beheer achievements en kortingscodes voor dealers.
@@ -70,15 +70,15 @@ export default async function AdminMilestonesPage({
       </div>
 
       {activeTab === 'milestones' ? (
-        <>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <MilestoneForm />
           <MilestoneList milestones={milestones ?? []} />
-        </>
+        </div>
       ) : (
-        <>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <DiscountCodeForm />
           <DiscountCodeList codes={discountCodes} />
-        </>
+        </div>
       )}
     </div>
   )

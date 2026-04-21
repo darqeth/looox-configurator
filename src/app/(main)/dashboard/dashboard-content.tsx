@@ -80,7 +80,7 @@ export async function DashboardContent({
     { data: memberData },
     { data: profileData },
     { data: configs },
-    { data: orders },
+    { data: _orders },
     { count: pendingOrderCount },
     { data: changelogs },
     { data: rssItems },
@@ -120,9 +120,6 @@ export async function DashboardContent({
 
   const korting = profileData?.korting ?? 50
   const canOrder = !memberData || memberData.role === 'manager' || (memberData?.can_order ?? true)
-  const configCount = configs?.length ?? 0
-  const savedCount = configs?.filter(c => c.status === 'saved').length ?? 0
-  const orderCount = orders?.length ?? 0
 
   // Eigen omzet berekend uit directe orders-query (geen company-aggregatie)
   const revenueSum = (ownOrders ?? []).reduce((sum, o) => sum + Number(o.total_price), 0)

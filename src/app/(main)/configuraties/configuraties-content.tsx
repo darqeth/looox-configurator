@@ -80,7 +80,6 @@ export async function ConfiguratiesContent({
   let teamMembers: TeamMember[] = []
 
   if (isManager && memberPerms?.company_id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: rawMembers } = await supabase
       .from('company_members')
       .select('user_id, profiles!inner(full_name)')

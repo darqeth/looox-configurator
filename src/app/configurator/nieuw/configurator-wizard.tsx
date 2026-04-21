@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS } from '@/lib/configurator-config'
@@ -84,7 +84,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
   )
 })
 
-export default function ConfiguratorWizard({ initialConfig, korting = 50, canSeePurchasePrices = true, canOrder = true, isInternational = false }: { initialConfig?: InitialConfig; korting?: number; canSeePurchasePrices?: boolean; canOrder?: boolean; isInternational?: boolean }) {
+export default function ConfiguratorWizard({ initialConfig, korting = 50, canSeePurchasePrices: _canSeePurchasePrices = true, canOrder = true, isInternational = false }: { initialConfig?: InitialConfig; korting?: number; canSeePurchasePrices?: boolean; canOrder?: boolean; isInternational?: boolean }) {
   const router = useRouter()
   const isEditing = !!initialConfig
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
@@ -194,6 +194,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
       console.error(e)
       setSaving(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity, isEditing, initialConfig, router])
 
   const handleOrder = useCallback(async ({ quantity: qty, notes, discount }: {
@@ -226,6 +227,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
       console.error(e)
       setSaving(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, router])
 
   if (orderResult) {

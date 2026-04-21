@@ -64,7 +64,7 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
 
   const [
     { data: profile },
-    { data: memberData },
+    { data: _memberData },
   ] = await Promise.all([
     supabase.from('profiles').select('full_name, company, phone, address, tier, created_at, avatar_url, company_id').eq('id', userId).single(),
     supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', userId).maybeSingle(),

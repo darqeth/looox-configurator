@@ -541,6 +541,7 @@ export default function OfferteDocument({
               <Text style={{ fontSize: 8, color: GRAY, marginTop: 2 }}>{configName ?? ''}</Text>
             </View>
           </View>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <Image
             src={attachmentUrl}
             style={{ width: 515, height: 690, objectFit: 'contain' }}

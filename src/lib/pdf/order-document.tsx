@@ -589,6 +589,7 @@ export default function OrderDocument({
               <Text style={{ fontSize: 8, color: GRAY, marginTop: 2 }}>{orderNumber} - {config.name ?? ''}</Text>
             </View>
           </View>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <Image
             src={attachmentUrl}
             style={{ width: 515, height: 690, objectFit: 'contain' }}

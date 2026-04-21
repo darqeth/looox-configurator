@@ -60,13 +60,6 @@ export default async function AdminConfiguratiePage({
     { key: 'saved', label: 'Opgeslagen', count: counts.saved },
   ]
 
-  function tabHref(key: string) {
-    const params = new URLSearchParams()
-    if (key) params.set('status', key)
-    if (q) params.set('q', q)
-    return `/admin/configuraties${params.size ? '?' + params.toString() : ''}`
-  }
-
   return (
     <div className="p-4 sm:p-6 lg:p-7">
 

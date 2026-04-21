@@ -53,7 +53,6 @@ export default function LoginPage() {
     }
 
     return () => subscription.unsubscribe()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function handleLogin(e: React.FormEvent<HTMLFormElement>) {

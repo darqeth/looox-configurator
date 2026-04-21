@@ -383,11 +383,12 @@ export async function sendNewRegistrationEmail({
 // ─── Email: Bestelling statuswijziging ───────────────────────────────────────
 
 const ORDER_STATUS_CONFIG: Record<string, { label: string; message: string; color: string }> = {
-  confirmed:     { label: 'Bevestigd',     message: 'Goed nieuws! Je bestelling is ontvangen en bevestigd door LoooX.', color: '#15803D' },
-  in_production: { label: 'In productie',  message: 'Je bestelling is in productie genomen. We houden je op de hoogte.',  color: '#1D4ED8' },
-  shipped:       { label: 'Verzonden',     message: 'Je bestelling is verzonden en onderweg naar jou toe!',               color: '#6D28D9' },
-  delivered:     { label: 'Geleverd',      message: 'Je bestelling is afgeleverd. Bedankt voor je vertrouwen in LoooX!', color: '#3d6b54' },
-  cancelled:     { label: 'Geannuleerd',   message: 'Je bestelling is helaas geannuleerd. Neem contact op met LoooX voor meer informatie.', color: '#DC2626' },
+  confirmed:        { label: 'Bevestigd',        message: 'Goed nieuws! Je bestelling is ontvangen en bevestigd door LoooX.', color: '#15803D' },
+  goedgekeurd:      { label: 'Goedgekeurd',       message: 'Bedankt voor je goedkeuring! LoooX neemt je bestelling nu in productie.', color: '#15803D' },
+  in_production:    { label: 'In productie',      message: 'Je bestelling is in productie genomen. We houden je op de hoogte.', color: '#1D4ED8' },
+  shipped:          { label: 'Verzonden',         message: 'Je bestelling is verzonden en onderweg naar jou toe!', color: '#6D28D9' },
+  delivered:        { label: 'Geleverd',          message: 'Je bestelling is afgeleverd. Bedankt voor je vertrouwen in LoooX!', color: '#3d6b54' },
+  cancelled:        { label: 'Geannuleerd',       message: 'Je bestelling is helaas geannuleerd. Neem contact op met LoooX voor meer informatie.', color: '#DC2626' },
 }
 
 export async function sendOrderStatusEmail({
@@ -419,6 +420,70 @@ export async function sendOrderStatusEmail({
       ${orderTable([row('Ordernummer', orderNumber), row('Status', cfg.label)].join(''))}
       ${p(cfg.message, true)}
       ${btn(`${SITE_URL}/bestellingen`, 'Bestellingen bekijken')}
+    `),
+  })
+}
+
+// ─── Email: Controle vereist (klant) ─────────────────────────────────────────
+
+export async function sendControleVereistEmail({
+  to,
+  name,
+  orderNumber,
+  drawings,
+}: {
+  to: string
+  name: string
+  orderNumber: string
+  drawings: { file_url: string; file_name: string }[]
+}) {
+  const drawingLinks = drawings.map(d =>
+    `<tr><td style="padding:6px 0;"><a href="${d.file_url}" style="color:#3d6b54;font-size:13px;font-weight:600;text-decoration:none;">📄 ${d.file_name}</a></td></tr>`
+  ).join('')
+
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Bestelling ${orderNumber} — Tekeningen ter goedkeuring`,
+    html: baseTemplate(`
+      ${h1('Tekeningen ter goedkeuring')}
+      ${p(`Hoi ${name}, LoooX heeft technische tekeningen klaarstaan voor je bestelling <strong>${orderNumber}</strong>.`)}
+      ${p('Bekijk de tekeningen zorgvuldig en geef je goedkeuring of geef aan wat er gewijzigd moet worden.')}
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:12px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Tekeningen</p>
+      <table style="width:100%;">${drawingLinks}</table>
+      ${divider()}
+      ${btn(`${SITE_URL}/bestellingen`, 'Tekeningen goedkeuren / afkeuren')}
+      ${p('Log in op de configurator om je goedkeuring te geven of wijzigingen door te geven.', true)}
+    `),
+  })
+}
+
+// ─── Email: Tekeningen afgekeurd (intern LoooX) ───────────────────────────────
+
+export async function sendAfgekeurdEmail({
+  orderNumber,
+  dealerName,
+  dealerEmail,
+  reden,
+}: {
+  orderNumber: string
+  dealerName: string
+  dealerEmail: string
+  reden: string
+}) {
+  await getResend().emails.send({
+    from: FROM,
+    to: INTERNAL_EMAIL,
+    subject: `Tekeningen afgekeurd — Bestelling ${orderNumber}`,
+    html: baseTemplate(`
+      ${h1('Tekeningen afgekeurd')}
+      ${p(`Dealer <strong>${dealerName}</strong> (${dealerEmail}) heeft de tekeningen bij bestelling <strong>${orderNumber}</strong> afgekeurd.`)}
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:12px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Reden van afkeuring</p>
+      <p style="margin:0;font-size:14px;line-height:1.6;color:#1a1a1a;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:12px 16px;">${reden}</p>
+      ${divider()}
+      ${btn(`${SITE_URL}/admin/bestellingen`, 'Bekijk in admin')}
     `),
   })
 }

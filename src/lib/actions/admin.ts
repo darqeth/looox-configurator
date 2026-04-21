@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import { sendApprovalEmail, sendOrderStatusEmail } from '@/lib/email'
+import { sendApprovalEmail, sendOrderStatusEmail, sendControleVereistEmail } from '@/lib/email'
 
 export async function toggleInternational(userId: string, value: boolean): Promise<void> {
   const supabase = await createClient()
@@ -182,7 +182,7 @@ export async function generatePasswordResetLink(email: string): Promise<{ link?:
   return { link: actionLink.toString() }
 }
 
-export type OrderStatus = 'pending' | 'confirmed' | 'in_production' | 'shipped' | 'delivered' | 'cancelled'
+export type OrderStatus = 'pending' | 'confirmed' | 'controle_vereist' | 'goedgekeurd' | 'afgekeurd' | 'in_production' | 'shipped' | 'delivered' | 'cancelled'
 
 export async function updateOrderStatus(
   orderId: string,
@@ -221,6 +221,58 @@ export async function updateOrderStatus(
         status,
       }).catch(() => {})
     }
+  }
+
+  return { success: true }
+}
+
+export async function setControleVereist(
+  orderId: string,
+  drawings: { file_url: string; file_name: string }[],
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('order_number, user_id')
+    .eq('id', orderId)
+    .single()
+
+  if (!order) return { success: false, error: 'Bestelling niet gevonden' }
+
+  await supabase.from('order_drawings').delete().eq('order_id', orderId)
+
+  if (drawings.length > 0) {
+    const { error: insertError } = await supabase.from('order_drawings').insert(
+      drawings.map(d => ({ order_id: orderId, file_url: d.file_url, file_name: d.file_name }))
+    )
+    if (insertError) return { success: false, error: insertError.message }
+  }
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ status: 'controle_vereist', afkeur_reden: null })
+    .eq('id', orderId)
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/bestellingen')
+  revalidatePath('/bestellingen')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, email')
+    .eq('id', order.user_id)
+    .single()
+
+  if (profile?.email) {
+    sendControleVereistEmail({
+      to: profile.email,
+      name: profile.full_name ?? 'Gebruiker',
+      orderNumber: order.order_number,
+      drawings,
+    }).catch(() => {})
   }
 
   return { success: true }

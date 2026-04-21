@@ -24,6 +24,10 @@ export const configStatusEnum = pgEnum('config_status', [
 export const orderStatusEnum = pgEnum('order_status', [
   'pending',
   'confirmed',
+  'controle_vereist',
+  'goedgekeurd',
+  'afgekeurd',
+  'in_production',
   'shipped',
   'delivered',
   'cancelled',
@@ -148,8 +152,20 @@ export const orders = pgTable('orders', {
   total_price: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
   notes: text('notes'),
   status: orderStatusEnum('status').notNull().default('pending'),
+  afkeur_reden: text('afkeur_reden'),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
+})
+
+// Tekeningen per bestelling (voor controle/goedkeuring flow)
+export const orderDrawings = pgTable('order_drawings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  order_id: uuid('order_id')
+    .notNull()
+    .references(() => orders.id, { onDelete: 'cascade' }),
+  file_url: text('file_url').notNull(),
+  file_name: text('file_name').notNull(),
+  created_at: timestamp('created_at').notNull().defaultNow(),
 })
 
 // Changelogs (what's new)

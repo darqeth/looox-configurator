@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { OrderApprovalButtons } from './order-approval-buttons'
 
 const PAGE_SIZE = 20
 
@@ -14,21 +15,27 @@ function ShapeIcon({ shape }: { shape: string }) {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending:       'In behandeling',
-  confirmed:     'Bevestigd',
-  in_production: 'In productie',
-  shipped:       'Verzonden',
-  delivered:     'Geleverd',
-  cancelled:     'Geannuleerd',
+  pending:          'In behandeling',
+  confirmed:        'Bevestigd',
+  controle_vereist: 'Controle vereist',
+  goedgekeurd:      'Goedgekeurd',
+  afgekeurd:        'Afgekeurd',
+  in_production:    'In productie',
+  shipped:          'Verzonden',
+  delivered:        'Geleverd',
+  cancelled:        'Geannuleerd',
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:       'bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]',
-  confirmed:     'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]',
-  in_production: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]',
-  shipped:       'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]',
-  delivered:     'bg-[#F0F4F1] text-lx-cta border-[#A7C4B0]',
-  cancelled:     'bg-red-50 text-red-600 border-red-200',
+  pending:          'bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]',
+  confirmed:        'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]',
+  controle_vereist: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]',
+  goedgekeurd:      'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]',
+  afgekeurd:        'bg-red-50 text-red-600 border-red-200',
+  in_production:    'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]',
+  shipped:          'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]',
+  delivered:        'bg-[#F0F4F1] text-lx-cta border-[#A7C4B0]',
+  cancelled:        'bg-red-50 text-red-600 border-red-200',
 }
 
 function formatDate(iso: string) {
@@ -54,6 +61,7 @@ export async function BestellingenContent({ page }: { page: string }) {
       total_price,
       status,
       notes,
+      afkeur_reden,
       created_at,
       configurations (
         id,
@@ -61,6 +69,10 @@ export async function BestellingenContent({ page }: { page: string }) {
         width,
         height,
         selected_options
+      ),
+      order_drawings (
+        file_url,
+        file_name
       )
     `, { count: 'exact' })
     .eq('user_id', user.id)
@@ -128,6 +140,8 @@ export async function BestellingenContent({ page }: { page: string }) {
             const priceSubLabel = order.quantity > 1
               ? `€${unitPrice.toLocaleString('nl-NL')} p.st.`
               : 'Bruto ex. BTW'
+
+            const drawings = (Array.isArray(order.order_drawings) ? order.order_drawings : []) as { file_url: string; file_name: string }[]
 
             return (
               <div key={order.id} className="hover:bg-lx-panel-bg/50 transition-colors">
@@ -234,6 +248,32 @@ export async function BestellingenContent({ page }: { page: string }) {
                     </div>
                   </div>
                 </div>
+
+                {/* Goedkeuring sectie — alleen bij controle_vereist */}
+                {order.status === 'controle_vereist' && drawings.length > 0 && (
+                  <div className="px-4 sm:px-5 pb-4">
+                    <OrderApprovalButtons
+                      orderId={order.id}
+                      orderNumber={order.order_number}
+                      drawings={drawings}
+                    />
+                  </div>
+                )}
+
+                {/* Afkeurreden — alleen bij afgekeurd */}
+                {order.status === 'afgekeurd' && order.afkeur_reden && (
+                  <div className="px-4 sm:px-5 pb-4">
+                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-shrink-0">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                      <div>
+                        <p className="text-[11.5px] font-bold text-red-700 mb-0.5">Reden van afkeuring</p>
+                        <p className="text-[12px] text-red-600 leading-relaxed">{order.afkeur_reden}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
               </div>
             )

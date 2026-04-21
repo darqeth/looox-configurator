@@ -103,7 +103,7 @@ export function OrderDrawingsUploadModal({
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
             </div>
-            <p className="text-[13px] font-semibold text-lx-text-primary">Klik om PDF's te selecteren</p>
+            <p className="text-[13px] font-semibold text-lx-text-primary">Klik om PDF&apos;s te selecteren</p>
             <p className="text-[11.5px] text-lx-text-secondary mt-1">Meerdere bestanden mogelijk</p>
           </button>
           <input ref={inputRef} type="file" accept=".pdf,application/pdf" multiple className="hidden" onChange={handleFileChange} />

@@ -91,7 +91,7 @@ export async function ConfiguratiesContent({
     // Haal config-aantallen op per teamlid
     const countResults = await Promise.all(
       memberUserIds.map(uid =>
-        supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', uid)
+        supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'saved')
       )
     )
 

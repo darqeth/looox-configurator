@@ -42,24 +42,42 @@ export async function signIn(email: string, password: string) {
 
     if (!existingMember) {
       const admin = createAdminClient()
-      const { data: newCompany } = await admin
-        .from('companies')
-        .insert({ name: profile.company })
-        .select('id')
-        .single()
 
-      if (newCompany) {
+      // Prefer existing company_id on the profile to avoid duplicate companies
+      let companyId = profile.company_id ?? null
+
+      if (!companyId) {
+        // Lookup by name first (case-insensitive) to stay idempotent under retries
+        const { data: existingCompany } = await admin
+          .from('companies')
+          .select('id')
+          .ilike('name', profile.company)
+          .maybeSingle()
+
+        if (existingCompany) {
+          companyId = existingCompany.id
+        } else {
+          const { data: newCompany } = await admin
+            .from('companies')
+            .insert({ name: profile.company })
+            .select('id')
+            .single()
+          companyId = newCompany?.id ?? null
+        }
+      }
+
+      if (companyId) {
         await Promise.all([
-          admin.from('profiles').update({ company_id: newCompany.id }).eq('id', user.id),
-          admin.from('company_members').insert({
-            company_id: newCompany.id,
+          admin.from('profiles').update({ company_id: companyId }).eq('id', user.id),
+          admin.from('company_members').upsert({
+            company_id: companyId,
             user_id: user.id,
             role: 'manager',
             can_order: true,
             can_see_purchase_prices: true,
             can_configure: true,
             own_configs_only: false,
-          }),
+          }, { onConflict: 'user_id' }),
         ])
       }
     }

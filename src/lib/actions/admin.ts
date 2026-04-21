@@ -79,7 +79,11 @@ export async function linkUserToCompany(
 
   // Haal bedrijfsnaam op om profiles.company synchroon te houden
   const { data: company } = await admin.from('companies').select('name').eq('id', companyId).single()
-  await admin.from('profiles').update({ company_id: companyId, ...(company ? { company: company.name } : {}) }).eq('id', userId)
+  const { error: profileError } = await admin
+    .from('profiles')
+    .update({ company_id: companyId, ...(company ? { company: company.name } : {}) })
+    .eq('id', userId)
+  if (profileError) return { success: false, error: profileError.message }
 
   const { data: existingMember } = await admin
     .from('company_members')
@@ -88,9 +92,16 @@ export async function linkUserToCompany(
     .maybeSingle()
 
   if (existingMember) {
-    await admin.from('company_members').update({ company_id: companyId, ...perms }).eq('user_id', userId)
+    const { error: updateError } = await admin
+      .from('company_members')
+      .update({ company_id: companyId, ...perms })
+      .eq('user_id', userId)
+    if (updateError) return { success: false, error: updateError.message }
   } else {
-    await admin.from('company_members').insert({ company_id: companyId, user_id: userId, ...perms })
+    const { error: insertError } = await admin
+      .from('company_members')
+      .insert({ company_id: companyId, user_id: userId, ...perms })
+    if (insertError) return { success: false, error: insertError.message }
   }
 
   revalidatePath('/admin/gebruikers')
@@ -244,8 +255,14 @@ export async function setControleVereist(
 
   if (!order) return { success: false, error: 'Bestelling niet gevonden' }
 
-  await supabase.from('order_drawings').delete().eq('order_id', orderId)
+  // Fetch existing drawing IDs before inserting new ones
+  const { data: existingDrawings } = await supabase
+    .from('order_drawings')
+    .select('id')
+    .eq('order_id', orderId)
+  const existingIds = (existingDrawings ?? []).map(d => d.id)
 
+  // Insert new drawings first — only delete old ones after all writes succeed
   if (drawings.length > 0) {
     const { error: insertError } = await supabase.from('order_drawings').insert(
       drawings.map(d => ({ order_id: orderId, file_url: d.file_url, file_name: d.file_name }))
@@ -258,6 +275,11 @@ export async function setControleVereist(
     .update({ status: 'controle_vereist', afkeur_reden: null })
     .eq('id', orderId)
   if (error) return { success: false, error: error.message }
+
+  // Safe to delete old drawings now that new ones and status update are committed
+  if (existingIds.length > 0) {
+    await supabase.from('order_drawings').delete().in('id', existingIds)
+  }
 
   revalidatePath('/admin/bestellingen')
   revalidatePath('/bestellingen')

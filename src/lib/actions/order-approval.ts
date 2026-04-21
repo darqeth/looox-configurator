@@ -23,11 +23,13 @@ export async function approveOrder(
   if (order.status !== 'controle_vereist') return { success: false, error: 'Bestelling staat niet op controle' }
 
   const admin = createAdminClient()
-  const { error } = await admin
+  const { error, count } = await admin
     .from('orders')
-    .update({ status: 'goedgekeurd' })
+    .update({ status: 'goedgekeurd' }, { count: 'exact' })
     .eq('id', orderId)
+    .eq('status', 'controle_vereist')
   if (error) return { success: false, error: error.message }
+  if (count === 0) return { success: false, error: 'Status is al gewijzigd door een andere actie' }
 
   revalidatePath('/bestellingen')
   revalidatePath('/admin/bestellingen')
@@ -69,11 +71,13 @@ export async function rejectOrder(
   if (order.status !== 'controle_vereist') return { success: false, error: 'Bestelling staat niet op controle' }
 
   const admin = createAdminClient()
-  const { error } = await admin
+  const { error, count } = await admin
     .from('orders')
-    .update({ status: 'afgekeurd', afkeur_reden: reden })
+    .update({ status: 'afgekeurd', afkeur_reden: reden }, { count: 'exact' })
     .eq('id', orderId)
+    .eq('status', 'controle_vereist')
   if (error) return { success: false, error: error.message }
+  if (count === 0) return { success: false, error: 'Status is al gewijzigd door een andere actie' }
 
   revalidatePath('/bestellingen')
   revalidatePath('/admin/bestellingen')

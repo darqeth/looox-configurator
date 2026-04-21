@@ -51,7 +51,9 @@ export async function fetchSidebarData(
     { data: streakData },
   ] = await Promise.all([
     supabase.from('configurations').select('id', { count: 'exact', head: true }).in('user_id', companyUserIds).eq('status', 'saved'),
-    supabase.rpc('count_company_orders', { p_user_id: userId }),
+    isSubAdmin && !isAdmin
+      ? Promise.resolve({ data: 0, error: null })
+      : supabase.rpc('count_company_orders', { p_user_id: userId }),
     (isAdmin || isSubAdmin)
       ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending')
       : Promise.resolve({ count: 0, data: null, error: null }),

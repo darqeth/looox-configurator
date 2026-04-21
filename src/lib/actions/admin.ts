@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isAdmin } from '@/lib/company-utils'
+import { isAdmin, isAdminOrSubAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { sendApprovalEmail, sendOrderStatusEmail, sendControleVereistEmail } from '@/lib/email'
@@ -203,7 +203,7 @@ export async function updateOrderStatus(
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+  if (!user || !await isAdminOrSubAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
 
   // Haal order op voor e-mail (voor de update, zodat we user_id hebben)
   const { data: order } = await supabase
@@ -212,7 +212,8 @@ export async function updateOrderStatus(
     .eq('id', orderId)
     .single()
 
-  const { error } = await supabase.from('orders').update({ status }).eq('id', orderId)
+  const admin = createAdminClient()
+  const { error } = await admin.from('orders').update({ status }).eq('id', orderId)
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/admin/bestellingen')
@@ -245,9 +246,11 @@ export async function setControleVereist(
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+  if (!user || !await isAdminOrSubAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
 
-  const { data: order } = await supabase
+  const adminClient = createAdminClient()
+
+  const { data: order } = await adminClient
     .from('orders')
     .select('order_number, user_id')
     .eq('id', orderId)
@@ -256,7 +259,7 @@ export async function setControleVereist(
   if (!order) return { success: false, error: 'Bestelling niet gevonden' }
 
   // Fetch existing drawing IDs before inserting new ones
-  const { data: existingDrawings } = await supabase
+  const { data: existingDrawings } = await adminClient
     .from('order_drawings')
     .select('id')
     .eq('order_id', orderId)
@@ -264,13 +267,13 @@ export async function setControleVereist(
 
   // Insert new drawings first — only delete old ones after all writes succeed
   if (drawings.length > 0) {
-    const { error: insertError } = await supabase.from('order_drawings').insert(
+    const { error: insertError } = await adminClient.from('order_drawings').insert(
       drawings.map(d => ({ order_id: orderId, file_url: d.file_url, file_name: d.file_name }))
     )
     if (insertError) return { success: false, error: insertError.message }
   }
 
-  const { error } = await supabase
+  const { error } = await adminClient
     .from('orders')
     .update({ status: 'controle_vereist', afkeur_reden: null })
     .eq('id', orderId)
@@ -278,7 +281,7 @@ export async function setControleVereist(
 
   // Safe to delete old drawings now that new ones and status update are committed
   if (existingIds.length > 0) {
-    await supabase.from('order_drawings').delete().in('id', existingIds)
+    await adminClient.from('order_drawings').delete().in('id', existingIds)
   }
 
   revalidatePath('/admin/bestellingen')

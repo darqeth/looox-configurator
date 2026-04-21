@@ -12,8 +12,14 @@ export default function SearchButton({ variant = 'default' }: { variant?: 'defau
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
+  const [shortcut, setShortcut] = useState('⌘K')
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+    setShortcut(isMac ? '⌘K' : 'Ctrl+K')
+  }, [])
 
   useEffect(() => {
     if (open) { inputRef.current?.focus(); setQuery(''); setResults(null) }
@@ -60,7 +66,7 @@ export default function SearchButton({ variant = 'default' }: { variant?: 'defau
         >
           {searchIcon}
           <span>Zoeken</span>
-          <kbd className="ml-auto text-[10px] bg-white/8 text-white/38 px-1.5 py-px rounded font-mono leading-tight">⌘K</kbd>
+          <kbd className="ml-auto text-[10px] bg-white/8 text-white/38 px-1.5 py-px rounded font-mono leading-tight">{shortcut}</kbd>
         </button>
       ) : (
         <button

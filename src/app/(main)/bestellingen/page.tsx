@@ -4,9 +4,9 @@ import { BestellingenContent, BestellingenContentSkeleton } from './bestellingen
 export default async function BestellingenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; view?: string }>
 }) {
-  const { page } = await searchParams
+  const { page, view } = await searchParams
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 overflow-x-hidden">
@@ -19,7 +19,7 @@ export default async function BestellingenPage({
 
       {/* Lijst — streamt zodra DB query klaar is */}
       <Suspense fallback={<BestellingenContentSkeleton />}>
-        <BestellingenContent page={page ?? '1'} />
+        <BestellingenContent page={page ?? '1'} view={view ?? ''} />
       </Suspense>
 
     </div>

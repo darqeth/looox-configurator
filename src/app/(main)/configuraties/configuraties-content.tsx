@@ -133,7 +133,7 @@ export async function ConfiguratiesContent({
 
   // Eigen config-count voor member tab header
   const ownCount = isManager
-    ? (await supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id)).count ?? 0
+    ? (await supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'saved')).count ?? 0
     : 0
 
   // Geef aan wie er bekeken wordt (voor lege-state tekst)
@@ -379,14 +379,19 @@ export async function ConfiguratiesContent({
 export function ConfiguratiesContentSkeleton() {
   return (
     <div className="animate-pulse">
-      {/* Tabs skeleton */}
-      <div className="flex gap-1 mb-4 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
-        {[72, 100, 72].map((w, i) => (
-          <div key={i} className="h-7 rounded-lg bg-lx-divider" style={{ width: w }} />
-        ))}
+      {/* Member tabs placeholder */}
+      <div className="flex gap-1 mb-3 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
+        <div className="h-7 w-32 rounded-lg bg-lx-divider" />
+        <div className="h-7 w-20 rounded-lg bg-lx-divider" />
       </div>
 
-      {/* Lijst skeleton */}
+      {/* Product tabs (Spiegels / Alle) */}
+      <div className="flex gap-1 mb-4 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
+        <div className="h-7 w-20 rounded-lg bg-lx-text-primary/10" />
+        <div className="h-7 w-14 rounded-lg bg-lx-divider" />
+      </div>
+
+      {/* Lijst */}
       <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
         <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
           <div className="w-9 flex-shrink-0" />

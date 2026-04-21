@@ -42,7 +42,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export async function BestellingenContent({ page }: { page: string }) {
+export async function BestellingenContent({ page, view }: { page: string; view: string }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -50,6 +50,56 @@ export async function BestellingenContent({ page }: { page: string }) {
   const currentPage = Math.max(1, parseInt(page, 10) || 1)
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
+
+  // Haal rol op
+  const { data: memberPerms } = await supabase
+    .from('company_members')
+    .select('role, company_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const isManager = !memberPerms || memberPerms.role === 'manager'
+
+  // Teamleden ophalen voor managers
+  type TeamMember = { userId: string; name: string; count: number }
+  let teamMembers: TeamMember[] = []
+
+  if (isManager && memberPerms?.company_id) {
+    const { data: rawMembers } = await supabase
+      .from('company_members')
+      .select('user_id, profiles!inner(full_name)')
+      .eq('company_id', memberPerms.company_id)
+      .neq('user_id', user.id)
+
+    const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
+
+    const countResults = await Promise.all(
+      memberUserIds.map(uid =>
+        supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', uid)
+      )
+    )
+
+    teamMembers = (rawMembers ?? []).map((m, i) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const profile = Array.isArray(m.profiles) ? (m.profiles as any[])[0] : m.profiles
+      return {
+        userId: m.user_id as string,
+        name: (profile?.full_name as string | null) ?? 'Onbekend',
+        count: countResults[i]?.count ?? 0,
+      }
+    })
+  }
+
+  const validView = view && teamMembers.some(m => m.userId === view)
+  const viewUserId = isManager && validView ? view : user.id
+  const viewingName = validView
+    ? teamMembers.find(m => m.userId === view)?.name.split(' ')[0] ?? 'collega'
+    : null
+
+  // Eigen order-count voor tab header
+  const ownCount = isManager
+    ? (await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', user.id)).count ?? 0
+    : 0
 
   const { data: orders, count } = await supabase
     .from('orders')
@@ -75,38 +125,90 @@ export async function BestellingenContent({ page }: { page: string }) {
         file_name
       )
     `, { count: 'exact' })
-    .eq('user_id', user.id)
+    .eq('user_id', viewUserId)
     .order('created_at', { ascending: false })
     .range(from, to)
 
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
 
+  const memberTabs = isManager && teamMembers.length > 0 ? (
+    <div className="flex flex-wrap gap-1 mb-3 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
+      <a
+        href="/bestellingen"
+        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors ${
+          !validView
+            ? 'bg-lx-text-primary text-white'
+            : 'text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg'
+        }`}
+      >
+        Mijn bestellingen
+        {ownCount > 0 && (
+          <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-full ${
+            !validView ? 'bg-white/20 text-white' : 'bg-lx-divider text-lx-text-secondary'
+          }`}>{ownCount}</span>
+        )}
+      </a>
+      {teamMembers.map((m) => {
+        const isActive = validView && view === m.userId
+        const firstName = m.name.split(' ')[0]
+        return (
+          <a
+            key={m.userId}
+            href={`/bestellingen?view=${m.userId}`}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors ${
+              isActive
+                ? 'bg-lx-text-primary text-white'
+                : 'text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg'
+            }`}
+          >
+            {firstName}
+            {m.count > 0 && (
+              <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-full ${
+                isActive ? 'bg-white/20 text-white' : 'bg-lx-divider text-lx-text-secondary'
+              }`}>{m.count}</span>
+            )}
+          </a>
+        )
+      })}
+    </div>
+  ) : null
+
   if (!orders || orders.length === 0) {
     return (
-      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm px-5 py-16 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-lx-panel-bg flex items-center justify-center mx-auto mb-4">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lx-text-secondary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 0 1-8 0"/>
-          </svg>
+      <>
+        {memberTabs}
+        <div className="bg-white rounded-[18px] border border-black/6 shadow-sm px-5 py-16 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-lx-panel-bg flex items-center justify-center mx-auto mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--lx-text-secondary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+          </div>
+          <p className="text-[14px] font-semibold text-lx-text-primary mb-1">
+            {viewingName ? `${viewingName} heeft nog geen bestellingen` : 'Nog geen bestellingen'}
+          </p>
+          {!viewingName && (
+            <>
+              <p className="text-[13px] text-lx-text-secondary mb-5 max-w-sm mx-auto leading-relaxed">
+                Configureer een spiegel en vraag een offerte aan. Je bestellingen verschijnen hier.
+              </p>
+              <Link
+                href="/configurator/nieuw"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors"
+              >
+                + Nieuwe spiegel configureren
+              </Link>
+            </>
+          )}
         </div>
-        <p className="text-[14px] font-semibold text-lx-text-primary mb-1">Nog geen bestellingen</p>
-        <p className="text-[13px] text-lx-text-secondary mb-5 max-w-sm mx-auto leading-relaxed">
-          Configureer een spiegel en vraag een offerte aan. Je bestellingen verschijnen hier.
-        </p>
-        <Link
-          href="/configurator/nieuw"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors"
-        >
-          + Nieuwe spiegel configureren
-        </Link>
-      </div>
+      </>
     )
   }
 
   return (
     <>
+      {memberTabs}
       <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
 
         {/* Column headers — tablet+ only */}
@@ -286,7 +388,7 @@ export async function BestellingenContent({ page }: { page: string }) {
         {totalPages > 1 ? (
           <div className="flex items-center gap-1">
             {currentPage > 1 && (
-              <Link href={`/bestellingen?page=${currentPage - 1}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">
+              <Link href={`/bestellingen?${[validView ? `view=${view}` : '', `page=${currentPage - 1}`].filter(Boolean).join('&')}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">
                 ← Vorige
               </Link>
             )}
@@ -294,7 +396,7 @@ export async function BestellingenContent({ page }: { page: string }) {
               {currentPage} / {totalPages}
             </span>
             {currentPage < totalPages && (
-              <Link href={`/bestellingen?page=${currentPage + 1}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">
+              <Link href={`/bestellingen?${[validView ? `view=${view}` : '', `page=${currentPage + 1}`].filter(Boolean).join('&')}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">
                 Volgende →
               </Link>
             )}
@@ -315,14 +417,21 @@ export async function BestellingenContent({ page }: { page: string }) {
 export function BestellingenContentSkeleton() {
   return (
     <div className="animate-pulse">
+      {/* Member tabs placeholder */}
+      <div className="flex gap-1 mb-3 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
+        <div className="h-7 w-32 rounded-lg bg-lx-divider" />
+        <div className="h-7 w-20 rounded-lg bg-lx-divider" />
+      </div>
+
+      {/* Tabel */}
       <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
-        <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
-          <div className="w-9 flex-shrink-0" />
-          <div className="w-[140px] h-2.5 bg-lx-divider rounded flex-shrink-0" />
-          <div className="flex-1 h-2.5 bg-lx-divider rounded" />
-          <div className="w-[92px] h-2.5 bg-lx-divider rounded flex-shrink-0" />
-          <div className="w-[124px] h-2.5 bg-lx-divider rounded flex-shrink-0" />
-          <div className="w-[60px] flex-shrink-0" />
+        <div className="hidden sm:grid grid-cols-[36px_140px_1fr_92px_124px_60px] gap-4 items-center px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
+          <div />
+          <div className="h-2.5 bg-lx-divider rounded" />
+          <div className="h-2.5 bg-lx-divider rounded" />
+          <div className="h-2.5 bg-lx-divider rounded" />
+          <div className="h-2.5 bg-lx-divider rounded" />
+          <div />
         </div>
         <div className="divide-y divide-lx-divider">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -350,6 +459,12 @@ export function BestellingenContentSkeleton() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-5 flex items-center justify-between gap-4">
+        <div />
+        <div className="h-9 w-36 rounded-xl bg-lx-divider" />
       </div>
     </div>
   )

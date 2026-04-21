@@ -6,6 +6,7 @@ import {
   GLAS_PRIJS_M2,
   VASTE_TOESLAG,
   LED_PRIJS_PER_METER,
+  ZANDSTRAAL_PRIJS_PER_METER,
   HEATING_MATRIX,
   ROND_DIAMETERS,
   ROND_BASIS_GLAS,
@@ -45,54 +46,40 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 // ─── Rechthoek ───────────────────────────────────────────────────────────────
 
-const DIRECT_POSITIONS = [
-  { key: 'geen',          label: 'Geen' },
-  { key: 'boven',         label: 'Boven' },
-  { key: 'boven-beneden', label: 'Boven + Beneden' },
-  { key: 'links-rechts',  label: 'Links + Rechts' },
-  { key: 'rondom',        label: 'Rondom' },
-]
-
 function RechthoekTab() {
   return (
     <div className="space-y-5">
       {/* Glasprijs per m² */}
       <SectionCard
         title="Glasprijs per m²"
-        subtitle="Prijs varieert per glaskleur en directe lichtpositie (zandstraalbewerking). Indirecte verlichting heeft geen invloed op de glasprijs."
+        subtitle="Vaste prijs per glaskleur, ongeacht verlichtingskeuze. Zandstraalbewerking bij directe verlichting wordt apart berekend."
       >
-        <div className="overflow-x-auto -mx-1">
-          <table className="w-full text-[12.5px]">
-            <thead>
-              <tr>
-                <th className="text-left pb-2 pr-4 text-lx-text-secondary font-medium">Glaskleur</th>
-                {DIRECT_POSITIONS.map(p => (
-                  <th key={p.key} className="text-right pb-2 px-2 text-lx-text-secondary font-medium whitespace-nowrap">{p.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {GLAS_KLEUREN.map((g, gi) => (
-                <tr key={g.id} className={gi < GLAS_KLEUREN.length - 1 ? 'border-b border-lx-divider' : ''}>
-                  <td className="py-2.5 pr-4 font-medium text-lx-text-primary">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} />
-                      {g.name}
-                    </div>
-                  </td>
-                  {DIRECT_POSITIONS.map(p => (
-                    <td key={p.key} className="py-2.5 px-2 text-right font-semibold text-lx-text-primary">
-                      {fmt(GLAS_PRIJS_M2[g.id][p.key])}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-0">
+          {GLAS_KLEUREN.map((g, gi) => (
+            <div key={g.id} className={`flex items-center justify-between py-2.5 ${gi < GLAS_KLEUREN.length - 1 ? 'border-b border-lx-divider' : ''}`}>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: g.color }} />
+                <span className="text-[12.5px] text-lx-text-primary font-medium">{g.name}</span>
+              </div>
+              <span className="text-[12.5px] font-semibold text-lx-text-primary">{fmt(GLAS_PRIJS_M2[g.id])}/m²</span>
+            </div>
+          ))}
         </div>
         <div className="mt-4 pt-4 border-t border-lx-divider flex items-center justify-between">
           <span className="text-[12.5px] text-lx-text-secondary">Vaste productiekosten (per spiegel)</span>
           <span className="text-[12.5px] font-semibold text-lx-text-primary">{fmt(VASTE_TOESLAG)}</span>
+        </div>
+      </SectionCard>
+
+      {/* Zandstraal */}
+      <SectionCard
+        title="Zandstraalbaan"
+        subtitle="Gezandstraalde baan in het glas bij directe verlichting, zodat het licht zichtbaar is. Zelfde marges als direct LED (10 cm per kant)."
+      >
+        <div className="space-y-0">
+          <InfoRow label="Prijs per strekkende meter" value={`${fmt(ZANDSTRAAL_PRIJS_PER_METER)}/m`} />
+          <InfoRow label="Marge per kant" value="10 cm (zelfde als direct LED)" />
+          <InfoRow label="Van toepassing bij" value="Directe verlichting (niet bij indirect)" />
         </div>
       </SectionCard>
 

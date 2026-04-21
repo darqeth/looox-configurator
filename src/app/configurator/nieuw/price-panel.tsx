@@ -21,6 +21,7 @@ import {
   CONTROLS_FOR_TYPE,
   ROND_BASIS_GLAS,
   ROND_FRAME_PRIJZEN,
+  ZANDSTRAAL_PRIJS_PER_METER,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 
@@ -555,13 +556,14 @@ export default function PricePanel({
 
   if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     // Glaskosten
-    const glasKosten = calcGlasKosten(width, height, glasKleur, directLight.position)
+    const glasKosten = calcGlasKosten(width, height, glasKleur)
     const glasNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? 'Helder'
     const shapePrefix = shape === 'rounded-rect' ? 'Afgerond' : shape === 'ovaal' ? 'Ovaal' : shape === 'arc' ? 'Boog' : 'Glas'
     lineItems.push({ label: `${shapePrefix} ${width}×${height} cm · ${glasNaam}`, price: Math.round(glasKosten) + 105 })
 
     if (directLight.position !== 'geen' && directLight.type) {
       const m = calcDirectLEDMeters(directLight.position, width, height)
+      lineItems.push({ label: `Zandstraalbaan · ${m.toFixed(2)}m`, price: Math.round(m * ZANDSTRAAL_PRIJS_PER_METER) })
       lineItems.push({ label: `Direct LED · ${m.toFixed(2)}m`, price: Math.round(m * 99) })
       if (directLight.control) {
         const cp = CONTROL_PRICES[directLight.control] ?? 0

@@ -108,35 +108,18 @@ export const GLAS_KLEUREN: { id: GlasKleur; name: string; color: string }[] = [
 ]
 
 // ─── Rechthoek glasprijs per m² ───────────────────────────────────────────────
-// Prijs is afhankelijk van glaskleur én directe lichtpositie (zandstraalbewerking).
-// Indirecte verlichting heeft géén invloed op de glasprijs.
+// Vaste prijs per glaskleur, ongeacht verlichtingskeuze.
+// Zandstraalbewerking (bij directe verlichting) wordt apart berekend per strekkende meter.
 
-export const GLAS_PRIJS_M2: Record<GlasKleur, Record<string, number>> = {
-  'helder': {
-    'geen':          175,
-    'boven':         215,
-    'boven-beneden': 255,
-    'links-rechts':  255,
-    'rondom':        330,
-  },
-  'smoke-zwart': {
-    'geen':          236,
-    'boven':         288,
-    'boven-beneden': 341,
-    'links-rechts':  341,
-    'rondom':        446,
-  },
-  'smoke-brons': {
-    'geen':          236,
-    'boven':         288,
-    'boven-beneden': 341,
-    'links-rechts':  341,
-    'rondom':        446,
-  },
+export const GLAS_PRIJS_M2: Record<GlasKleur, number> = {
+  'helder':      175,
+  'smoke-zwart': 236,
+  'smoke-brons': 236,
 }
 
-export const VASTE_TOESLAG = 105       // vaste productiekosten per spiegel
-export const LED_PRIJS_PER_METER = 99  // €/strekm voor alle lichttypen
+export const VASTE_TOESLAG             = 105  // vaste productiekosten per spiegel
+export const LED_PRIJS_PER_METER       = 99   // €/strekm voor alle lichttypen
+export const ZANDSTRAAL_PRIJS_PER_METER = 50  // €/strekm zandstraalbaan bij directe verlichting
 
 // ─── LED-meter berekeningen ───────────────────────────────────────────────────
 // Direct: 10cm marge aan elke kant (20cm totaal per richting)
@@ -227,11 +210,9 @@ export function calcGlasKosten(
   widthCm: number,
   heightCm: number,
   glasKleur: GlasKleur,
-  directPosition: string,
 ): number {
   const areaM2 = (widthCm / 100) * (heightCm / 100)
-  const prijs = GLAS_PRIJS_M2[glasKleur]?.[directPosition] ?? GLAS_PRIJS_M2[glasKleur]['geen']
-  return areaM2 * prijs
+  return areaM2 * (GLAS_PRIJS_M2[glasKleur] ?? 175)
 }
 
 // ─── Extra opties ─────────────────────────────────────────────────────────────
@@ -363,7 +344,7 @@ export function calcBasePrice(
   directPosition: string = 'geen',
 ): number {
   if (shape === 'rechthoek' || shape === 'op-aanvraag' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
-    return Math.round(calcGlasKosten(width, height, glasKleur, directPosition) + VASTE_TOESLAG)
+    return Math.round(calcGlasKosten(width, height, glasKleur) + VASTE_TOESLAG)
   }
   if (shape === 'rond' && diameter) {
     return (ROND_BASIS_GLAS[diameter] ?? 92) + VASTE_TOESLAG
@@ -394,12 +375,14 @@ export function calcTotalPrice(state: {
 
   // ── Rechthoek / Afgeronde hoeken / Ovaal / Arc: zelfde glasprijs + LED ─────
   if (state.shape === 'rechthoek' || state.shape === 'rounded-rect' || state.shape === 'ovaal' || state.shape === 'arc') {
-    const glasKosten = calcGlasKosten(state.width, state.height, glasKleur, state.directPosition)
+    const glasKosten = calcGlasKosten(state.width, state.height, glasKleur)
     let price = glasKosten + VASTE_TOESLAG
 
-    // Direct LED (alleen als positie + type gekozen)
+    // Direct LED + zandstraalbaan (alleen als positie + type gekozen)
     if (state.directPosition !== 'geen' && state.directType) {
-      price += calcDirectLEDMeters(state.directPosition, state.width, state.height) * LED_PRIJS_PER_METER
+      const directM = calcDirectLEDMeters(state.directPosition, state.width, state.height)
+      price += directM * LED_PRIJS_PER_METER
+      price += directM * ZANDSTRAAL_PRIJS_PER_METER
       if (state.directControl) price += CONTROL_PRICES[state.directControl] ?? 0
     }
 

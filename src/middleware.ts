@@ -32,7 +32,9 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   const isAuthPage =
-    pathname.startsWith('/login') || pathname.startsWith('/register')
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/invite/')
   const isPendingPage = pathname === '/pending'
 
   // Not logged in → stuur naar login

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { sendOrderStatusEmail, sendAfgekeurdEmail } from '@/lib/email'
 
@@ -21,7 +22,8 @@ export async function approveOrder(
   if (order.user_id !== user.id) return { success: false, error: 'Geen toegang' }
   if (order.status !== 'controle_vereist') return { success: false, error: 'Bestelling staat niet op controle' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('orders')
     .update({ status: 'goedgekeurd' })
     .eq('id', orderId)
@@ -66,7 +68,8 @@ export async function rejectOrder(
   if (order.user_id !== user.id) return { success: false, error: 'Geen toegang' }
   if (order.status !== 'controle_vereist') return { success: false, error: 'Bestelling staat niet op controle' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('orders')
     .update({ status: 'afgekeurd', afkeur_reden: reden })
     .eq('id', orderId)

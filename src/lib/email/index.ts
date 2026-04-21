@@ -162,7 +162,7 @@ export async function sendInviteEmail({
   companyName: string
   token: string
 }) {
-  const link = `${SITE_URL}/registreer?invite=${token}`
+  const link = `${SITE_URL}/invite/${token}`
 
   await getResend().emails.send({
     from: FROM,

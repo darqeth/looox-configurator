@@ -12,7 +12,7 @@ type Milestone = {
 
 const STORAGE_KEY = 'lx_celebrated_milestones'
 
-export default function MilestoneCelebration({ milestones }: { milestones: Milestone[] }) {
+export default function MilestoneCelebration({ milestones, onDone, skipStorage }: { milestones: Milestone[]; onDone?: () => void; skipStorage?: boolean }) {
   const [celebrating, setCelebrating] = useState<Milestone | null>(null)
   const [queue, setQueue] = useState<Milestone[]>([])
   const launched = useRef(false)
@@ -21,21 +21,27 @@ export default function MilestoneCelebration({ milestones }: { milestones: Miles
     if (launched.current) return
     launched.current = true
 
-    let seen: string[] = []
-    try {
-      seen = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-    } catch { /* ignore parse errors */ }
-    const newlyDone = milestones.filter(m => m.done && !seen.includes(m.id))
+    let toShow: Milestone[]
 
-    if (newlyDone.length === 0) return
+    if (skipStorage) {
+      toShow = milestones.filter(m => m.done)
+    } else {
+      let seen: string[] = []
+      try {
+        seen = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+      } catch { /* ignore parse errors */ }
+      toShow = milestones.filter(m => m.done && !seen.includes(m.id))
 
-    // Sla ze allemaal direct op — zodat ze niet nogmaals getoond worden
-    const updated = [...new Set([...seen, ...newlyDone.map(m => m.id)])]
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)) } catch { /* ignore quota errors */ }
+      if (toShow.length > 0) {
+        const updated = [...new Set([...seen, ...toShow.map(m => m.id)])]
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)) } catch { /* ignore quota errors */ }
+      }
+    }
 
-    setQueue(newlyDone)
-    setCelebrating(newlyDone[0])
-  }, [milestones])
+    if (toShow.length === 0) return
+    setQueue(toShow)
+    setCelebrating(toShow[0])
+  }, [milestones, skipStorage])
 
   useEffect(() => {
     if (!celebrating) return
@@ -76,6 +82,7 @@ export default function MilestoneCelebration({ milestones }: { milestones: Miles
     } else {
       setCelebrating(null)
       setQueue([])
+      onDone?.()
     }
   }
 

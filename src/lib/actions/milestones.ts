@@ -138,10 +138,16 @@ export async function deleteDiscountCode(id: string) {
 
 // ─── Dealer: check & award milestones ────────────────────────────────────────
 
-export async function checkAndAwardMilestones() {
+export type AwardedMilestone = {
+  id: string
+  title: string
+  perk: string
+}
+
+export async function checkAndAwardMilestones(): Promise<AwardedMilestone[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return []
 
   // company_members is bron van waarheid — profile.company_id kan stale zijn na verwijdering
   const { data: memberRow } = await supabase.from('company_members').select('company_id').eq('user_id', user.id).single()
@@ -170,9 +176,10 @@ export async function checkAndAwardMilestones() {
     supabase.from('configurations').select('selected_options').in('user_id', companyUserIds),
   ])
 
-  if (!milestones) return
+  if (!milestones) return []
 
   const achievedIds = new Set((alreadyAchieved ?? []).map(a => a.milestone_id))
+  const newlyAwarded: AwardedMilestone[] = []
   const totalConfigs = Number(configCount ?? 0)
   const totalOrders = Number(orderCount ?? 0)
   const totalRevenue = Number(revenueSum ?? 0)
@@ -215,9 +222,20 @@ export async function checkAndAwardMilestones() {
       milestone_id: m.id,
       discount_code: discountCode,
     })
+
+    newlyAwarded.push({
+      id: m.id,
+      title: m.title,
+      perk: m.benefit_description ?? (
+        m.benefit_type === 'discount_pct' ? `${m.benefit_value}% korting`
+        : m.benefit_type === 'discount_fixed' ? `€${m.benefit_value} korting`
+        : 'Voordeel beschikbaar'
+      ),
+    })
   }
 
   revalidatePath('/looox-circle')
+  return newlyAwarded
 }
 
 // ─── Dealer: custom voordeel claimen (markeer als gezien) ────────────────────

@@ -12,7 +12,8 @@ import StepSamenvatting from './step-samenvatting'
 import PricePanel from './price-panel'
 import { saveConfiguration, updateConfiguration } from '@/lib/actions/configurator'
 import { placeOrder } from '@/lib/actions/orders'
-import { checkAndAwardMilestones } from '@/lib/actions/milestones'
+import { checkAndAwardMilestones, type AwardedMilestone } from '@/lib/actions/milestones'
+import MilestoneCelebration from '@/app/(main)/looox-circle/milestone-celebration'
 import { createClient } from '@/lib/supabase/client'
 
 interface InitialConfig {
@@ -113,6 +114,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; orderId: string } | null>(null)
+  const [newMilestones, setNewMilestones] = useState<AwardedMilestone[]>([])
 
   const handleShapeSelect = useCallback((s: ShapeSlug) => {
     setShape(s)
@@ -188,8 +190,12 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
         await saveConfiguration(payload)
       }
       setSaved(true)
-      await checkAndAwardMilestones()
-      router.push('/configuraties')
+      const awarded = await checkAndAwardMilestones()
+      if (awarded.length > 0) {
+        setNewMilestones(awarded)
+      } else {
+        router.push('/configuraties')
+      }
     } catch (e) {
       console.error(e)
       setSaving(false)
@@ -221,7 +227,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
         discountValue: discount?.value ?? null,
         discountUseType: discount?.useType ?? null,
       })
-      await checkAndAwardMilestones()
+      const awarded = await checkAndAwardMilestones()
+      setNewMilestones(awarded)
       setOrderResult(result)
     } catch (e) {
       console.error(e)
@@ -229,6 +236,20 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, router])
+
+  if (newMilestones.length > 0) {
+    const celebrationMilestones = newMilestones.map(m => ({ ...m, done: true }))
+    return (
+      <MilestoneCelebration
+        milestones={celebrationMilestones}
+        skipStorage
+        onDone={() => {
+          setNewMilestones([])
+          if (!orderResult) router.push('/configuraties')
+        }}
+      />
+    )
+  }
 
   if (orderResult) {
     return (

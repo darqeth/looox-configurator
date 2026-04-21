@@ -22,6 +22,8 @@ export type UserRowProfile = {
   created_at: string | null
   korting: number | null
   is_international: boolean | null
+  is_admin: boolean
+  is_sub_admin: boolean
   company_id: string | null
   member?: {
     role: string
@@ -39,6 +41,7 @@ export function UserRow({
   isColleague = false,
   inviterName = null,
   companies = [],
+  currentUserIsAdmin = false,
 }: {
   profile: UserRowProfile
   showActions?: boolean
@@ -46,6 +49,7 @@ export function UserRow({
   isColleague?: boolean
   inviterName?: string | null
   companies?: { id: string; name: string }[]
+  currentUserIsAdmin?: boolean
 }) {
   const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
@@ -97,6 +101,16 @@ export function UserRow({
             {localIsInternational && (
               <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
                 Buitenland +5%
+              </span>
+            )}
+            {profile.is_admin && (
+              <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">
+                Superadmin
+              </span>
+            )}
+            {!profile.is_admin && profile.is_sub_admin && (
+              <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
+                Beheerder
               </span>
             )}
           </div>
@@ -157,6 +171,7 @@ export function UserRow({
           profile={profile}
           companies={companies}
           onClose={() => setModalOpen(false)}
+          currentUserIsAdmin={currentUserIsAdmin}
         />
       )}
     </>

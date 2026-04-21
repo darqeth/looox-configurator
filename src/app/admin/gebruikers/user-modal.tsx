@@ -11,6 +11,8 @@ import {
   generatePasswordResetLink,
   deleteUser,
   updateApprovalStatus,
+  updateSubAdmin,
+  updateSuperAdmin,
 } from '@/lib/actions/admin'
 import type { UserRowProfile } from './user-row'
 
@@ -18,10 +20,12 @@ export function UserEditModal({
   profile,
   companies,
   onClose,
+  currentUserIsAdmin = false,
 }: {
   profile: UserRowProfile
   companies: { id: string; name: string }[]
   onClose: () => void
+  currentUserIsAdmin?: boolean
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -53,6 +57,14 @@ export function UserEditModal({
 
   // Verwijderen
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Beheerrol
+  const [subAdminConfirm, setSubAdminConfirm] = useState('')
+  const [showSubAdminConfirm, setShowSubAdminConfirm] = useState(false)
+  const [superAdminConfirm, setSuperAdminConfirm] = useState('')
+  const [showSuperAdminConfirm, setShowSuperAdminConfirm] = useState(false)
+  const [localIsSubAdmin, setLocalIsSubAdmin] = useState(profile.is_sub_admin)
+  const [localIsSuperAdmin, setLocalIsSuperAdmin] = useState(profile.is_admin)
 
   useEffect(() => {
     setMounted(true)
@@ -142,6 +154,28 @@ export function UserEditModal({
       const result = await deleteUser(profile.id)
       if (result.success) { router.refresh(); onClose() }
       else { setError(result.error ?? 'Verwijderen mislukt'); setConfirmDelete(false) }
+    })
+  }
+
+  function handleConfirmSubAdmin(enable: boolean) {
+    setLocalIsSubAdmin(enable)
+    setShowSubAdminConfirm(false)
+    setSubAdminConfirm('')
+    startTransition(async () => {
+      const result = await updateSubAdmin(profile.id, enable)
+      if (!result.success) { setError(result.error ?? 'Mislukt'); setLocalIsSubAdmin(!enable) }
+      else showSuccess(enable ? 'Beheerderstoegang ingeschakeld' : 'Beheerderstoegang uitgeschakeld')
+    })
+  }
+
+  function handleConfirmSuperAdmin(enable: boolean) {
+    setLocalIsSuperAdmin(enable)
+    setShowSuperAdminConfirm(false)
+    setSuperAdminConfirm('')
+    startTransition(async () => {
+      const result = await updateSuperAdmin(profile.id, enable)
+      if (!result.success) { setError(result.error ?? 'Mislukt'); setLocalIsSuperAdmin(!enable) }
+      else showSuccess(enable ? 'Superadmin ingeschakeld' : 'Superadmin uitgeschakeld')
     })
   }
 
@@ -359,6 +393,110 @@ export function UserEditModal({
               )}
             </div>
           </div>
+
+          {/* Beheerrechten — alleen zichtbaar voor superadmin, niet op eigen account */}
+          {currentUserIsAdmin && (
+            <div className="px-6 py-4 border-b border-gray-100">
+              <p className="text-[10.5px] font-bold text-lx-text-secondary uppercase tracking-widest mb-4">Beheerrechten</p>
+              <div className="space-y-4">
+
+                {/* Tussenbeheerder */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] font-medium text-lx-text-primary">Tussenbeheerder</p>
+                      <p className="text-[11.5px] text-lx-text-secondary">Toegang tot Klantconfiguraties en Bestellingen</p>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={localIsSubAdmin}
+                      disabled={isPending || localIsSuperAdmin}
+                      onClick={() => {
+                        if (localIsSubAdmin) { handleConfirmSubAdmin(false) }
+                        else { setShowSubAdminConfirm(true); setSubAdminConfirm('') }
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 cursor-pointer ${localIsSubAdmin ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${localIsSubAdmin ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {showSubAdminConfirm && (
+                    <div className="mt-2.5 p-3 bg-indigo-50 border border-indigo-200 rounded-xl space-y-2">
+                      <p className="text-[12px] text-indigo-800 font-medium">Typ <strong>BEHEER</strong> om te bevestigen</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={subAdminConfirm}
+                          onChange={e => setSubAdminConfirm(e.target.value)}
+                          placeholder="BEHEER"
+                          autoFocus
+                          className="flex-1 text-[12.5px] border border-indigo-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500 bg-white"
+                        />
+                        <button
+                          disabled={subAdminConfirm.toUpperCase() !== 'BEHEER' || isPending}
+                          onClick={() => handleConfirmSubAdmin(true)}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[12px] font-semibold disabled:opacity-40"
+                        >
+                          Bevestigen
+                        </button>
+                        <button onClick={() => { setShowSubAdminConfirm(false); setSubAdminConfirm('') }} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12px] text-lx-text-secondary">
+                          Annuleren
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Superadmin */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] font-medium text-lx-text-primary">Superadmin</p>
+                      <p className="text-[11.5px] text-lx-text-secondary">Volledige toegang tot alle beheeronderdelen</p>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={localIsSuperAdmin}
+                      disabled={isPending}
+                      onClick={() => {
+                        if (localIsSuperAdmin) { handleConfirmSuperAdmin(false) }
+                        else { setShowSuperAdminConfirm(true); setSuperAdminConfirm('') }
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 cursor-pointer ${localIsSuperAdmin ? 'bg-purple-600' : 'bg-gray-200'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${localIsSuperAdmin ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {showSuperAdminConfirm && (
+                    <div className="mt-2.5 p-3 bg-purple-50 border border-purple-200 rounded-xl space-y-2">
+                      <p className="text-[12px] text-purple-800 font-medium">Typ <strong>SUPERADMIN</strong> om te bevestigen</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={superAdminConfirm}
+                          onChange={e => setSuperAdminConfirm(e.target.value)}
+                          placeholder="SUPERADMIN"
+                          autoFocus
+                          className="flex-1 text-[12.5px] border border-purple-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-purple-500 bg-white"
+                        />
+                        <button
+                          disabled={superAdminConfirm.toUpperCase() !== 'SUPERADMIN' || isPending}
+                          onClick={() => handleConfirmSuperAdmin(true)}
+                          className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-[12px] font-semibold disabled:opacity-40"
+                        >
+                          Bevestigen
+                        </button>
+                        <button onClick={() => { setShowSuperAdminConfirm(false); setSuperAdminConfirm('') }} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12px] text-lx-text-secondary">
+                          Annuleren
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          )}
 
           {/* Acties */}
           <div className="px-6 py-4">

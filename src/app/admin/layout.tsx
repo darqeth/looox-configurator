@@ -9,6 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user) redirect('/login')
 
   const sidebar = await fetchSidebarData(supabase, user.id)
+  if (!sidebar.isAdmin && !sidebar.isSubAdmin) redirect('/dashboard')
 
   return (
     <div className="min-h-screen bg-lx-divider">
@@ -19,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         configCount={sidebar.configCount}
         orderCount={sidebar.orderCount}
         isAdmin={sidebar.isAdmin}
+        isSubAdmin={sidebar.isSubAdmin}
         isManager={sidebar.isManager}
         canConfigure={sidebar.canConfigure}
         avatarUrl={sidebar.avatarUrl}

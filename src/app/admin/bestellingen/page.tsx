@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { isAdmin } from '@/lib/company-utils'
+import { isAdminOrSubAdmin } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import { OrderStatusSelect } from './order-status-row'
 
@@ -31,7 +31,7 @@ export default async function AdminBestellingenPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
+  if (!await isAdminOrSubAdmin(supabase, user.id)) redirect('/dashboard')
 
   const { data: orders } = await supabase
     .from('orders')

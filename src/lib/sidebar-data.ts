@@ -14,6 +14,7 @@ export type SidebarData = {
   configCount: number
   orderCount: number
   isAdmin: boolean
+  isSubAdmin: boolean
   isManager: boolean
   canConfigure: boolean
   pendingCount: number
@@ -27,11 +28,12 @@ export async function fetchSidebarData(
   userId: string
 ): Promise<SidebarData> {
   const [{ data: profile }, { data: memberData }] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, company_id, tier, is_admin, avatar_url').eq('id', userId).single(),
+    supabase.from('profiles').select('full_name, company, company_id, tier, is_admin, is_sub_admin, avatar_url').eq('id', userId).single(),
     supabase.from('company_members').select('role, company_id, can_configure').eq('user_id', userId).single(),
   ])
 
   const isAdmin = profile?.is_admin ?? false
+  const isSubAdmin = profile?.is_sub_admin ?? false
   const isManager = memberData?.role === 'manager'
   // company_members is bron van waarheid — profile.company_id kan stale zijn na verwijdering
   const companyId = memberData?.company_id ?? null
@@ -50,7 +52,7 @@ export async function fetchSidebarData(
   ] = await Promise.all([
     supabase.from('configurations').select('id', { count: 'exact', head: true }).in('user_id', companyUserIds).eq('status', 'saved'),
     supabase.rpc('count_company_orders', { p_user_id: userId }),
-    isAdmin
+    (isAdmin || isSubAdmin)
       ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending')
       : Promise.resolve({ count: 0, data: null, error: null }),
     isManager && companyId
@@ -106,6 +108,7 @@ export async function fetchSidebarData(
     configCount: totalConfigs,
     orderCount: totalOrders,
     isAdmin,
+    isSubAdmin,
     isManager,
     canConfigure,
     pendingCount: pendingCount ?? 0,

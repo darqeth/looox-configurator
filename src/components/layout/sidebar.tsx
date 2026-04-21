@@ -15,6 +15,7 @@ interface SidebarProps {
   orderCount: number
   configCount: number
   isAdmin: boolean
+  isSubAdmin?: boolean
   isManager?: boolean
   canConfigure?: boolean
   pendingCount?: number
@@ -23,7 +24,7 @@ interface SidebarProps {
   closestMilestone?: ClosestMilestone | null
 }
 
-export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isManager = false, canConfigure = true, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
+export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
@@ -85,7 +86,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
     },
     {
       href: '/admin/producten',
-      label: 'Producten & prijzen',
+      label: 'Producten & Prijzen',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
     },
     {
@@ -148,10 +149,12 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
         <p className="text-white/45 text-[9.5px] font-semibold tracking-widest uppercase px-3 pb-2 pt-3">Menu</p>
         {navItems.map((item) => <NavItem key={item.href} item={item} />)}
 
-        {isAdmin && (
+        {(isAdmin || isSubAdmin) && (
           <div className="mt-4">
             <p className="text-white/45 text-[9.5px] font-semibold tracking-widest uppercase px-3 pb-2 pt-1">Beheer</p>
-            {adminItems.map((item) => <NavItem key={item.href} item={item} />)}
+            {(isAdmin ? adminItems : adminItems.filter(i =>
+              i.href === '/admin/configuraties' || i.href === '/admin/bestellingen'
+            )).map((item) => <NavItem key={item.href} item={item} />)}
           </div>
         )}
       </nav>

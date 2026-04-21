@@ -22,7 +22,7 @@ export default async function GebruikersPage() {
   const [{ data: rawProfiles }, { data: pendingColleagues }, { data: companies }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international, company_members(role, can_order, can_see_purchase_prices, can_configure, own_configs_only)')
+      .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international, is_admin, is_sub_admin, company_members(role, can_order, can_see_purchase_prices, can_configure, own_configs_only)')
       .order('created_at', { ascending: false }),
     supabase
       .from('profiles')
@@ -51,6 +51,8 @@ export default async function GebruikersPage() {
       created_at: p.created_at,
       korting: p.korting,
       is_international: p.is_international,
+      is_admin: (p as typeof p & { is_admin?: boolean }).is_admin ?? false,
+      is_sub_admin: (p as typeof p & { is_sub_admin?: boolean }).is_sub_admin ?? false,
       company_id: p.company_id,
       member: rawP.company_members?.[0] ?? null,
     }
@@ -92,11 +94,12 @@ export default async function GebruikersPage() {
               return (
                 <UserRow
                   key={p.id}
-                  profile={{ id: p.id, full_name: p.full_name, email: p.email, company: companyName, phone: null, tier: null, korting: null, is_international: null, company_id: p.company_id ?? null, approval_status: p.approval_status, created_at: p.created_at, member: null }}
+                  profile={{ id: p.id, full_name: p.full_name, email: p.email, company: companyName, phone: null, tier: null, korting: null, is_international: null, is_admin: false, is_sub_admin: false, company_id: p.company_id ?? null, approval_status: p.approval_status, created_at: p.created_at, member: null }}
                   showActions
                   isColleague
                   inviterName={inviterName}
                   companies={companies ?? []}
+                  currentUserIsAdmin
                 />
               )
             })}
@@ -110,7 +113,7 @@ export default async function GebruikersPage() {
           <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Wacht op goedkeuring</h2>
           <div className="space-y-2">
             {pending.map(p => (
-              <UserRow key={p.id} profile={p} showActions companies={companies ?? []} />
+              <UserRow key={p.id} profile={p} showActions companies={companies ?? []} currentUserIsAdmin />
             ))}
           </div>
         </section>
@@ -122,7 +125,7 @@ export default async function GebruikersPage() {
         {approved.length > 0 ? (
           <div className="space-y-2">
             {approved.map(p => (
-              <UserRow key={p.id} profile={p} companies={companies ?? []} />
+              <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin />
             ))}
           </div>
         ) : (
@@ -136,7 +139,7 @@ export default async function GebruikersPage() {
           <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Afgewezen ({rejected.length})</h2>
           <div className="space-y-2">
             {rejected.map(p => (
-              <UserRow key={p.id} profile={p} showApprove companies={companies ?? []} />
+              <UserRow key={p.id} profile={p} showApprove companies={companies ?? []} currentUserIsAdmin />
             ))}
           </div>
         </section>

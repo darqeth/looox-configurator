@@ -77,7 +77,9 @@ export async function linkUserToCompany(
     own_configs_only: permissions?.own_configs_only ?? false,
   }
 
-  await admin.from('profiles').update({ company_id: companyId }).eq('id', userId)
+  // Haal bedrijfsnaam op om profiles.company synchroon te houden
+  const { data: company } = await admin.from('companies').select('name').eq('id', companyId).single()
+  await admin.from('profiles').update({ company_id: companyId, ...(company ? { company: company.name } : {}) }).eq('id', userId)
 
   const { data: existingMember } = await admin
     .from('company_members')
@@ -275,5 +277,39 @@ export async function setControleVereist(
     }).catch(() => {})
   }
 
+  return { success: true }
+}
+
+export async function updateSubAdmin(
+  userId: string,
+  value: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+  if (userId === user.id) return { success: false, error: 'Kan jezelf niet wijzigen' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('profiles').update({ is_sub_admin: value }).eq('id', userId)
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/gebruikers')
+  return { success: true }
+}
+
+export async function updateSuperAdmin(
+  userId: string,
+  value: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+  if (userId === user.id) return { success: false, error: 'Kan jezelf niet wijzigen' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('profiles').update({ is_admin: value }).eq('id', userId)
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/gebruikers')
   return { success: true }
 }

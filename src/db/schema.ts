@@ -51,6 +51,7 @@ export const profiles = pgTable('profiles', {
     .notNull()
     .default('pending'),
   is_admin: boolean('is_admin').notNull().default(false),
+  is_sub_admin: boolean('is_sub_admin').notNull().default(false),
   tier: text('tier').notNull().default('Studio'), // Studio | Signature | Atelier
   price_multiplier: numeric('price_multiplier', { precision: 5, scale: 4 })
     .notNull()

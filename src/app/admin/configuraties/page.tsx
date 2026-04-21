@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { isAdmin } from '@/lib/company-utils'
+import { isAdminOrSubAdmin } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import ConfigDetailModal from './config-detail-modal'
 import AdminConfigTabs from './admin-config-tabs'
@@ -14,7 +14,7 @@ export default async function AdminConfiguratiePage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
+  if (!await isAdminOrSubAdmin(supabase, user.id)) redirect('/dashboard')
 
   const { status, q } = await searchParams
 

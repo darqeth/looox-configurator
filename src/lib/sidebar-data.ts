@@ -42,7 +42,8 @@ export async function fetchSidebarData(
 
   const [
     { count: configCount },
-    { data: orderCount },
+    { data: companyOrderCount },
+    { count: ownOrderCount },
     { count: pendingCount },
     { count: pendingColleaguesCount },
     { data: milestones },
@@ -51,9 +52,12 @@ export async function fetchSidebarData(
     { data: streakData },
   ] = await Promise.all([
     supabase.from('configurations').select('id', { count: 'exact', head: true }).in('user_id', companyUserIds).eq('status', 'saved'),
+    // Company-wide orders — used for milestone calculation only
     isSubAdmin && !isAdmin
       ? Promise.resolve({ data: 0, error: null })
       : supabase.rpc('count_company_orders', { p_user_id: userId }),
+    // Own orders only — matches what /bestellingen page shows
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', userId),
     (isAdmin || isSubAdmin)
       ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending')
       : Promise.resolve({ count: 0, data: null, error: null }),
@@ -72,7 +76,8 @@ export async function fetchSidebarData(
   // Compute closest unachieved milestone
   const achievedIds = new Set((userMilestonesData ?? []).map((um: { milestone_id: string }) => um.milestone_id))
   const totalConfigs = Number(configCount ?? 0)
-  const totalOrders = Number(orderCount ?? 0)
+  const totalOrders = Number(companyOrderCount ?? 0)
+  const ownOrders = Number(ownOrderCount ?? 0)
   const totalRevenue = Number(revenueSum ?? 0)
   const currentStreak = (streakData as { current_streak?: number } | null)?.current_streak ?? 0
 
@@ -108,7 +113,7 @@ export async function fetchSidebarData(
     company: profile?.company ?? '',
     tier: profile?.tier ?? 'Studio',
     configCount: totalConfigs,
-    orderCount: totalOrders,
+    orderCount: isSubAdmin && !isAdmin ? 0 : ownOrders,
     isAdmin,
     isSubAdmin,
     isManager,

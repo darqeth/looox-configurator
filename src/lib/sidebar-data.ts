@@ -53,9 +53,7 @@ export async function fetchSidebarData(
   ] = await Promise.all([
     supabase.from('configurations').select('id', { count: 'exact', head: true }).in('user_id', companyUserIds).eq('status', 'saved'),
     // Company-wide orders — used for milestone calculation only
-    isSubAdmin && !isAdmin
-      ? Promise.resolve({ data: 0, error: null })
-      : supabase.rpc('count_company_orders', { p_user_id: userId }),
+    supabase.rpc('count_company_orders', { p_user_id: userId }),
     // Own orders only — matches what /bestellingen page shows
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', userId),
     (isAdmin || isSubAdmin)
@@ -113,7 +111,7 @@ export async function fetchSidebarData(
     company: profile?.company ?? '',
     tier: profile?.tier ?? 'Studio',
     configCount: totalConfigs,
-    orderCount: isSubAdmin && !isAdmin ? 0 : ownOrders,
+    orderCount: ownOrders,
     isAdmin,
     isSubAdmin,
     isManager,

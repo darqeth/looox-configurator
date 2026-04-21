@@ -19,6 +19,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         configCount={sidebar.configCount}
         orderCount={sidebar.orderCount}
         isAdmin={sidebar.isAdmin}
+        isSubAdmin={sidebar.isSubAdmin}
         isManager={sidebar.isManager}
         canConfigure={sidebar.canConfigure}
         avatarUrl={sidebar.avatarUrl}

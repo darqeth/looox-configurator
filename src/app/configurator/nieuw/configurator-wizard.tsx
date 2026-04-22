@@ -463,7 +463,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
                 {step === 3 && (
                   <StepOpties
                     shape={shape}
+                    width={width}
+                    height={height}
                     diameter={diameter}
+                    glasKleur={glasKleur}
                     selectedOptions={selectedOptions}
                     onChange={setSelectedOptions}
                     optionSubChoices={optionSubChoices}

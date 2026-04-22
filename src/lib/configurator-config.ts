@@ -173,6 +173,21 @@ export const ROND_BASIS_GLAS: Record<number, number> = {
   30: 33, 40: 47, 50: 56, 60: 67, 70: 81, 80: 92, 100: 123, 120: 178,
 }
 
+// Frameprijzen rechthoek per strekkende meter (omtrek = 2×(b+h))
+// Aluminium €20/m · Mat zwart €40/m · Geborstelde kleuren €60/m
+export const RECHTHOEK_FRAME_PRIJS_PER_METER: Record<string, number> = {
+  'aluminium':      20,
+  'zwart':          40,
+  'gun-metal':      60,
+  'brushed-brass':  60,
+  'brushed-copper': 60,
+}
+
+export function calcRechthoekFramePrice(colorId: string, widthCm: number, heightCm: number): number {
+  const omtrekM = 2 * (widthCm + heightCm) / 100
+  return Math.round(omtrekM * (RECHTHOEK_FRAME_PRIJS_PER_METER[colorId] ?? 20))
+}
+
 // Vaste frameprijzen per diameter (excl. standaard glas, excl. vaste kosten)
 // Bron: prijzen_spiegels_rond.xlsx
 export const ROND_FRAME_PRIJZEN: Record<string, Partial<Record<number, number>>> = {
@@ -301,7 +316,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     id: 'frame-in-kleur',
     name: 'Frame in kleur',
     description: 'Aluminium frame, keuze uit 5 kleuren',
-    price: 80,
+    price: 0,
     shapes: ['rechthoek', 'rond'],
     incompatibleWith: ['afgeronde-hoeken', 'schuine-zijden'],
     subChoices: {
@@ -400,6 +415,9 @@ export function calcTotalPrice(state: {
         price += Math.round(glasKosten * 0.30)
       } else if (optId === 'afgeronde-hoeken') {
         price += Math.round(glasKosten * 0.60)
+      } else if (optId === 'frame-in-kleur') {
+        const colorId = state.optionSubChoices?.['frame-in-kleur']
+        if (colorId) price += calcRechthoekFramePrice(colorId, state.width, state.height)
       } else {
         const opt = EXTRA_OPTIONS.find(o => o.id === optId)
         if (opt) price += opt.price

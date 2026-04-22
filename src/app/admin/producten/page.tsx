@@ -11,6 +11,7 @@ import {
   ROND_DIAMETERS,
   ROND_BASIS_GLAS,
   ROND_FRAME_PRIJZEN,
+  RECHTHOEK_FRAME_PRIJS_PER_METER,
   ORGANIC_SIZES,
   EXTRA_OPTIONS,
   CONTROL_PRICES,
@@ -106,6 +107,32 @@ function RechthoekTab() {
             })}
           </div>
         </div>
+      </SectionCard>
+
+      {/* Frame in kleur */}
+      <SectionCard
+        title="Frame in kleur — rechthoek"
+        subtitle="Aluminium frame rondom. Prijs per strekkende meter × omtrek (2 × breedte + 2 × hoogte)."
+      >
+        <div className="space-y-0">
+          {Object.entries(RECHTHOEK_FRAME_PRIJS_PER_METER).map(([colorId, pricePerM], i, arr) => {
+            const label = {
+              'aluminium':      'Aluminium',
+              'zwart':          'Mat zwart',
+              'gun-metal':      'Metallic Gun Metal',
+              'brushed-brass':  'Metallic Brushed Brass',
+              'brushed-copper': 'Metallic Brushed Copper',
+            }[colorId] ?? colorId
+            return (
+              <InfoRow
+                key={colorId}
+                label={label}
+                value={`€${pricePerM}/m`}
+              />
+            )
+          })}
+        </div>
+        <p className="text-[11.5px] text-lx-text-secondary mt-3">Voorbeeld: 100×80 cm → omtrek 3,6 m → aluminium €72 · zwart €144 · metallic €216</p>
       </SectionCard>
 
       {/* Verwarming matrix */}

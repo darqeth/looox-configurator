@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { ShapeSlug, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER } from '@/lib/configurator-config'
 
 function OptionIcon({ id, active }: { id: string; active: boolean }) {
   const imgIds: Record<string, string> = {
@@ -45,14 +45,17 @@ function OptionIcon({ id, active }: { id: string; active: boolean }) {
 
 interface StepOptiesProps {
   shape: ShapeSlug
+  width: number
+  height: number
   diameter?: number | null
+  glasKleur: GlasKleur
   selectedOptions: string[]
   onChange: (options: string[]) => void
   optionSubChoices: Record<string, string>
   onSubChoiceChange: (optionId: string, choiceId: string) => void
 }
 
-export default function StepOpties({ shape, diameter, selectedOptions, onChange, optionSubChoices, onSubChoiceChange }: StepOptiesProps) {
+export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange }: StepOptiesProps) {
   const available = EXTRA_OPTIONS.filter((opt) => opt.shapes.includes(shape))
 
   function getIncompatibleReason(optionId: string): string | null {
@@ -132,7 +135,21 @@ export default function StepOpties({ shape, diameter, selectedOptions, onChange,
               <span className={`absolute top-3 right-3 text-[11px] font-bold px-2 py-0.5 rounded-full ${
                 isSelected ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
               }`}>
-                {option.priceDisplay ?? `+€${option.price}`}
+                {option.id === 'verwarming'
+                  ? `+€${shape === 'rond' ? calcRondHeatingPrice(diameter ?? 60) : calcHeatingPrice(width, height)}`
+                  : option.id === 'afgeronde-hoeken'
+                  ? `+€${Math.round(calcGlasKosten(width, height, glasKleur) * 0.60)}`
+                  : option.id === 'schuine-zijden'
+                  ? `+€${Math.round(calcGlasKosten(width, height, glasKleur) * 0.30)}`
+                  : option.id === 'frame-in-kleur' && shape !== 'rond'
+                  ? (() => {
+                      const colorId = optionSubChoices[option.id]
+                      if (colorId) return `+€${calcRechthoekFramePrice(colorId, width, height)}`
+                      const minPrice = calcRechthoekFramePrice(Object.keys(RECHTHOEK_FRAME_PRIJS_PER_METER).reduce((a, b) => RECHTHOEK_FRAME_PRIJS_PER_METER[a] <= RECHTHOEK_FRAME_PRIJS_PER_METER[b] ? a : b), width, height)
+                      return `v.a. €${minPrice}`
+                    })()
+                  : (option.priceDisplay ?? `+€${option.price}`)
+                }
               </span>
 
               {/* Icoon */}

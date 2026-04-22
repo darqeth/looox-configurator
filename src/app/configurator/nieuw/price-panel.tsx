@@ -22,6 +22,7 @@ import {
   ROND_BASIS_GLAS,
   ROND_FRAME_PRIJZEN,
   ZANDSTRAAL_PRIJS_PER_METER,
+  calcRechthoekFramePrice,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 
@@ -587,6 +588,12 @@ export default function PricePanel({
         lineItems.push({ label: 'Schuine zijden (+30%)', price: Math.round(glasKosten * 0.30) })
       } else if (optId === 'afgeronde-hoeken') {
         lineItems.push({ label: 'Afgeronde hoeken (+60%)', price: Math.round(glasKosten * 0.60) })
+      } else if (optId === 'frame-in-kleur') {
+        const colorId = optionSubChoices['frame-in-kleur']
+        if (colorId) {
+          const colorName = EXTRA_OPTIONS.find(o => o.id === 'frame-in-kleur')?.subChoices?.options.find(c => c.id === colorId)?.name ?? colorId
+          lineItems.push({ label: `Frame · ${colorName}`, price: calcRechthoekFramePrice(colorId, width, height) })
+        }
       } else {
         const opt = EXTRA_OPTIONS.find(o => o.id === optId)
         if (opt && opt.price > 0) lineItems.push({ label: opt.name, price: opt.price })

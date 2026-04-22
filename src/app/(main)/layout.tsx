@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/sidebar'
 import { fetchSidebarData } from '@/lib/sidebar-data'
+import SupportButton from '@/components/support/support-button'
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -30,6 +31,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       <main className="lg:ml-60 min-h-screen">
         {children}
       </main>
+      <SupportButton />
     </div>
   )
 }

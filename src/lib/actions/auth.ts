@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { sendWelcomeEmail, sendPasswordResetEmail, sendNewRegistrationEmail } from '@/lib/email'
+import { getNotificationEmails } from '@/lib/actions/settings'
 
 export async function signIn(email: string, password: string) {
   const supabase = await createClient()
@@ -168,12 +169,15 @@ export async function signUp(data: {
     isInvited: !!invite,
   }).catch(() => {})
 
-  sendNewRegistrationEmail({
-    name: data.fullName,
-    email: data.email,
-    company: data.company,
-    phone: data.phone,
-  }).catch(() => {})
+  getNotificationEmails().then(to =>
+    sendNewRegistrationEmail({
+      to,
+      name: data.fullName,
+      email: data.email,
+      company: data.company,
+      phone: data.phone,
+    })
+  ).catch(() => {})
 
   redirect('/pending')
 }

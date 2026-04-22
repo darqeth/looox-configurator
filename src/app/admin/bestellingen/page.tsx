@@ -14,7 +14,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 // Status volgorde voor sortering
 const STATUS_ORDER: Record<string, number> = {
-  pending: 0, confirmed: 1, in_production: 2, shipped: 3, delivered: 4, cancelled: 5,
+  confirmed: 0, pending: 1, in_production: 2, shipped: 3, delivered: 4, cancelled: 5,
 }
 
 export default async function AdminBestellingenPage() {

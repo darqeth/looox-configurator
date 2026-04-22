@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { sendOrderStatusEmail, sendAfgekeurdEmail } from '@/lib/email'
+import { sendOrderStatusEmail, sendAfgekeurdEmail, sendAkkoordInternEmail } from '@/lib/email'
+import { getNotificationEmails } from '@/lib/actions/settings'
 
 export async function approveOrder(
   orderId: string,
@@ -49,6 +50,15 @@ export async function approveOrder(
     }).catch(() => {})
   }
 
+  getNotificationEmails().then(to =>
+    sendAkkoordInternEmail({
+      to,
+      orderNumber: order.order_number,
+      dealerName: profile?.full_name ?? 'Onbekend',
+      dealerEmail: profile?.email ?? '',
+    })
+  ).catch(() => {})
+
   return { success: true }
 }
 
@@ -88,12 +98,15 @@ export async function rejectOrder(
     .eq('id', user.id)
     .single()
 
-  sendAfgekeurdEmail({
-    orderNumber: order.order_number,
-    dealerName: profile?.full_name ?? 'Onbekend',
-    dealerEmail: profile?.email ?? '',
-    reden,
-  }).catch(() => {})
+  getNotificationEmails().then(to =>
+    sendAfgekeurdEmail({
+      to,
+      orderNumber: order.order_number,
+      dealerName: profile?.full_name ?? 'Onbekend',
+      dealerEmail: profile?.email ?? '',
+      reden,
+    })
+  ).catch(() => {})
 
   return { success: true }
 }

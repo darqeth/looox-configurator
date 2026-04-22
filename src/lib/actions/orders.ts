@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID } from '@/lib/actions/configurator-helpers'
 import { sendOrderConfirmationEmail, sendInternalOrderEmail, type OrderEmailDetails } from '@/lib/email'
+import { getNotificationEmails } from '@/lib/actions/settings'
 import { renderOrderPDF } from '@/lib/pdf/render-order'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
 
@@ -124,17 +125,20 @@ async function sendOrderEmails(
     pdfBuffer,
   }).catch(() => {})
 
-  sendInternalOrderEmail({
-    order: emailDetails,
-    customer: {
-      name: (profile as Profile | null)?.full_name ?? null,
-      company: (profile as Profile | null)?.company ?? null,
-      email,
-      phone: (profile as Profile | null)?.phone ?? null,
-      address: (profile as Profile | null)?.address ?? null,
-    },
-    pdfBuffer,
-  }).catch(() => {})
+  getNotificationEmails().then(to =>
+    sendInternalOrderEmail({
+      to,
+      order: emailDetails,
+      customer: {
+        name: (profile as Profile | null)?.full_name ?? null,
+        company: (profile as Profile | null)?.company ?? null,
+        email,
+        phone: (profile as Profile | null)?.phone ?? null,
+        address: (profile as Profile | null)?.address ?? null,
+      },
+      pdfBuffer,
+    })
+  ).catch(() => {})
 }
 
 // ─── Order number ─────────────────────────────────────────────────────────────

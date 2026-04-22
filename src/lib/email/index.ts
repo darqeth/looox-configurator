@@ -275,10 +275,12 @@ export async function sendOrderConfirmationEmail({
 // ─── Email: Interne ordernotificatie (marketing) ──────────────────────────────
 
 export async function sendInternalOrderEmail({
+  to,
   order,
   customer,
   pdfBuffer,
 }: {
+  to: string[]
   order: OrderEmailDetails
   customer: {
     name: string | null
@@ -301,7 +303,7 @@ export async function sendInternalOrderEmail({
 
   await getResend().emails.send({
     from: FROM,
-    to: INTERNAL_EMAIL,
+    to,
     subject: `Nieuwe bestelling — ${order.orderNumber} (${customer.company ?? customer.name ?? customer.email})`,
     html: baseTemplate(`
       ${h1('Nieuwe bestelling!')}
@@ -347,11 +349,13 @@ export async function sendApprovalEmail({
 // ─── Email: Nieuwe aanmelding (intern) ───────────────────────────────────────
 
 export async function sendNewRegistrationEmail({
+  to,
   name,
   email,
   company,
   phone,
 }: {
+  to: string[]
   name: string
   email: string
   company: string
@@ -366,7 +370,7 @@ export async function sendNewRegistrationEmail({
 
   await getResend().emails.send({
     from: FROM,
-    to: INTERNAL_EMAIL,
+    to,
     subject: `Nieuwe aanmelding — ${name} (${company || email})`,
     html: baseTemplate(`
       ${h1('Nieuwe aanmelding!')}
@@ -462,11 +466,13 @@ export async function sendControleVereistEmail({
 // ─── Email: Tekeningen afgekeurd (intern LoooX) ───────────────────────────────
 
 export async function sendAfgekeurdEmail({
+  to,
   orderNumber,
   dealerName,
   dealerEmail,
   reden,
 }: {
+  to: string[]
   orderNumber: string
   dealerName: string
   dealerEmail: string
@@ -474,7 +480,7 @@ export async function sendAfgekeurdEmail({
 }) {
   await getResend().emails.send({
     from: FROM,
-    to: INTERNAL_EMAIL,
+    to,
     subject: `Tekeningen afgekeurd — Bestelling ${orderNumber}`,
     html: baseTemplate(`
       ${h1('Tekeningen afgekeurd')}
@@ -485,6 +491,119 @@ export async function sendAfgekeurdEmail({
       ${divider()}
       ${btn(`${SITE_URL}/admin/bestellingen`, 'Bekijk in admin')}
     `),
+  })
+}
+
+// ─── Email: Tekeningen goedgekeurd (intern LoooX) ────────────────────────────
+
+export async function sendAkkoordInternEmail({
+  to,
+  orderNumber,
+  dealerName,
+  dealerEmail,
+}: {
+  to: string[]
+  orderNumber: string
+  dealerName: string
+  dealerEmail: string
+}) {
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Tekeningen goedgekeurd — Bestelling ${orderNumber}`,
+    html: baseTemplate(`
+      ${h1('Bestelling goedgekeurd!')}
+      ${p(`Dealer <strong>${dealerName}</strong> (${dealerEmail}) heeft de tekeningen bij bestelling <strong>${orderNumber}</strong> goedgekeurd. De bestelling kan nu in productie worden genomen.`)}
+      ${divider()}
+      ${btn(`${SITE_URL}/admin/bestellingen`, 'Bekijk in admin')}
+    `),
+  })
+}
+
+// ─── Email: Support verzoek (intern) ────────────────────────────────────────
+
+const SUPPORT_TYPE_LABELS: Record<string, string> = {
+  probleem: 'Probleem',
+  vraag: 'Algemene vraag',
+  technisch: 'Technische vraag',
+  feature: 'Feature request',
+}
+
+const SUPPORT_TYPE_COLORS: Record<string, string> = {
+  probleem: '#DC2626',
+  vraag: '#2563EB',
+  technisch: '#D97706',
+  feature: '#7C3AED',
+}
+
+export async function sendSupportEmail({
+  to,
+  replyTo,
+  senderName,
+  senderEmail,
+  senderCompany,
+  type,
+  urgent,
+  subject,
+  description,
+  configLabel,
+  screenshotBase64,
+  screenshotName,
+}: {
+  to: string[]
+  replyTo: string
+  senderName: string
+  senderEmail: string
+  senderCompany: string
+  type: string
+  urgent: boolean
+  subject: string
+  description: string
+  configLabel?: string
+  screenshotBase64?: string
+  screenshotName?: string
+}) {
+  const typeLabel = SUPPORT_TYPE_LABELS[type] ?? type
+  const color = SUPPORT_TYPE_COLORS[type] ?? '#666'
+  const typeBadge = `<span style="display:inline-block;background:${color}1a;color:${color};border:1px solid ${color}40;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;">${typeLabel}</span>`
+  const urgentBadge = urgent
+    ? `<span style="display:inline-block;background:#DC26261a;color:#DC2626;border:1px solid #DC262640;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600;margin-left:6px;">Urgent</span>`
+    : ''
+
+  const senderRows = [
+    row('Naam', senderName),
+    senderCompany ? row('Bedrijf', senderCompany) : '',
+    row('E-mail', `<a href="mailto:${senderEmail}" style="color:#3d6b54;">${senderEmail}</a>`),
+  ].join('')
+
+  const descriptionBlock = `<div style="margin:0;font-size:14px;line-height:1.7;color:#1a1a1a;background:#f8f8f6;border:1px solid #e8e8e4;border-radius:10px;padding:14px 16px;white-space:pre-wrap;">${description.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`
+
+  const attachments: { filename: string; content: string }[] = []
+  if (screenshotBase64 && screenshotName) {
+    attachments.push({ filename: screenshotName, content: screenshotBase64 })
+  }
+
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    replyTo,
+    subject: `[${typeLabel}${urgent ? ' — Urgent' : ''}] ${subject} — ${senderName} (${senderCompany || senderEmail})`,
+    html: baseTemplate(`
+      ${h1('Support verzoek')}
+      <p style="margin:0 0 16px;">${typeBadge}${urgentBadge}</p>
+      <p style="margin:0 0 4px;font-size:18px;font-weight:700;color:#1a1a1a;">${subject.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Van</p>
+      ${orderTable(senderRows)}
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Beschrijving</p>
+      ${descriptionBlock}
+      ${configLabel ? `${divider()}<p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Gekoppelde configuratie</p>${orderTable(row('Configuratie', configLabel))}` : ''}
+      ${screenshotBase64 ? `${divider()}${p('Screenshot is bijgevoegd als bijlage.', true)}` : ''}
+      ${divider()}
+      ${p('Beantwoord deze e-mail direct om te reageren naar de afzender.', true)}
+    `),
+    attachments: attachments.length > 0 ? attachments : undefined,
   })
 }
 

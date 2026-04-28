@@ -18,13 +18,14 @@ interface SidebarProps {
   isSubAdmin?: boolean
   isManager?: boolean
   canConfigure?: boolean
+  isInternational?: boolean
   pendingCount?: number
   pendingColleaguesCount?: number
   avatarUrl?: string | null
   closestMilestone?: ClosestMilestone | null
 }
 
-export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
+export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, isInternational = false, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
@@ -50,13 +51,13 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
       badgeStyle: 'default',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
     },
-    {
+    ...(!isInternational ? [{
       href: '/looox-circle',
       label: 'LoooX Circle',
-      badge: null,
+      badge: null as string | null,
       badgeStyle: 'tier',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-    },
+    }] : []),
     {
       href: '/account',
       label: 'Mijn account',
@@ -164,37 +165,39 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
         )}
       </nav>
 
-      {/* LoooX Circle widget */}
-      <div className="px-3 pb-3">
-        <Link href="/looox-circle" onClick={() => setOpen(false)} className="block">
-          <div className="bg-white/7 hover:bg-white/10 rounded-xl p-3 transition-colors">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-white/45 text-[9px] font-bold tracking-widest uppercase">LoooX Circle</span>
+      {/* LoooX Circle widget — verborgen voor internationale gebruikers */}
+      {!isInternational && (
+        <div className="px-3 pb-3">
+          <Link href="/looox-circle" onClick={() => setOpen(false)} className="block">
+            <div className="bg-white/7 hover:bg-white/10 rounded-xl p-3 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white/45 text-[9px] font-bold tracking-widest uppercase">LoooX Circle</span>
+                {closestMilestone ? (
+                  <span className="text-[#6EBD8E] text-[9.5px] font-semibold tabular-nums">{closestMilestone.pct}%</span>
+                ) : (
+                  <span className="bg-[#5DA87A]/22 text-[#6EBD8E] text-[9.5px] font-bold px-2 py-px rounded-full">{tier}</span>
+                )}
+              </div>
               {closestMilestone ? (
-                <span className="text-[#6EBD8E] text-[9.5px] font-semibold tabular-nums">{closestMilestone.pct}%</span>
+                <>
+                  <p className="text-white/80 text-[11px] font-medium truncate mb-1.5">{closestMilestone.title}</p>
+                  <div className="bg-white/10 rounded-full h-1 overflow-hidden mb-1.5">
+                    <div className="bg-[#5FA87A] h-full rounded-full transition-all" style={{ width: `${closestMilestone.pct}%` }} />
+                  </div>
+                  <p className="text-white/32 text-[9.5px]">{closestMilestone.progressLabel}</p>
+                </>
               ) : (
-                <span className="bg-[#5DA87A]/22 text-[#6EBD8E] text-[9.5px] font-bold px-2 py-px rounded-full">{tier}</span>
+                <>
+                  <div className="bg-white/10 rounded-full h-1 overflow-hidden mb-1.5">
+                    <div className="bg-[#5FA87A] h-full rounded-full" style={{ width: '100%' }} />
+                  </div>
+                  <p className="text-white/32 text-[9.5px]">Alle mijlpalen behaald</p>
+                </>
               )}
             </div>
-            {closestMilestone ? (
-              <>
-                <p className="text-white/80 text-[11px] font-medium truncate mb-1.5">{closestMilestone.title}</p>
-                <div className="bg-white/10 rounded-full h-1 overflow-hidden mb-1.5">
-                  <div className="bg-[#5FA87A] h-full rounded-full transition-all" style={{ width: `${closestMilestone.pct}%` }} />
-                </div>
-                <p className="text-white/32 text-[9.5px]">{closestMilestone.progressLabel}</p>
-              </>
-            ) : (
-              <>
-                <div className="bg-white/10 rounded-full h-1 overflow-hidden mb-1.5">
-                  <div className="bg-[#5FA87A] h-full rounded-full" style={{ width: '100%' }} />
-                </div>
-                <p className="text-white/32 text-[9.5px]">Alle mijlpalen behaald</p>
-              </>
-            )}
-          </div>
-        </Link>
-      </div>
+          </Link>
+        </div>
+      )}
 
       {/* CTA — verborgen als collega geen configureerrecht heeft */}
       {canConfigure && (

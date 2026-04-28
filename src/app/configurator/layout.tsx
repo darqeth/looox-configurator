@@ -21,6 +21,7 @@ export default async function ConfiguratorLayout({ children }: { children: React
         orderCount={sidebar.orderCount}
         isAdmin={sidebar.isAdmin}
         isManager={sidebar.isManager}
+        isInternational={sidebar.isInternational}
         canConfigure={sidebar.canConfigure}
         avatarUrl={sidebar.avatarUrl}
         pendingCount={sidebar.pendingCount}

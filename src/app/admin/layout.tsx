@@ -23,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         isAdmin={sidebar.isAdmin}
         isSubAdmin={sidebar.isSubAdmin}
         isManager={sidebar.isManager}
+        isInternational={sidebar.isInternational}
         canConfigure={sidebar.canConfigure}
         avatarUrl={sidebar.avatarUrl}
         pendingCount={sidebar.pendingCount}

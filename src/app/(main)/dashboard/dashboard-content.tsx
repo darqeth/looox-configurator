@@ -69,9 +69,11 @@ export function DashboardContentSkeleton() {
 export async function DashboardContent({
   userId,
   companyId,
+  isInternational = false,
 }: {
   userId: string
   companyId: string | null
+  isInternational?: boolean
 }) {
   const supabase = await createClient()
   const companyUserIds = await getCompanyUserIds(supabase, userId, companyId)
@@ -105,9 +107,9 @@ export async function DashboardContent({
     supabase.from('changelogs').select('id, title, body, published_at').order('published_at', { ascending: false }),
     supabase.from('rss_cache').select('id, title, url, summary, image_url, published_at').order('published_at', { ascending: false }).limit(4),
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-    supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
-    supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', userId),
-    supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
+    isInternational ? Promise.resolve({ data: [], error: null }) : supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
+    isInternational ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', userId),
+    isInternational ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
     supabase.from('orders').select('total_price').eq('user_id', userId),
     supabase.rpc('count_company_configs', { p_user_id: userId }),
     supabase.rpc('count_company_orders', { p_user_id: userId }),
@@ -403,8 +405,8 @@ export async function DashboardContent({
         </div>
       </div>
 
-      {/* LoooX Circle */}
-      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
+      {/* LoooX Circle — verborgen voor internationale gebruikers */}
+      {!isInternational && <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
         <div className="px-5 py-3.5 border-b border-lx-divider flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-[13.5px] font-semibold text-lx-text-primary">LoooX Circle</span>
@@ -487,7 +489,7 @@ export async function DashboardContent({
         ) : (
           <div className="px-5 py-8 text-center"><p className="text-[13px] text-lx-text-secondary">Mijlpalen worden binnenkort geconfigureerd.</p></div>
         )}
-      </div>
+      </div>}
     </>
   )
 }

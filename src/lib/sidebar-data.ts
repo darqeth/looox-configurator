@@ -17,6 +17,7 @@ export type SidebarData = {
   isSubAdmin: boolean
   isManager: boolean
   canConfigure: boolean
+  isInternational: boolean
   pendingCount: number
   pendingColleaguesCount: number
   avatarUrl: string | null
@@ -28,12 +29,13 @@ export async function fetchSidebarData(
   userId: string
 ): Promise<SidebarData> {
   const [{ data: profile }, { data: memberData }] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, company_id, tier, is_admin, is_sub_admin, avatar_url').eq('id', userId).single(),
+    supabase.from('profiles').select('full_name, company, company_id, tier, is_admin, is_sub_admin, avatar_url, is_international').eq('id', userId).single(),
     supabase.from('company_members').select('role, company_id, can_configure').eq('user_id', userId).single(),
   ])
 
   const isAdmin = profile?.is_admin ?? false
   const isSubAdmin = profile?.is_sub_admin ?? false
+  const isInternational = profile?.is_international ?? false
   const isManager = memberData?.role === 'manager'
   // company_members is bron van waarheid — profile.company_id kan stale zijn na verwijdering
   const companyId = memberData?.company_id ?? null
@@ -65,10 +67,10 @@ export async function fetchSidebarData(
           .eq('company_id', companyId)
           .eq('approval_status', 'pending')
       : Promise.resolve({ count: 0, data: null, error: null }),
-    supabase.from('milestones').select('id, title, goal_type, goal_value').eq('is_active', true).order('sort_order'),
-    supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
-    supabase.rpc('sum_order_revenue', { p_user_id: userId }),
-    supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
+    isInternational ? Promise.resolve({ data: [], error: null }) : supabase.from('milestones').select('id, title, goal_type, goal_value').eq('is_active', true).order('sort_order'),
+    isInternational ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
+    isInternational ? Promise.resolve({ data: 0, error: null }) : supabase.rpc('sum_order_revenue', { p_user_id: userId }),
+    isInternational ? Promise.resolve({ data: null, error: null }) : supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
   ])
 
   // Compute closest unachieved milestone
@@ -116,9 +118,10 @@ export async function fetchSidebarData(
     isSubAdmin,
     isManager,
     canConfigure,
+    isInternational,
     pendingCount: pendingCount ?? 0,
     pendingColleaguesCount: pendingColleaguesCount ?? 0,
     avatarUrl: profile?.avatar_url ?? null,
-    closestMilestone: closest,
+    closestMilestone: isInternational ? null : closest,
   }
 }

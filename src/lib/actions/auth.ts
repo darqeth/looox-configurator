@@ -100,12 +100,12 @@ export async function signUp(data: {
   // Validate invite token before registering (fail fast)
   // Gebruik admin client — invite-tabel heeft RLS die auth.uid() vereist,
   // maar de registrerende gebruiker is nog niet ingelogd.
-  let invite: { id: string; company_id: string; can_order: boolean; can_see_purchase_prices: boolean; can_configure: boolean; own_configs_only: boolean } | null = null
+  let invite: { id: string; company_id: string; invited_by: string | null; can_order: boolean; can_see_purchase_prices: boolean; can_configure: boolean; own_configs_only: boolean } | null = null
   if (data.inviteToken) {
     const admin = createAdminClient()
     const { data: inviteRow } = await admin
       .from('company_invites')
-      .select('id, company_id, can_order, can_see_purchase_prices, can_configure, own_configs_only')
+      .select('id, company_id, invited_by, can_order, can_see_purchase_prices, can_configure, own_configs_only')
       .eq('token', data.inviteToken)
       .eq('email', data.email)
       .is('accepted_at', null)
@@ -114,6 +114,18 @@ export async function signUp(data: {
 
     if (!inviteRow) return { error: 'Deze uitnodigingslink is ongeldig of verlopen.' }
     invite = inviteRow
+  }
+
+  // Haal is_international op van de uitnodiger zodat collega het erft
+  let inviterIsInternational = false
+  if (invite?.invited_by) {
+    const admin = createAdminClient()
+    const { data: inviterProfile } = await admin
+      .from('profiles')
+      .select('is_international')
+      .eq('id', invite.invited_by)
+      .single()
+    inviterIsInternational = inviterProfile?.is_international ?? false
   }
 
   const { data: authData, error } = await supabase.auth.signUp({
@@ -139,6 +151,7 @@ export async function signUp(data: {
     phone: data.phone,
     approval_status: 'pending',
     ...(invite ? { company_id: invite.company_id } : {}),
+    ...(inviterIsInternational ? { is_international: true } : {}),
   }, { onConflict: 'id' })
 
   if (profileError) return { error: 'Profiel aanmaken mislukt.' }

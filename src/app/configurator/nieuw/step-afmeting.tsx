@@ -62,12 +62,15 @@ const DimInput = memo(function DimInput({
   label,
   value,
   onChange,
+  maxOverride,
 }: {
   label: string
   value: number
   onChange: (v: number) => void
+  maxOverride?: number
 }) {
-  const { min, max } = RECHTHOEK_CONSTRAINTS
+  const { min, max: baseMax } = RECHTHOEK_CONSTRAINTS
+  const max = maxOverride !== undefined ? Math.min(baseMax, maxOverride) : baseMax
   const [raw, setRaw] = useState(String(value))
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -169,13 +172,33 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <DimInput label="Breedte" value={width} onChange={(v) => onChange({ width: v })} />
-          <DimInput label="Hoogte" value={height} onChange={(v) => onChange({ height: v })} />
+          <DimInput
+            label="Breedte"
+            value={width}
+            onChange={(v) => onChange({ width: v })}
+            maxOverride={shape === 'arc' ? height * 2 : undefined}
+          />
+          <DimInput
+            label="Hoogte"
+            value={height}
+            onChange={(v) => {
+              const updates: Parameters<typeof onChange>[0] = { height: v }
+              if (shape === 'arc' && width > v * 2) updates.width = v * 2
+              onChange(updates)
+            }}
+          />
         </div>
 
-        <p className="text-[12px] text-lx-text-secondary">
-          Minimale afmeting: {RECHTHOEK_CONSTRAINTS.min} cm — Maximale afmeting: {RECHTHOEK_CONSTRAINTS.max} cm
-        </p>
+        {shape === 'arc' && (
+          <p className="text-[12px] text-lx-text-secondary">
+            Boog: breedte max. 2× hoogte ({height * 2} cm) — Min. {RECHTHOEK_CONSTRAINTS.min} cm, Max. {RECHTHOEK_CONSTRAINTS.max} cm
+          </p>
+        )}
+        {shape !== 'arc' && (
+          <p className="text-[12px] text-lx-text-secondary">
+            Minimale afmeting: {RECHTHOEK_CONSTRAINTS.min} cm — Maximale afmeting: {RECHTHOEK_CONSTRAINTS.max} cm
+          </p>
+        )}
         <div className="border-t border-lx-divider pt-5">
           <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
         </div>

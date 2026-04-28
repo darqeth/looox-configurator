@@ -230,9 +230,7 @@ export default function StepSamenvatting({
           <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
         </svg>
         <p className="text-[12px] text-lx-text-secondary leading-relaxed">
-          {shape === 'op-aanvraag'
-            ? 'Dit is een offerteaanvraag — geen betaling vereist. Je ontvangt binnen 1 werkdag een bevestiging. Productietijd is ca. 10 werkdagen na akkoord.'
-            : 'Je bestelling wordt direct in behandeling genomen. We streven ernaar om binnen 1 werkdag een orderbevestiging te sturen. Productietijd is 4 tot 6 weken.'}
+          Sla de configuratie op als offerte. Vanuit het overzicht kun je daarna een bestelling plaatsen.
         </p>
       </div>
 
@@ -241,27 +239,13 @@ export default function StepSamenvatting({
         <button
           onClick={() => onSave(false)}
           disabled={!projectName.trim() || saving}
-          className="flex-1 h-11 rounded-xl border-2 border-lx-cta text-lx-cta text-[13.5px] font-semibold hover:bg-lx-panel-bg/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {saving ? 'Opslaan…' : 'Opslaan'}
+          {saving ? 'Opslaan…' : 'Opslaan als offerte'}
         </button>
-        {canOrder && (
-          <BestelModal
-            shape={shape}
-            unitPrice={unitPrice}
-            korting={korting}
-            projectName={projectName}
-            saving={saving}
-            disabled={orderDisabled}
-            onOrder={onOrder}
-          />
-        )}
       </div>
       {!projectName.trim() && (
-        <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om door te gaan</p>
-      )}
-      {hasSchunineZijden && !schunineZijdenFile && projectName.trim() && (
-        <p className="text-[11px] text-lx-text-secondary text-center">Upload een maattekening om te kunnen bestellen</p>
+        <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>
       )}
     </div>
   )

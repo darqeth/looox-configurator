@@ -15,6 +15,11 @@ export async function toggleInternational(userId: string, value: boolean): Promi
   revalidatePath('/admin/gebruikers')
 }
 
+export async function toggleGroothandel(userId: string, value: boolean): Promise<void> {
+  const supabase = createAdminClient()
+  await supabase.from('profiles').update({ is_groothandel: value }).eq('id', userId)
+}
+
 export async function updateKorting(userId: string, korting: number): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

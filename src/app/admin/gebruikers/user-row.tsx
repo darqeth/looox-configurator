@@ -22,6 +22,7 @@ export type UserRowProfile = {
   created_at: string | null
   korting: number | null
   is_international: boolean | null
+  is_groothandel: boolean | null
   is_admin: boolean
   is_sub_admin: boolean
   company_id: string | null

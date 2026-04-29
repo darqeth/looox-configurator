@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   updateKorting,
   toggleInternational,
+  toggleGroothandel,
   linkUserToCompany,
   updateMemberPermissions,
   generatePasswordResetLink,
@@ -39,6 +40,7 @@ export function UserEditModal({
 
   // Internationaal
   const [isInternational, setIsInternational] = useState(profile.is_international ?? false)
+  const [isGroothandel, setIsGroothandel] = useState(profile.is_groothandel ?? false)
 
   // Bedrijfskoppeling
   const matchedCompany = companies.find(c => c.name.toLowerCase() === (profile.company ?? '').toLowerCase())
@@ -98,6 +100,14 @@ export function UserEditModal({
     setIsInternational(next)
     startTransition(async () => {
       await toggleInternational(profile.id, next)
+    })
+  }
+
+  function handleToggleGroothandel() {
+    const next = !isGroothandel
+    setIsGroothandel(next)
+    startTransition(async () => {
+      await toggleGroothandel(profile.id, next)
     })
   }
 
@@ -314,6 +324,24 @@ export function UserEditModal({
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 cursor-pointer ${isInternational ? 'bg-lx-cta' : 'bg-gray-200'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${isInternational ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* Groothandelaar */}
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-lx-divider">
+              <div>
+                <p className="text-[13px] font-medium text-lx-text-primary">Groothandelaar</p>
+                <p className="text-[11.5px] text-lx-text-secondary">Toegang tot projectspiegel configurator — geen reguliere spiegels of milestones</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isGroothandel}
+                onClick={handleToggleGroothandel}
+                disabled={isPending}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 cursor-pointer ${isGroothandel ? 'bg-lx-cta' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${isGroothandel ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
           </div>

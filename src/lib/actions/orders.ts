@@ -321,8 +321,18 @@ export async function placeOrderFromConfig(
 
   if (configError || !config) throw new Error('Configuratie niet gevonden')
 
-  const unitPrice = Number(config.total_price)
-  const subtotal = unitPrice * quantity
+  const opts = (config.selected_options ?? {}) as ConfigOptions
+  const isProjectspiegel = (opts.shape as string | undefined) === 'projectspiegel'
+  const configQty = (opts.quantity as number | undefined) ?? 1
+
+  // Projectspiegels: total_price is al het totaal voor configQty stuks.
+  // Sla de echte hoeveelheid + stuksprijs op, niet quantity=1 + totaal-als-stuksprijs.
+  const effectiveQuantity = isProjectspiegel ? configQty : quantity
+  const totalPriceRaw = Number(config.total_price)
+  const unitPrice = isProjectspiegel && configQty > 0
+    ? Math.round((totalPriceRaw / configQty) * 100) / 100
+    : totalPriceRaw
+  const subtotal = unitPrice * effectiveQuantity
   let discountAmount = 0
   if (discountCodeId && discountType && discountValue) {
     if (discountType === 'pct') {
@@ -346,7 +356,7 @@ export async function placeOrderFromConfig(
         configuration_id: config.id,
         user_id: user.id,
         order_number: orderNumber,
-        quantity,
+        quantity: effectiveQuantity,
         unit_price: unitPrice.toString(),
         total_price: finalTotalPrice.toString(),
         notes: notes || null,
@@ -382,8 +392,6 @@ export async function placeOrderFromConfig(
   revalidatePath('/dashboard')
   revalidatePath('/configuraties')
 
-  const opts = (config.selected_options ?? {}) as ConfigOptions
-
   const emailDetails: OrderEmailDetails = {
     orderNumber,
     projectName: config.name ?? (opts.description as string | undefined) ?? 'Configuratie',
@@ -395,7 +403,7 @@ export async function placeOrderFromConfig(
     glasKleur: opts.glasKleur ?? null,
     directLight: lightLabel(opts.directLight),
     indirectLight: lightLabel(opts.indirectLight),
-    quantity,
+    quantity: effectiveQuantity,
     unitPrice,
     totalPrice: finalTotalPrice,
   }

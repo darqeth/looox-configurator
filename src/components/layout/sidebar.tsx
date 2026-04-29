@@ -19,13 +19,14 @@ interface SidebarProps {
   isManager?: boolean
   canConfigure?: boolean
   isInternational?: boolean
+  isGroothandel?: boolean
   pendingCount?: number
   pendingColleaguesCount?: number
   avatarUrl?: string | null
   closestMilestone?: ClosestMilestone | null
 }
 
-export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, isInternational = false, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
+export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, isInternational = false, isGroothandel = false, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
@@ -51,7 +52,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
       badgeStyle: 'default',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
     },
-    ...(!isInternational ? [{
+    ...(!isInternational && !isGroothandel ? [{
       href: '/looox-circle',
       label: 'LoooX Circle',
       badge: null as string | null,
@@ -165,8 +166,8 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
         )}
       </nav>
 
-      {/* LoooX Circle widget — verborgen voor internationale gebruikers */}
-      {!isInternational && (
+      {/* LoooX Circle widget — verborgen voor internationale en groothandel gebruikers */}
+      {!isInternational && !isGroothandel && (
         <div className="px-3 pb-3">
           <Link href="/looox-circle" onClick={() => setOpen(false)} className="block">
             <div className="bg-white/7 hover:bg-white/10 rounded-xl p-3 transition-colors">

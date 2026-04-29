@@ -23,6 +23,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         isSubAdmin={sidebar.isSubAdmin}
         isManager={sidebar.isManager}
         isInternational={sidebar.isInternational}
+        isGroothandel={sidebar.isGroothandel}
         canConfigure={sidebar.canConfigure}
         avatarUrl={sidebar.avatarUrl}
         pendingCount={sidebar.pendingCount}

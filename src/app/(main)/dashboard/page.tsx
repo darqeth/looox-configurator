@@ -29,7 +29,7 @@ export default async function DashboardPage() {
     { data: memberData },
     { data: notificationItems },
   ] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, notifications_read_at, is_international').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name, company, notifications_read_at, is_international, is_groothandel').eq('id', user.id).single(),
     supabase.from('company_members').select('company_id').eq('user_id', user.id).maybeSingle(),
     supabase.from('notifications').select('id, title, body, type, published_at').order('published_at', { ascending: false }).limit(20),
   ])
@@ -37,6 +37,7 @@ export default async function DashboardPage() {
   const firstName = profile?.full_name?.split(' ')[0] ?? 'daar'
   const company = profile?.company ?? ''
   const isInternational = profile?.is_international ?? false
+  const isGroothandel = profile?.is_groothandel ?? false
   // company_members is bron van waarheid — profile.company_id kan stale zijn
   const companyId = memberData?.company_id ?? null
 
@@ -67,6 +68,7 @@ export default async function DashboardPage() {
           userId={user.id}
           companyId={companyId}
           isInternational={isInternational}
+          isGroothandel={isGroothandel}
         />
       </Suspense>
 

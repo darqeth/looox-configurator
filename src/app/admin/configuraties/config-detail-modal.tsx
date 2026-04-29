@@ -118,7 +118,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
       {/* Klikbare rij */}
       <button
         onClick={() => setOpen(true)}
-        className={`w-full transition-colors text-left cursor-pointer ${isProjectspiegel ? 'border-l-[3px] border-l-teal-400 bg-teal-50/20 hover:bg-teal-50/40' : 'hover:bg-lx-panel-bg/50'}`}
+        className={`w-full transition-colors text-left cursor-pointer ${isProjectspiegel ? 'border-l-[3px] border-l-violet-500 bg-violet-50/30 hover:bg-violet-50/50' : 'hover:bg-lx-panel-bg/50'}`}
       >
         {/* Mobile layout */}
         <div className="flex gap-3 px-4 py-3.5 sm:hidden">

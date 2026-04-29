@@ -49,7 +49,7 @@ export default function StepOpties({ ophanging, voormonteren, onChange }: StepOp
         label="Ophanging"
         description="Ophangmateriaal wordt meegeleverd"
         value={ophanging}
-        onChange={(v) => onChange({ ophanging: v })}
+        onChange={(v) => onChange(v ? { ophanging: true } : { ophanging: false, voormonteren: false })}
       />
       {ophanging && (
         <ToggleRow

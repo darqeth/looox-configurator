@@ -2,6 +2,10 @@
 
 export type Glasdikte = '4' | '5' | '6'
 
+export const GLASDIKTES = ['4', '5', '6'] as const satisfies Glasdikte[]
+export const AFMETING_MIN = 20  // projectspiegels kunnen kleiner zijn dan reguliere spiegels (min 40)
+export const AFMETING_MAX = 300
+
 export const GLASDIKTE_PRIJS_M2: Record<Glasdikte, number> = {
   '4': 30.78,
   '5': 34.68,

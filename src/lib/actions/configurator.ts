@@ -169,3 +169,67 @@ export async function updateConfiguration(input: UpdateConfigInput) {
   revalidatePath('/dashboard')
   revalidatePath(`/configurator/${input.configId}`)
 }
+
+export type SaveProjectspiegelInput = {
+  lengte: number
+  hoogte: number
+  glasdikte: '4' | '5' | '6'
+  ophanging: boolean
+  voormonteren: boolean
+  verpakkingPerStuk: boolean
+  quantity: number
+  projectName: string
+  reference: string
+}
+
+export async function saveProjectspiegelConfiguration(input: SaveProjectspiegelInput) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+
+  const { calcBasisprijs, calcTotaal } = await import('@/lib/projectspiegel-config')
+  const basisprijs = calcBasisprijs({
+    lengte: input.lengte,
+    hoogte: input.hoogte,
+    glasdikte: input.glasdikte,
+    ophanging: input.ophanging,
+    verpakkingPerStuk: input.verpakkingPerStuk,
+  })
+  const totalPrice = calcTotaal(basisprijs, input.quantity)
+
+  const selectedOptionsJson = {
+    shape: 'projectspiegel' as const,
+    glasdikte: input.glasdikte,
+    ophanging: input.ophanging,
+    voormonteren: input.voormonteren,
+    verpakkingPerStuk: input.verpakkingPerStuk,
+    quantity: input.quantity,
+    reference: input.reference,
+    description: '',
+    diameter: null,
+    organicSizeKey: null,
+    glasKleur: 'helder',
+    directLight: { position: 'geen', type: null, control: null },
+    indirectLight: { position: 'geen', type: null, control: null },
+    extras: [],
+    optionSubChoices: {},
+    attachmentUrl: null,
+  }
+
+  const { error } = await supabase.from('configurations').insert({
+    user_id: user.id,
+    product_id: DEFAULT_PRODUCT_ID,
+    name: input.projectName,
+    width: input.lengte,
+    height: input.hoogte,
+    selected_options: selectedOptionsJson,
+    total_price: totalPrice.toString(),
+    status: 'saved',
+    article_number: generateArticleNumber(),
+  })
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/configuraties')
+  revalidatePath('/dashboard')
+}

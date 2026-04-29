@@ -1,4 +1,4 @@
-export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc'
+export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc' | 'projectspiegel'
 export type LightType = '3000k' | '4000k' | 'rgbw' | 'cct'
 export type GlasKleur = 'helder' | 'smoke-zwart' | 'smoke-brons'
 
@@ -31,6 +31,7 @@ export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   ovaal:          ['geen', 'rondom'],
   arc:            ['geen', 'rondom'],
   'op-aanvraag':  ['geen', 'indirect', 'direct'],
+  projectspiegel: [],
 }
 
 export const INDIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
@@ -41,6 +42,7 @@ export const INDIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   ovaal:          ['geen', 'rondom'],
   arc:            ['geen', 'rondom'],
   'op-aanvraag':  [],
+  projectspiegel: [],
 }
 
 export const POSITION_LABELS: Record<string, string> = {
@@ -358,6 +360,7 @@ export function calcBasePrice(
   glasKleur: GlasKleur = 'helder',
   directPosition: string = 'geen',
 ): number {
+  if (shape === 'projectspiegel') return 0
   if (shape === 'rechthoek' || shape === 'op-aanvraag' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     return Math.round(calcGlasKosten(width, height, glasKleur) + VASTE_TOESLAG)
   }
@@ -387,6 +390,9 @@ export function calcTotalPrice(state: {
   optionSubChoices?: Record<string, string>
 }): number {
   const glasKleur: GlasKleur = state.glasKleur ?? 'helder'
+
+  // ── Projectspiegel: prijs apart berekend ─────────────────────────────────
+  if (state.shape === 'projectspiegel') return 0
 
   // ── Rechthoek / Afgeronde hoeken / Ovaal / Arc: zelfde glasprijs + LED ─────
   if (state.shape === 'rechthoek' || state.shape === 'rounded-rect' || state.shape === 'ovaal' || state.shape === 'arc') {

@@ -170,6 +170,56 @@ export async function updateConfiguration(input: UpdateConfigInput) {
   revalidatePath(`/configurator/${input.configId}`)
 }
 
+export async function updateProjectspiegelConfiguration(configId: string, input: SaveProjectspiegelInput) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+
+  const { calcBasisprijs, calcTotaal } = await import('@/lib/projectspiegel-config')
+  const basisprijs = calcBasisprijs({
+    lengte: input.lengte,
+    hoogte: input.hoogte,
+    glasdikte: input.glasdikte,
+    ophanging: input.ophanging,
+    verpakkingPerStuk: input.verpakkingPerStuk,
+  })
+  const totalPrice = calcTotaal(basisprijs, input.quantity)
+
+  const selectedOptionsJson = {
+    shape: 'projectspiegel' as const,
+    glasdikte: input.glasdikte,
+    ophanging: input.ophanging,
+    voormonteren: input.voormonteren,
+    verpakkingPerStuk: input.verpakkingPerStuk,
+    quantity: input.quantity,
+    reference: input.reference,
+    description: '',
+    diameter: null,
+    organicSizeKey: null,
+    glasKleur: 'helder',
+    directLight: { position: 'geen', type: null, control: null },
+    indirectLight: { position: 'geen', type: null, control: null },
+    extras: [],
+    optionSubChoices: {},
+    attachmentUrl: null,
+  }
+
+  const { error } = await supabase.from('configurations').update({
+    name: input.projectName,
+    width: input.lengte,
+    height: input.hoogte,
+    selected_options: selectedOptionsJson,
+    total_price: totalPrice.toString(),
+    updated_at: new Date().toISOString(),
+  }).eq('id', configId).eq('user_id', user.id)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/configuraties')
+  revalidatePath('/dashboard')
+  revalidatePath(`/configurator/${configId}`)
+}
+
 export type SaveProjectspiegelInput = {
   lengte: number
   hoogte: number

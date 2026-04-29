@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Glasdikte, VERPAKKING_DREMPEL } from '@/lib/projectspiegel-config'
-import { saveProjectspiegelConfiguration } from '@/lib/actions/configurator'
+import { VERPAKKING_DREMPEL } from '@/lib/projectspiegel-config'
+import { saveProjectspiegelConfiguration, updateProjectspiegelConfiguration } from '@/lib/actions/configurator'
+import { Glasdikte as GlasdikteType } from '@/lib/projectspiegel-config'
 import StepAfmeting from './step-afmeting'
 import StepOpties from './step-opties'
 import StepSamenvatting from './step-samenvatting'
@@ -15,19 +16,34 @@ const STEPS = [
   { label: 'Samenvatting' },
 ]
 
-export default function ProjectspiegelConfigurator() {
+interface InitialConfig {
+  id: string
+  lengte: number
+  hoogte: number
+  glasdikte: GlasdikteType
+  ophanging: boolean
+  voormonteren: boolean
+  verpakkingPerStuk: boolean
+  quantity: number
+  projectName: string
+  reference: string
+}
+
+export default function ProjectspiegelConfigurator({ initialConfig }: { initialConfig?: InitialConfig }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
+  const isEditing = !!initialConfig
+
   const [step, setStep] = useState(0)
-  const [lengte, setLengte] = useState(120)
-  const [hoogte, setHoogte] = useState(80)
-  const [glasdikte, setGlasdikte] = useState<Glasdikte>('5')
-  const [ophanging, setOphanging] = useState(true)
-  const [voormonteren, setVoormonteren] = useState(true)
-  const [quantity, setQuantity] = useState(1)
-  const [verpakkingPerStuk, setVerpakkingPerStuk] = useState(true)
-  const [projectName, setProjectName] = useState('')
+  const [lengte, setLengte] = useState(initialConfig?.lengte ?? 120)
+  const [hoogte, setHoogte] = useState(initialConfig?.hoogte ?? 80)
+  const [glasdikte, setGlasdikte] = useState<GlasdikteType>(initialConfig?.glasdikte ?? '5')
+  const [ophanging, setOphanging] = useState(initialConfig?.ophanging ?? true)
+  const [voormonteren, setVoormonteren] = useState(initialConfig?.voormonteren ?? true)
+  const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
+  const [verpakkingPerStuk, setVerpakkingPerStuk] = useState(initialConfig?.verpakkingPerStuk ?? true)
+  const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
 
   const effectiveVerpakking = quantity < VERPAKKING_DREMPEL ? true : verpakkingPerStuk
 
@@ -38,7 +54,7 @@ export default function ProjectspiegelConfigurator() {
 
   function handleSave() {
     startTransition(async () => {
-      await saveProjectspiegelConfiguration({
+      const payload = {
         lengte,
         hoogte,
         glasdikte,
@@ -47,8 +63,13 @@ export default function ProjectspiegelConfigurator() {
         verpakkingPerStuk: effectiveVerpakking,
         quantity,
         projectName,
-        reference: '',
-      })
+        reference: initialConfig?.reference ?? '',
+      }
+      if (isEditing) {
+        await updateProjectspiegelConfiguration(initialConfig.id, payload)
+      } else {
+        await saveProjectspiegelConfiguration(payload)
+      }
       router.push('/configuraties')
     })
   }

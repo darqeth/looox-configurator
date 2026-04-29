@@ -236,8 +236,10 @@ export async function ConfiguratiesContent({
                 ].filter(Boolean)
 
                 const canDelete = config.user_id === user.id || memberPerms?.role === 'manager'
+                const isProjectspiegel = shape === 'projectspiegel'
+                const projectspiegelStuks = isProjectspiegel ? (opts?.quantity as number | undefined) : undefined
                 const displayPrice = Number(config.total_price)
-                const priceLabel = 'Bruto ex. BTW'
+                const priceLabel = isProjectspiegel ? 'Netto ex. BTW' : 'Bruto ex. BTW'
 
                 return (
                   <div key={config.id} className="hover:bg-lx-panel-bg/50 transition-colors">
@@ -265,7 +267,7 @@ export async function ConfiguratiesContent({
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
                           {canOrder && shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
@@ -317,7 +319,7 @@ export async function ConfiguratiesContent({
                       {canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
                           {shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} />
                           )}
                         </div>
                       )}

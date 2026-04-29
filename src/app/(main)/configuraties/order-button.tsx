@@ -11,9 +11,11 @@ interface OrderButtonProps {
   metaSummary: string
   price: number
   korting: number
+  isProjectspiegel?: boolean
+  projectspiegelStuks?: number
 }
 
-export default function OrderButton({ configId, configName, metaSummary, price, korting }: OrderButtonProps) {
+export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks }: OrderButtonProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
@@ -23,8 +25,10 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
   const [result, setResult] = useState<string | null>(null)
   const [orderError, setOrderError] = useState<string | null>(null)
 
-  const nettoUnitPrice = Math.round(price * (1 - korting / 100))
-  const subtotal = nettoUnitPrice * quantity
+  // Projectspiegels: prijs is al netto staffelprijs × qty — geen dealer korting, geen extra qty-vermenigvuldiging
+  const nettoUnitPrice = isProjectspiegel ? price : Math.round(price * (1 - korting / 100))
+  const effectiveQuantity = isProjectspiegel ? 1 : quantity
+  const subtotal = nettoUnitPrice * effectiveQuantity
   const { input: discountInput, setInput: setDiscountInput, validating: discountValidating, error: discountError, setError: setDiscountError, applied: appliedDiscount, setApplied: setAppliedDiscount, discountAmount, validate: handleValidate, reset: resetDiscount } = useDiscountCode(subtotal)
   const finalTotal = subtotal - discountAmount
 
@@ -34,7 +38,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
     setOrderError(null)
     try {
       const { orderNumber } = await placeOrderFromConfig(
-        configId, quantity, notes,
+        configId, effectiveQuantity, notes,
         appliedDiscount?.id ?? null,
         appliedDiscount?.type ?? null,
         appliedDiscount?.value ?? null,
@@ -129,41 +133,59 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                 <div className="px-6 py-5 space-y-4">
                   {/* Prijs samenvatting */}
                   <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12.5px] text-lx-text-secondary">Bruto ex. BTW</span>
-                      <span className="text-[13px] font-medium text-lx-text-primary">€{price.toLocaleString('nl-NL')}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12.5px] text-lx-text-secondary">Dealer korting ({korting}%)</span>
-                      <span className="text-[13px] font-medium text-lx-text-secondary">−€{(price - nettoUnitPrice).toLocaleString('nl-NL')}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
-                      <span className="text-[12.5px] text-lx-text-secondary font-medium">Netto ex. BTW</span>
-                      <span className="text-[14px] font-bold text-lx-cta">€{nettoUnitPrice.toLocaleString('nl-NL')}</span>
-                    </div>
-                    {appliedDiscount && (
-                      <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
-                        <span className="text-[12px] text-green-600">
-                          Kortingscode ({appliedDiscount.type === 'pct' ? `${appliedDiscount.value}%` : `€${appliedDiscount.value} eenmalig`})
-                        </span>
-                        <span className="text-[12px] font-semibold text-green-600">
-                          −€{discountAmount.toLocaleString('nl-NL')}
-                        </span>
-                      </div>
-                    )}
-                    {(appliedDiscount || quantity > 1) && (
-                      <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
-                        <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal {quantity}×</span>
-                        <span className="text-[15px] font-bold text-lx-text-primary">€{finalTotal.toLocaleString('nl-NL')}</span>
-                      </div>
+                    {isProjectspiegel ? (
+                      <>
+                        {projectspiegelStuks && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[12.5px] text-lx-text-secondary">{projectspiegelStuks} stuks (incl. staffelkorting)</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                          <span className="text-[12.5px] text-lx-text-secondary font-medium">Netto totaal ex. BTW</span>
+                          <span className="text-[14px] font-bold text-lx-cta">€{price.toLocaleString('nl-NL')}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[12.5px] text-lx-text-secondary">Bruto ex. BTW</span>
+                          <span className="text-[13px] font-medium text-lx-text-primary">€{price.toLocaleString('nl-NL')}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[12.5px] text-lx-text-secondary">Dealer korting ({korting}%)</span>
+                          <span className="text-[13px] font-medium text-lx-text-secondary">−€{(price - nettoUnitPrice).toLocaleString('nl-NL')}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                          <span className="text-[12.5px] text-lx-text-secondary font-medium">Netto ex. BTW</span>
+                          <span className="text-[14px] font-bold text-lx-cta">€{nettoUnitPrice.toLocaleString('nl-NL')}</span>
+                        </div>
+                        {appliedDiscount && (
+                          <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                            <span className="text-[12px] text-green-600">
+                              Kortingscode ({appliedDiscount.type === 'pct' ? `${appliedDiscount.value}%` : `€${appliedDiscount.value} eenmalig`})
+                            </span>
+                            <span className="text-[12px] font-semibold text-green-600">
+                              −€{discountAmount.toLocaleString('nl-NL')}
+                            </span>
+                          </div>
+                        )}
+                        {(appliedDiscount || quantity > 1) && (
+                          <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                            <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal {quantity}×</span>
+                            <span className="text-[15px] font-bold text-lx-text-primary">€{finalTotal.toLocaleString('nl-NL')}</span>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
-                  {/* Aantal */}
+                  {/* Aantal — verborgen voor projectspiegels (qty zit al in de prijs) */}
+                  {!isProjectspiegel && (
                   <div>
                     <label className="text-[12px] font-semibold text-lx-text-secondary mb-2 block">Aantal</label>
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
                         className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
                         tabIndex={-1}
@@ -176,12 +198,14 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                         className="w-16 h-9 rounded-xl border border-black/12 text-center text-[14px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white"
                       />
                       <button
+                        type="button"
                         onClick={() => setQuantity(quantity + 1)}
                         className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
                         tabIndex={-1}
                       >+</button>
                     </div>
                   </div>
+                  )}
 
                   {/* Kortingscode */}
                   <div>

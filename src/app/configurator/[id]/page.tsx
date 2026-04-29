@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import ConfiguratorWizard from '../nieuw/configurator-wizard'
+import ProjectspiegelConfigurator from '../nieuw/projectspiegel/index'
 import { LightConfig } from '../nieuw/step-verlichting'
 import { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 
@@ -12,7 +13,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
 
   const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([
     supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).single(),
-    supabase.from('profiles').select('korting, is_international').eq('id', user.id).single(),
+    supabase.from('profiles').select('korting, is_international, is_groothandel').eq('id', user.id).single(),
     supabase.from('company_members').select('role, can_see_purchase_prices, can_order').eq('user_id', user.id).maybeSingle(),
   ])
 
@@ -46,6 +47,26 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const canOrder = isManager || (memberData?.can_order ?? true)
   const korting = profile?.korting ?? 50
   const isInternational = profile?.is_international ?? false
+  const isGroothandel = profile?.is_groothandel ?? false
+
+  if (isGroothandel) {
+    return (
+      <ProjectspiegelConfigurator
+        initialConfig={{
+          id: config.id,
+          lengte: config.width ?? 120,
+          hoogte: config.height ?? 80,
+          glasdikte: ((opts.glasdikte as '4' | '5' | '6') ?? '5'),
+          ophanging: (opts.ophanging as boolean) ?? true,
+          voormonteren: (opts.voormonteren as boolean) ?? true,
+          verpakkingPerStuk: (opts.verpakkingPerStuk as boolean) ?? true,
+          quantity: (opts.quantity as number) ?? 1,
+          projectName: config.name ?? '',
+          reference: (opts.reference as string) ?? '',
+        }}
+      />
+    )
+  }
 
   return (
     <ConfiguratorWizard

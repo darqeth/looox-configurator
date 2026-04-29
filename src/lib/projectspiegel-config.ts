@@ -53,7 +53,7 @@ export function calcStuksprijs(basisprijs: number, qty: number): number {
 }
 
 export function calcTotaal(basisprijs: number, qty: number): number {
-  return Math.round(calcStuksprijs(basisprijs, qty) * qty * 100) / 100
+  return Math.round(basisprijs * (1 - getStaffelKorting(qty)) * qty * 100) / 100
 }
 
 export type StaffelTip = {

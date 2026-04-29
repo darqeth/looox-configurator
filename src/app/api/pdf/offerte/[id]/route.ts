@@ -34,7 +34,12 @@ export async function GET(
 
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const quantity = (opts.quantity as number | undefined) ?? 1
-  const unitPrice = Number(config.total_price)
+  const totalPrice = Number(config.total_price)
+  // Projectspiegels: total_price is al het totaal voor alle stuks; stuksprijs terugrekenen
+  const isProjectspiegel = (opts.shape as string | undefined) === 'projectspiegel'
+  const unitPrice = isProjectspiegel && quantity > 1
+    ? Math.round((totalPrice / quantity) * 100) / 100
+    : totalPrice
   const attachmentUrl = (opts.attachmentUrl as string | null) ?? null
 
   const buffer = await renderToBuffer(React.createElement(OfferteDocument, {

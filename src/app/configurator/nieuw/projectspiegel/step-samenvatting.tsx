@@ -6,9 +6,11 @@ import {
   calcBasisprijs,
   calcStuksprijs,
   calcTotaal,
+  getStaffelKorting,
   getStaffelTip,
   STAFFEL_KORTINGEN,
   VERPAKKING_DREMPEL,
+  VERPAKKING_PER_STUK,
 } from '@/lib/projectspiegel-config'
 
 interface StepSamenvattingProps {
@@ -49,7 +51,7 @@ export default function StepSamenvatting({
   const basisprijs = calcBasisprijs({ lengte, hoogte, glasdikte, ophanging, verpakkingPerStuk })
   const stuksprijs = calcStuksprijs(basisprijs, quantity)
   const totaal     = calcTotaal(basisprijs, quantity)
-  const korting    = STAFFEL_KORTINGEN.find(s => quantity >= s.vanaf)?.pct ?? 0
+  const korting    = getStaffelKorting(quantity)
   const tip        = getStaffelTip(basisprijs, quantity)
 
   const showVerpakkingToggle = quantity >= VERPAKKING_DREMPEL
@@ -150,7 +152,7 @@ export default function StepSamenvatting({
           <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
             <div>
               <p className="text-[13px] font-medium text-lx-text-primary">Niet per stuk verpakken</p>
-              <p className="text-[11.5px] text-lx-text-secondary">Bulk verpakking — geen folie/hoekjes per spiegel (−€9,16/stuk)</p>
+              <p className="text-[11.5px] text-lx-text-secondary">Bulk verpakking — geen folie/hoekjes per spiegel (−€{VERPAKKING_PER_STUK.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/stuk)</p>
             </div>
             <button
               role="switch"

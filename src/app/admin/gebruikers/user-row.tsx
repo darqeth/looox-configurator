@@ -104,6 +104,11 @@ export function UserRow({
                 Buitenland +5%
               </span>
             )}
+            {profile.is_groothandel && (
+              <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700">
+                Groothandel
+              </span>
+            )}
             {profile.is_admin && (
               <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">
                 Superadmin

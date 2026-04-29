@@ -36,13 +36,14 @@ export interface ConfigRow {
 }
 
 const shapeLabel: Record<string, string> = {
-  rechthoek:     'Rechthoek',
-  rond:          'Rond',
-  organic:       'Organic',
-  'op-aanvraag': 'Op aanvraag',
-  'rounded-rect': 'Afgerond',
-  ovaal:         'Ovaal',
-  arc:           'Boog',
+  rechthoek:       'Rechthoek',
+  rond:            'Rond',
+  organic:         'Organic',
+  'op-aanvraag':   'Op aanvraag',
+  'rounded-rect':  'Afgerond',
+  ovaal:           'Ovaal',
+  arc:             'Boog',
+  projectspiegel:  'Projectspiegel',
 }
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -110,12 +111,14 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
   const longDate = new Date(config.updated_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
   const profile = config.profiles
 
+  const isProjectspiegel = shape === 'projectspiegel'
+
   return (
     <>
       {/* Klikbare rij */}
       <button
         onClick={() => setOpen(true)}
-        className="w-full hover:bg-lx-panel-bg/50 transition-colors text-left cursor-pointer"
+        className={`w-full transition-colors text-left cursor-pointer ${isProjectspiegel ? 'border-l-[3px] border-l-teal-400 bg-teal-50/20 hover:bg-teal-50/40' : 'hover:bg-lx-panel-bg/50'}`}
       >
         {/* Mobile layout */}
         <div className="flex gap-3 px-4 py-3.5 sm:hidden">

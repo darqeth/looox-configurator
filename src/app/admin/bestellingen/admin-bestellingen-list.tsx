@@ -109,8 +109,9 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
           <div className="divide-y divide-lx-divider">
             {filtered.map(order => {
               const shape = (order.config?.selected_options as { shape?: string })?.shape ?? 'rechthoek'
+              const isProjectspiegel = shape === 'projectspiegel'
               return (
-                <div key={order.id} className="hover:bg-lx-panel-bg/40 transition-colors">
+                <div key={order.id} className={`transition-colors ${isProjectspiegel ? 'border-l-[3px] border-l-teal-400 bg-teal-50/20 hover:bg-teal-50/40' : 'hover:bg-lx-panel-bg/40'}`}>
                   {/* Mobile */}
                   <div className="lg:hidden px-4 py-3.5 flex gap-3">
                     <div className="w-8 h-8 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">

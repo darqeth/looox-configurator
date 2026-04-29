@@ -16,6 +16,14 @@ import {
   EXTRA_OPTIONS,
   CONTROL_PRICES,
 } from '@/lib/configurator-config'
+import {
+  GLASDIKTE_PRIJS_M2,
+  STAFFEL_KORTINGEN,
+  POLIJSTEN_PER_M,
+  OPHANGING_KLEIN,
+  OPHANGING_GROOT,
+  VERPAKKING_PER_STUK,
+} from '@/lib/projectspiegel-config'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -312,6 +320,60 @@ function OrganicTab() {
   )
 }
 
+// ─── Projectspiegels ─────────────────────────────────────────────────────────
+
+function ProjectspiegelsTab() {
+  return (
+    <div className="space-y-5">
+      <SectionCard title="Glasprijs per m²" subtitle="Basisprijs glas voor projectspiegels (geen LED, geen frame).">
+        <div className="space-y-0">
+          {(['4', '5', '6'] as const).map((d, i, arr) => (
+            <div key={d} className={`flex items-center justify-between py-2.5 ${i < arr.length - 1 ? 'border-b border-lx-divider' : ''}`}>
+              <span className="text-[12.5px] text-lx-text-primary font-medium">{d} mm</span>
+              <span className="text-[12.5px] font-semibold text-lx-text-primary">{fmt(GLASDIKTE_PRIJS_M2[d])}/m²</span>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Kanten polijsten" subtitle="Altijd inbegrepen. Prijs per lopende meter × omtrek (2 × lengte + 2 × hoogte).">
+        <InfoRow label="Prijs per lopende meter" value={`${fmt(POLIJSTEN_PER_M)}/m`} />
+      </SectionCard>
+
+      <SectionCard title="Ophanging">
+        <InfoRow label="Oppervlakte ≤ 0,8 m²" value={fmt(OPHANGING_KLEIN)} />
+        <InfoRow label="Oppervlakte > 0,8 m²" value={`${fmt(OPHANGING_GROOT)} (ook >1,6 m² — TBD)`} />
+      </SectionCard>
+
+      <SectionCard title="Verpakking per stuk" subtitle="Folie en hoekbeschermers. Altijd inbegrepen bij <25 stuks. Optioneel ≥25 stuks.">
+        <InfoRow label="Prijs per stuk" value={fmt(VERPAKKING_PER_STUK)} />
+        <InfoRow label="Drempel" value="< 25 stuks: altijd aan · ≥ 25 stuks: optioneel" />
+      </SectionCard>
+
+      <SectionCard title="Staffelkortingen" subtitle="Korting op de basisprijs per stuk op basis van besteld aantal.">
+        <table className="w-full text-[12.5px]">
+          <thead>
+            <tr className="text-lx-text-secondary">
+              <th className="text-left pb-2 font-medium">Vanaf</th>
+              <th className="text-right pb-2 font-medium">Korting</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...STAFFEL_KORTINGEN].reverse().map((tier, i) => (
+              <tr key={tier.vanaf} className={i < STAFFEL_KORTINGEN.length - 1 ? 'border-b border-lx-divider' : ''}>
+                <td className="py-2.5 font-medium text-lx-text-primary">{tier.vanaf}+ stuks</td>
+                <td className="py-2.5 text-right font-semibold text-lx-text-primary">
+                  {tier.pct > 0 ? `−${(tier.pct * 100).toFixed(1)}%` : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </SectionCard>
+    </div>
+  )
+}
+
 // ─── Op aanvraag ─────────────────────────────────────────────────────────────
 
 function OpAanvraagTab() {
@@ -389,11 +451,12 @@ const PRODUCT_CATS = [
 ]
 
 const SHAPE_TABS = [
-  { id: 'rechthoek',  label: 'Rechthoek',  component: RechthoekTab },
-  { id: 'rond',       label: 'Rond',        component: RondTab },
-  { id: 'organic',    label: 'Organic',     component: OrganicTab },
-  { id: 'op-aanvraag',label: 'Op aanvraag', component: OpAanvraagTab },
-  { id: 'opties',     label: 'Extra opties',component: ExtraOptiesTab },
+  { id: 'rechthoek',     label: 'Rechthoek',      component: RechthoekTab },
+  { id: 'rond',          label: 'Rond',           component: RondTab },
+  { id: 'organic',       label: 'Organic',        component: OrganicTab },
+  { id: 'op-aanvraag',   label: 'Op aanvraag',    component: OpAanvraagTab },
+  { id: 'projectspiegels', label: 'Projectspiegels', component: ProjectspiegelsTab },
+  { id: 'opties',        label: 'Extra opties',   component: ExtraOptiesTab },
 ]
 
 export default function ProductenPage() {

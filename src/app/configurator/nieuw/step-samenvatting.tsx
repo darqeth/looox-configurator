@@ -128,18 +128,6 @@ export default function StepSamenvatting({
 
       {/* Prijs */}
       <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
-        {isInternational && (
-          <div className="flex items-center justify-between">
-            <span className="text-[12px] text-lx-text-secondary">Basisprijs</span>
-            <span className="text-[13px] text-lx-text-secondary">€{basePrice.toLocaleString('nl-NL')}</span>
-          </div>
-        )}
-        {isInternational && (
-          <div className="flex items-center justify-between">
-            <span className="text-[12px] text-orange-600">Buitenlandtoeslag (5%)</span>
-            <span className="text-[13px] text-orange-600">+€{internationalSurcharge.toLocaleString('nl-NL')}</span>
-          </div>
-        )}
         <div className="flex items-center justify-between">
           <span className="text-[12.5px] text-lx-text-secondary">Eenheidsprijs Bruto ex. BTW</span>
           <span className="text-[17px] font-bold text-lx-cta">€{unitPrice.toLocaleString('nl-NL')}</span>

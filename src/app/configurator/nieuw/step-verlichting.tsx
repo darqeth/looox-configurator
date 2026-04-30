@@ -25,6 +25,7 @@ interface LightSectionProps {
   positions: string[]
   config: LightConfig
   onChange: (updates: Partial<LightConfig>) => void
+  controlTooltips?: Record<string, string>
 }
 
 const CONTROL_IMG: Record<string, string> = {
@@ -57,7 +58,7 @@ const ControlIcon = memo(function ControlIcon({ id, active }: { id: string; acti
   return <div className="w-7 h-7" />
 })
 
-const LightSection = memo(function LightSection({ title, positions, config, onChange }: LightSectionProps) {
+const LightSection = memo(function LightSection({ title, positions, config, onChange, controlTooltips }: LightSectionProps) {
   const lightTypes: LightType[] = ['3000k', '4000k', 'rgbw', 'cct']
 
   if (positions.length === 0) return null
@@ -135,24 +136,41 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
                   {CONTROLS_FOR_TYPE[config.type].map((ctrl) => {
                     const price = CONTROL_PRICES[ctrl.id] ?? 0
                     const isActive = config.control === ctrl.id
+                    const tooltip = controlTooltips?.[ctrl.id]
                     return (
-                      <button
-                        key={ctrl.id}
-                        onClick={() => onChange({ control: ctrl.id })}
-                        className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                          isActive
-                            ? 'bg-lx-panel-bg border-lx-cta text-lx-cta'
-                            : 'bg-white border-black/10 text-lx-text-secondary hover:border-lx-cta/50 hover:text-lx-cta'
-                        }`}
-                      >
-                        <span className={`absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                          isActive ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
-                        }`}>
-                          {price === 0 ? 'Inbegrepen' : `+€${price}`}
-                        </span>
-                        <ControlIcon id={ctrl.id} active={isActive} />
-                        <span className="text-[11.5px] font-semibold text-center leading-tight text-lx-text-primary">{ctrl.name}</span>
-                      </button>
+                      <div key={ctrl.id} className="relative group/tooltip">
+                        <button
+                          onClick={() => onChange({ control: ctrl.id })}
+                          className={`relative w-full flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                            isActive
+                              ? 'bg-lx-panel-bg border-lx-cta text-lx-cta'
+                              : 'bg-white border-black/10 text-lx-text-secondary hover:border-lx-cta/50 hover:text-lx-cta'
+                          }`}
+                        >
+                          <span className={`absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                            isActive ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
+                          }`}>
+                            {price === 0 ? 'Inbegrepen' : `+€${price}`}
+                          </span>
+                          {tooltip && (
+                            <span className="absolute top-2 left-2 text-lx-text-secondary/50">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+                              </svg>
+                            </span>
+                          )}
+                          <ControlIcon id={ctrl.id} active={isActive} />
+                          <span className="text-[11.5px] font-semibold text-center leading-tight text-lx-text-primary">{ctrl.name}</span>
+                        </button>
+                        {tooltip && (
+                          <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-150">
+                            <div className="bg-gray-900 text-white text-[11.5px] rounded-lg px-2.5 py-2 w-48 leading-relaxed shadow-lg text-center">
+                              {tooltip}
+                            </div>
+                            <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
+                          </div>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
@@ -171,6 +189,7 @@ interface StepVerlichtingProps {
   indirectLight: LightConfig
   onDirectChange: (updates: Partial<LightConfig>) => void
   onIndirectChange: (updates: Partial<LightConfig>) => void
+  controlTooltips?: Record<string, string>
 }
 
 export default function StepVerlichting({
@@ -179,6 +198,7 @@ export default function StepVerlichting({
   indirectLight,
   onDirectChange,
   onIndirectChange,
+  controlTooltips,
 }: StepVerlichtingProps) {
   const directPositions = DIRECT_LIGHT_POSITIONS[shape] ?? []
   const indirectPositions = INDIRECT_LIGHT_POSITIONS[shape] ?? []
@@ -205,6 +225,7 @@ export default function StepVerlichting({
             positions={directPositions}
             config={directLight}
             onChange={onDirectChange}
+            controlTooltips={controlTooltips}
           />
           {indirectPositions.length > 0 && <div className="border-t border-lx-divider" />}
         </>
@@ -216,6 +237,7 @@ export default function StepVerlichting({
           positions={indirectPositions}
           config={indirectLight}
           onChange={onIndirectChange}
+          controlTooltips={controlTooltips}
         />
       )}
     </div>

@@ -86,6 +86,7 @@ export const CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; au
     { id: '3-staps-dimmer',     name: '3-staps dimmer' },
     { id: 'wip-schakelaar',     name: 'Wip schakelaar' },
     { id: 'motion-sensor',      name: 'Motion sensor' },
+    { id: 'afstandsbediening',  name: 'Afstandsbediening' },
   ],
   '4000k': [
     { id: 'externe-schakeling', name: 'Externe schakeling' },
@@ -93,6 +94,7 @@ export const CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; au
     { id: '3-staps-dimmer',     name: '3-staps dimmer' },
     { id: 'wip-schakelaar',     name: 'Wip schakelaar' },
     { id: 'motion-sensor',      name: 'Motion sensor' },
+    { id: 'afstandsbediening',  name: 'Afstandsbediening' },
   ],
   rgbw: [{ id: 'afstandsbediening', name: 'Afstandsbediening', auto: true }],
   cct:  [

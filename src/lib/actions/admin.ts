@@ -384,3 +384,18 @@ export async function saveExtraOptionTooltip(id: string, text: string): Promise<
   if (!user) throw new Error('Niet ingelogd')
   await supabase.from('extra_option_tooltips').upsert({ id, tooltip_text: text.slice(0, 500), updated_at: new Date().toISOString() })
 }
+
+export async function getControlTooltips(): Promise<Record<string, string>> {
+  const supabase = await createClient()
+  const { data } = await supabase.from('control_tooltips').select('id, tooltip_text')
+  const result: Record<string, string> = {}
+  for (const row of data ?? []) result[row.id] = row.tooltip_text
+  return result
+}
+
+export async function saveControlTooltip(id: string, text: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+  await supabase.from('control_tooltips').upsert({ id, tooltip_text: text.slice(0, 500), updated_at: new Date().toISOString() })
+}

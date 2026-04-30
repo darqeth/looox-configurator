@@ -15,8 +15,10 @@ import {
   ORGANIC_SIZES,
   EXTRA_OPTIONS,
   CONTROL_PRICES,
+  CONTROLS_FOR_TYPE,
+  LIGHT_TYPE_LABELS,
 } from '@/lib/configurator-config'
-import { getExtraOptionTooltips, saveExtraOptionTooltip } from '@/lib/actions/admin'
+import { getExtraOptionTooltips, saveExtraOptionTooltip, getControlTooltips, saveControlTooltip } from '@/lib/actions/admin'
 import {
   GLASDIKTE_PRIJS_M2,
   STAFFEL_KORTINGEN,
@@ -484,6 +486,93 @@ function ExtraOptiesTab() {
   )
 }
 
+function BedieningTab() {
+  const lightTypeOrder = ['3000k', '4000k', 'cct', 'rgbw'] as const
+
+  // Deduplicate controls: id → { name, price, lightTypes[] }
+  const allControls: { id: string; name: string; price: number; lightTypes: string[] }[] = []
+  for (const lt of lightTypeOrder) {
+    for (const ctrl of CONTROLS_FOR_TYPE[lt]) {
+      const existing = allControls.find(c => c.id === ctrl.id)
+      if (existing) {
+        existing.lightTypes.push(LIGHT_TYPE_LABELS[lt])
+      } else {
+        allControls.push({ id: ctrl.id, name: ctrl.name, price: CONTROL_PRICES[ctrl.id] ?? 0, lightTypes: [LIGHT_TYPE_LABELS[lt]] })
+      }
+    }
+  }
+
+  const [tooltips, setTooltips] = useState<Record<string, string>>({})
+  const [feedback, setFeedback] = useState<Record<string, 'saved' | 'error' | null>>({})
+
+  useEffect(() => {
+    getControlTooltips().then(setTooltips)
+  }, [])
+
+  async function handleTooltipBlur(id: string, value: string) {
+    try {
+      await saveControlTooltip(id, value)
+      setTooltips(prev => ({ ...prev, [id]: value }))
+      setFeedback(prev => ({ ...prev, [id]: 'saved' }))
+    } catch {
+      setFeedback(prev => ({ ...prev, [id]: 'error' }))
+    }
+    setTimeout(() => setFeedback(prev => ({ ...prev, [id]: null })), 2000)
+  }
+
+  return (
+    <div className="space-y-5">
+      <SectionCard title="Bedieningsopties" subtitle="Zelfde prijs voor alle spiegelvormen. Tooltip tekst is zichtbaar voor klanten in de configurator.">
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-[12.5px]">
+            <thead>
+              <tr>
+                <th className="text-left pb-2 pr-4 text-lx-text-secondary font-medium">Bediening</th>
+                <th className="text-left pb-2 pr-4 text-lx-text-secondary font-medium">Beschikbaar bij</th>
+                <th className="text-right pb-2 text-lx-text-secondary font-medium">Prijs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allControls.map((ctrl, i) => (
+                <Fragment key={ctrl.id}>
+                  <tr className="border-b border-lx-divider">
+                    <td className="py-3 pr-4 align-top font-semibold text-lx-text-primary">{ctrl.name}</td>
+                    <td className="py-3 pr-4 align-top text-lx-text-secondary">{ctrl.lightTypes.join(', ')}</td>
+                    <td className="py-3 align-top text-right font-semibold text-lx-text-primary whitespace-nowrap">
+                      {ctrl.price === 0 ? 'Inbegrepen' : fmt(ctrl.price)}
+                    </td>
+                  </tr>
+                  <tr className={i < allControls.length - 1 ? 'border-b border-lx-divider' : ''}>
+                    <td colSpan={3} className="pb-3 pr-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Tooltip tekst (klanten)</span>
+                        {feedback[ctrl.id] === 'saved' && (
+                          <span className="text-[10.5px] text-green-600 font-medium">✓ Opgeslagen</span>
+                        )}
+                        {feedback[ctrl.id] === 'error' && (
+                          <span className="text-[10.5px] text-red-500 font-medium">✗ Fout</span>
+                        )}
+                      </div>
+                      <textarea
+                        rows={2}
+                        defaultValue={tooltips[ctrl.id] ?? ''}
+                        key={ctrl.id + '-' + (tooltips[ctrl.id] ?? '')}
+                        onBlur={async (e) => { await handleTooltipBlur(ctrl.id, e.target.value) }}
+                        placeholder="Tooltip tekst voor klanten (optioneel)..."
+                        className="w-full px-3 py-2 text-[12px] rounded-lg border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-1 focus:ring-lx-cta/10 outline-none transition-colors resize-none"
+                      />
+                    </td>
+                  </tr>
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 const PRODUCT_CATS = [
@@ -498,6 +587,7 @@ const SHAPE_TABS = [
   { id: 'op-aanvraag',   label: 'Op aanvraag',    component: OpAanvraagTab },
   { id: 'projectspiegels', label: 'Projectspiegels', component: ProjectspiegelsTab },
   { id: 'opties',        label: 'Extra opties',   component: ExtraOptiesTab },
+  { id: 'bediening',    label: 'Bediening',      component: BedieningTab },
 ]
 
 export default function ProductenPage() {

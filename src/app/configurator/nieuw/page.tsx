@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import ConfiguratorWizard from './configurator-wizard'
 import ProjectspiegelConfigurator from './projectspiegel/index'
-import { getExtraOptionTooltips } from '@/lib/actions/admin'
+import { getExtraOptionTooltips, getControlTooltips } from '@/lib/actions/admin'
 
 export const metadata = { title: 'Nieuwe spiegel — LoooX Configurator' }
 
@@ -15,7 +15,10 @@ export default async function NieuweConfiguratiePage() {
   let isInternational = false
   let isGroothandel = false
 
-  const optionTooltips = await getExtraOptionTooltips()
+  const [optionTooltips, controlTooltips] = await Promise.all([
+    getExtraOptionTooltips(),
+    getControlTooltips(),
+  ])
 
   if (user) {
     const [{ data: profile }, { data: memberData }] = await Promise.all([
@@ -42,6 +45,7 @@ export default async function NieuweConfiguratiePage() {
       canOrder={canOrder}
       isInternational={isInternational}
       optionTooltips={optionTooltips}
+      controlTooltips={controlTooltips}
     />
   )
 }

@@ -85,7 +85,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
   )
 })
 
-export default function ConfiguratorWizard({ initialConfig, korting = 50, canSeePurchasePrices: _canSeePurchasePrices = true, canOrder = true, isInternational = false, optionTooltips = {} }: { initialConfig?: InitialConfig; korting?: number; canSeePurchasePrices?: boolean; canOrder?: boolean; isInternational?: boolean; optionTooltips?: Record<string, string> }) {
+export default function ConfiguratorWizard({ initialConfig, korting = 50, canSeePurchasePrices: _canSeePurchasePrices = true, canOrder = true, isInternational = false, optionTooltips = {}, controlTooltips = {} }: { initialConfig?: InitialConfig; korting?: number; canSeePurchasePrices?: boolean; canOrder?: boolean; isInternational?: boolean; optionTooltips?: Record<string, string>; controlTooltips?: Record<string, string> }) {
   const router = useRouter()
   const isEditing = !!initialConfig
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
@@ -457,6 +457,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
                     indirectLight={indirectLight}
                     onDirectChange={(updates) => setDirectLight(prev => ({ ...prev, ...updates }))}
                     onIndirectChange={(updates) => setIndirectLight(prev => ({ ...prev, ...updates }))}
+                    controlTooltips={controlTooltips}
                   />
                 )}
 

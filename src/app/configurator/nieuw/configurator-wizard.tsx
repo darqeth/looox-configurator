@@ -458,6 +458,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
                     onDirectChange={(updates) => setDirectLight(prev => ({ ...prev, ...updates }))}
                     onIndirectChange={(updates) => setIndirectLight(prev => ({ ...prev, ...updates }))}
                     controlTooltips={controlTooltips}
+                    isInternational={isInternational}
                   />
                 )}
 
@@ -473,6 +474,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
                     optionSubChoices={optionSubChoices}
                     onSubChoiceChange={(id, val) => setOptionSubChoices(prev => ({ ...prev, [id]: val }))}
                     optionTooltips={optionTooltips}
+                    isInternational={isInternational}
                   />
                 )}
 
@@ -539,6 +541,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
                 directLight={directLight} indirectLight={indirectLight}
                 selectedOptions={selectedOptions}
                 optionSubChoices={optionSubChoices}
+                isInternational={isInternational}
               />
             </div>
           </div>

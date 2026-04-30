@@ -54,9 +54,11 @@ interface StepOptiesProps {
   optionSubChoices: Record<string, string>
   onSubChoiceChange: (optionId: string, choiceId: string) => void
   optionTooltips?: Record<string, string>
+  isInternational?: boolean
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips }: StepOptiesProps) {
+export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false }: StepOptiesProps) {
+  const mult = isInternational ? 1.05 : 1
   const available = EXTRA_OPTIONS.filter((opt) => opt.shapes.includes(shape))
 
   function getIncompatibleReason(optionId: string): string | null {
@@ -137,19 +139,19 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                 isSelected ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
               }`}>
                 {option.id === 'verwarming'
-                  ? `+€${shape === 'rond' ? calcRondHeatingPrice(diameter ?? 60) : calcHeatingPrice(width, height)}`
+                  ? `+€${Math.round((shape === 'rond' ? calcRondHeatingPrice(diameter ?? 60) : calcHeatingPrice(width, height)) * mult)}`
                   : option.id === 'afgeronde-hoeken'
-                  ? `+€${Math.round(calcGlasKosten(width, height, glasKleur) * 0.60)}`
+                  ? `+€${Math.round(calcGlasKosten(width, height, glasKleur) * 0.60 * mult)}`
                   : option.id === 'schuine-zijden'
-                  ? `+€${Math.round(calcGlasKosten(width, height, glasKleur) * 0.30)}`
+                  ? `+€${Math.round(calcGlasKosten(width, height, glasKleur) * 0.30 * mult)}`
                   : option.id === 'frame-in-kleur' && shape !== 'rond'
                   ? (() => {
                       const colorId = optionSubChoices[option.id]
-                      if (colorId) return `+€${calcRechthoekFramePrice(colorId, width, height)}`
-                      const minPrice = calcRechthoekFramePrice(Object.keys(RECHTHOEK_FRAME_PRIJS_PER_METER).reduce((a, b) => RECHTHOEK_FRAME_PRIJS_PER_METER[a] <= RECHTHOEK_FRAME_PRIJS_PER_METER[b] ? a : b), width, height)
+                      if (colorId) return `+€${Math.round(calcRechthoekFramePrice(colorId, width, height) * mult)}`
+                      const minPrice = Math.round(calcRechthoekFramePrice(Object.keys(RECHTHOEK_FRAME_PRIJS_PER_METER).reduce((a, b) => RECHTHOEK_FRAME_PRIJS_PER_METER[a] <= RECHTHOEK_FRAME_PRIJS_PER_METER[b] ? a : b), width, height) * mult)
                       return `v.a. €${minPrice}`
                     })()
-                  : (option.priceDisplay ?? `+€${option.price}`)
+                  : (option.priceDisplay ?? `+€${Math.round(option.price * mult)}`)
                 }
               </span>
 

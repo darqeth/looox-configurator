@@ -26,6 +26,7 @@ interface LightSectionProps {
   config: LightConfig
   onChange: (updates: Partial<LightConfig>) => void
   controlTooltips?: Record<string, string>
+  isInternational?: boolean
 }
 
 const CONTROL_IMG: Record<string, string> = {
@@ -58,7 +59,8 @@ const ControlIcon = memo(function ControlIcon({ id, active }: { id: string; acti
   return <div className="w-7 h-7" />
 })
 
-const LightSection = memo(function LightSection({ title, positions, config, onChange, controlTooltips }: LightSectionProps) {
+const LightSection = memo(function LightSection({ title, positions, config, onChange, controlTooltips, isInternational = false }: LightSectionProps) {
+  const mult = isInternational ? 1.05 : 1
   const lightTypes: LightType[] = ['3000k', '4000k', 'rgbw', 'cct']
 
   if (positions.length === 0) return null
@@ -123,7 +125,7 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
               {CONTROLS_FOR_TYPE[config.type][0]?.auto ? (
                 <div className="relative flex items-center gap-3 p-3 bg-lx-panel-bg rounded-xl border border-black/8">
                   <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">
-                    +€{CONTROL_PRICES['afstandsbediening']}
+                    +€{Math.round(CONTROL_PRICES['afstandsbediening'] * mult)}
                   </span>
                   <div className="text-lx-cta"><ControlIcon id="afstandsbediening" active={true} /></div>
                   <div className="pr-14">
@@ -134,7 +136,7 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {CONTROLS_FOR_TYPE[config.type].map((ctrl) => {
-                    const price = CONTROL_PRICES[ctrl.id] ?? 0
+                    const price = Math.round((CONTROL_PRICES[ctrl.id] ?? 0) * mult)
                     const isActive = config.control === ctrl.id
                     const tooltip = controlTooltips?.[ctrl.id]
                     return (
@@ -190,6 +192,7 @@ interface StepVerlichtingProps {
   onDirectChange: (updates: Partial<LightConfig>) => void
   onIndirectChange: (updates: Partial<LightConfig>) => void
   controlTooltips?: Record<string, string>
+  isInternational?: boolean
 }
 
 export default function StepVerlichting({
@@ -199,6 +202,7 @@ export default function StepVerlichting({
   onDirectChange,
   onIndirectChange,
   controlTooltips,
+  isInternational = false,
 }: StepVerlichtingProps) {
   const directPositions = DIRECT_LIGHT_POSITIONS[shape] ?? []
   const indirectPositions = INDIRECT_LIGHT_POSITIONS[shape] ?? []
@@ -226,6 +230,7 @@ export default function StepVerlichting({
             config={directLight}
             onChange={onDirectChange}
             controlTooltips={controlTooltips}
+            isInternational={isInternational}
           />
           {indirectPositions.length > 0 && <div className="border-t border-lx-divider" />}
         </>
@@ -238,6 +243,7 @@ export default function StepVerlichting({
           config={indirectLight}
           onChange={onIndirectChange}
           controlTooltips={controlTooltips}
+          isInternational={isInternational}
         />
       )}
     </div>

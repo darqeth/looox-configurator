@@ -126,7 +126,7 @@ function RechthoekTab() {
         subtitle="Aluminium frame rondom. Prijs per strekkende meter × omtrek (2 × breedte + 2 × hoogte)."
       >
         <div className="space-y-0">
-          {Object.entries(RECHTHOEK_FRAME_PRIJS_PER_METER).map(([colorId, pricePerM], i, arr) => {
+          {Object.entries(RECHTHOEK_FRAME_PRIJS_PER_METER).map(([colorId, pricePerM]) => {
             const label = {
               'aluminium':      'Aluminium',
               'zwart':          'Mat zwart',

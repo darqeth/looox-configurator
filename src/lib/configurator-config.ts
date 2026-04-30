@@ -360,7 +360,7 @@ export function calcBasePrice(
   diameter?: number,
   organicSizeKey?: string,
   glasKleur: GlasKleur = 'helder',
-  directPosition: string = 'geen',
+  _directPosition: string = 'geen',
 ): number {
   if (shape === 'projectspiegel') return 0
   if (shape === 'rechthoek' || shape === 'op-aanvraag' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {

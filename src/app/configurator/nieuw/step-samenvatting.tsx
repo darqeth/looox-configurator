@@ -84,9 +84,9 @@ export default function StepSamenvatting({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   projectName, reference,
-  saving, schunineZijdenFile, isInternational = false, korting = 50, onProjectNameChange, onReferenceChange,
+  saving, schunineZijdenFile, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange,
   onSchunineZijdenFileChange,
-  onGoToStep, onSave, onOrder, canOrder = true,
+  onGoToStep, onSave, onOrder: _onOrder, canOrder: _canOrder = true,
 }: StepSamenvattingProps) {
   const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
   const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? shape
@@ -111,7 +111,6 @@ export default function StepSamenvatting({
     .filter(Boolean)
     .join(', ')
 
-  const orderDisabled = !projectName.trim() || saving || (hasSchunineZijden && !schunineZijdenFile)
 
   return (
     <div className="space-y-6">

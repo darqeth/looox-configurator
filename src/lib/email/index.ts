@@ -8,7 +8,6 @@ function getResend() {
 
 const FROM = 'LoooX Configurator <noreply@looox.nl>'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://configurator.looox.nl'
-const INTERNAL_EMAIL = 'marketing@rmsanitair.nl'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

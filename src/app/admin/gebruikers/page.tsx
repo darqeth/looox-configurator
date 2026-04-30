@@ -19,7 +19,7 @@ export default async function GebruikersPage() {
 
   if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
 
-  const [{ data: rawProfiles }, { data: pendingColleagues }, { data: companies }] = await Promise.all([
+  const [{ data: rawProfiles }, { data: pendingColleagues }, { data: companies }, { data: streaks }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international, is_groothandel, is_admin, is_sub_admin, company_members(role, can_order, can_see_purchase_prices, can_configure, own_configs_only)')
@@ -35,7 +35,11 @@ export default async function GebruikersPage() {
       .eq('approval_status', 'pending')
       .not('company_id', 'is', null),
     supabase.from('companies').select('id, name').order('name'),
+    supabase.from('login_streaks').select('user_id, total_days'),
   ])
+
+  const streakMap: Record<string, number> = {}
+  for (const s of streaks ?? []) streakMap[s.user_id] = s.total_days ?? 0
 
   // Normalize profiles: extract first company_members row
   const profiles: UserRowProfile[] = (rawProfiles ?? []).map(p => {
@@ -114,7 +118,7 @@ export default async function GebruikersPage() {
           <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Wacht op goedkeuring</h2>
           <div className="space-y-2">
             {pending.map(p => (
-              <UserRow key={p.id} profile={p} showActions companies={companies ?? []} currentUserIsAdmin />
+              <UserRow key={p.id} profile={p} showActions companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id] ?? 0} />
             ))}
           </div>
         </section>
@@ -126,7 +130,7 @@ export default async function GebruikersPage() {
         {approved.length > 0 ? (
           <div className="space-y-2">
             {approved.map(p => (
-              <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin />
+              <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id] ?? 0} />
             ))}
           </div>
         ) : (
@@ -140,7 +144,7 @@ export default async function GebruikersPage() {
           <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Afgewezen ({rejected.length})</h2>
           <div className="space-y-2">
             {rejected.map(p => (
-              <UserRow key={p.id} profile={p} showApprove companies={companies ?? []} currentUserIsAdmin />
+              <UserRow key={p.id} profile={p} showApprove companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id] ?? 0} />
             ))}
           </div>
         </section>

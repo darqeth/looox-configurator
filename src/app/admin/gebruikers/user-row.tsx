@@ -43,6 +43,7 @@ export function UserRow({
   inviterName = null,
   companies = [],
   currentUserIsAdmin = false,
+  totalDays = 0,
 }: {
   profile: UserRowProfile
   showActions?: boolean
@@ -51,6 +52,7 @@ export function UserRow({
   inviterName?: string | null
   companies?: { id: string; name: string }[]
   currentUserIsAdmin?: boolean
+  totalDays?: number
 }) {
   const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
@@ -117,6 +119,14 @@ export function UserRow({
             {!profile.is_admin && profile.is_sub_admin && (
               <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700">
                 Beheerder
+              </span>
+            )}
+            {totalDays > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-lx-panel-bg text-lx-text-secondary border border-black/8">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                {totalDays}d
               </span>
             )}
           </div>

@@ -317,7 +317,7 @@ export async function updateLoginStreak() {
 
   const { data: streak } = await supabase
     .from('login_streaks')
-    .select('current_streak, longest_streak, last_login_date')
+    .select('current_streak, longest_streak, last_login_date, total_days')
     .eq('user_id', user.id)
     .single()
 
@@ -327,6 +327,7 @@ export async function updateLoginStreak() {
       current_streak: 1,
       longest_streak: 1,
       last_login_date: today,
+      total_days: 1,
     })
     return
   }
@@ -344,6 +345,7 @@ export async function updateLoginStreak() {
     current_streak: newStreak,
     longest_streak: newLongest,
     last_login_date: today,
+    total_days: (streak.total_days ?? 0) + 1,
     updated_at: new Date().toISOString(),
   }).eq('user_id', user.id)
 }

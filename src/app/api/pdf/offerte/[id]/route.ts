@@ -28,7 +28,7 @@ export async function GET(
   // Fetch dealer profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, phone, address')
+    .select('full_name, company, phone, address, shipping_address')
     .eq('id', user.id)
     .single()
 
@@ -52,6 +52,7 @@ export async function GET(
       email: user.email ?? '',
       phone: profile?.phone ?? null,
       address: profile?.address ?? null,
+      shippingAddress: (profile as { shipping_address?: string | null } | null)?.shipping_address ?? null,
     },
     config: {
       width: config.width,

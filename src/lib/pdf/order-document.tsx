@@ -363,6 +363,7 @@ export type OrderDocumentProps = {
     email: string
     phone?: string | null
     address?: string | null
+    shippingAddress?: string | null
   }
   config: {
     name: string | null
@@ -444,6 +445,12 @@ export default function OrderDocument({
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Adres</Text>
                   <Text style={styles.infoValue}>{dealer.address}</Text>
+                </View>
+              )}
+              {dealer.shippingAddress && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Afleveradres</Text>
+                  <Text style={styles.infoValue}>{dealer.shippingAddress}</Text>
                 </View>
               )}
             </View>

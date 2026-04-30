@@ -81,7 +81,7 @@ async function sendOrderEmails(
 ) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, email, company, phone, address, korting')
+    .select('full_name, email, company, phone, address, shipping_address, korting')
     .eq('id', userId)
     .single()
 
@@ -101,6 +101,7 @@ async function sendOrderEmails(
         email,
         phone: (profile as Profile | null)?.phone ?? null,
         address: (profile as Profile | null)?.address ?? null,
+        shippingAddress: (profile as { shipping_address?: string | null } | null)?.shipping_address ?? null,
       },
       config: {
         name: emailDetails.projectName ?? null,
@@ -135,6 +136,7 @@ async function sendOrderEmails(
         email,
         phone: (profile as Profile | null)?.phone ?? null,
         address: (profile as Profile | null)?.address ?? null,
+        shippingAddress: (profile as { shipping_address?: string | null } | null)?.shipping_address ?? null,
       },
       pdfBuffer,
     })

@@ -361,6 +361,7 @@ export type OfferteDocumentProps = {
     email: string
     phone?: string | null
     address?: string | null
+    shippingAddress?: string | null
   }
   config: {
     width: number | null
@@ -397,6 +398,9 @@ export default function OfferteDocument({
           <View>
             <Text style={styles.companyName}>{dealer.company ?? dealer.name ?? 'Uw leverancier'}</Text>
             {dealer.address && <Text style={styles.companyDetails}>{dealer.address}</Text>}
+            {dealer.shippingAddress && (
+              <Text style={styles.companyDetails}>Afleveradres: {dealer.shippingAddress}</Text>
+            )}
             {dealer.phone && <Text style={styles.companyDetails}>{dealer.phone}</Text>}
             <Text style={styles.companyDetails}>{dealer.email}</Text>
           </View>

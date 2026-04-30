@@ -46,6 +46,7 @@ export const profiles = pgTable('profiles', {
   company: text('company'),
   phone: text('phone'),
   address: text('address'),
+  shipping_address: text('shipping_address'),
   avatar_url: text('avatar_url'),
   approval_status: approvalStatusEnum('approval_status')
     .notNull()

@@ -13,6 +13,7 @@ export async function updateProfile(formData: FormData) {
   const company  = (formData.get('company')   as string ?? '').slice(0, 100)
   const phone    = (formData.get('phone')     as string ?? '').slice(0, 30)
   const address  = (formData.get('address')   as string ?? '').slice(0, 200)
+  const shippingAddress = (formData.get('shipping_address') as string ?? '').slice(0, 300)
 
   const { error } = await supabase
     .from('profiles')
@@ -21,6 +22,7 @@ export async function updateProfile(formData: FormData) {
       company,
       phone,
       address,
+      shipping_address: shippingAddress || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id)

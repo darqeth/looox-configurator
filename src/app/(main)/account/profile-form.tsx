@@ -8,6 +8,7 @@ type Profile = {
   company: string | null
   phone: string | null
   address: string | null
+  shipping_address: string | null
   email: string
 }
 
@@ -61,6 +62,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   const [profileStatus, setProfileStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [profileError, setProfileError] = useState('')
   const [profileLoading, setProfileLoading] = useState(false)
+  const [hasShippingAddress, setHasShippingAddress] = useState(!!profile.shipping_address)
 
   async function handleProfile(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -86,6 +88,31 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         <InputField label="E-mailadres" name="email" defaultValue={profile.email} readOnly />
       </div>
       <InputField label="Adres" name="address" defaultValue={profile.address} placeholder="Voorbeeldstraat 1, 1234 AB Amsterdam" />
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="has_shipping_address"
+          name="has_shipping_address"
+          checked={hasShippingAddress}
+          onChange={e => setHasShippingAddress(e.target.checked)}
+          className="rounded border-lx-border"
+        />
+        <label htmlFor="has_shipping_address" className="text-[13px] text-lx-text-primary cursor-pointer">Afwijkend verzendadres opgeven</label>
+      </div>
+
+      {hasShippingAddress && (
+        <div>
+          <label className="block text-[12px] font-semibold text-lx-text-primary mb-1.5">Afleveradres</label>
+          <textarea
+            name="shipping_address"
+            defaultValue={profile.shipping_address ?? ''}
+            placeholder="Straatnaam huisnummer, 1234 AB Stad, Land"
+            rows={3}
+            className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10 outline-none transition-colors resize-none"
+          />
+        </div>
+      )}
 
       {profileStatus === 'success' && <SuccessBanner message="Profiel opgeslagen" />}
       {profileStatus === 'error' && <ErrorBanner message={profileError} />}

@@ -15,6 +15,7 @@ export type OrderRenderInput = {
     email: string
     phone: string | null
     address: string | null
+    shippingAddress?: string | null
   }
   config: {
     name: string | null

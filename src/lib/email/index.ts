@@ -288,6 +288,7 @@ export async function sendInternalOrderEmail({
     email: string
     phone: string | null
     address: string | null
+    shippingAddress?: string | null
   }
   pdfBuffer?: Buffer
 }) {
@@ -297,6 +298,7 @@ export async function sendInternalOrderEmail({
     row('E-mail', `<a href="mailto:${customer.email}" style="color:#3d6b54;">${customer.email}</a>`),
     customer.phone ? row('Telefoon', customer.phone) : '',
     customer.address ? row('Adres', customer.address) : '',
+    customer.shippingAddress ? row('Afleveradres', customer.shippingAddress) : '',
   ].join('')
 
   const orderRows = buildOrderRows(order)

@@ -165,17 +165,17 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                     {option.name}
                   </p>
                   {optionTooltips?.[option.id] && (
-                    <div className="relative group/tooltip flex-shrink-0">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lx-text-secondary/60 cursor-help">
-                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-                      </svg>
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-lx-text-primary text-white text-[11px] font-medium rounded-lg shadow-lg w-48 opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-150 pointer-events-none z-50 leading-snug">
-                        {optionTooltips[option.id]}
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
-                      </div>
-                    </div>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-lx-text-secondary/60">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
                   )}
                 </div>
+                {optionTooltips?.[option.id] && (
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-lx-text-primary text-white text-[11px] font-medium rounded-lg shadow-lg w-48 opacity-0 group-hover/card:opacity-100 transition-opacity duration-150 pointer-events-none z-50 leading-snug">
+                    {optionTooltips[option.id]}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
+                  </div>
+                )}
                 <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">{option.description}</p>
                 {isSelected && option.id === 'schuine-zijden' && (
                   <p className="text-[11px] text-lx-cta mt-1 font-medium">Tekening vereist — aanleveren in stap 5</p>

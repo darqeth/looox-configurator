@@ -29,6 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         pendingCount={sidebar.pendingCount}
         pendingColleaguesCount={sidebar.pendingColleaguesCount}
         closestMilestone={sidebar.closestMilestone}
+        allMilestonesAchieved={sidebar.allMilestonesAchieved}
       />
       <main className="lg:ml-60 min-h-screen">
         {children}

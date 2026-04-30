@@ -23,6 +23,7 @@ export type SidebarData = {
   pendingColleaguesCount: number
   avatarUrl: string | null
   closestMilestone: ClosestMilestone | null
+  allMilestonesAchieved: boolean
 }
 
 export async function fetchSidebarData(
@@ -92,7 +93,11 @@ export async function fetchSidebarData(
 
   type Milestone = { id: string; title: string; goal_type: string; goal_value: number }
 
-  const closest = (milestones as Milestone[] ?? [])
+  const allMilestonesList = milestones as Milestone[] ?? []
+  const unachievedCount = allMilestonesList.filter(m => !achievedIds.has(m.id)).length
+  const allMilestonesAchieved = allMilestonesList.length > 0 && unachievedCount === 0
+
+  const closest = allMilestonesList
     .filter(m => !achievedIds.has(m.id) && m.goal_type !== 'shape' && (currentByType[m.goal_type] ?? 0) < m.goal_value)
     .map(m => {
       const current = currentByType[m.goal_type] ?? 0
@@ -126,5 +131,6 @@ export async function fetchSidebarData(
     pendingColleaguesCount: pendingColleaguesCount ?? 0,
     avatarUrl: profile?.avatar_url ?? null,
     closestMilestone: (isInternational || isGroothandel) ? null : closest,
+    allMilestonesAchieved: (isInternational || isGroothandel) ? false : allMilestonesAchieved,
   }
 }

@@ -27,6 +27,7 @@ export default async function ConfiguratorLayout({ children }: { children: React
         pendingCount={sidebar.pendingCount}
         pendingColleaguesCount={sidebar.pendingColleaguesCount}
         closestMilestone={sidebar.closestMilestone}
+        allMilestonesAchieved={sidebar.allMilestonesAchieved}
       />
       <main className="lg:ml-60 min-h-screen">
         {children}

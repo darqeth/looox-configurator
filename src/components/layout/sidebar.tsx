@@ -24,9 +24,10 @@ interface SidebarProps {
   pendingColleaguesCount?: number
   avatarUrl?: string | null
   closestMilestone?: ClosestMilestone | null
+  allMilestonesAchieved?: boolean
 }
 
-export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, isInternational = false, isGroothandel = false, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone }: SidebarProps) {
+export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, isInternational = false, isGroothandel = false, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone, allMilestonesAchieved = false }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
@@ -187,13 +188,15 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
                   </div>
                   <p className="text-white/32 text-[9.5px]">{closestMilestone.progressLabel}</p>
                 </>
-              ) : (
+              ) : allMilestonesAchieved ? (
                 <>
                   <div className="bg-white/10 rounded-full h-1 overflow-hidden mb-1.5">
                     <div className="bg-[#5FA87A] h-full rounded-full" style={{ width: '100%' }} />
                   </div>
                   <p className="text-white/32 text-[9.5px]">Alle mijlpalen behaald</p>
                 </>
+              ) : (
+                <p className="text-white/32 text-[9.5px]">Bekijk je mijlpalen →</p>
               )}
             </div>
           </Link>

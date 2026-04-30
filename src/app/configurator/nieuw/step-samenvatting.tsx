@@ -14,7 +14,6 @@ import {
   calcTotalPrice,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
-import BestelModal from './bestel-modal'
 
 interface StepSamenvattingProps {
   shape: ShapeSlug

@@ -34,8 +34,19 @@ const GLASS_APPEARANCE: Record<string, { fill: string; fillOpacity: number; stro
   'smoke-brons': { fill: '#7A5C2A', fillOpacity: 0.78, stroke: '#604820', glansOpacity: 0.13 },
 }
 
+export type ConfigPreview = {
+  shape: ShapeSlug
+  width: number | null
+  height: number | null
+  diameter?: number | null
+  organicSizeKey?: string | null
+  glasKleur?: GlasKleur | null
+  directLight?: { position: string; type: string | null }
+  indirectLight?: { position: string; type: string | null }
+}
+
 // Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen
-const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur }: {
+export const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur, size = 220 }: {
   shape: ShapeSlug
   width: number
   height: number
@@ -44,8 +55,9 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
   directPosition: string
   indirectPosition: string
   glasKleur: GlasKleur
+  size?: number
 }) {
-  const glass = GLASS_APPEARANCE[glasKleur]
+  const glass = GLASS_APPEARANCE[glasKleur] ?? GLASS_APPEARANCE['helder']
   const CANVAS = 220
   const PAD = 28
   const available = CANVAS - PAD * 2
@@ -91,7 +103,7 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
     const innerH = h - 2 * offY - (dirTop ? bandH : 0) - (dirBottom ? bandH : 0)
 
     return (
-      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
         <defs>
           <filter id="wall-glow" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="7" result="blur" />
@@ -194,7 +206,7 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
     const hasIndirect = indirectPosition !== 'geen'
 
     return (
-      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
         <defs>
           <filter id="wall-glow-c" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="7" />
@@ -247,7 +259,7 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
     const hasIndirect = indirectPosition !== 'geen'
 
     return (
-      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
         <defs>
           <filter id="wall-glow-o" x="-60%" y="-60%" width="220%" height="220%">
             <feGaussianBlur stdDeviation="7" />
@@ -315,7 +327,7 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
     const innerH = h - 2 * offY - (dirTop ? bandH : 0) - (dirBottom ? bandH : 0)
 
     return (
-      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
         <defs>
           <filter id="wall-glow-rr" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="7" result="blur" />
@@ -381,7 +393,7 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
     const hasIndirect = indirectPosition !== 'geen'
 
     return (
-      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
         <defs>
           <filter id="wall-glow-ov" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="7" />
@@ -439,7 +451,7 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
     const hasIndirect = indirectPosition !== 'geen'
 
     return (
-      <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
         <defs>
           <filter id="wall-glow-arc" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="7" />
@@ -475,7 +487,7 @@ const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diamet
 
   // Op aanvraag
   return (
-    <svg width={CANVAS} height={CANVAS} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+    <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
       <rect x="35" y="55" width="150" height="110" rx="4" fill="none" stroke="#B0ABA4" strokeWidth="1.5" strokeDasharray="6 3" />
       <text x={cx} y="116" textAnchor="middle" fill="var(--lx-text-secondary)" fontSize="13" fontWeight="500">Op aanvraag</text>
     </svg>

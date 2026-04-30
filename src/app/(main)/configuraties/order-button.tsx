@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { placeOrderFromConfig } from '@/lib/actions/orders'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
+import { MirrorPreview, type ConfigPreview } from '@/app/configurator/nieuw/price-panel'
+import { SHAPES, ORGANIC_SIZES, type GlasKleur } from '@/lib/configurator-config'
 
 interface OrderButtonProps {
   configId: string
@@ -13,9 +15,53 @@ interface OrderButtonProps {
   korting: number
   isProjectspiegel?: boolean
   projectspiegelStuks?: number
+  configPreview?: ConfigPreview
 }
 
-export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks }: OrderButtonProps) {
+function PreviewCard({ preview }: { preview: ConfigPreview }) {
+  const shapeName = SHAPES.find(s => s.slug === preview.shape)?.name ?? preview.shape
+  let dimensionLabel = ''
+  if (preview.shape === 'rond' && preview.diameter) dimensionLabel = `⌀ ${preview.diameter} cm`
+  else if (preview.shape === 'organic' && preview.organicSizeKey) {
+    dimensionLabel = ORGANIC_SIZES.find(s => s.key === preview.organicSizeKey)?.label ?? ''
+  } else if (preview.width && preview.height) dimensionLabel = `${preview.width} × ${preview.height} cm`
+
+  const directPos = preview.directLight?.position
+  const indirectPos = preview.indirectLight?.position
+  const hasLight = (directPos && directPos !== 'geen') || (indirectPos && indirectPos !== 'geen')
+
+  return (
+    <div className="flex items-center gap-3 bg-lx-panel-bg rounded-xl p-3">
+      <div className="flex-shrink-0 rounded-lg overflow-hidden bg-white/50 w-[80px] h-[80px] flex items-center justify-center">
+        <MirrorPreview
+          shape={preview.shape}
+          width={preview.width ?? 80}
+          height={preview.height ?? 60}
+          diameter={preview.diameter ?? null}
+          organicSizeKey={preview.organicSizeKey ?? null}
+          directPosition={directPos && directPos !== 'geen' ? directPos : 'geen'}
+          indirectPosition={indirectPos && indirectPos !== 'geen' ? indirectPos : 'geen'}
+          glasKleur={(preview.glasKleur ?? 'helder') as GlasKleur}
+          size={80}
+        />
+      </div>
+      <div className="flex-1 min-w-0 space-y-0.5">
+        <p className="text-[13px] font-semibold text-lx-text-primary">{shapeName}</p>
+        {dimensionLabel && <p className="text-[12px] text-lx-text-secondary">{dimensionLabel}</p>}
+        {hasLight && (
+          <p className="text-[11.5px] text-lx-text-secondary">
+            {[
+              directPos && directPos !== 'geen' ? 'Directe verlichting' : '',
+              indirectPos && indirectPos !== 'geen' ? 'Indirecte verlichting' : '',
+            ].filter(Boolean).join(' · ')}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview }: OrderButtonProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
@@ -80,7 +126,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={handleClose}>
           <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
           <div
-            className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+            className={`relative bg-white rounded-2xl shadow-xl w-full overflow-hidden ${configPreview ? 'max-w-lg' : 'max-w-md'}`}
             onClick={(e) => e.stopPropagation()}
           >
             {result ? (
@@ -131,6 +177,9 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                 </div>
 
                 <div className="px-6 py-5 space-y-4">
+                  {/* Configuratie preview */}
+                  {configPreview && <PreviewCard preview={configPreview} />}
+
                   {/* Prijs samenvatting */}
                   <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
                     {isProjectspiegel ? (

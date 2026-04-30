@@ -3,6 +3,8 @@ import Link from 'next/link'
 import OrderButton from './order-button'
 import ConfiguratiesTabs from './configuraties-tabs'
 import ConfigActionsMenu from './config-actions-menu'
+import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
+import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 
 const PAGE_SIZE = 20
 
@@ -241,6 +243,17 @@ export async function ConfiguratiesContent({
                 const displayPrice = Number(config.total_price)
                 const priceLabel = isProjectspiegel ? 'Netto ex. BTW' : 'Bruto ex. BTW'
 
+                const configPreview: ConfigPreview | undefined = shape && shape !== 'projectspiegel' ? {
+                  shape: shape as ShapeSlug,
+                  width: config.width ?? null,
+                  height: config.height ?? null,
+                  diameter: opts?.diameter as number | null ?? null,
+                  organicSizeKey: opts?.organicSize as string | null ?? null,
+                  glasKleur: opts?.glasKleur as GlasKleur | null ?? null,
+                  directLight: direct ? { position: direct.position, type: (direct as { position: string; type?: string | null }).type ?? null } : undefined,
+                  indirectLight: indirect ? { position: indirect.position, type: (indirect as { position: string; type?: string | null }).type ?? null } : undefined,
+                } : undefined
+
                 return (
                   <div key={config.id} className="hover:bg-lx-panel-bg/50 transition-colors">
 
@@ -267,7 +280,7 @@ export async function ConfiguratiesContent({
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
                           {canOrder && shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
@@ -319,7 +332,7 @@ export async function ConfiguratiesContent({
                       {canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
                           {shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
                           )}
                         </div>
                       )}

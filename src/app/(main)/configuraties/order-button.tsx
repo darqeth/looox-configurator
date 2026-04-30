@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { placeOrderFromConfig } from '@/lib/actions/orders'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
 import { MirrorPreview, type ConfigPreview } from '@/app/configurator/nieuw/price-panel'
-import { SHAPES, ORGANIC_SIZES, type GlasKleur } from '@/lib/configurator-config'
+import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, type GlasKleur } from '@/lib/configurator-config'
 
 interface OrderButtonProps {
   configId: string
@@ -18,8 +18,19 @@ interface OrderButtonProps {
   configPreview?: ConfigPreview
 }
 
+function lightSummary(light: { position: string; type: string | null } | undefined): string {
+  if (!light || !light.position || light.position === 'geen') return 'Geen'
+  const pos = POSITION_LABELS[light.position] ?? light.position
+  const type = light.type ? (LIGHT_TYPE_LABELS[light.type as keyof typeof LIGHT_TYPE_LABELS] ?? light.type) : null
+  return type ? `${pos} · ${type}` : pos
+}
+
 function PreviewCard({ preview }: { preview: ConfigPreview }) {
+  const [expanded, setExpanded] = useState(false)
+
   const shapeName = SHAPES.find(s => s.slug === preview.shape)?.name ?? preview.shape
+  const glasKleurName = GLAS_KLEUREN.find(g => g.id === preview.glasKleur)?.name ?? null
+
   let dimensionLabel = ''
   if (preview.shape === 'rond' && preview.diameter) dimensionLabel = `⌀ ${preview.diameter} cm`
   else if (preview.shape === 'organic' && preview.organicSizeKey) {
@@ -28,35 +39,60 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
 
   const directPos = preview.directLight?.position
   const indirectPos = preview.indirectLight?.position
-  const hasLight = (directPos && directPos !== 'geen') || (indirectPos && indirectPos !== 'geen')
+  const extraNames = preview.extras?.map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name ?? id) ?? []
 
   return (
-    <div className="flex items-center gap-3 bg-lx-panel-bg rounded-xl p-3">
-      <div className="flex-shrink-0 rounded-lg overflow-hidden bg-white/50 w-[80px] h-[80px] flex items-center justify-center">
-        <MirrorPreview
-          shape={preview.shape}
-          width={preview.width ?? 80}
-          height={preview.height ?? 60}
-          diameter={preview.diameter ?? null}
-          organicSizeKey={preview.organicSizeKey ?? null}
-          directPosition={directPos && directPos !== 'geen' ? directPos : 'geen'}
-          indirectPosition={indirectPos && indirectPos !== 'geen' ? indirectPos : 'geen'}
-          glasKleur={(preview.glasKleur ?? 'helder') as GlasKleur}
-          size={80}
-        />
-      </div>
-      <div className="flex-1 min-w-0 space-y-0.5">
-        <p className="text-[13px] font-semibold text-lx-text-primary">{shapeName}</p>
-        {dimensionLabel && <p className="text-[12px] text-lx-text-secondary">{dimensionLabel}</p>}
-        {hasLight && (
-          <p className="text-[11.5px] text-lx-text-secondary">
-            {[
-              directPos && directPos !== 'geen' ? 'Directe verlichting' : '',
-              indirectPos && indirectPos !== 'geen' ? 'Indirecte verlichting' : '',
-            ].filter(Boolean).join(' · ')}
-          </p>
-        )}
-      </div>
+    <div className="bg-lx-panel-bg rounded-xl overflow-hidden">
+      {/* Klikbare header */}
+      <button
+        type="button"
+        onClick={() => setExpanded(e => !e)}
+        className="w-full flex items-center gap-3 p-3 text-left hover:bg-black/[0.03] transition-colors"
+      >
+        <div className="flex-shrink-0 rounded-lg overflow-hidden bg-white/60 w-[72px] h-[72px] flex items-center justify-center">
+          <MirrorPreview
+            shape={preview.shape}
+            width={preview.width ?? 80}
+            height={preview.height ?? 60}
+            diameter={preview.diameter ?? null}
+            organicSizeKey={preview.organicSizeKey ?? null}
+            directPosition={directPos && directPos !== 'geen' ? directPos : 'geen'}
+            indirectPosition={indirectPos && indirectPos !== 'geen' ? indirectPos : 'geen'}
+            glasKleur={(preview.glasKleur ?? 'helder') as GlasKleur}
+            size={72}
+          />
+        </div>
+        <div className="flex-1 min-w-0 space-y-0.5">
+          <p className="text-[13px] font-semibold text-lx-text-primary">{shapeName}</p>
+          {dimensionLabel && <p className="text-[12px] text-lx-text-secondary">{dimensionLabel}{glasKleurName ? ` · ${glasKleurName}` : ''}</p>}
+          <p className="text-[11.5px] text-lx-cta font-medium">{expanded ? 'Details verbergen' : 'Alle details bekijken'}</p>
+        </div>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          className={`flex-shrink-0 text-lx-text-secondary transition-transform ${expanded ? 'rotate-180' : ''}`}
+        >
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </button>
+
+      {/* Uitklapbaar detail-paneel */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-0 border-t border-black/6 space-y-2">
+          <div className="pt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+            <span className="text-[11.5px] text-lx-text-secondary font-medium pt-px">Direct</span>
+            <span className="text-[12px] text-lx-text-primary">{lightSummary(preview.directLight)}</span>
+            <span className="text-[11.5px] text-lx-text-secondary font-medium pt-px">Indirect</span>
+            <span className="text-[12px] text-lx-text-primary">{lightSummary(preview.indirectLight)}</span>
+            {extraNames.length > 0 && (
+              <>
+                <span className="text-[11.5px] text-lx-text-secondary font-medium pt-px">Opties</span>
+                <span className="text-[12px] text-lx-text-primary">{extraNames.join(', ')}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

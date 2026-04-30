@@ -252,6 +252,7 @@ export async function ConfiguratiesContent({
                   glasKleur: opts?.glasKleur as GlasKleur | null ?? null,
                   directLight: direct ? { position: direct.position, type: (direct as { position: string; type?: string | null }).type ?? null } : undefined,
                   indirectLight: indirect ? { position: indirect.position, type: (indirect as { position: string; type?: string | null }).type ?? null } : undefined,
+                  extras: extras.length > 0 ? extras : undefined,
                 } : undefined
 
                 return (

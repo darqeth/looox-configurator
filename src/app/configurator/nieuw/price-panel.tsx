@@ -43,6 +43,7 @@ export type ConfigPreview = {
   glasKleur?: GlasKleur | null
   directLight?: { position: string; type: string | null }
   indirectLight?: { position: string; type: string | null }
+  extras?: string[]
 }
 
 // Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen

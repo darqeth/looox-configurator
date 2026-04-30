@@ -35,11 +35,11 @@ export default async function GebruikersPage() {
       .eq('approval_status', 'pending')
       .not('company_id', 'is', null),
     supabase.from('companies').select('id, name').order('name'),
-    supabase.from('login_streaks').select('user_id, total_days'),
+    supabase.from('login_streaks').select('user_id, total_days, last_login_date'),
   ])
 
-  const streakMap: Record<string, number> = {}
-  for (const s of streaks ?? []) streakMap[s.user_id] = s.total_days ?? 0
+  const streakMap: Record<string, { totalDays: number; lastLogin: string | null }> = {}
+  for (const s of streaks ?? []) streakMap[s.user_id] = { totalDays: s.total_days ?? 0, lastLogin: s.last_login_date ?? null }
 
   // Normalize profiles: extract first company_members row
   const profiles: UserRowProfile[] = (rawProfiles ?? []).map(p => {
@@ -118,7 +118,7 @@ export default async function GebruikersPage() {
           <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Wacht op goedkeuring</h2>
           <div className="space-y-2">
             {pending.map(p => (
-              <UserRow key={p.id} profile={p} showActions companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id] ?? 0} />
+              <UserRow key={p.id} profile={p} showActions companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
             ))}
           </div>
         </section>
@@ -130,7 +130,7 @@ export default async function GebruikersPage() {
         {approved.length > 0 ? (
           <div className="space-y-2">
             {approved.map(p => (
-              <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id] ?? 0} />
+              <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
             ))}
           </div>
         ) : (
@@ -144,7 +144,7 @@ export default async function GebruikersPage() {
           <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Afgewezen ({rejected.length})</h2>
           <div className="space-y-2">
             {rejected.map(p => (
-              <UserRow key={p.id} profile={p} showApprove companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id] ?? 0} />
+              <UserRow key={p.id} profile={p} showApprove companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
             ))}
           </div>
         </section>

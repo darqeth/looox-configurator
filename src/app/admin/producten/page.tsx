@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import {
   GLAS_KLEUREN,
   GLAS_PRIJS_M2,
@@ -430,8 +430,8 @@ function ExtraOptiesTab() {
             </thead>
             <tbody>
               {EXTRA_OPTIONS.map((opt, i) => (
-                <>
-                  <tr key={opt.id} className="border-b border-lx-divider">
+                <Fragment key={opt.id}>
+                  <tr className="border-b border-lx-divider">
                     <td className="py-3 pr-4 align-top">
                       <p className="font-semibold text-lx-text-primary">{opt.name}</p>
                       <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">{opt.description}</p>
@@ -446,7 +446,7 @@ function ExtraOptiesTab() {
                       {opt.priceDisplay ?? (opt.price > 0 ? fmt(opt.price) : '—')}
                     </td>
                   </tr>
-                  <tr key={opt.id + '-tooltip'} className={i < EXTRA_OPTIONS.length - 1 ? 'border-b border-lx-divider' : ''}>
+                  <tr className={i < EXTRA_OPTIONS.length - 1 ? 'border-b border-lx-divider' : ''}>
                     <td colSpan={3} className="pb-3 pr-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Tooltip tekst (klanten)</span>
@@ -467,7 +467,7 @@ function ExtraOptiesTab() {
                       />
                     </td>
                   </tr>
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

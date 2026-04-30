@@ -85,7 +85,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
   )
 })
 
-export default function ConfiguratorWizard({ initialConfig, korting = 50, canSeePurchasePrices: _canSeePurchasePrices = true, canOrder = true, isInternational = false }: { initialConfig?: InitialConfig; korting?: number; canSeePurchasePrices?: boolean; canOrder?: boolean; isInternational?: boolean }) {
+export default function ConfiguratorWizard({ initialConfig, korting = 50, canSeePurchasePrices: _canSeePurchasePrices = true, canOrder = true, isInternational = false, optionTooltips = {} }: { initialConfig?: InitialConfig; korting?: number; canSeePurchasePrices?: boolean; canOrder?: boolean; isInternational?: boolean; optionTooltips?: Record<string, string> }) {
   const router = useRouter()
   const isEditing = !!initialConfig
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
@@ -471,6 +471,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
                     onChange={setSelectedOptions}
                     optionSubChoices={optionSubChoices}
                     onSubChoiceChange={(id, val) => setOptionSubChoices(prev => ({ ...prev, [id]: val }))}
+                    optionTooltips={optionTooltips}
                   />
                 )}
 

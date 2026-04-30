@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import ConfiguratorWizard from './configurator-wizard'
 import ProjectspiegelConfigurator from './projectspiegel/index'
+import { getExtraOptionTooltips } from '@/lib/actions/admin'
 
 export const metadata = { title: 'Nieuwe spiegel — LoooX Configurator' }
 
@@ -14,11 +15,15 @@ export default async function NieuweConfiguratiePage() {
   let isInternational = false
   let isGroothandel = false
 
+  let optionTooltips: Record<string, string> = {}
+
   if (user) {
-    const [{ data: profile }, { data: memberData }] = await Promise.all([
+    const [{ data: profile }, { data: memberData }, fetchedTooltips] = await Promise.all([
       supabase.from('profiles').select('is_international, is_groothandel, korting').eq('id', user.id).single(),
       supabase.from('company_members').select('role, can_see_purchase_prices, can_order').eq('user_id', user.id).maybeSingle(),
+      getExtraOptionTooltips(),
     ])
+    optionTooltips = fetchedTooltips
 
     const isManager = !memberData || memberData.role === 'manager'
     canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
@@ -38,6 +43,7 @@ export default async function NieuweConfiguratiePage() {
       canSeePurchasePrices={canSeePurchasePrices}
       canOrder={canOrder}
       isInternational={isInternational}
+      optionTooltips={optionTooltips}
     />
   )
 }

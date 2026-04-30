@@ -369,3 +369,18 @@ export async function uploadDrawingFile(
   const { data: { publicUrl } } = adminClient.storage.from('drawings').getPublicUrl(path)
   return { url: publicUrl, fileName: file.name }
 }
+
+export async function getExtraOptionTooltips(): Promise<Record<string, string>> {
+  const supabase = await createClient()
+  const { data } = await supabase.from('extra_option_tooltips').select('id, tooltip_text')
+  const result: Record<string, string> = {}
+  for (const row of data ?? []) result[row.id] = row.tooltip_text
+  return result
+}
+
+export async function saveExtraOptionTooltip(id: string, text: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+  await supabase.from('extra_option_tooltips').upsert({ id, tooltip_text: text.slice(0, 500), updated_at: new Date().toISOString() })
+}

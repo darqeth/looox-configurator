@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   GLAS_KLEUREN,
   GLAS_PRIJS_M2,
@@ -16,6 +16,7 @@ import {
   EXTRA_OPTIONS,
   CONTROL_PRICES,
 } from '@/lib/configurator-config'
+import { getExtraOptionTooltips, saveExtraOptionTooltip } from '@/lib/actions/admin'
 import {
   GLASDIKTE_PRIJS_M2,
   STAFFEL_KORTINGEN,
@@ -397,10 +398,27 @@ function OpAanvraagTab() {
 
 function ExtraOptiesTab() {
   const shapeLabel = (shapes: string[]) => shapes.map(s => ({ rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag' }[s] ?? s)).join(', ')
+  const [tooltips, setTooltips] = useState<Record<string, string>>({})
+  const [feedback, setFeedback] = useState<Record<string, 'saved' | 'error' | null>>({})
+
+  useEffect(() => {
+    getExtraOptionTooltips().then(setTooltips)
+  }, [])
+
+  async function handleTooltipBlur(id: string, value: string) {
+    try {
+      await saveExtraOptionTooltip(id, value)
+      setTooltips(prev => ({ ...prev, [id]: value }))
+      setFeedback(prev => ({ ...prev, [id]: 'saved' }))
+    } catch {
+      setFeedback(prev => ({ ...prev, [id]: 'error' }))
+    }
+    setTimeout(() => setFeedback(prev => ({ ...prev, [id]: null })), 2000)
+  }
 
   return (
     <div className="space-y-5">
-      <SectionCard title="Alle extra opties" subtitle="Prijzen zijn netto inkoopprijs excl. btw.">
+      <SectionCard title="Alle extra opties" subtitle="Prijzen zijn netto inkoopprijs excl. btw. Tooltip tekst is zichtbaar voor klanten in de configurator.">
         <div className="overflow-x-auto -mx-1">
           <table className="w-full text-[12.5px]">
             <thead>
@@ -412,21 +430,44 @@ function ExtraOptiesTab() {
             </thead>
             <tbody>
               {EXTRA_OPTIONS.map((opt, i) => (
-                <tr key={opt.id} className={i < EXTRA_OPTIONS.length - 1 ? 'border-b border-lx-divider' : ''}>
-                  <td className="py-3 pr-4 align-top">
-                    <p className="font-semibold text-lx-text-primary">{opt.name}</p>
-                    <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">{opt.description}</p>
-                    {opt.incompatibleWith.length > 0 && (
-                      <p className="text-[11px] text-amber-600 mt-0.5">
-                        Niet combineerbaar met: {opt.incompatibleWith.map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name ?? id).join(', ')}
-                      </p>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4 align-top text-lx-text-secondary">{shapeLabel(opt.shapes as string[])}</td>
-                  <td className="py-3 align-top text-right font-semibold text-lx-text-primary whitespace-nowrap">
-                    {opt.priceDisplay ?? (opt.price > 0 ? fmt(opt.price) : '—')}
-                  </td>
-                </tr>
+                <>
+                  <tr key={opt.id} className="border-b border-lx-divider">
+                    <td className="py-3 pr-4 align-top">
+                      <p className="font-semibold text-lx-text-primary">{opt.name}</p>
+                      <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">{opt.description}</p>
+                      {opt.incompatibleWith.length > 0 && (
+                        <p className="text-[11px] text-amber-600 mt-0.5">
+                          Niet combineerbaar met: {opt.incompatibleWith.map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name ?? id).join(', ')}
+                        </p>
+                      )}
+                    </td>
+                    <td className="py-3 pr-4 align-top text-lx-text-secondary">{shapeLabel(opt.shapes as string[])}</td>
+                    <td className="py-3 align-top text-right font-semibold text-lx-text-primary whitespace-nowrap">
+                      {opt.priceDisplay ?? (opt.price > 0 ? fmt(opt.price) : '—')}
+                    </td>
+                  </tr>
+                  <tr key={opt.id + '-tooltip'} className={i < EXTRA_OPTIONS.length - 1 ? 'border-b border-lx-divider' : ''}>
+                    <td colSpan={3} className="pb-3 pr-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Tooltip tekst (klanten)</span>
+                        {feedback[opt.id] === 'saved' && (
+                          <span className="text-[10.5px] text-green-600 font-medium">✓ Opgeslagen</span>
+                        )}
+                        {feedback[opt.id] === 'error' && (
+                          <span className="text-[10.5px] text-red-500 font-medium">✗ Fout</span>
+                        )}
+                      </div>
+                      <textarea
+                        rows={2}
+                        defaultValue={tooltips[opt.id] ?? ''}
+                        key={opt.id + '-' + (tooltips[opt.id] ?? '')}
+                        onBlur={async (e) => { await handleTooltipBlur(opt.id, e.target.value) }}
+                        placeholder="Tooltip tekst voor klanten (optioneel)..."
+                        className="w-full px-3 py-2 text-[12px] rounded-lg border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-1 focus:ring-lx-cta/10 outline-none transition-colors resize-none"
+                      />
+                    </td>
+                  </tr>
+                </>
               ))}
             </tbody>
           </table>

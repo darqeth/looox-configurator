@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# superpowers runtime state
+.superpowers/
+
 # lokale bronbestanden
 "configurator flow images/"
 "extra keuzes images/"

@@ -330,7 +330,7 @@ export function UserEditModal({
             {/* Groothandelaar */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-lx-divider">
               <div>
-                <p className="text-[13px] font-medium text-lx-text-primary">Groothandelaar</p>
+                <p className="text-[13px] font-medium text-lx-text-primary">Project</p>
                 <p className="text-[11.5px] text-lx-text-secondary">Toegang tot projectspiegel configurator — geen reguliere spiegels of milestones</p>
               </div>
               <button

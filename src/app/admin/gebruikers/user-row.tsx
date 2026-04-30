@@ -106,7 +106,7 @@ export function UserRow({
             )}
             {profile.is_groothandel && (
               <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">
-                Groothandel
+                Project
               </span>
             )}
             {profile.is_admin && (

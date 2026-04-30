@@ -115,6 +115,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
   const [saved, setSaved] = useState(false)
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; orderId: string } | null>(null)
   const [newMilestones, setNewMilestones] = useState<AwardedMilestone[]>([])
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const handleShapeSelect = useCallback((s: ShapeSlug) => {
     setShape(s)
@@ -172,6 +173,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
   const handleSave = useCallback(async () => {
     if (!shape || !projectName.trim()) return
     setSaving(true)
+    setSaveError(null)
     try {
       const attachmentUrl = await uploadAttachment()
       const payload = {
@@ -190,18 +192,21 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
         await saveConfiguration(payload)
       }
       setSaved(true)
-      const awarded = await checkAndAwardMilestones()
-      if (awarded.length > 0) {
-        setNewMilestones(awarded)
-      } else {
-        router.push('/configuraties')
+      if (!isInternational) {
+        const awarded = await checkAndAwardMilestones()
+        if (awarded.length > 0) {
+          setNewMilestones(awarded)
+          return
+        }
       }
+      router.push('/configuraties')
     } catch (e) {
       console.error(e)
+      setSaveError(e instanceof Error ? e.message : 'Opslaan mislukt')
       setSaving(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity, isEditing, initialConfig, router])
+  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity, isEditing, initialConfig, isInternational, router])
 
   const handleOrder = useCallback(async ({ quantity: qty, notes, discount }: {
     quantity: number
@@ -479,26 +484,33 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canSee
                 )}
 
                 {step === 4 && (
-                  <StepSamenvatting
-                    shape={shape} width={width} height={height}
-                    diameter={diameter} organicSizeKey={organicSizeKey}
-                    glasKleur={glasKleur}
-                    directLight={directLight} indirectLight={indirectLight}
-                    selectedOptions={selectedOptions}
-                    optionSubChoices={optionSubChoices}
-                    projectName={projectName} reference={reference}
-                    saving={saving}
-                    schunineZijdenFile={schunineZijdenFile}
-                    isInternational={isInternational}
-                    korting={korting}
-                    onProjectNameChange={setProjectName}
-                    onReferenceChange={setReference}
-                    onSchunineZijdenFileChange={setSchunineZijdenFile}
-                    onGoToStep={setStep}
-                    onSave={handleSave}
-                    onOrder={handleOrder}
-                    canOrder={canOrder}
-                  />
+                  <>
+                    <StepSamenvatting
+                      shape={shape} width={width} height={height}
+                      diameter={diameter} organicSizeKey={organicSizeKey}
+                      glasKleur={glasKleur}
+                      directLight={directLight} indirectLight={indirectLight}
+                      selectedOptions={selectedOptions}
+                      optionSubChoices={optionSubChoices}
+                      projectName={projectName} reference={reference}
+                      saving={saving}
+                      schunineZijdenFile={schunineZijdenFile}
+                      isInternational={isInternational}
+                      korting={korting}
+                      onProjectNameChange={setProjectName}
+                      onReferenceChange={setReference}
+                      onSchunineZijdenFileChange={setSchunineZijdenFile}
+                      onGoToStep={setStep}
+                      onSave={handleSave}
+                      onOrder={handleOrder}
+                      canOrder={canOrder}
+                    />
+                    {saveError && (
+                      <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-[12.5px] text-red-600 font-medium">
+                        {saveError}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Navigation */}

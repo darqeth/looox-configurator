@@ -63,6 +63,8 @@ type Profile = {
   company: string | null
   phone: string | null
   address: string | null
+  shipping_address?: string | null
+  korting?: number
 }
 
 async function sendOrderEmails(
@@ -101,7 +103,7 @@ async function sendOrderEmails(
         email,
         phone: (profile as Profile | null)?.phone ?? null,
         address: (profile as Profile | null)?.address ?? null,
-        shippingAddress: (profile as { shipping_address?: string | null } | null)?.shipping_address ?? null,
+        shippingAddress: (profile as Profile | null)?.shipping_address ?? null,
       },
       config: {
         name: emailDetails.projectName ?? null,
@@ -110,7 +112,7 @@ async function sendOrderEmails(
         options: configOptions,
       },
       unitPrice: emailDetails.unitPrice,
-      korting: (profile as { korting?: number } | null)?.korting ?? 50,
+      korting: (profile as Profile | null)?.korting ?? 50,
       quantity: emailDetails.quantity,
       notes,
       attachmentUrl,
@@ -136,7 +138,7 @@ async function sendOrderEmails(
         email,
         phone: (profile as Profile | null)?.phone ?? null,
         address: (profile as Profile | null)?.address ?? null,
-        shippingAddress: (profile as { shipping_address?: string | null } | null)?.shipping_address ?? null,
+        shippingAddress: (profile as Profile | null)?.shipping_address ?? null,
       },
       pdfBuffer,
     })

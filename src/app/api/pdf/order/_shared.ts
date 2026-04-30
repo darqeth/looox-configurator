@@ -29,11 +29,13 @@ export async function buildOrderPDFResponse(
   userEmail: string,
   order: OrderRow
 ): Promise<NextResponse> {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, company, phone, address, korting')
-    .eq('id', userId)
-    .single()
+  const [{ data: profile }, { data: memberData }] = await Promise.all([
+    supabase.from('profiles').select('full_name, company, phone, address, korting').eq('id', userId).single(),
+    supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', userId).maybeSingle(),
+  ])
+
+  const isManager = !memberData || memberData.role === 'manager'
+  const showKorting = isManager || (memberData?.can_see_purchase_prices ?? false)
 
   const config = (Array.isArray(order.configurations)
     ? order.configurations[0]
@@ -66,6 +68,7 @@ export async function buildOrderPDFResponse(
     quantity: order.quantity,
     notes: order.notes,
     attachmentUrl: (opts.attachmentUrl as string | null) ?? null,
+    showKorting,
   })
 
   const filename = `LoooX-Order-${order.order_number}.pdf`

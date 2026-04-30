@@ -421,7 +421,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
           <div className="space-y-3 pt-1">
             <InvitePermToggle label="Mag bestellingen plaatsen" description="Kan configuraties omzetten naar bestellingen"
               checked={perms.can_order} onChange={v => setPerms(p => ({ ...p, can_order: v }))} />
-            <InvitePermToggle label="Mag inkoopprijzen zien" description="Ziet dealer-prijzen; anders alleen klantprijzen"
+            <InvitePermToggle label="Mag inkoopkorting zien" description="Ziet inkoopkorting bij bestellen; anders alleen nettoprijzen"
               checked={perms.can_see_purchase_prices} onChange={v => setPerms(p => ({ ...p, can_see_purchase_prices: v }))} />
             <InvitePermToggle label="Mag configuraties aanmaken" description="Kan nieuwe spiegels configureren"
               checked={perms.can_configure} onChange={v => setPerms(p => ({ ...p, can_configure: v }))} />
@@ -516,7 +516,7 @@ function InvitePermissionsModal({ invite, onClose }: { invite: Invite; onClose: 
         <div className="space-y-3">
           <InvitePermToggle label="Mag bestellingen plaatsen" description="Kan configuraties omzetten naar bestellingen"
             checked={perms.can_order} onChange={v => setPerms(p => ({ ...p, can_order: v }))} />
-          <InvitePermToggle label="Mag inkoopprijzen zien" description="Ziet dealer-prijzen; anders alleen klantprijzen"
+          <InvitePermToggle label="Mag inkoopkorting zien" description="Ziet inkoopkorting bij bestellen; anders alleen nettoprijzen"
             checked={perms.can_see_purchase_prices} onChange={v => setPerms(p => ({ ...p, can_see_purchase_prices: v }))} />
           <InvitePermToggle label="Mag configuraties aanmaken" description="Kan nieuwe spiegels configureren"
             checked={perms.can_configure} onChange={v => setPerms(p => ({ ...p, can_configure: v }))} />
@@ -602,8 +602,8 @@ function PermissionsModal({ member, onClose }: { member: Member; onClose: () => 
               onChange={v => setPerms(p => ({ ...p, can_order: v }))}
             />
             <PermToggle
-              label="Mag inkoopprijzen zien"
-              description="Ziet dealer-prijzen; zonder dit recht alleen klantprijzen en offertes"
+              label="Mag inkoopkorting zien"
+              description="Ziet inkoopkorting bij bestellen; zonder dit recht alleen nettoprijzen"
               checked={perms.can_see_purchase_prices}
               onChange={v => setPerms(p => ({ ...p, can_see_purchase_prices: v }))}
             />

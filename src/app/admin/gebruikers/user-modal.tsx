@@ -391,7 +391,7 @@ export function UserEditModal({
                     <div className="space-y-3 bg-lx-panel-bg rounded-xl p-3">
                       {([
                         { key: 'can_order',               label: 'Mag bestellen',              value: canOrder,             set: setCanOrder },
-                        { key: 'can_see_purchase_prices', label: 'Ziet inkoopprijzen',         value: canSeePurchasePrices, set: setCanSeePurchasePrices },
+                        { key: 'can_see_purchase_prices', label: 'Ziet inkoopkorting',          value: canSeePurchasePrices, set: setCanSeePurchasePrices },
                         { key: 'can_configure',           label: 'Mag configureren',           value: canConfigure,         set: setCanConfigure },
                         { key: 'own_configs_only',        label: 'Alleen eigen configuraties', value: ownConfigsOnly,       set: setOwnConfigsOnly },
                       ] as const).map(({ key, label, value, set }) => (

@@ -28,6 +28,7 @@ export type OrderRenderInput = {
   quantity: number
   notes: string | null
   attachmentUrl: string | null
+  showKorting?: boolean
 }
 
 export async function renderOrderPDF(input: OrderRenderInput): Promise<Buffer> {

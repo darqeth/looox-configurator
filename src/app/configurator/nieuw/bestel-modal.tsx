@@ -11,6 +11,7 @@ interface BestelModalProps {
   projectName: string
   saving: boolean
   disabled?: boolean
+  canSeePurchasePrices?: boolean
   onOrder: (params: {
     quantity: number
     notes: string
@@ -18,7 +19,7 @@ interface BestelModalProps {
   }) => void
 }
 
-export default function BestelModal({ shape, unitPrice, korting, projectName, saving, disabled, onOrder }: BestelModalProps) {
+export default function BestelModal({ shape, unitPrice, korting, projectName, saving, disabled, canSeePurchasePrices = true, onOrder }: BestelModalProps) {
   const [open, setOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
   const [notes, setNotes] = useState('')
@@ -89,15 +90,19 @@ export default function BestelModal({ shape, unitPrice, korting, projectName, sa
             <div className="px-6 py-5 space-y-4">
               {/* Prijs samenvatting */}
               <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12.5px] text-lx-text-secondary">Bruto ex. BTW</span>
-                  <span className="text-[13px] font-medium text-lx-text-primary">€{unitPrice.toLocaleString('nl-NL')}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[12.5px] text-lx-text-secondary">Dealer korting ({korting}%)</span>
-                  <span className="text-[13px] font-medium text-lx-text-secondary">−€{(unitPrice - nettoUnitPrice).toLocaleString('nl-NL')}</span>
-                </div>
-                <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                {canSeePurchasePrices && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12.5px] text-lx-text-secondary">Bruto ex. BTW</span>
+                      <span className="text-[13px] font-medium text-lx-text-primary">€{unitPrice.toLocaleString('nl-NL')}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12.5px] text-lx-text-secondary">Dealer korting ({korting}%)</span>
+                      <span className="text-[13px] font-medium text-lx-text-secondary">−€{(unitPrice - nettoUnitPrice).toLocaleString('nl-NL')}</span>
+                    </div>
+                  </>
+                )}
+                <div className={`flex items-center justify-between${canSeePurchasePrices ? ' pt-1 border-t border-lx-divider' : ''}`}>
                   <span className="text-[12.5px] text-lx-text-secondary font-medium">Netto ex. BTW</span>
                   <span className="text-[14px] font-bold text-lx-cta">€{nettoUnitPrice.toLocaleString('nl-NL')}</span>
                 </div>

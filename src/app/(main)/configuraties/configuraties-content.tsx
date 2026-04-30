@@ -281,7 +281,7 @@ export async function ConfiguratiesContent({
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
                           {canOrder && shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} canSeePurchasePrices={canSeePurchasePrices} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
@@ -333,7 +333,7 @@ export async function ConfiguratiesContent({
                       {canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
                           {shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} canSeePurchasePrices={canSeePurchasePrices} />
                           )}
                         </div>
                       )}

@@ -75,7 +75,6 @@ export async function signIn(email: string, password: string) {
             user_id: user.id,
             role: 'manager',
             can_order: true,
-            can_see_purchase_prices: true,
             can_configure: true,
             own_configs_only: false,
           }, { onConflict: 'user_id' }),
@@ -100,12 +99,12 @@ export async function signUp(data: {
   // Validate invite token before registering (fail fast)
   // Gebruik admin client — invite-tabel heeft RLS die auth.uid() vereist,
   // maar de registrerende gebruiker is nog niet ingelogd.
-  let invite: { id: string; company_id: string; invited_by: string | null; can_order: boolean; can_see_purchase_prices: boolean; can_configure: boolean; own_configs_only: boolean } | null = null
+  let invite: { id: string; company_id: string; invited_by: string | null; can_order: boolean; can_configure: boolean; own_configs_only: boolean } | null = null
   if (data.inviteToken) {
     const admin = createAdminClient()
     const { data: inviteRow } = await admin
       .from('company_invites')
-      .select('id, company_id, invited_by, can_order, can_see_purchase_prices, can_configure, own_configs_only')
+      .select('id, company_id, invited_by, can_order, can_configure, own_configs_only')
       .eq('token', data.inviteToken)
       .eq('email', data.email)
       .is('accepted_at', null)
@@ -165,7 +164,6 @@ export async function signUp(data: {
       user_id: authData.user.id,
       role: 'member',
       can_order: invite.can_order,
-      can_see_purchase_prices: invite.can_see_purchase_prices,
       can_configure: invite.can_configure,
       own_configs_only: invite.own_configs_only,
     })

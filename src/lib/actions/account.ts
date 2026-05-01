@@ -54,7 +54,6 @@ export async function updateProfile(formData: FormData) {
             user_id: user.id,
             role: 'manager',
             can_order: true,
-            can_see_purchase_prices: true,
             can_configure: true,
             own_configs_only: false,
           }),

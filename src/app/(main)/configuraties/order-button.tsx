@@ -300,6 +300,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                       <input
                         type="number"
                         min={1}
+                        step={1}
                         value={quantity}
                         onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                         className="w-16 h-9 rounded-xl border border-black/12 text-center text-[14px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white"

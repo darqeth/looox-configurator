@@ -210,19 +210,31 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
 
   const subtotal = basePrice * input.quantity
   let discountAmount = 0
-  if (input.discountCodeId && input.discountType && input.discountValue) {
-    if (input.discountType === 'pct') {
-      discountAmount = Math.round(subtotal * input.discountValue / 100)
-    } else {
-      discountAmount = Math.min(input.discountValue, subtotal)
+  let resolvedDiscountType: 'pct' | 'fixed' | null = null
+  let resolvedDiscountValue: number | null = null
+  let resolvedDiscountUseType: 'single' | 'per_user' = 'single'
+  if (input.discountCodeId) {
+    // Re-read authoritative type/value/use_type from DB — never trust client-supplied values
+    const { data: codeRow } = await supabase
+      .from('discount_codes')
+      .select('type, value, use_type')
+      .eq('id', input.discountCodeId)
+      .single()
+    if (codeRow) {
+      resolvedDiscountType = codeRow.type as 'pct' | 'fixed'
+      resolvedDiscountValue = Number(codeRow.value)
+      resolvedDiscountUseType = (codeRow.use_type ?? 'single') as 'single' | 'per_user'
+      discountAmount = resolvedDiscountType === 'pct'
+        ? Math.round(subtotal * resolvedDiscountValue / 100)
+        : Math.min(resolvedDiscountValue, subtotal)
     }
   }
   const finalTotalPrice = subtotal - discountAmount
 
   const selectedOptionsJson = {
     ...buildSelectedOptionsJson(input),
-    discountType: input.discountType ?? null,
-    discountValue: input.discountValue ?? null,
+    discountType: resolvedDiscountType,
+    discountValue: resolvedDiscountValue,
     discountAmount: discountAmount > 0 ? discountAmount : null,
   }
 
@@ -264,7 +276,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
   if (orderError || !order) throw new Error(orderError?.message ?? 'Order aanmaken mislukt')
 
   if (input.discountCodeId) {
-    await applyDiscountCode(supabase, input.discountCodeId, order.id, user.id, input.discountUseType ?? 'single')
+    await applyDiscountCode(supabase, input.discountCodeId, order.id, user.id, resolvedDiscountUseType)
   }
 
   revalidatePath('/bestellingen')
@@ -341,11 +353,23 @@ export async function placeOrderFromConfig(
     : totalPriceRaw
   const subtotal = unitPrice * effectiveQuantity
   let discountAmount = 0
-  if (discountCodeId && discountType && discountValue) {
-    if (discountType === 'pct') {
-      discountAmount = Math.round(subtotal * discountValue / 100)
-    } else {
-      discountAmount = Math.min(discountValue, subtotal)
+  let resolvedDiscountType: 'pct' | 'fixed' | null = null
+  let resolvedDiscountValue: number | null = null
+  let resolvedDiscountUseType: 'single' | 'per_user' = 'single'
+  if (discountCodeId) {
+    // Re-read authoritative type/value/use_type from DB — never trust client-supplied values
+    const { data: codeRow } = await supabase
+      .from('discount_codes')
+      .select('type, value, use_type')
+      .eq('id', discountCodeId)
+      .single()
+    if (codeRow) {
+      resolvedDiscountType = codeRow.type as 'pct' | 'fixed'
+      resolvedDiscountValue = Number(codeRow.value)
+      resolvedDiscountUseType = (codeRow.use_type ?? 'single') as 'single' | 'per_user'
+      discountAmount = resolvedDiscountType === 'pct'
+        ? Math.round(subtotal * resolvedDiscountValue / 100)
+        : Math.min(resolvedDiscountValue, subtotal)
     }
   }
   const finalTotalPrice = subtotal - discountAmount
@@ -383,8 +407,8 @@ export async function placeOrderFromConfig(
       ...(discountAmount > 0 && {
         selected_options: {
           ...(config.selected_options as object ?? {}),
-          discountType,
-          discountValue,
+          discountType: resolvedDiscountType,
+          discountValue: resolvedDiscountValue,
           discountAmount,
         },
       }),
@@ -392,7 +416,7 @@ export async function placeOrderFromConfig(
     .eq('id', configId)
 
   if (discountCodeId) {
-    await applyDiscountCode(supabase, discountCodeId, order.id, user.id, discountUseType ?? 'single')
+    await applyDiscountCode(supabase, discountCodeId, order.id, user.id, resolvedDiscountUseType)
   }
 
   revalidatePath('/bestellingen')

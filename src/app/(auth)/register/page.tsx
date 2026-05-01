@@ -6,7 +6,7 @@ import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import { signUp } from '@/lib/actions/auth'
 import Link from 'next/link'
-import { Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 function getStrength(password: string) {
   const criteria = [
@@ -23,6 +23,8 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -148,18 +150,23 @@ export default function RegisterPage() {
               >
                 Wachtwoord
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
-                placeholder="Minimaal 8 tekens"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                  placeholder="Minimaal 8 tekens"
+                />
+                <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-lx-text-secondary hover:text-lx-text-primary transition-colors" aria-label={showPassword ? 'Verberg wachtwoord' : 'Toon wachtwoord'}>
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {password.length > 0 && <PasswordStrength password={password} />}
             </div>
 
@@ -170,15 +177,20 @@ export default function RegisterPage() {
               >
                 Wachtwoord bevestigen
               </label>
-              <input
-                id="confirm"
-                name="confirm"
-                type="password"
-                required
-                autoComplete="new-password"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="confirm"
+                  name="confirm"
+                  type={showConfirm ? 'text' : 'password'}
+                  required
+                  autoComplete="new-password"
+                  className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                  placeholder="••••••••"
+                />
+                <button type="button" tabIndex={-1} onClick={() => setShowConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-lx-text-secondary hover:text-lx-text-primary transition-colors" aria-label={showConfirm ? 'Verberg wachtwoord' : 'Toon wachtwoord'}>
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {error && (

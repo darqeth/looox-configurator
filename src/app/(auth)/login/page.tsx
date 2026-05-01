@@ -7,11 +7,13 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [showLoginPw, setShowLoginPw] = useState(false)
+  const [showRecoveryPw, setShowRecoveryPw] = useState(false)
   const [isRecovery, setIsRecovery] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [passwordDone, setPasswordDone] = useState(false)
@@ -156,17 +158,22 @@ export default function LoginPage() {
                     <label htmlFor="new-password" className="block text-sm font-semibold text-lx-text-secondary mb-1.5">
                       Nieuw wachtwoord
                     </label>
-                    <input
-                      id="new-password"
-                      type="password"
-                      required
-                      minLength={8}
-                      autoComplete="new-password"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
-                      placeholder="Minimaal 8 tekens"
-                    />
+                    <div className="relative">
+                      <input
+                        id="new-password"
+                        type={showRecoveryPw ? 'text' : 'password'}
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                        placeholder="Minimaal 8 tekens"
+                      />
+                      <button type="button" tabIndex={-1} onClick={() => setShowRecoveryPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-lx-text-secondary hover:text-lx-text-primary transition-colors" aria-label={showRecoveryPw ? 'Verberg wachtwoord' : 'Toon wachtwoord'}>
+                        {showRecoveryPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   {error && (
@@ -216,15 +223,20 @@ export default function LoginPage() {
                   <label htmlFor="password" className="block text-sm font-semibold text-lx-text-secondary mb-1.5">
                     Wachtwoord
                   </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    autoComplete="current-password"
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
-                    placeholder="••••••••"
-                  />
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showLoginPw ? 'text' : 'password'}
+                      required
+                      autoComplete="current-password"
+                      className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                      placeholder="••••••••"
+                    />
+                    <button type="button" tabIndex={-1} onClick={() => setShowLoginPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-lx-text-secondary hover:text-lx-text-primary transition-colors" aria-label={showLoginPw ? 'Verberg wachtwoord' : 'Toon wachtwoord'}>
+                      {showLoginPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 {error && (

@@ -376,7 +376,6 @@ export type OrderDocumentProps = {
   quantity: number
   notes?: string | null
   attachmentUrl?: string | null
-  showKorting?: boolean
   staffelKortingPct?: number
 }
 
@@ -390,7 +389,7 @@ const STATUS_NL: Record<string, string> = {
 
 export default function OrderDocument({
   orderNumber, orderDate, articleNumber, status,
-  dealer, config, unitPrice, korting, quantity, notes, attachmentUrl, showKorting = true, staffelKortingPct,
+  dealer, config, unitPrice, korting, quantity, notes, attachmentUrl, staffelKortingPct,
 }: OrderDocumentProps) {
   const opts = config.options
   const nettoUnitPrice = Math.round(unitPrice * (1 - korting / 100))
@@ -533,19 +532,15 @@ export default function OrderDocument({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Prijsoverzicht (excl. BTW)</Text>
           <View style={styles.pricingBox}>
-            {showKorting && (
-              <>
-                <View style={styles.pricingRow}>
-                  <Text style={styles.pricingLabel}>Bruto ex. BTW</Text>
-                  <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
-                </View>
-                <View style={styles.pricingRow}>
-                  <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
-                  <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(Math.round(unitPrice * korting / 100))}</Text>
-                </View>
-              </>
-            )}
-            {showKorting && staffelAmountPerStuk > 0 && (
+            <View style={styles.pricingRow}>
+              <Text style={styles.pricingLabel}>Bruto ex. BTW</Text>
+              <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
+            </View>
+            <View style={styles.pricingRow}>
+              <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
+              <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(Math.round(unitPrice * korting / 100))}</Text>
+            </View>
+            {staffelAmountPerStuk > 0 && (
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>
                   Staffelkorting ({((staffelKortingPct ?? 0) * 100).toFixed(0)}%)

@@ -99,8 +99,7 @@ async function sendOrderEmails(
     shippingAddress: profileData?.shipping_address ?? null,
   }
 
-  // PDF genereren — twee versies: intern (met korting) en klant (zonder korting)
-  const renderArgs = {
+  const pdfBuffer = await renderOrderPDF({
     orderNumber,
     orderDate,
     articleNumber,
@@ -117,19 +116,13 @@ async function sendOrderEmails(
     quantity: emailDetails.quantity,
     notes,
     attachmentUrl,
-  }
-  const [internalResult, customerResult] = await Promise.allSettled([
-    renderOrderPDF({ ...renderArgs, showKorting: true }),
-    renderOrderPDF({ ...renderArgs, showKorting: false }),
-  ])
-  const pdfBufferInternal = internalResult.status === 'fulfilled' ? internalResult.value : undefined
-  const pdfBufferCustomer = customerResult.status === 'fulfilled' ? customerResult.value : undefined
+  }).catch(() => undefined)
 
   sendOrderConfirmationEmail({
     to: email,
     name: profileData?.full_name ?? 'Gebruiker',
     order: emailDetails,
-    pdfBuffer: pdfBufferCustomer,
+    pdfBuffer,
   }).catch(() => {})
 
   getNotificationEmails().then(to =>
@@ -137,7 +130,7 @@ async function sendOrderEmails(
       to,
       order: emailDetails,
       customer: dealerInfo,
-      pdfBuffer: pdfBufferInternal,
+      pdfBuffer,
     })
   ).catch(() => {})
 }

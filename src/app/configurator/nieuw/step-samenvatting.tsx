@@ -14,6 +14,7 @@ import {
   calcTotalPrice,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
+import { Loader2 } from 'lucide-react'
 
 interface StepSamenvattingProps {
   shape: ShapeSlug
@@ -225,9 +226,14 @@ export default function StepSamenvatting({
         <button
           onClick={() => onSave(false)}
           disabled={!projectName.trim() || saving}
-          className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {saving ? 'Opslaan…' : 'Opslaan als offerte'}
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Opslaan…</span>
+            </>
+          ) : 'Opslaan als offerte'}
         </button>
       </div>
       {!projectName.trim() && (

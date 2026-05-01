@@ -383,14 +383,10 @@ function ProjectspiegelsTab() {
 function MaatwerkStaffelTab() {
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-sm font-semibold text-lx-text-primary mb-1">
-          Staffelkorting maatwerk spiegels
-        </h3>
-        <p className="text-xs text-lx-text-secondary mb-4">
-          Van toepassing op de netto prijs (ná dealer korting). Wordt automatisch
-          toegepast bij het bestellen op basis van het gekozen aantal.
-        </p>
+      <SectionCard
+        title="Staffelkorting maatwerk spiegels"
+        subtitle="Van toepassing op de netto prijs (ná dealer korting). Wordt automatisch toegepast bij het bestellen op basis van het gekozen aantal."
+      >
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-lx-divider">
@@ -409,7 +405,7 @@ function MaatwerkStaffelTab() {
             ))}
           </tbody>
         </table>
-      </div>
+      </SectionCard>
     </div>
   )
 }

@@ -10,7 +10,6 @@ export default async function NieuweConfiguratiePage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   let korting = 50
-  let canSeePurchasePrices = true
   let canOrder = true
   let isInternational = false
   let isGroothandel = false
@@ -23,11 +22,10 @@ export default async function NieuweConfiguratiePage() {
   if (user) {
     const [{ data: profile }, { data: memberData }] = await Promise.all([
       supabase.from('profiles').select('is_international, is_groothandel, korting').eq('id', user.id).single(),
-      supabase.from('company_members').select('role, can_see_purchase_prices, can_order').eq('user_id', user.id).maybeSingle(),
+      supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle(),
     ])
 
     const isManager = !memberData || memberData.role === 'manager'
-    canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
     canOrder = isManager || (memberData?.can_order ?? true)
     isInternational = profile?.is_international ?? false
     isGroothandel = profile?.is_groothandel ?? false
@@ -41,7 +39,6 @@ export default async function NieuweConfiguratiePage() {
   return (
     <ConfiguratorWizard
       korting={korting}
-      canSeePurchasePrices={canSeePurchasePrices}
       canOrder={canOrder}
       isInternational={isInternational}
       optionTooltips={optionTooltips}

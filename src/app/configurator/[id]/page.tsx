@@ -14,7 +14,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([
     supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).single(),
     supabase.from('profiles').select('korting, is_international, is_groothandel').eq('id', user.id).single(),
-    supabase.from('company_members').select('role, can_see_purchase_prices, can_order').eq('user_id', user.id).maybeSingle(),
+    supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle(),
   ])
 
   if (error || !config) notFound()
@@ -43,7 +43,6 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   }
 
   const isManager = !memberData || memberData.role === 'manager'
-  const canSeePurchasePrices = isManager || (memberData?.can_see_purchase_prices ?? false)
   const canOrder = isManager || (memberData?.can_order ?? true)
   const korting = profile?.korting ?? 50
   const isInternational = profile?.is_international ?? false
@@ -72,7 +71,6 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     <ConfiguratorWizard
       initialConfig={initialConfig}
       korting={korting}
-      canSeePurchasePrices={canSeePurchasePrices}
       canOrder={canOrder}
       isInternational={isInternational}
     />

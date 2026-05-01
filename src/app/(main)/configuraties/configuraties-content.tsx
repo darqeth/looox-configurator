@@ -91,11 +91,9 @@ export async function ConfiguratiesContent({
     const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
 
     // Haal config-aantallen op per teamlid — één query i.p.v. N
-    const { data: memberConfigRows } = await supabase
-      .from('configurations')
-      .select('user_id')
-      .in('user_id', memberUserIds)
-      .eq('status', 'saved')
+    const { data: memberConfigRows } = memberUserIds.length > 0
+      ? await supabase.from('configurations').select('user_id').in('user_id', memberUserIds).eq('status', 'saved')
+      : { data: [] as { user_id: string }[] }
 
     const memberConfigCounts = (memberConfigRows ?? []).reduce<Record<string, number>>((acc, row) => {
       acc[row.user_id] = (acc[row.user_id] ?? 0) + 1

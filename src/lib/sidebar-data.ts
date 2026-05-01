@@ -90,7 +90,7 @@ export async function fetchSidebarData(
         longest_streak: 1,
         last_login_date: today,
         total_days: 1,
-      })
+      }).then(({ error }) => { if (error) console.error('[streak]', error) })
     } else if (streak.last_login_date !== today) {
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
@@ -103,7 +103,7 @@ export async function fetchSidebarData(
         last_login_date: today,
         total_days: (streak.total_days ?? 0) + 1, // NOTE: total_days column requires migration
         updated_at: new Date().toISOString(),
-      }).eq('user_id', userId)
+      }).eq('user_id', userId).then(({ error }) => { if (error) console.error('[streak]', error) })
     }
   }
 

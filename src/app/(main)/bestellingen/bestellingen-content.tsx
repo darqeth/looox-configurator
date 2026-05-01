@@ -73,10 +73,9 @@ export async function BestellingenContent({ page, view }: { page: string; view: 
 
     const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
 
-    const { data: memberOrderRows } = await supabase
-      .from('orders')
-      .select('user_id')
-      .in('user_id', memberUserIds)
+    const { data: memberOrderRows } = memberUserIds.length > 0
+      ? await supabase.from('orders').select('user_id').in('user_id', memberUserIds)
+      : { data: [] as { user_id: string }[] }
 
     const memberOrderCounts = (memberOrderRows ?? []).reduce<Record<string, number>>((acc, row) => {
       acc[row.user_id] = (acc[row.user_id] ?? 0) + 1

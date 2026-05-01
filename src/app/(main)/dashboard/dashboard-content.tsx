@@ -99,7 +99,8 @@ export async function DashboardContent({
     { data: streakData },
     { data: usedDiscountCodes },
     { data: downloads },
-    { data: allConfigStatuses },
+    { count: totalConfigCountResult },
+    { data: configStatusRows },
   ] = await Promise.all([
     supabase.from('company_members').select('role, can_order').eq('user_id', userId).maybeSingle(),
     supabase.from('profiles').select('korting').eq('id', userId).single(),
@@ -116,13 +117,14 @@ export async function DashboardContent({
     supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
     supabase.from('discount_codes').select('code').eq('user_id', userId).not('used_at', 'is', null),
     supabase.from('downloads').select('id, title, file_url, file_ext, file_size').eq('is_active', true).order('sort_order').limit(6),
-    // Eén query voor alle config-statussen — totalConfigCount/savedConfigCount/orderedConfigCount client-side berekend
-    supabase.from('configurations').select('status').eq('user_id', userId),
+    // O(1) count voor totaal + alleen relevante statussen ophalen
+    supabase.from('configurations').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('configurations').select('status').eq('user_id', userId).in('status', ['saved', 'ordered']),
   ])
 
-  const totalConfigCount = allConfigStatuses?.length ?? 0
-  const savedConfigCount = allConfigStatuses?.filter(c => c.status === 'saved').length ?? 0
-  const orderedConfigCount = allConfigStatuses?.filter(c => c.status === 'ordered').length ?? 0
+  const totalConfigCount = totalConfigCountResult ?? 0
+  const savedConfigCount = configStatusRows?.filter(c => c.status === 'saved').length ?? 0
+  const orderedConfigCount = configStatusRows?.filter(c => c.status === 'ordered').length ?? 0
 
   const korting = profileData?.korting ?? 50
   const canOrder = !memberData || memberData.role === 'manager' || (memberData?.can_order ?? true)

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
@@ -127,8 +128,13 @@ export default function LoginPage() {
                       placeholder="naam@bedrijf.nl"
                     />
                   </div>
-                  <button type="submit" disabled={isPending} className="w-full bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                    {isPending ? 'Bezig…' : 'Resetlink versturen'}
+                  <button type="submit" disabled={isPending} className="w-full flex items-center justify-center gap-2 bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    {isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Bezig…</span>
+                      </>
+                    ) : 'Resetlink versturen'}
                   </button>
                 </form>
                 <button onClick={() => setIsForgot(false)} className="mt-4 text-sm text-lx-text-secondary hover:underline w-full text-center">Terug naar inloggen</button>
@@ -175,9 +181,14 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={isPending}
-                    className="w-full bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isPending ? 'Bezig…' : 'Wachtwoord opslaan'}
+                    {isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Bezig…</span>
+                      </>
+                    ) : 'Wachtwoord opslaan'}
                   </button>
                 </form>
               </>
@@ -228,9 +239,14 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="w-full bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lx-cta"
+                  className="w-full flex items-center justify-center gap-2 bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lx-cta"
                 >
-                  {isPending ? 'Bezig met inloggen…' : 'Inloggen'}
+                  {isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Bezig met inloggen…</span>
+                    </>
+                  ) : 'Inloggen'}
                 </button>
               </form>
               <button onClick={() => { setIsForgot(true); setError(null) }} className="mt-4 text-sm text-lx-text-secondary hover:underline w-full text-center">

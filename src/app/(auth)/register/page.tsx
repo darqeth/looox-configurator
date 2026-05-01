@@ -6,6 +6,7 @@ import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import { signUp } from '@/lib/actions/auth'
 import Link from 'next/link'
+import { Loader2 } from 'lucide-react'
 
 function getStrength(password: string) {
   const criteria = [
@@ -192,9 +193,14 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lx-cta mt-1"
+              className="w-full flex items-center justify-center gap-2 bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lx-cta mt-1"
             >
-              {isPending ? 'Aanvraag versturen…' : 'Account aanvragen'}
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Aanvraag versturen…</span>
+                </>
+              ) : 'Account aanvragen'}
             </button>
           </form>
         </div>

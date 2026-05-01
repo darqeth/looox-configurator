@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
+import { Loader2 } from 'lucide-react'
 import { inviteColleague, updateMemberPermissions, removeMember, revokeInvite, updateInvitePermissions } from '@/lib/actions/colleagues'
 import type { MemberPermissions, InvitePermissions } from '@/lib/actions/colleagues'
 
@@ -189,9 +190,14 @@ function MemberRow({ member, isManager, onEdit }: { member: Member; isManager: b
           <button
             onClick={handleRemove}
             disabled={isPending}
-            className="text-[12px] font-medium text-lx-text-secondary hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 text-[12px] font-medium text-lx-text-secondary hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
           >
-            Verwijder
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Verwijder</span>
+              </>
+            ) : 'Verwijder'}
           </button>
         </div>
       )}
@@ -264,9 +270,14 @@ function InviteRow({ invite, copiedToken, onCopy, onEditPerms }: {
         <button
           onClick={handleRevoke}
           disabled={isPending}
-          className="text-[12px] font-medium text-lx-text-secondary hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 text-[12px] font-medium text-lx-text-secondary hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
         >
-          Intrekken
+          {isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Intrekken</span>
+            </>
+          ) : 'Intrekken'}
         </button>
       </div>
     </div>
@@ -432,9 +443,14 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             <button
               onClick={handleSend}
               disabled={isPending}
-              className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
             >
-              {isPending ? 'Aanmaken…' : 'Uitnodiging aanmaken'}
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Aanmaken…</span>
+                </>
+              ) : 'Uitnodiging aanmaken'}
             </button>
           </div>
           <p className="text-lx-text-secondary text-[11px] text-center">
@@ -519,9 +535,14 @@ function InvitePermissionsModal({ invite, onClose }: { invite: Invite; onClose: 
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
           >
-            {isPending ? 'Opslaan…' : 'Opslaan'}
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Opslaan…</span>
+              </>
+            ) : 'Opslaan'}
           </button>
           <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-lx-text-secondary hover:bg-lx-divider text-[13.5px] transition-colors">
             Annuleren
@@ -612,9 +633,14 @@ function PermissionsModal({ member, onClose }: { member: Member; onClose: () => 
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
           >
-            {isPending ? 'Opslaan…' : 'Opslaan'}
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Opslaan…</span>
+              </>
+            ) : 'Opslaan'}
           </button>
           <button
             onClick={onClose}

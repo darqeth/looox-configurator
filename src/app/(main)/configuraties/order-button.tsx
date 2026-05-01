@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 import { placeOrderFromConfig } from '@/lib/actions/orders'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
 import { MirrorPreview, type ConfigPreview } from '@/app/configurator/nieuw/price-panel'
@@ -419,9 +420,14 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                   <button
                     onClick={handleOrder}
                     disabled={!checked || loading}
-                    className="flex-1 h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Bestelling plaatsen…' : 'Bestellen →'}
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Bestelling plaatsen…</span>
+                      </>
+                    ) : 'Bestellen →'}
                   </button>
                 </div>
               </>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { updateProfile, updatePassword } from '@/lib/actions/account'
 
 type Profile = {
@@ -121,9 +122,14 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         <button
           type="submit"
           disabled={profileLoading}
-          className="bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors"
+          className="flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors"
         >
-          {profileLoading ? 'Opslaan...' : 'Wijzigingen opslaan'}
+          {profileLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Opslaan...</span>
+            </>
+          ) : 'Wijzigingen opslaan'}
         </button>
       </div>
     </form>
@@ -180,9 +186,14 @@ export function PasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-lx-text-primary hover:bg-[#333] disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors"
+          className="flex items-center justify-center gap-2 bg-lx-text-primary hover:bg-[#333] disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors"
         >
-          {loading ? 'Opslaan...' : 'Wachtwoord wijzigen'}
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Opslaan...</span>
+            </>
+          ) : 'Wachtwoord wijzigen'}
         </button>
       </div>
     </form>

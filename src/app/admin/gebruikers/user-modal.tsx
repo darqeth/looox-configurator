@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 import {
   updateKorting,
   toggleInternational,
@@ -255,17 +256,27 @@ export function UserEditModal({
                 <button
                   onClick={() => handleApproval('approved')}
                   disabled={isPending}
-                  className="flex-1 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  Goedkeuren
+                  {isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Goedkeuren</span>
+                    </>
+                  ) : 'Goedkeuren'}
                 </button>
                 {profile.approval_status !== 'rejected' && (
                   <button
                     onClick={() => handleApproval('rejected')}
                     disabled={isPending}
-                    className="flex-1 text-red-600 bg-red-50 hover:bg-red-100 text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                    className="flex-1 flex items-center justify-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
                   >
-                    Afwijzen
+                    {isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Afwijzen</span>
+                      </>
+                    ) : 'Afwijzen'}
                   </button>
                 )}
               </div>
@@ -295,7 +306,14 @@ export function UserEditModal({
                     className="w-16 h-8 rounded-lg border border-lx-cta/50 text-center text-[13px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white px-1"
                   />
                   <span className="text-[12px] text-lx-text-secondary">%</span>
-                  <button onClick={handleSaveKorting} className="text-[12px] font-semibold text-lx-cta hover:underline cursor-pointer">OK</button>
+                  <button onClick={handleSaveKorting} disabled={isPending} className="flex items-center justify-center gap-2 text-[12px] font-semibold text-lx-cta hover:underline cursor-pointer disabled:opacity-50">
+                    {isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>OK</span>
+                      </>
+                    ) : 'OK'}
+                  </button>
                   <button onClick={() => setKortingEditing(false)} className="text-[12px] text-lx-text-secondary hover:text-lx-text-primary cursor-pointer">✕</button>
                 </div>
               ) : (
@@ -410,9 +428,14 @@ export function UserEditModal({
                   <button
                     onClick={handleSaveCompany}
                     disabled={isPending}
-                    className="w-full bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
                   >
-                    {profile.company_id === selectedCompanyId && profile.member ? 'Rechten opslaan' : 'Koppelen & opslaan'}
+                    {isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>{profile.company_id === selectedCompanyId && profile.member ? 'Rechten opslaan' : 'Koppelen & opslaan'}</span>
+                      </>
+                    ) : profile.company_id === selectedCompanyId && profile.member ? 'Rechten opslaan' : 'Koppelen & opslaan'}
                   </button>
                 </>
               )}
@@ -460,9 +483,14 @@ export function UserEditModal({
                         <button
                           disabled={subAdminConfirm.toUpperCase() !== 'BEHEER' || isPending}
                           onClick={() => handleConfirmSubAdmin(true)}
-                          className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[12px] font-semibold disabled:opacity-40"
+                          className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[12px] font-semibold disabled:opacity-40"
                         >
-                          Bevestigen
+                          {isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Bevestigen</span>
+                            </>
+                          ) : 'Bevestigen'}
                         </button>
                         <button onClick={() => { setShowSubAdminConfirm(false); setSubAdminConfirm('') }} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12px] text-lx-text-secondary">
                           Annuleren
@@ -507,9 +535,14 @@ export function UserEditModal({
                         <button
                           disabled={superAdminConfirm.toUpperCase() !== 'SUPERADMIN' || isPending}
                           onClick={() => handleConfirmSuperAdmin(true)}
-                          className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-[12px] font-semibold disabled:opacity-40"
+                          className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-[12px] font-semibold disabled:opacity-40"
                         >
-                          Bevestigen
+                          {isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Bevestigen</span>
+                            </>
+                          ) : 'Bevestigen'}
                         </button>
                         <button onClick={() => { setShowSuperAdminConfirm(false); setSuperAdminConfirm('') }} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12px] text-lx-text-secondary">
                           Annuleren
@@ -533,13 +566,22 @@ export function UserEditModal({
                 <button
                   onClick={handleGenerateResetLink}
                   disabled={isPending || !profile.email}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-black/8 hover:border-black/15 hover:bg-lx-panel-bg transition-all text-left disabled:opacity-40 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-black/8 hover:border-black/15 hover:bg-lx-panel-bg transition-all disabled:opacity-40 cursor-pointer"
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lx-text-secondary flex-shrink-0">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <span className="text-[13px] font-medium text-lx-text-primary">Wachtwoord resetlink genereren</span>
+                  {isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-[13px] font-medium text-lx-text-primary">Wachtwoord resetlink genereren</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-lx-text-secondary flex-shrink-0">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                      <span className="text-[13px] font-medium text-lx-text-primary">Wachtwoord resetlink genereren</span>
+                    </>
+                  )}
                 </button>
               ) : (
                 <div className="p-3 bg-lx-panel-bg rounded-xl border border-black/8">
@@ -583,9 +625,14 @@ export function UserEditModal({
                     <button
                       onClick={handleDelete}
                       disabled={isPending}
-                      className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[12.5px] font-semibold py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                      className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-[12.5px] font-semibold py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     >
-                      {isPending ? '...' : 'Definitief verwijderen'}
+                      {isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Definitief verwijderen</span>
+                        </>
+                      ) : 'Definitief verwijderen'}
                     </button>
                     <button
                       onClick={() => setConfirmDelete(false)}

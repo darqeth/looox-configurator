@@ -17,7 +17,6 @@ interface OrderButtonProps {
   isProjectspiegel?: boolean
   projectspiegelStuks?: number
   configPreview?: ConfigPreview
-  canSeePurchasePrices?: boolean
 }
 
 function lightSummary(light: { position: string; type: string | null } | undefined): string {
@@ -99,7 +98,7 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
   )
 }
 
-export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, canSeePurchasePrices = true }: OrderButtonProps) {
+export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview }: OrderButtonProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
@@ -240,29 +239,25 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                       </>
                     ) : (
                       <>
-                        {canSeePurchasePrices && (
-                          <>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[12.5px] text-lx-text-secondary">Bruto ex. BTW</span>
-                              <span className="text-[13px] font-medium text-lx-text-primary">€{price.toLocaleString('nl-NL')}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[12.5px] text-lx-text-secondary">Dealer korting ({korting}%)</span>
-                              <span className="text-[13px] font-medium text-lx-text-secondary">−€{(price - nettoNaDealer).toLocaleString('nl-NL')}</span>
-                            </div>
-                            {staffelPct > 0 && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-[12.5px] text-lx-text-secondary">
-                                  Staffelkorting ({(staffelPct * 100).toFixed(0)}%)
-                                </span>
-                                <span className="text-[12.5px] text-lx-text-secondary">
-                                  -{staffelAmountPerStuk.toLocaleString('nl-NL')}
-                                </span>
-                              </div>
-                            )}
-                          </>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[12.5px] text-lx-text-secondary">Bruto ex. BTW</span>
+                          <span className="text-[13px] font-medium text-lx-text-primary">€{price.toLocaleString('nl-NL')}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[12.5px] text-lx-text-secondary">Dealer korting ({korting}%)</span>
+                          <span className="text-[13px] font-medium text-lx-text-secondary">−€{(price - nettoNaDealer).toLocaleString('nl-NL')}</span>
+                        </div>
+                        {staffelPct > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[12.5px] text-lx-text-secondary">
+                              Staffelkorting ({(staffelPct * 100).toFixed(0)}%)
+                            </span>
+                            <span className="text-[12.5px] text-lx-text-secondary">
+                              -{staffelAmountPerStuk.toLocaleString('nl-NL')}
+                            </span>
+                          </div>
                         )}
-                        <div className={`flex items-center justify-between${canSeePurchasePrices ? ' pt-1 border-t border-lx-divider' : ''}`}>
+                        <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
                           <span className="text-[12.5px] text-lx-text-secondary font-medium">Netto ex. BTW</span>
                           <span className="text-[14px] font-bold text-lx-cta">€{nettoUnitPrice.toLocaleString('nl-NL')}</span>
                         </div>

@@ -64,7 +64,7 @@ export async function ConfiguratiesContent({
   const [{ data: memberPerms }, { data: profileData }] = await Promise.all([
     supabase
       .from('company_members')
-      .select('role, can_order, can_configure, can_see_purchase_prices, own_configs_only, company_id')
+      .select('role, can_order, can_configure, own_configs_only, company_id')
       .eq('user_id', user.id)
       .maybeSingle(),
     supabase.from('profiles').select('korting').eq('id', user.id).single(),
@@ -75,7 +75,6 @@ export async function ConfiguratiesContent({
   const isManager = !memberPerms || memberPerms.role === 'manager'
   const canOrder = isManager || (memberPerms?.can_order ?? true)
   const canConfigure = isManager || (memberPerms?.can_configure ?? true)
-  const canSeePurchasePrices = isManager || (memberPerms?.can_see_purchase_prices ?? false)
 
   // Haal teamleden op als de user manager is
   type TeamMember = { userId: string; name: string; count: number }
@@ -205,9 +204,7 @@ export async function ConfiguratiesContent({
               <div className="w-9 flex-shrink-0" />
               <div className="flex-1 min-w-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Naam</div>
               <div className="w-[152px] flex-shrink-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider hidden lg:block">Afmeting (B × H)</div>
-              {canSeePurchasePrices && (
-                <div className="w-[92px] flex-shrink-0 text-right text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Prijs</div>
-              )}
+              <div className="w-[92px] flex-shrink-0 text-right text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Prijs</div>
               {canOrder && (
                 <div className="w-[96px] flex-shrink-0" />
               )}
@@ -272,11 +269,9 @@ export async function ConfiguratiesContent({
                           <p className="text-[13px] font-semibold text-lx-text-primary truncate leading-snug">
                             {config.name ?? 'Naamloze configuratie'}
                           </p>
-                          {canSeePurchasePrices && (
-                            <p className="text-[13px] font-bold text-lx-text-primary flex-shrink-0">
-                              €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
-                            </p>
-                          )}
+                          <p className="text-[13px] font-bold text-lx-text-primary flex-shrink-0">
+                            €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                          </p>
                         </div>
                         <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
                           {config.article_number && <span className="font-mono">{config.article_number} · </span>}
@@ -285,7 +280,7 @@ export async function ConfiguratiesContent({
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
                           {canOrder && shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} canSeePurchasePrices={canSeePurchasePrices} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
@@ -324,20 +319,18 @@ export async function ConfiguratiesContent({
                       </div>
 
                       {/* Col: Price */}
-                      {canSeePurchasePrices && (
-                        <div className="w-[92px] flex-shrink-0 text-right">
-                          <p className="text-[13px] font-bold text-lx-text-primary">
-                            €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
-                          </p>
-                          <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>
-                        </div>
-                      )}
+                      <div className="w-[92px] flex-shrink-0 text-right">
+                        <p className="text-[13px] font-bold text-lx-text-primary">
+                          €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                        </p>
+                        <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>
+                      </div>
 
                       {/* Col: Bestellen CTA */}
                       {canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
                           {shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} canSeePurchasePrices={canSeePurchasePrices} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
                           )}
                         </div>
                       )}

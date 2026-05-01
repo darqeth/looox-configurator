@@ -90,20 +90,26 @@ export async function ConfiguratiesContent({
 
     const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
 
-    // Haal config-aantallen op per teamlid
-    const countResults = await Promise.all(
-      memberUserIds.map(uid =>
-        supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'saved')
-      )
-    )
+    // Haal config-aantallen op per teamlid — één query i.p.v. N
+    const { data: memberConfigRows } = await supabase
+      .from('configurations')
+      .select('user_id')
+      .in('user_id', memberUserIds)
+      .eq('status', 'saved')
 
-    teamMembers = (rawMembers ?? []).map((m, i) => {
+    const memberConfigCounts = (memberConfigRows ?? []).reduce<Record<string, number>>((acc, row) => {
+      acc[row.user_id] = (acc[row.user_id] ?? 0) + 1
+      return acc
+    }, {})
+
+    teamMembers = (rawMembers ?? []).map((m) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const profile = Array.isArray(m.profiles) ? (m.profiles as any[])[0] : m.profiles
+      const uid = m.user_id as string
       return {
-        userId: m.user_id as string,
+        userId: uid,
         name: (profile?.full_name as string | null) ?? 'Onbekend',
-        count: countResults[i]?.count ?? 0,
+        count: memberConfigCounts[uid] ?? 0,
       }
     })
   }

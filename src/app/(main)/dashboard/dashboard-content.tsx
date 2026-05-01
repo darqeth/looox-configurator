@@ -87,11 +87,9 @@ export async function DashboardContent({
     { data: memberData },
     { data: profileData },
     { data: configs },
-    { data: _orders },
     { count: pendingOrderCount },
     { data: changelogs },
     { data: rssItems },
-    { count: totalConfigCount },
     { data: circleMilestones },
     { data: userMilestonesData },
     { data: companyMilestonesData },
@@ -101,17 +99,14 @@ export async function DashboardContent({
     { data: streakData },
     { data: usedDiscountCodes },
     { data: downloads },
-    { count: savedConfigCount },
-    { count: orderedConfigCount },
+    { data: allConfigStatuses },
   ] = await Promise.all([
     supabase.from('company_members').select('role, can_order').eq('user_id', userId).maybeSingle(),
     supabase.from('profiles').select('korting').eq('id', userId).single(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', userId).order('updated_at', { ascending: false }).limit(5),
-    supabase.from('orders').select('id', { count: 'exact' }).eq('user_id', userId),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', ['pending', 'confirmed']),
     supabase.from('changelogs').select('id, title, body, published_at').order('published_at', { ascending: false }),
     supabase.from('rss_cache').select('id, title, url, summary, image_url, published_at').order('published_at', { ascending: false }).limit(4),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
     (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', userId),
     (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
@@ -121,9 +116,13 @@ export async function DashboardContent({
     supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
     supabase.from('discount_codes').select('code').eq('user_id', userId).not('used_at', 'is', null),
     supabase.from('downloads').select('id, title, file_url, file_ext, file_size').eq('is_active', true).order('sort_order').limit(6),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'saved'),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'ordered'),
+    // Eén query voor alle config-statussen — totalConfigCount/savedConfigCount/orderedConfigCount client-side berekend
+    supabase.from('configurations').select('status').eq('user_id', userId),
   ])
+
+  const totalConfigCount = allConfigStatuses?.length ?? 0
+  const savedConfigCount = allConfigStatuses?.filter(c => c.status === 'saved').length ?? 0
+  const orderedConfigCount = allConfigStatuses?.filter(c => c.status === 'ordered').length ?? 0
 
   const korting = profileData?.korting ?? 50
   const canOrder = !memberData || memberData.role === 'manager' || (memberData?.can_order ?? true)

@@ -204,7 +204,7 @@ export async function ConfiguratiesContent({
             <div className="hidden sm:flex items-center gap-4 px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
               <div className="w-9 flex-shrink-0" />
               <div className="flex-1 min-w-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Naam</div>
-              <div className="w-[152px] flex-shrink-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider hidden lg:block">Vorm / Afmeting</div>
+              <div className="w-[152px] flex-shrink-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider hidden lg:block">Afmeting (B × H)</div>
               {canSeePurchasePrices && (
                 <div className="w-[92px] flex-shrink-0 text-right text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Prijs</div>
               )}

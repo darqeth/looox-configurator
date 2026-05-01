@@ -103,7 +103,7 @@ export function formatDimensions(
   if (shape === 'rond') return opts.diameter ? `O ${opts.diameter} cm` : '—'
   if (shape === 'organic') return opts.organicSizeKey ? (ORGANIC_LABELS[opts.organicSizeKey] ?? opts.organicSizeKey) : '—'
   if (shape === 'op-aanvraag') return 'Op aanvraag'
-  if (width && height) return `${width} × ${height} cm`
+  if (width && height) return `B ${width} × H ${height} cm`
   return '—'
 }
 

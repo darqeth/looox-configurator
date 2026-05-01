@@ -155,7 +155,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
                     : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
                 }`}
               >
-                {p.w} × {p.h}
+                B {p.w} × H {p.h}
               </button>
             ))}
             <button

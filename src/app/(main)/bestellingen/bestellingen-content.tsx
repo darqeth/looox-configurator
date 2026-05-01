@@ -236,7 +236,7 @@ export async function BestellingenContent({ page, view }: { page: string; view: 
             } | null
             const shape = (config?.selected_options as { shape?: string })?.shape ?? '—'
             const dims = config?.width && config?.height
-              ? `${config.width} × ${config.height} cm`
+              ? `B ${config.width} × H ${config.height} cm`
               : shape === 'rond'
               ? `⌀ ${(config?.selected_options as { diameter?: number })?.diameter ?? '—'} cm`
               : '—'

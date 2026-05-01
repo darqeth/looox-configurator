@@ -97,7 +97,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
   else if (shape === 'organic' && organicKey) {
     const size = ORGANIC_SIZES.find(s => s.key === organicKey)
     dimensionLabel = size?.label ?? organicKey.replace('x', ' × ') + ' cm'
-  } else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
+  } else if (config.width && config.height) dimensionLabel = `B ${config.width} × H ${config.height} cm`
 
   const metaParts = [
     shapeLabel[shape] ?? shape,

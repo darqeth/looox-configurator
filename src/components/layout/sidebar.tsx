@@ -234,7 +234,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
             <button
               type="submit"
               title="Uitloggen"
-              className="text-white/35 hover:text-white/90 hover:bg-white/10 w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+              className="text-white/35 hover:text-white/90 hover:bg-white/10 w-11 h-11 rounded-lg flex items-center justify-center transition-all"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
             </button>

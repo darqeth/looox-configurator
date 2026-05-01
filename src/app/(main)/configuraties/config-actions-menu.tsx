@@ -59,7 +59,7 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
         ref={btnRef}
         onClick={handleOpen}
         aria-label="Meer opties"
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg transition-colors cursor-pointer"
+        className="w-11 h-11 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg transition-colors cursor-pointer"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
           <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>

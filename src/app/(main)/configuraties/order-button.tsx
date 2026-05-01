@@ -160,7 +160,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
       {/* Trigger knop */}
       <button
         onClick={() => setOpen(true)}
-        className="px-3 py-1.5 rounded-lg bg-lx-cta text-white text-[12.5px] font-semibold hover:bg-lx-cta-hover transition-colors whitespace-nowrap"
+        className="px-3 py-2.5 rounded-lg bg-lx-cta text-white text-[12.5px] font-semibold hover:bg-lx-cta-hover transition-colors whitespace-nowrap"
       >
         Bestellen →
       </button>
@@ -290,7 +290,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                       <button
                         type="button"
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
+                        className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
                         tabIndex={-1}
                       >−</button>
                       <input
@@ -299,12 +299,12 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                         step={1}
                         value={quantity}
                         onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-16 h-9 rounded-xl border border-black/12 text-center text-[14px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white"
+                        className="w-16 h-11 rounded-xl border border-black/12 text-center text-[14px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white"
                       />
                       <button
                         type="button"
                         onClick={() => setQuantity(quantity + 1)}
-                        className="w-9 h-9 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
+                        className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
                         tabIndex={-1}
                       >+</button>
                     </div>

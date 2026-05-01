@@ -235,7 +235,7 @@ function PasswordStrength({ password }: { password: string }) {
   const { criteria, score } = getStrength(password)
 
   const barColor =
-    score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-orange-400' : score === 3 ? 'bg-yellow-400' : 'bg-lx-panel-bg'
+    score <= 1 ? 'bg-red-500' : score === 2 ? 'bg-orange-400' : score === 3 ? 'bg-yellow-400' : 'bg-lx-cta'
   const label =
     score <= 1 ? 'Zwak' : score === 2 ? 'Matig' : score === 3 ? 'Goed' : 'Sterk'
   const labelColor =

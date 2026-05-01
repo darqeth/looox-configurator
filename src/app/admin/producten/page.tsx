@@ -27,6 +27,7 @@ import {
   OPHANGING_GROOT,
   VERPAKKING_PER_STUK,
 } from '@/lib/projectspiegel-config'
+import { MAATWERK_STAFFEL_KORTINGEN } from '@/lib/maatwerk-staffel'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -377,6 +378,42 @@ function ProjectspiegelsTab() {
   )
 }
 
+// ─── Maatwerk staffelkorting ──────────────────────────────────────────────────
+
+function MaatwerkStaffelTab() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-semibold text-lx-text-primary mb-1">
+          Staffelkorting maatwerk spiegels
+        </h3>
+        <p className="text-xs text-lx-text-secondary mb-4">
+          Van toepassing op de netto prijs (ná dealer korting). Wordt automatisch
+          toegepast bij het bestellen op basis van het gekozen aantal.
+        </p>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-lx-divider">
+              <th className="text-left py-2 text-xs text-lx-text-secondary font-medium">Vanaf (stuks)</th>
+              <th className="text-left py-2 text-xs text-lx-text-secondary font-medium">Korting</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...MAATWERK_STAFFEL_KORTINGEN].reverse().map((tier, i) => (
+              <tr key={i} className="border-b border-lx-divider last:border-0">
+                <td className="py-2 text-lx-text-primary">{tier.vanaf}+</td>
+                <td className="py-2 font-medium text-lx-cta">
+                  {tier.pct > 0 ? `${(tier.pct * 100).toFixed(0)}%` : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ─── Op aanvraag ─────────────────────────────────────────────────────────────
 
 function OpAanvraagTab() {
@@ -588,6 +625,7 @@ const SHAPE_TABS = [
   { id: 'projectspiegels', label: 'Projectspiegels', component: ProjectspiegelsTab },
   { id: 'opties',        label: 'Extra opties',   component: ExtraOptiesTab },
   { id: 'bediening',    label: 'Bediening',      component: BedieningTab },
+  { id: 'maatwerk-staffel', label: 'Staffelkorting', component: MaatwerkStaffelTab },
 ]
 
 export default function ProductenPage() {

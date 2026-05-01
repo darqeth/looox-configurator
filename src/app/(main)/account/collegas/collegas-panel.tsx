@@ -131,6 +131,7 @@ export default function CollegasPanel({ isManager, members, invites }: CollegasP
 function MemberRow({ member, isManager, onEdit }: { member: Member; isManager: boolean; onEdit: () => void }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const firstLetter = member.name.charAt(0).toUpperCase()
 
   const statusBadge = member.approvalStatus === 'pending'
@@ -138,7 +139,7 @@ function MemberRow({ member, isManager, onEdit }: { member: Member; isManager: b
     : null
 
   function handleRemove() {
-    if (!confirm(`Weet je zeker dat je ${member.name} wil verwijderen?`)) return
+    setConfirmRemove(false)
     startTransition(async () => {
       const result = await removeMember(member.id)
       if (!result.success) setError(result.error ?? 'Onbekende fout')
@@ -187,18 +188,37 @@ function MemberRow({ member, isManager, onEdit }: { member: Member; isManager: b
           >
             Rechten
           </button>
-          <button
-            onClick={handleRemove}
-            disabled={isPending}
-            className="flex items-center justify-center gap-2 text-[12px] font-medium text-lx-text-secondary hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Verwijder</span>
-              </>
-            ) : 'Verwijder'}
-          </button>
+          {confirmRemove ? (
+            <div className="flex items-center gap-2 text-[12px]">
+              <span className="text-red-500 font-medium">Zeker?</span>
+              <button
+                onClick={handleRemove}
+                disabled={isPending}
+                className="text-red-600 font-semibold hover:underline"
+              >
+                Ja
+              </button>
+              <button
+                onClick={() => setConfirmRemove(false)}
+                className="text-lx-text-secondary hover:underline"
+              >
+                Nee
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmRemove(true)}
+              disabled={isPending}
+              className="flex items-center justify-center gap-2 text-[12px] font-medium text-lx-text-secondary hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Verwijder</span>
+                </>
+              ) : 'Verwijder'}
+            </button>
+          )}
         </div>
       )}
       {isManager && member.isSelf && (
@@ -232,11 +252,12 @@ function InviteRow({ invite, copiedToken, onCopy, onEditPerms }: {
   onEditPerms: (invite: Invite) => void
 }) {
   const [isPending, startTransition] = useTransition()
+  const [confirmRevoke, setConfirmRevoke] = useState(false)
   const isCopied = copiedToken === invite.token
   const expiresDate = new Date(invite.expiresAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })
 
   function handleRevoke() {
-    if (!confirm(`Weet je zeker dat je de uitnodiging voor ${invite.email} wil intrekken?`)) return
+    setConfirmRevoke(false)
     startTransition(async () => { await revokeInvite(invite.id) })
   }
 
@@ -267,18 +288,37 @@ function InviteRow({ invite, copiedToken, onCopy, onEditPerms }: {
         >
           Rechten
         </button>
-        <button
-          onClick={handleRevoke}
-          disabled={isPending}
-          className="flex items-center justify-center gap-2 text-[12px] font-medium text-lx-text-secondary hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Intrekken</span>
-            </>
-          ) : 'Intrekken'}
-        </button>
+        {confirmRevoke ? (
+          <div className="flex items-center gap-2 text-[12px]">
+            <span className="text-red-500 font-medium">Zeker?</span>
+            <button
+              onClick={handleRevoke}
+              disabled={isPending}
+              className="text-red-600 font-semibold hover:underline"
+            >
+              Ja
+            </button>
+            <button
+              onClick={() => setConfirmRevoke(false)}
+              className="text-lx-text-secondary hover:underline"
+            >
+              Nee
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmRevoke(true)}
+            disabled={isPending}
+            className="flex items-center justify-center gap-2 text-[12px] font-medium text-lx-text-secondary hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Intrekken</span>
+              </>
+            ) : 'Intrekken'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -684,6 +724,8 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
         className="bg-white rounded-[22px] w-full max-w-md shadow-xl p-6"
         onClick={e => e.stopPropagation()}
       >

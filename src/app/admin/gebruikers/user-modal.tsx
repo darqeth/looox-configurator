@@ -202,6 +202,8 @@ export function UserEditModal({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
         className="bg-white w-full sm:rounded-2xl sm:max-w-lg shadow-2xl overflow-hidden flex flex-col"
         style={{ maxHeight: '92vh' }}
         onClick={e => e.stopPropagation()}

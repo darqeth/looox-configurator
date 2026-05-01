@@ -45,6 +45,8 @@ export default function DeleteButton({ configId, configName, isAdmin = false }: 
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => !loading && setOpen(false)}>
           <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
           <div
+            role="dialog"
+            aria-modal="true"
             className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >

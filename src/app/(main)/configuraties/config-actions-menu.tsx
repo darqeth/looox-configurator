@@ -115,7 +115,7 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => !deleting && setConfirmDelete(false)}>
           <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-6">
               <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

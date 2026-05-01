@@ -49,7 +49,7 @@ interface ShapePickerProps {
 export default function ShapePicker({ onSelect, onClose }: ShapePickerProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-1">
           <h1 className="text-[26px] font-bold text-lx-text-primary">Spiegel vorm</h1>
           {onClose && (

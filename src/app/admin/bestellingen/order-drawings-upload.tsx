@@ -71,7 +71,7 @@ export function OrderDrawingsUploadModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl border border-black/8 shadow-xl w-full max-w-md">
+      <div role="dialog" aria-modal="true" className="bg-white rounded-2xl border border-black/8 shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-lx-divider">
           <h2 className="text-[15px] font-bold text-lx-text-primary">Tekeningen uploaden</h2>
           <button onClick={onCancel} disabled={busy} className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">

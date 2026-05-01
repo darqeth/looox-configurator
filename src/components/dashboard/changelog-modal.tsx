@@ -36,7 +36,7 @@ export default function ChangelogModal({ changelogs }: { changelogs: Changelog[]
             onClick={() => setOpen(false)}
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col pointer-events-auto">
+            <div role="dialog" aria-modal="true" className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col pointer-events-auto">
 
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-lx-divider flex-shrink-0">

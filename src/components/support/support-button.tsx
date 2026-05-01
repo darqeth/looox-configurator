@@ -114,7 +114,7 @@ export default function SupportButton() {
           className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-4"
           onClick={e => { if (e.target === e.currentTarget) handleClose() }}
         >
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-lx-divider">
               <div className="flex items-center gap-2.5">

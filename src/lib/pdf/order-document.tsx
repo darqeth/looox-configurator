@@ -377,6 +377,7 @@ export type OrderDocumentProps = {
   notes?: string | null
   attachmentUrl?: string | null
   showKorting?: boolean
+  staffelKortingPct?: number
 }
 
 const STATUS_NL: Record<string, string> = {
@@ -389,11 +390,15 @@ const STATUS_NL: Record<string, string> = {
 
 export default function OrderDocument({
   orderNumber, orderDate, articleNumber, status,
-  dealer, config, unitPrice, korting, quantity, notes, attachmentUrl, showKorting = true,
+  dealer, config, unitPrice, korting, quantity, notes, attachmentUrl, showKorting = true, staffelKortingPct,
 }: OrderDocumentProps) {
   const opts = config.options
   const nettoUnitPrice = Math.round(unitPrice * (1 - korting / 100))
-  const nettoSubtotal = nettoUnitPrice * quantity
+  const staffelAmountPerStuk = staffelKortingPct && staffelKortingPct > 0
+    ? Math.round(nettoUnitPrice * staffelKortingPct)
+    : 0
+  const finalNettoUnitPrice = nettoUnitPrice - staffelAmountPerStuk
+  const nettoSubtotal = finalNettoUnitPrice * quantity
   const discountAmount = (opts.discountAmount as number | null) ?? 0
   const nettoTotal = nettoSubtotal - discountAmount
 
@@ -540,9 +545,17 @@ export default function OrderDocument({
                 </View>
               </>
             )}
+            {showKorting && staffelAmountPerStuk > 0 && (
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>
+                  Staffelkorting ({((staffelKortingPct ?? 0) * 100).toFixed(0)}%)
+                </Text>
+                <Text>-{formatPrice(staffelAmountPerStuk)}</Text>
+              </View>
+            )}
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Netto ex. BTW</Text>
-              <Text style={styles.pricingValue}>{formatPrice(nettoUnitPrice)}</Text>
+              <Text style={styles.pricingValue}>{formatPrice(finalNettoUnitPrice)}</Text>
             </View>
             <View style={styles.pricingRow}>
               <Text style={styles.pricingLabel}>Aantal</Text>

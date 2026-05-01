@@ -32,7 +32,10 @@ export type OrderRenderInput = {
 }
 
 export async function renderOrderPDF(input: OrderRenderInput): Promise<Buffer> {
+  const staffelKortingPct = typeof (input.config.options as Record<string, unknown>)?.staffelKortingPct === 'number'
+    ? (input.config.options as Record<string, unknown>).staffelKortingPct as number
+    : undefined
   return renderToBuffer(
-    React.createElement(OrderDocument, input) as React.ReactElement<DocumentProps>
+    React.createElement(OrderDocument, { ...input, staffelKortingPct }) as React.ReactElement<DocumentProps>
   )
 }

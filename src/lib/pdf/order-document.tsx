@@ -550,7 +550,7 @@ export default function OrderDocument({
                 <Text style={styles.pricingLabel}>
                   Staffelkorting ({((staffelKortingPct ?? 0) * 100).toFixed(0)}%)
                 </Text>
-                <Text>-{formatPrice(staffelAmountPerStuk)}</Text>
+                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(staffelAmountPerStuk)}</Text>
               </View>
             )}
             <View style={styles.pricingRow}>

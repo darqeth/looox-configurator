@@ -49,7 +49,6 @@ export function UserEditModal({
     (profile.member?.role as 'manager' | 'member') ?? 'manager'
   )
   const [canOrder, setCanOrder] = useState(profile.member?.can_order ?? true)
-  const [canSeePurchasePrices, setCanSeePurchasePrices] = useState(profile.member?.can_see_purchase_prices ?? true)
   const [canConfigure, setCanConfigure] = useState(profile.member?.can_configure ?? true)
   const [ownConfigsOnly, setOwnConfigsOnly] = useState(profile.member?.own_configs_only ?? false)
 
@@ -116,7 +115,6 @@ export function UserEditModal({
     const perms = {
       role: memberRole,
       can_order: canOrder,
-      can_see_purchase_prices: canSeePurchasePrices,
       can_configure: canConfigure,
       own_configs_only: ownConfigsOnly,
     }
@@ -390,10 +388,9 @@ export function UserEditModal({
                     <label className="text-[11.5px] font-medium text-lx-text-secondary mb-2 block">Rechten</label>
                     <div className="space-y-3 bg-lx-panel-bg rounded-xl p-3">
                       {([
-                        { key: 'can_order',               label: 'Mag bestellen',              value: canOrder,             set: setCanOrder },
-                        { key: 'can_see_purchase_prices', label: 'Ziet inkoopkorting',          value: canSeePurchasePrices, set: setCanSeePurchasePrices },
-                        { key: 'can_configure',           label: 'Mag configureren',           value: canConfigure,         set: setCanConfigure },
-                        { key: 'own_configs_only',        label: 'Alleen eigen configuraties', value: ownConfigsOnly,       set: setOwnConfigsOnly },
+                        { key: 'can_order',        label: 'Mag bestellen',              value: canOrder,       set: setCanOrder },
+                        { key: 'can_configure',    label: 'Mag configureren',           value: canConfigure,   set: setCanConfigure },
+                        { key: 'own_configs_only', label: 'Alleen eigen configuraties', value: ownConfigsOnly, set: setOwnConfigsOnly },
                       ] as const).map(({ key, label, value, set }) => (
                         <div key={key} className="flex items-center justify-between">
                           <span className="text-[12.5px] text-lx-text-primary">{label}</span>

@@ -9,7 +9,6 @@ type Member = {
   id: string
   role: 'manager' | 'member'
   can_order: boolean
-  can_see_purchase_prices: boolean
   can_configure: boolean
   own_configs_only: boolean
   userId: string
@@ -26,7 +25,6 @@ type Invite = {
   token: string
   expiresAt: string
   can_order: boolean
-  can_see_purchase_prices: boolean
   can_configure: boolean
   own_configs_only: boolean
 }
@@ -172,7 +170,6 @@ function MemberRow({ member, isManager, onEdit }: { member: Member; isManager: b
         {member.role === 'member' && (
           <div className="flex flex-wrap gap-1 mt-1.5">
             <PermBadge label="Bestellen" active={member.can_order} />
-            <PermBadge label="Inkoopprijzen" active={member.can_see_purchase_prices} />
             <PermBadge label="Configureren" active={member.can_configure} />
             <PermBadge label="Eigen configs" active={member.own_configs_only} />
           </div>
@@ -246,7 +243,6 @@ function InviteRow({ invite, copiedToken, onCopy, onEditPerms }: {
         <p className="text-[13px] font-medium text-lx-text-primary">{invite.email}</p>
         <div className="flex flex-wrap gap-1 mt-1">
           <PermBadge label="Bestellen" active={invite.can_order} />
-          <PermBadge label="Inkoopprijzen" active={invite.can_see_purchase_prices} />
           <PermBadge label="Configureren" active={invite.can_configure} />
           <PermBadge label="Eigen configs" active={invite.own_configs_only} />
         </div>
@@ -280,9 +276,9 @@ function InviteRow({ invite, copiedToken, onCopy, onEditPerms }: {
 // ─── Invite Modal (2 stappen) ─────────────────────────────────────────────────
 
 const PRESETS = {
-  beperkt:   { can_order: false, can_see_purchase_prices: false, can_configure: false, own_configs_only: true },
-  standaard: { can_order: false, can_see_purchase_prices: false, can_configure: true,  own_configs_only: true },
-  volledig:  { can_order: true,  can_see_purchase_prices: true,  can_configure: true,  own_configs_only: false },
+  beperkt:   { can_order: false, can_configure: false, own_configs_only: true },
+  standaard: { can_order: false, can_configure: true,  own_configs_only: true },
+  volledig:  { can_order: true,  can_configure: true,  own_configs_only: false },
 }
 type Preset = keyof typeof PRESETS
 
@@ -421,8 +417,6 @@ function InviteModal({ onClose }: { onClose: () => void }) {
           <div className="space-y-3 pt-1">
             <InvitePermToggle label="Mag bestellingen plaatsen" description="Kan configuraties omzetten naar bestellingen"
               checked={perms.can_order} onChange={v => setPerms(p => ({ ...p, can_order: v }))} />
-            <InvitePermToggle label="Mag inkoopkorting zien" description="Ziet inkoopkorting bij bestellen; anders alleen nettoprijzen"
-              checked={perms.can_see_purchase_prices} onChange={v => setPerms(p => ({ ...p, can_see_purchase_prices: v }))} />
             <InvitePermToggle label="Mag configuraties aanmaken" description="Kan nieuwe spiegels configureren"
               checked={perms.can_configure} onChange={v => setPerms(p => ({ ...p, can_configure: v }))} />
             <InvitePermToggle label="Ziet alleen eigen configuraties" description="Kan geen configuraties van collega's inzien"
@@ -475,7 +469,6 @@ function InvitePermToggle({ label, description, checked, onChange }: {
 function InvitePermissionsModal({ invite, onClose }: { invite: Invite; onClose: () => void }) {
   const [perms, setPerms] = useState<InvitePermissions>({
     can_order: invite.can_order,
-    can_see_purchase_prices: invite.can_see_purchase_prices,
     can_configure: invite.can_configure,
     own_configs_only: invite.own_configs_only,
   })
@@ -516,8 +509,6 @@ function InvitePermissionsModal({ invite, onClose }: { invite: Invite; onClose: 
         <div className="space-y-3">
           <InvitePermToggle label="Mag bestellingen plaatsen" description="Kan configuraties omzetten naar bestellingen"
             checked={perms.can_order} onChange={v => setPerms(p => ({ ...p, can_order: v }))} />
-          <InvitePermToggle label="Mag inkoopkorting zien" description="Ziet inkoopkorting bij bestellen; anders alleen nettoprijzen"
-            checked={perms.can_see_purchase_prices} onChange={v => setPerms(p => ({ ...p, can_see_purchase_prices: v }))} />
           <InvitePermToggle label="Mag configuraties aanmaken" description="Kan nieuwe spiegels configureren"
             checked={perms.can_configure} onChange={v => setPerms(p => ({ ...p, can_configure: v }))} />
           <InvitePermToggle label="Ziet alleen eigen configuraties" description="Kan geen configuraties van collega's inzien"
@@ -547,7 +538,6 @@ function PermissionsModal({ member, onClose }: { member: Member; onClose: () => 
   const [role, setRole] = useState<'manager' | 'member'>(member.role)
   const [perms, setPerms] = useState<Omit<MemberPermissions, 'role'>>({
     can_order: member.can_order,
-    can_see_purchase_prices: member.can_see_purchase_prices,
     can_configure: member.can_configure,
     own_configs_only: member.own_configs_only,
   })
@@ -600,12 +590,6 @@ function PermissionsModal({ member, onClose }: { member: Member; onClose: () => 
               description="Kan configuraties omzetten naar bestellingen"
               checked={perms.can_order}
               onChange={v => setPerms(p => ({ ...p, can_order: v }))}
-            />
-            <PermToggle
-              label="Mag inkoopkorting zien"
-              description="Ziet inkoopkorting bij bestellen; zonder dit recht alleen nettoprijzen"
-              checked={perms.can_see_purchase_prices}
-              onChange={v => setPerms(p => ({ ...p, can_see_purchase_prices: v }))}
             />
             <PermToggle
               label="Mag configuraties aanmaken"

@@ -7,7 +7,6 @@ import type { UserRowProfile } from './user-row'
 type RawMember = {
   role: string
   can_order: boolean
-  can_see_purchase_prices: boolean
   can_configure: boolean
   own_configs_only: boolean
 }
@@ -22,7 +21,7 @@ export default async function GebruikersPage() {
   const [{ data: rawProfiles }, { data: pendingColleagues }, { data: companies }, { data: streaks }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international, is_groothandel, is_admin, is_sub_admin, company_members(role, can_order, can_see_purchase_prices, can_configure, own_configs_only)')
+      .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international, is_groothandel, is_admin, is_sub_admin, company_members(role, can_order, can_configure, own_configs_only)')
       .order('created_at', { ascending: false }),
     supabase
       .from('profiles')

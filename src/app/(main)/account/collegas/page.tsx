@@ -34,7 +34,7 @@ export default async function CollegasPage() {
   const { data: members } = await supabase
     .from('company_members')
     .select(`
-      id, role, can_order, can_see_purchase_prices, can_configure, own_configs_only, created_at,
+      id, role, can_order, can_configure, own_configs_only, created_at,
       profiles!inner(id, full_name, email, avatar_url, approval_status)
     `)
     .eq('company_id', activeCompanyId)
@@ -44,7 +44,7 @@ export default async function CollegasPage() {
   const { data: invites } = isManager
     ? await supabase
         .from('company_invites')
-        .select('id, email, token, expires_at, created_at, can_order, can_see_purchase_prices, can_configure, own_configs_only')
+        .select('id, email, token, expires_at, created_at, can_order, can_configure, own_configs_only')
         .eq('company_id', activeCompanyId)
         .is('accepted_at', null)
         .order('created_at', { ascending: false })
@@ -58,7 +58,6 @@ export default async function CollegasPage() {
       id: m.id as string,
       role: m.role as 'manager' | 'member',
       can_order: m.can_order as boolean,
-      can_see_purchase_prices: m.can_see_purchase_prices as boolean,
       can_configure: m.can_configure as boolean,
       own_configs_only: m.own_configs_only as boolean,
       userId: profile?.id as string,
@@ -76,7 +75,6 @@ export default async function CollegasPage() {
     token: i.token,
     expiresAt: i.expires_at,
     can_order: i.can_order as boolean,
-    can_see_purchase_prices: i.can_see_purchase_prices as boolean,
     can_configure: i.can_configure as boolean,
     own_configs_only: i.own_configs_only as boolean,
   }))

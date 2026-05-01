@@ -29,7 +29,6 @@ export type UserRowProfile = {
   member?: {
     role: string
     can_order: boolean
-    can_see_purchase_prices: boolean
     can_configure: boolean
     own_configs_only: boolean
   } | null

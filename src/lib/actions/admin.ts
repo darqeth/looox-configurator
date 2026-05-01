@@ -66,7 +66,6 @@ export async function linkUserToCompany(
   permissions?: {
     role?: 'manager' | 'member'
     can_order?: boolean
-    can_see_purchase_prices?: boolean
     can_configure?: boolean
     own_configs_only?: boolean
   }
@@ -80,7 +79,6 @@ export async function linkUserToCompany(
   const perms = {
     role: permissions?.role ?? 'manager',
     can_order: permissions?.can_order ?? true,
-    can_see_purchase_prices: permissions?.can_see_purchase_prices ?? true,
     can_configure: permissions?.can_configure ?? true,
     own_configs_only: permissions?.own_configs_only ?? false,
   }
@@ -121,7 +119,6 @@ export async function updateMemberPermissions(
   permissions: {
     role: 'manager' | 'member'
     can_order: boolean
-    can_see_purchase_prices: boolean
     can_configure: boolean
     own_configs_only: boolean
   }

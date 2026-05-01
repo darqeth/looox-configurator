@@ -11,14 +11,12 @@ import { sendInviteEmail } from '@/lib/email'
 export type MemberPermissions = {
   role: 'manager' | 'member'
   can_order: boolean
-  can_see_purchase_prices: boolean
   can_configure: boolean
   own_configs_only: boolean
 }
 
 export type InvitePermissions = {
   can_order: boolean
-  can_see_purchase_prices: boolean
   can_configure: boolean
   own_configs_only: boolean
 }
@@ -29,7 +27,6 @@ export async function inviteColleague(
   email: string,
   permissions: InvitePermissions = {
     can_order: false,
-    can_see_purchase_prices: false,
     can_configure: true,
     own_configs_only: true,
   }
@@ -146,7 +143,6 @@ export async function updateMemberPermissions(
     .update({
       role: permissions.role,
       can_order: permissions.can_order,
-      can_see_purchase_prices: permissions.can_see_purchase_prices,
       can_configure: permissions.can_configure,
       own_configs_only: permissions.own_configs_only,
     })

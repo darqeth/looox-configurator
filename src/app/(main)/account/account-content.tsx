@@ -67,7 +67,7 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
     { data: _memberData },
   ] = await Promise.all([
     supabase.from('profiles').select('full_name, company, phone, address, shipping_address, tier, created_at, avatar_url, company_id').eq('id', userId).single(),
-    supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', userId).maybeSingle(),
+    supabase.from('company_members').select('role').eq('user_id', userId).maybeSingle(),
   ])
 
   const tier = tierInfo[profile?.tier ?? 'Studio'] ?? tierInfo.Studio

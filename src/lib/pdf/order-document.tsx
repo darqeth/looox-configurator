@@ -15,6 +15,18 @@ import {
   StyleSheet,
 } from '@react-pdf/renderer'
 
+function formatAddress(str: string | null | undefined): string {
+  if (!str) return ''
+  const parts = str.split('\t')
+  if (parts.length === 5) {
+    const [straat, huisnummer, woonplaats, provincie, land] = parts
+    const line1 = [straat, huisnummer].filter(Boolean).join(' ')
+    const landLabel = land === 'BE' ? 'België' : land === 'NL' ? 'Nederland' : land
+    return [line1, woonplaats, provincie, landLabel].filter(Boolean).join(', ')
+  }
+  return str
+}
+
 // LoooX logo als SVG (gebaseerd op /public/logo-looox-grey.svg)
 function LoooXLogo({ width = 80, color = '#3D6B4F' }: { width?: number; color?: string }) {
   const height = Math.round(80.89 * (width / 197.23))
@@ -449,13 +461,13 @@ export default function OrderDocument({
               {dealer.address && (
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Adres</Text>
-                  <Text style={styles.infoValue}>{dealer.address}</Text>
+                  <Text style={styles.infoValue}>{formatAddress(dealer.address)}</Text>
                 </View>
               )}
               {dealer.shippingAddress && (
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Afleveradres</Text>
-                  <Text style={styles.infoValue}>{dealer.shippingAddress}</Text>
+                  <Text style={styles.infoValue}>{formatAddress(dealer.shippingAddress)}</Text>
                 </View>
               )}
             </View>

@@ -81,6 +81,7 @@ async function sendOrderEmails(
   configOptions: ConfigOptions,
   width: number | null,
   height: number | null,
+  altShippingAddress?: string | null,
 ) {
   const { data: profile } = await supabase
     .from('profiles')
@@ -96,7 +97,7 @@ async function sendOrderEmails(
     email,
     phone: profileData?.phone ?? null,
     address: profileData?.address ?? null,
-    shippingAddress: profileData?.shipping_address ?? null,
+    shippingAddress: altShippingAddress ?? profileData?.shipping_address ?? null,
   }
 
   const pdfBuffer = await renderOrderPDF({
@@ -320,6 +321,7 @@ export async function placeOrderFromConfig(
   discountType?: 'pct' | 'fixed' | null,
   discountValue?: number | null,
   discountUseType?: 'single' | 'per_user' | null,
+  altShippingAddress?: string | null,
 ): Promise<{ orderNumber: string; orderId: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -410,7 +412,7 @@ export async function placeOrderFromConfig(
     .from('configurations')
     .update({
       status: 'ordered',
-      ...((discountAmount > 0 || staffelKortingPct > 0) && {
+      ...((discountAmount > 0 || staffelKortingPct > 0 || altShippingAddress) && {
         selected_options: {
           ...(config.selected_options as object ?? {}),
           ...(staffelKortingPct > 0 && { staffelKortingPct }),
@@ -419,6 +421,7 @@ export async function placeOrderFromConfig(
             discountValue: resolvedDiscountValue,
             discountAmount,
           }),
+          ...(altShippingAddress && { altShippingAddress }),
         },
       }),
     })
@@ -458,6 +461,7 @@ export async function placeOrderFromConfig(
     opts,
     config.width ?? null,
     config.height ?? null,
+    altShippingAddress ?? null,
   ).catch(() => {})
 
   return { orderNumber, orderId: order.id }

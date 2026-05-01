@@ -13,6 +13,15 @@ type Profile = {
   email: string
 }
 
+type ParsedAddress = { straat: string; huisnummer: string; woonplaats: string; provincie: string; land: string }
+
+function parseAddress(str: string | null): ParsedAddress {
+  if (!str) return { straat: '', huisnummer: '', woonplaats: '', provincie: '', land: 'NL' }
+  const parts = str.split('\t')
+  if (parts.length === 5) return { straat: parts[0], huisnummer: parts[1], woonplaats: parts[2], provincie: parts[3], land: parts[4] }
+  return { straat: str, huisnummer: '', woonplaats: '', provincie: '', land: 'NL' }
+}
+
 function SuccessBanner({ message }: { message: string }) {
   return (
     <div className="flex items-center gap-2 text-[12.5px] text-lx-cta bg-lx-icon-bg border border-lx-cta/20 rounded-xl px-3.5 py-2.5">
@@ -59,18 +68,54 @@ function InputField({ label, name, defaultValue, type = 'text', placeholder, rea
   )
 }
 
+function AddressFields({ prefix, defaults }: { prefix: string; defaults: ParsedAddress }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-[1fr_6rem] gap-3">
+        <InputField label="Straat" name={`${prefix}_straat`} defaultValue={defaults.straat} placeholder="Hoofdstraat" />
+        <InputField label="Huisnr." name={`${prefix}_huisnummer`} defaultValue={defaults.huisnummer} placeholder="10A" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <InputField label="Woonplaats" name={`${prefix}_woonplaats`} defaultValue={defaults.woonplaats} placeholder="Amsterdam" />
+        <InputField label="Provincie" name={`${prefix}_provincie`} defaultValue={defaults.provincie} placeholder="Noord-Holland" />
+      </div>
+      <div>
+        <label className="block text-[12px] font-semibold text-lx-text-primary mb-1.5">Land</label>
+        <select
+          name={`${prefix}_land`}
+          defaultValue={defaults.land}
+          className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/30 outline-none transition-colors"
+        >
+          <option value="NL">Nederland</option>
+          <option value="BE">België</option>
+        </select>
+      </div>
+    </div>
+  )
+}
+
 export function ProfileForm({ profile }: { profile: Profile }) {
   const [profileStatus, setProfileStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [profileError, setProfileError] = useState('')
   const [profileLoading, setProfileLoading] = useState(false)
   const [hasShippingAddress, setHasShippingAddress] = useState(!!profile.shipping_address)
 
+  const parsedAddress = parseAddress(profile.address)
+  const parsedShipping = parseAddress(profile.shipping_address)
+
   async function handleProfile(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setProfileLoading(true)
     setProfileStatus('idle')
     try {
-      await updateProfile(new FormData(e.currentTarget))
+      const fd = new FormData(e.currentTarget)
+      const compose = (p: string) =>
+        ['straat', 'huisnummer', 'woonplaats', 'provincie', 'land']
+          .map(f => (fd.get(`${p}_${f}`) as string ?? '').trim())
+          .join('\t')
+      fd.set('address', compose('address'))
+      fd.set('shipping_address', hasShippingAddress ? compose('shipping') : '')
+      await updateProfile(fd)
       setProfileStatus('success')
     } catch (e) {
       setProfileError(e instanceof Error ? e.message : 'Er is iets misgegaan')
@@ -88,13 +133,16 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         <InputField label="Telefoonnummer" name="phone" defaultValue={profile.phone} placeholder="+31 6 12345678" />
         <InputField label="E-mailadres" name="email" defaultValue={profile.email} readOnly />
       </div>
-      <InputField label="Adres" name="address" defaultValue={profile.address} placeholder="Voorbeeldstraat 1, 1234 AB Amsterdam" />
+
+      <div>
+        <p className="text-[12px] font-semibold text-lx-text-primary mb-2">Adres</p>
+        <AddressFields prefix="address" defaults={parsedAddress} />
+      </div>
 
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
           id="has_shipping_address"
-          name="has_shipping_address"
           checked={hasShippingAddress}
           onChange={e => setHasShippingAddress(e.target.checked)}
           className="rounded border-lx-border"
@@ -104,14 +152,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
 
       {hasShippingAddress && (
         <div>
-          <label className="block text-[12px] font-semibold text-lx-text-primary mb-1.5">Afleveradres</label>
-          <textarea
-            name="shipping_address"
-            defaultValue={profile.shipping_address ?? ''}
-            placeholder="Straatnaam huisnummer, 1234 AB Stad, Land"
-            rows={3}
-            className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/30 outline-none transition-colors resize-none"
-          />
+          <p className="text-[12px] font-semibold text-lx-text-primary mb-2">Afleveradres</p>
+          <AddressFields prefix="shipping" defaults={parsedShipping} />
         </div>
       )}
 

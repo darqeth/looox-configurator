@@ -12,7 +12,7 @@ export async function updateProfile(formData: FormData) {
   const fullName = (formData.get('full_name') as string ?? '').slice(0, 100)
   const company  = (formData.get('company')   as string ?? '').slice(0, 100)
   const phone    = (formData.get('phone')     as string ?? '').slice(0, 30)
-  const address  = (formData.get('address')   as string ?? '').slice(0, 200)
+  const address  = (formData.get('address')   as string ?? '').slice(0, 300)
   const shippingAddress = (formData.get('shipping_address') as string ?? '').slice(0, 300)
 
   const { error } = await supabase

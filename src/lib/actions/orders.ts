@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID } from '@/lib/actions/configurator-helpers'
+import { getMaatwerkStaffelKorting } from '@/lib/maatwerk-staffel'
 import { sendOrderConfirmationEmail, sendInternalOrderEmail, type OrderEmailDetails } from '@/lib/email'
 import { getNotificationEmails } from '@/lib/actions/settings'
 import { renderOrderPDF } from '@/lib/pdf/render-order'
@@ -184,8 +185,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
   if (!user) throw new Error('Niet ingelogd')
 
   // Controleer buitenlandtoeslag
-  const { data: profile } = await supabase.from('profiles').select('is_international').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('is_international, korting').eq('id', user.id).single()
   const isInternational = profile?.is_international ?? false
+  const dealerKortingPct = profile?.korting ?? 50
 
   const calcPrice = calcTotalPrice({
     shape: input.shape,
@@ -203,6 +205,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     selectedOptions: input.selectedOptions,
   })
   const basePrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
+
+  const staffelKortingPct = getMaatwerkStaffelKorting(input.quantity)
+  const nettoNaDealer = Math.round(basePrice * (1 - dealerKortingPct / 100))
+  const staffelKortingAmount = Math.round(nettoNaDealer * staffelKortingPct) * input.quantity
 
   const subtotal = basePrice * input.quantity
   let discountAmount = 0
@@ -225,10 +231,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
         : Math.min(resolvedDiscountValue, subtotal)
     }
   }
-  const finalTotalPrice = subtotal - discountAmount
+  const finalTotalPrice = subtotal - staffelKortingAmount - discountAmount
 
   const selectedOptionsJson = {
     ...buildSelectedOptionsJson(input),
+    ...(staffelKortingPct > 0 && { staffelKortingPct }),
     discountType: resolvedDiscountType,
     discountValue: resolvedDiscountValue,
     discountAmount: discountAmount > 0 ? discountAmount : null,
@@ -333,6 +340,13 @@ export async function placeOrderFromConfig(
 
   if (configError || !config) throw new Error('Configuratie niet gevonden')
 
+  const { data: profileForKorting } = await supabase
+    .from('profiles')
+    .select('korting')
+    .eq('id', user.id)
+    .single()
+  const dealerKortingPct = profileForKorting?.korting ?? 50
+
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const isProjectspiegel = (opts.shape as string | undefined) === 'projectspiegel'
   const configQty = (opts.quantity as number | undefined) ?? 1
@@ -348,6 +362,9 @@ export async function placeOrderFromConfig(
     ? Math.round((totalPriceRaw / configQty) * 100) / 100
     : totalPriceRaw
   const subtotal = unitPrice * effectiveQuantity
+  const staffelKortingPct = isProjectspiegel ? 0 : getMaatwerkStaffelKorting(effectiveQuantity)
+  const nettoNaDealer = isProjectspiegel ? 0 : Math.round(unitPrice * (1 - dealerKortingPct / 100))
+  const staffelKortingAmount = isProjectspiegel ? 0 : Math.round(nettoNaDealer * staffelKortingPct) * effectiveQuantity
   let discountAmount = 0
   let resolvedDiscountType: 'pct' | 'fixed' | null = null
   let resolvedDiscountValue: number | null = null
@@ -368,7 +385,7 @@ export async function placeOrderFromConfig(
         : Math.min(resolvedDiscountValue, subtotal)
     }
   }
-  const finalTotalPrice = subtotal - discountAmount
+  const finalTotalPrice = subtotal - staffelKortingAmount - discountAmount
 
   let order: { id: string } | null = null
   let orderNumber = ''
@@ -400,12 +417,15 @@ export async function placeOrderFromConfig(
     .from('configurations')
     .update({
       status: 'ordered',
-      ...(discountAmount > 0 && {
+      ...((discountAmount > 0 || staffelKortingPct > 0) && {
         selected_options: {
           ...(config.selected_options as object ?? {}),
-          discountType: resolvedDiscountType,
-          discountValue: resolvedDiscountValue,
-          discountAmount,
+          ...(staffelKortingPct > 0 && { staffelKortingPct }),
+          ...(discountAmount > 0 && {
+            discountType: resolvedDiscountType,
+            discountValue: resolvedDiscountValue,
+            discountAmount,
+          }),
         },
       }),
     })

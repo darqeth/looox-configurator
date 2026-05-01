@@ -59,28 +59,45 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
   const total = isInternational ? Math.round(netto * 1.05) : netto
   const priceLabel = 'Bruto ex. BTW'
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/8 px-4 py-3 flex items-center justify-between z-30">
-      <div>
-        <p className="text-[10px] text-lx-text-secondary font-medium">{priceLabel}</p>
-        <p className="text-[17px] font-bold text-lx-text-primary">€{total.toLocaleString('nl-NL')}</p>
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/8 px-4 pt-2.5 pb-3 z-30">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex gap-1.5 items-center">
+          {[1, 2, 3, 4].map(s => (
+            <div
+              key={s}
+              className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                s === step ? 'bg-lx-cta' : s < step ? 'bg-lx-cta/40' : 'bg-black/15'
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-[11px] text-lx-text-secondary font-medium">
+          Stap {step} van 4
+        </span>
       </div>
-      {step < 4 ? (
-        <button
-          onClick={onNext}
-          disabled={!isStep1Valid}
-          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-60 transition-all"
-        >
-          Volgende →
-        </button>
-      ) : (
-        <button
-          onClick={onSave}
-          disabled={!projectName.trim() || saving}
-          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-60 transition-all"
-        >
-          Opslaan
-        </button>
-      )}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] text-lx-text-secondary font-medium">{priceLabel}</p>
+          <p className="text-[17px] font-bold text-lx-text-primary">€{total.toLocaleString('nl-NL')}</p>
+        </div>
+        {step < 4 ? (
+          <button
+            onClick={onNext}
+            disabled={!isStep1Valid}
+            className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-60 transition-all"
+          >
+            Volgende →
+          </button>
+        ) : (
+          <button
+            onClick={onSave}
+            disabled={!projectName.trim() || saving}
+            className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-60 transition-all"
+          >
+            Opslaan
+          </button>
+        )}
+      </div>
     </div>
   )
 })

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCompanyUserIds } from '@/lib/company-utils'
 import Link from 'next/link'
+import { Layers, ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import CopyButton from '@/components/copy-button'
 import ChangelogModal from '@/components/dashboard/changelog-modal'
@@ -291,9 +292,20 @@ export async function DashboardContent({
               })}
             </div>
           ) : (
-            <div className="px-5 py-10 text-center">
-              <p className="text-[13px] text-lx-text-secondary">Nog geen configuraties</p>
-              <Link href="/configurator/nieuw" className="inline-block mt-3 text-[13px] text-lx-cta font-medium hover:underline">Maak je eerste spiegel →</Link>
+            <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+              <div className="w-11 h-11 rounded-2xl bg-lx-icon-bg flex items-center justify-center">
+                <Layers className="w-5 h-5 text-lx-cta" />
+              </div>
+              <div>
+                <p className="text-[13.5px] font-semibold text-lx-text-primary">Nog geen configuraties</p>
+                <p className="text-[12px] text-lx-text-secondary mt-0.5">Maak je eerste spiegel aan om te beginnen.</p>
+              </div>
+              <Link
+                href="/configurator/nieuw"
+                className="bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2 rounded-xl transition-colors inline-flex items-center gap-1.5"
+              >
+                Nieuwe spiegel <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           )}
         </div>

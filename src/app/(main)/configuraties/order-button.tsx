@@ -6,6 +6,7 @@ import { placeOrderFromConfig } from '@/lib/actions/orders'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
 import { MirrorPreview, type ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, type GlasKleur } from '@/lib/configurator-config'
+import { getMaatwerkStaffelKorting, getMaatwerkStaffelTip, type MaatwerkStaffelTip } from '@/lib/maatwerk-staffel'
 
 interface OrderButtonProps {
   configId: string
@@ -109,9 +110,15 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
   const [orderError, setOrderError] = useState<string | null>(null)
 
   // Projectspiegels: prijs is al netto staffelprijs × qty — geen dealer korting, geen extra qty-vermenigvuldiging
-  const nettoUnitPrice = isProjectspiegel ? price : Math.round(price * (1 - korting / 100))
+  const nettoNaDealer = isProjectspiegel ? price : Math.round(price * (1 - korting / 100))
+  const staffelPct = isProjectspiegel ? 0 : getMaatwerkStaffelKorting(quantity)
+  const staffelAmountPerStuk = isProjectspiegel ? 0 : Math.round(nettoNaDealer * staffelPct)
+  const nettoUnitPrice = nettoNaDealer - staffelAmountPerStuk
   const effectiveQuantity = isProjectspiegel ? 1 : quantity
   const subtotal = nettoUnitPrice * effectiveQuantity
+  const staffelTip: MaatwerkStaffelTip | null = isProjectspiegel
+    ? null
+    : getMaatwerkStaffelTip(nettoNaDealer, quantity)
   const { input: discountInput, setInput: setDiscountInput, validating: discountValidating, error: discountError, setError: setDiscountError, applied: appliedDiscount, setApplied: setAppliedDiscount, discountAmount, validate: handleValidate, reset: resetDiscount } = useDiscountCode(subtotal)
   const finalTotal = subtotal - discountAmount
 
@@ -241,8 +248,18 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-[12.5px] text-lx-text-secondary">Dealer korting ({korting}%)</span>
-                              <span className="text-[13px] font-medium text-lx-text-secondary">−€{(price - nettoUnitPrice).toLocaleString('nl-NL')}</span>
+                              <span className="text-[13px] font-medium text-lx-text-secondary">−€{(price - nettoNaDealer).toLocaleString('nl-NL')}</span>
                             </div>
+                            {staffelPct > 0 && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-[12.5px] text-lx-text-secondary">
+                                  Staffelkorting ({(staffelPct * 100).toFixed(0)}%)
+                                </span>
+                                <span className="text-[12.5px] text-lx-text-secondary">
+                                  -{staffelAmountPerStuk.toLocaleString('nl-NL')}
+                                </span>
+                              </div>
+                            )}
                           </>
                         )}
                         <div className={`flex items-center justify-between${canSeePurchasePrices ? ' pt-1 border-t border-lx-divider' : ''}`}>
@@ -384,6 +401,18 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                   </div>
                 )}
 
+                {staffelTip && (
+                  <div className="px-6 pb-2">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3">
+                      <p className="text-[12px] text-amber-800 leading-relaxed">
+                        Bestel er nog <strong>{staffelTip.stuks}</strong> meer (totaal{' '}
+                        <strong>{staffelTip.tierQty} stuks</strong>) en betaal{' '}
+                        <strong>€{staffelTip.prijsVolgend.toLocaleString('nl-NL')}</strong> per stuk
+                        {' '}i.p.v. €{staffelTip.prijsNu.toLocaleString('nl-NL')}.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="px-6 pb-6 flex gap-3">
                   <button
                     onClick={handleClose}

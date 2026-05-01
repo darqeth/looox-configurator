@@ -393,7 +393,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             <button
               onClick={() => setStep(2)}
               disabled={!email}
-              className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+              className="flex-1 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
             >
               Volgende →
             </button>
@@ -443,7 +443,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             <button
               onClick={handleSend}
               disabled={isPending}
-              className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
             >
               {isPending ? (
                 <>
@@ -535,7 +535,7 @@ function InvitePermissionsModal({ invite, onClose }: { invite: Invite; onClose: 
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
           >
             {isPending ? (
               <>
@@ -633,7 +633,7 @@ function PermissionsModal({ member, onClose }: { member: Member; onClose: () => 
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-50 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13.5px] font-semibold py-2.5 rounded-xl transition-colors"
           >
             {isPending ? (
               <>

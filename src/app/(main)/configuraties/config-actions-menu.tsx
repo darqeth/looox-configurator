@@ -128,10 +128,10 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
               </p>
             </div>
             <div className="px-6 pb-6 flex gap-3">
-              <button onClick={() => setConfirmDelete(false)} disabled={deleting} className="flex-1 h-11 rounded-xl border border-black/10 text-lx-text-secondary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors disabled:opacity-50">
+              <button onClick={() => setConfirmDelete(false)} disabled={deleting} className="flex-1 h-11 rounded-xl border border-black/10 text-lx-text-secondary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors disabled:opacity-60">
                 Annuleren
               </button>
-              <button onClick={handleDelete} disabled={deleting} className="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-semibold transition-colors disabled:opacity-50">
+              <button onClick={handleDelete} disabled={deleting} className="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-semibold transition-colors disabled:opacity-60">
                 {deleting ? 'Verwijderen…' : 'Verwijderen'}
               </button>
             </div>

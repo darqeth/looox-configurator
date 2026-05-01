@@ -68,7 +68,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
         <button
           onClick={onNext}
           disabled={!isStep1Valid}
-          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-40 transition-all"
+          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-60 transition-all"
         >
           Volgende →
         </button>
@@ -76,7 +76,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
         <button
           onClick={onSave}
           disabled={!projectName.trim() || saving}
-          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-40 transition-all"
+          className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-60 transition-all"
         >
           Opslaan
         </button>
@@ -532,7 +532,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                         (step === 2 && !isStep2Valid()) ||
                         (step === 3 && !isStep3Valid())
                       }
-                      className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-lx-cta text-white hover:bg-lx-cta-hover disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                     >
                       Volgende: {STEPS[step]?.label}
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

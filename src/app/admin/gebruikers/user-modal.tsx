@@ -256,7 +256,7 @@ export function UserEditModal({
                 <button
                   onClick={() => handleApproval('approved')}
                   disabled={isPending}
-                  className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                  className="flex-1 flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-60 cursor-pointer"
                 >
                   {isPending ? (
                     <>
@@ -269,7 +269,7 @@ export function UserEditModal({
                   <button
                     onClick={() => handleApproval('rejected')}
                     disabled={isPending}
-                    className="flex-1 flex items-center justify-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                    className="flex-1 flex items-center justify-center gap-2 text-red-600 bg-red-50 hover:bg-red-100 text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-60 cursor-pointer"
                   >
                     {isPending ? (
                       <>
@@ -306,7 +306,7 @@ export function UserEditModal({
                     className="w-16 h-8 rounded-lg border border-lx-cta/50 text-center text-[13px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white px-1"
                   />
                   <span className="text-[12px] text-lx-text-secondary">%</span>
-                  <button onClick={handleSaveKorting} disabled={isPending} className="flex items-center justify-center gap-2 text-[12px] font-semibold text-lx-cta hover:underline cursor-pointer disabled:opacity-50">
+                  <button onClick={handleSaveKorting} disabled={isPending} className="flex items-center justify-center gap-2 text-[12px] font-semibold text-lx-cta hover:underline cursor-pointer disabled:opacity-60">
                     {isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -337,7 +337,7 @@ export function UserEditModal({
                 aria-checked={isInternational}
                 onClick={handleToggleInternational}
                 disabled={isPending}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 cursor-pointer ${isInternational ? 'bg-lx-cta' : 'bg-gray-200'}`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-60 cursor-pointer ${isInternational ? 'bg-lx-cta' : 'bg-gray-200'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${isInternational ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
@@ -355,7 +355,7 @@ export function UserEditModal({
                 aria-checked={isGroothandel}
                 onClick={handleToggleGroothandel}
                 disabled={isPending}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 cursor-pointer ${isGroothandel ? 'bg-lx-cta' : 'bg-gray-200'}`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-60 cursor-pointer ${isGroothandel ? 'bg-lx-cta' : 'bg-gray-200'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${isGroothandel ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
@@ -428,7 +428,7 @@ export function UserEditModal({
                   <button
                     onClick={handleSaveCompany}
                     disabled={isPending}
-                    className="w-full flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-60 cursor-pointer"
                   >
                     {isPending ? (
                       <>
@@ -463,7 +463,7 @@ export function UserEditModal({
                         if (localIsSubAdmin) { handleConfirmSubAdmin(false) }
                         else { setShowSubAdminConfirm(true); setSubAdminConfirm('') }
                       }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 cursor-pointer ${localIsSubAdmin ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-60 cursor-pointer ${localIsSubAdmin ? 'bg-indigo-600' : 'bg-gray-200'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${localIsSubAdmin ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
@@ -483,7 +483,7 @@ export function UserEditModal({
                         <button
                           disabled={subAdminConfirm.toUpperCase() !== 'BEHEER' || isPending}
                           onClick={() => handleConfirmSubAdmin(true)}
-                          className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[12px] font-semibold disabled:opacity-40"
+                          className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[12px] font-semibold disabled:opacity-60"
                         >
                           {isPending ? (
                             <>
@@ -515,7 +515,7 @@ export function UserEditModal({
                         if (localIsSuperAdmin) { handleConfirmSuperAdmin(false) }
                         else { setShowSuperAdminConfirm(true); setSuperAdminConfirm('') }
                       }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-40 cursor-pointer ${localIsSuperAdmin ? 'bg-purple-600' : 'bg-gray-200'}`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-60 cursor-pointer ${localIsSuperAdmin ? 'bg-purple-600' : 'bg-gray-200'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${localIsSuperAdmin ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
@@ -535,7 +535,7 @@ export function UserEditModal({
                         <button
                           disabled={superAdminConfirm.toUpperCase() !== 'SUPERADMIN' || isPending}
                           onClick={() => handleConfirmSuperAdmin(true)}
-                          className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-[12px] font-semibold disabled:opacity-40"
+                          className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-[12px] font-semibold disabled:opacity-60"
                         >
                           {isPending ? (
                             <>
@@ -566,7 +566,7 @@ export function UserEditModal({
                 <button
                   onClick={handleGenerateResetLink}
                   disabled={isPending || !profile.email}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-black/8 hover:border-black/15 hover:bg-lx-panel-bg transition-all disabled:opacity-40 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-black/8 hover:border-black/15 hover:bg-lx-panel-bg transition-all disabled:opacity-60 cursor-pointer"
                 >
                   {isPending ? (
                     <>
@@ -625,7 +625,7 @@ export function UserEditModal({
                     <button
                       onClick={handleDelete}
                       disabled={isPending}
-                      className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-[12.5px] font-semibold py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                      className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-[12.5px] font-semibold py-2 rounded-lg transition-colors disabled:opacity-60 cursor-pointer"
                     >
                       {isPending ? (
                         <>

@@ -84,7 +84,7 @@ export default function RegisterPage() {
                 type="text"
                 required
                 autoComplete="name"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                className="w-full px-3 py-2.5 border border-lx-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
                 placeholder="Jan de Vries"
               />
             </div>
@@ -102,7 +102,7 @@ export default function RegisterPage() {
                 type="text"
                 required
                 autoComplete="organization"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                className="w-full px-3 py-2.5 border border-lx-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
                 placeholder="Sanitair BV"
               />
             </div>
@@ -120,7 +120,7 @@ export default function RegisterPage() {
                 name="phone"
                 type="tel"
                 autoComplete="tel"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                className="w-full px-3 py-2.5 border border-lx-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
                 placeholder="06 12345678"
               />
             </div>
@@ -138,7 +138,7 @@ export default function RegisterPage() {
                 type="email"
                 required
                 autoComplete="email"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                className="w-full px-3 py-2.5 border border-lx-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
                 placeholder="jan@sanitairbv.nl"
               />
             </div>
@@ -160,7 +160,7 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                  className="w-full px-3 py-2.5 pr-10 border border-lx-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
                   placeholder="Minimaal 8 tekens"
                 />
                 <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-lx-text-secondary hover:text-lx-text-primary transition-colors" aria-label={showPassword ? 'Verberg wachtwoord' : 'Toon wachtwoord'}>
@@ -184,7 +184,7 @@ export default function RegisterPage() {
                   type={showConfirm ? 'text' : 'password'}
                   required
                   autoComplete="new-password"
-                  className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/40 focus:border-lx-cta transition-colors"
+                  className="w-full px-3 py-2.5 pr-10 border border-lx-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
                   placeholder="••••••••"
                 />
                 <button type="button" tabIndex={-1} onClick={() => setShowConfirm(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-lx-text-secondary hover:text-lx-text-primary transition-colors" aria-label={showConfirm ? 'Verberg wachtwoord' : 'Toon wachtwoord'}>

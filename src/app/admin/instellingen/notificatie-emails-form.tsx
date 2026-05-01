@@ -76,7 +76,7 @@ export default function NotificatieEmailsForm({ initialEmails }: { initialEmails
         <button
           onClick={add}
           disabled={!newEmail.trim()}
-          className="px-4 py-2.5 rounded-xl bg-lx-panel-bg border border-black/12 text-[13px] font-semibold text-lx-text-secondary hover:border-lx-cta/50 hover:text-lx-cta disabled:opacity-40 transition-all"
+          className="px-4 py-2.5 rounded-xl bg-lx-panel-bg border border-black/12 text-[13px] font-semibold text-lx-text-secondary hover:border-lx-cta/50 hover:text-lx-cta disabled:opacity-60 transition-all"
         >
           Toevoegen
         </button>
@@ -89,7 +89,7 @@ export default function NotificatieEmailsForm({ initialEmails }: { initialEmails
         <button
           onClick={save}
           disabled={isPending || emails.length === 0}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover disabled:opacity-40 transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover disabled:opacity-60 transition-all"
         >
           {isPending && (
             <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

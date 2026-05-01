@@ -51,7 +51,7 @@ function InputField({ label, name, defaultValue, type = 'text', placeholder, rea
         className={`w-full px-3.5 py-2.5 text-[13px] rounded-xl border transition-colors outline-none ${
           readOnly
             ? 'bg-lx-panel-bg border-lx-border text-lx-text-secondary cursor-default'
-            : 'bg-white border-lx-border text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10'
+            : 'bg-white border-lx-border text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/30'
         }`}
       />
       {readOnly && <p className="text-[11px] text-lx-placeholder mt-1">Dit veld kan niet worden gewijzigd</p>}
@@ -110,7 +110,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
             defaultValue={profile.shipping_address ?? ''}
             placeholder="Straatnaam huisnummer, 1234 AB Stad, Land"
             rows={3}
-            className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10 outline-none transition-colors resize-none"
+            className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/30 outline-none transition-colors resize-none"
           />
         </div>
       )}
@@ -165,7 +165,7 @@ export function PasswordForm() {
             type="password"
             name="password"
             placeholder="Minimaal 8 tekens"
-            className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10 outline-none transition-colors"
+            className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/30 outline-none transition-colors"
           />
         </div>
         <div>
@@ -174,7 +174,7 @@ export function PasswordForm() {
             type="password"
             name="confirm"
             placeholder="Herhaal wachtwoord"
-            className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10 outline-none transition-colors"
+            className="w-full px-3.5 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/30 outline-none transition-colors"
           />
         </div>
       </div>
@@ -186,7 +186,7 @@ export function PasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="flex items-center justify-center gap-2 bg-lx-text-primary hover:bg-[#333] disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors"
+          className="flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover disabled:opacity-60 text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl transition-colors"
         >
           {loading ? (
             <>

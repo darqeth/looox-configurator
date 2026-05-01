@@ -340,7 +340,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                           <button
                             onClick={handleValidate}
                             disabled={!discountInput.trim() || discountValidating}
-                            className="px-3.5 h-9 rounded-xl bg-lx-panel-bg border border-black/12 text-[12.5px] font-semibold text-lx-text-secondary hover:text-lx-text-primary disabled:opacity-40 transition-colors whitespace-nowrap"
+                            className="px-3.5 h-9 rounded-xl bg-lx-panel-bg border border-black/12 text-[12.5px] font-semibold text-lx-text-secondary hover:text-lx-text-primary disabled:opacity-60 transition-colors whitespace-nowrap"
                           >
                             {discountValidating ? '…' : 'Valideer'}
                           </button>
@@ -420,7 +420,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                   <button
                     onClick={handleOrder}
                     disabled={!checked || loading}
-                    className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex-1 h-11 flex items-center justify-center gap-2 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <>

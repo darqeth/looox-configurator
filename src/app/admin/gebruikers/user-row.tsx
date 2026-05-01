@@ -157,14 +157,14 @@ export function UserRow({
               <button
                 onClick={() => handleApproval('approved')}
                 disabled={isPending}
-                className="bg-lx-cta hover:bg-lx-cta-hover text-white text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                className="bg-lx-cta hover:bg-lx-cta-hover text-white text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-60 cursor-pointer"
               >
                 Goedkeuren
               </button>
               <button
                 onClick={() => handleApproval('rejected')}
                 disabled={isPending}
-                className="text-lx-text-secondary hover:text-red-600 hover:bg-red-50 text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                className="text-lx-text-secondary hover:text-red-600 hover:bg-red-50 text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-60 cursor-pointer"
               >
                 Afwijzen
               </button>
@@ -174,7 +174,7 @@ export function UserRow({
             <button
               onClick={() => handleApproval('approved')}
               disabled={isPending}
-              className="text-lx-cta hover:bg-lx-icon-bg text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+              className="text-lx-cta hover:bg-lx-icon-bg text-[12.5px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors disabled:opacity-60 cursor-pointer"
             >
               Alsnog goedkeuren
             </button>

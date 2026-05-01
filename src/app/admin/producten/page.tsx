@@ -502,7 +502,7 @@ function ExtraOptiesTab() {
                         key={opt.id + '-' + (tooltips[opt.id] ?? '')}
                         onBlur={async (e) => { await handleTooltipBlur(opt.id, e.target.value) }}
                         placeholder="Tooltip tekst voor klanten (optioneel)..."
-                        className="w-full px-3 py-2 text-[12px] rounded-lg border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-1 focus:ring-lx-cta/10 outline-none transition-colors resize-none"
+                        className="w-full px-3 py-2 text-[12px] rounded-lg border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-1 focus:ring-lx-cta/30 outline-none transition-colors resize-none"
                       />
                     </td>
                   </tr>
@@ -596,7 +596,7 @@ function BedieningTab() {
                         key={ctrl.id + '-' + (tooltips[ctrl.id] ?? '')}
                         onBlur={async (e) => { await handleTooltipBlur(ctrl.id, e.target.value) }}
                         placeholder="Tooltip tekst voor klanten (optioneel)..."
-                        className="w-full px-3 py-2 text-[12px] rounded-lg border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-1 focus:ring-lx-cta/10 outline-none transition-colors resize-none"
+                        className="w-full px-3 py-2 text-[12px] rounded-lg border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-1 focus:ring-lx-cta/30 outline-none transition-colors resize-none"
                       />
                     </td>
                   </tr>

@@ -190,7 +190,7 @@ export default function NotificationBell({ notifications, readAt }: Notification
               <button
                 onClick={handleReadAll}
                 disabled={isPending}
-                className="text-[11.5px] text-lx-cta font-medium hover:text-lx-cta-hover disabled:opacity-50 transition-colors"
+                className="text-[11.5px] text-lx-cta font-medium hover:text-lx-cta-hover disabled:opacity-60 transition-colors"
               >
                 Alles gelezen
               </button>

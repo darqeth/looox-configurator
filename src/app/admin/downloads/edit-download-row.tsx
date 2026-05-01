@@ -113,7 +113,7 @@ export default function EditDownloadRow({
           <button
             onClick={handleSave}
             disabled={!title.trim() || !fileUrl.trim() || isPending}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-lx-cta text-white text-[12.5px] font-semibold hover:bg-lx-cta-hover disabled:opacity-40 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-lx-cta text-white text-[12.5px] font-semibold hover:bg-lx-cta-hover disabled:opacity-60 transition-all cursor-pointer"
           >
             {isPending ? (
               <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
@@ -125,7 +125,7 @@ export default function EditDownloadRow({
           <button
             onClick={handleCancel}
             disabled={isPending}
-            className="px-4 py-1.5 rounded-lg border border-black/12 text-lx-text-secondary text-[12.5px] font-medium hover:bg-lx-panel-bg disabled:opacity-40 transition-colors cursor-pointer"
+            className="px-4 py-1.5 rounded-lg border border-black/12 text-lx-text-secondary text-[12.5px] font-medium hover:bg-lx-panel-bg disabled:opacity-60 transition-colors cursor-pointer"
           >
             Annuleren
           </button>

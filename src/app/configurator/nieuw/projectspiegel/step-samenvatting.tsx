@@ -203,7 +203,7 @@ export default function StepSamenvatting({
       <button
         onClick={onSave}
         disabled={!projectName.trim() || saving}
-        className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {saving ? 'Opslaan…' : 'Opslaan als offerte'}
       </button>

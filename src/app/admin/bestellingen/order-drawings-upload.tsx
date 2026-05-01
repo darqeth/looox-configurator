@@ -128,14 +128,14 @@ export function OrderDrawingsUploadModal({
           <button
             onClick={onCancel}
             disabled={busy}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-black/10 text-[13px] font-semibold text-lx-text-primary hover:bg-lx-panel-bg transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-black/10 text-[13px] font-semibold text-lx-text-primary hover:bg-lx-panel-bg transition-colors disabled:opacity-60"
           >
             Annuleren
           </button>
           <button
             onClick={handleSubmit}
             disabled={busy || files.length === 0}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {busy ? 'Bezig…' : `Verstuur naar klant (${files.length})`}
           </button>

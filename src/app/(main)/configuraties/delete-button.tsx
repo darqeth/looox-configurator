@@ -63,14 +63,14 @@ export default function DeleteButton({ configId, configName, isAdmin = false }: 
               <button
                 onClick={() => setOpen(false)}
                 disabled={loading}
-                className="flex-1 h-11 rounded-xl border border-black/10 text-lx-text-secondary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors disabled:opacity-50"
+                className="flex-1 h-11 rounded-xl border border-black/10 text-lx-text-secondary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors disabled:opacity-60"
               >
                 Annuleren
               </button>
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-semibold transition-colors disabled:opacity-50"
+                className="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-semibold transition-colors disabled:opacity-60"
               >
                 {loading ? 'Verwijderen…' : 'Verwijderen'}
               </button>

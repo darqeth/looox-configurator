@@ -112,7 +112,7 @@ export default function AvatarUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="mt-1.5 text-[12px] text-lx-cta font-medium hover:text-lx-cta-hover transition-colors disabled:opacity-50"
+          className="mt-1.5 text-[12px] text-lx-cta font-medium hover:text-lx-cta-hover transition-colors disabled:opacity-60"
         >
           {uploading ? 'Bezig met uploaden...' : url ? 'Afbeelding wijzigen' : 'Afbeelding uploaden'}
         </button>

@@ -82,7 +82,7 @@ export default async function AdminConfiguratiePage({
             name="q"
             defaultValue={q ?? ''}
             placeholder="Zoek op naam, klant of bedrijf…"
-            className="w-full pl-9 pr-4 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/10 outline-none transition-colors"
+            className="w-full pl-9 pr-4 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/30 outline-none transition-colors"
           />
         </form>
 

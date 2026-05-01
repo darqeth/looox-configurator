@@ -85,14 +85,14 @@ export function OrderApprovalButtons({
               })
             }}
             disabled={isPending}
-            className="px-3 py-1.5 rounded-lg bg-lx-cta text-white text-[12px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg bg-lx-cta text-white text-[12px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60"
           >
             {isPending ? 'Bezig…' : 'Goedkeuren'}
           </button>
           <button
             onClick={() => { setShowRejectModal(true); setError('') }}
             disabled={isPending}
-            className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-[12px] font-semibold hover:bg-red-50 transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-[12px] font-semibold hover:bg-red-50 transition-colors disabled:opacity-60"
           >
             Afkeuren
           </button>
@@ -137,7 +137,7 @@ export function OrderApprovalButtons({
                   })
                 }}
                 disabled={isPending}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-[13px] font-semibold hover:bg-red-700 transition-colors disabled:opacity-60"
               >
                 {isPending ? 'Bezig…' : 'Afkeuren'}
               </button>

@@ -87,60 +87,56 @@ async function sendOrderEmails(
     .eq('id', userId)
     .single()
 
-  const email = (profile as Profile | null)?.email ?? userEmail
-
-  // PDF genereren
-  let pdfBuffer: Buffer | undefined
-  try {
-    pdfBuffer = await renderOrderPDF({
-      orderNumber,
-      orderDate,
-      articleNumber,
-      status: 'pending',
-      dealer: {
-        name: (profile as Profile | null)?.full_name ?? null,
-        company: (profile as Profile | null)?.company ?? null,
-        email,
-        phone: (profile as Profile | null)?.phone ?? null,
-        address: (profile as Profile | null)?.address ?? null,
-        shippingAddress: (profile as Profile | null)?.shipping_address ?? null,
-      },
-      config: {
-        name: emailDetails.projectName ?? null,
-        width,
-        height,
-        options: configOptions,
-      },
-      unitPrice: emailDetails.unitPrice,
-      korting: (profile as Profile | null)?.korting ?? 50,
-      quantity: emailDetails.quantity,
-      notes,
-      attachmentUrl,
-    })
-  } catch {
-    // PDF fout is niet fataal — mails zonder bijlage versturen
+  const profileData = profile as Profile | null
+  const email = profileData?.email ?? userEmail
+  const dealerInfo = {
+    name: profileData?.full_name ?? null,
+    company: profileData?.company ?? null,
+    email,
+    phone: profileData?.phone ?? null,
+    address: profileData?.address ?? null,
+    shippingAddress: profileData?.shipping_address ?? null,
   }
+
+  // PDF genereren — twee versies: intern (met korting) en klant (zonder korting)
+  const renderArgs = {
+    orderNumber,
+    orderDate,
+    articleNumber,
+    status: 'pending' as const,
+    dealer: dealerInfo,
+    config: {
+      name: emailDetails.projectName ?? null,
+      width,
+      height,
+      options: configOptions,
+    },
+    unitPrice: emailDetails.unitPrice,
+    korting: profileData?.korting ?? 50,
+    quantity: emailDetails.quantity,
+    notes,
+    attachmentUrl,
+  }
+  const [internalResult, customerResult] = await Promise.allSettled([
+    renderOrderPDF({ ...renderArgs, showKorting: true }),
+    renderOrderPDF({ ...renderArgs, showKorting: false }),
+  ])
+  const pdfBufferInternal = internalResult.status === 'fulfilled' ? internalResult.value : undefined
+  const pdfBufferCustomer = customerResult.status === 'fulfilled' ? customerResult.value : undefined
 
   sendOrderConfirmationEmail({
     to: email,
-    name: (profile as Profile | null)?.full_name ?? 'Gebruiker',
+    name: profileData?.full_name ?? 'Gebruiker',
     order: emailDetails,
-    pdfBuffer,
+    pdfBuffer: pdfBufferCustomer,
   }).catch(() => {})
 
   getNotificationEmails().then(to =>
     sendInternalOrderEmail({
       to,
       order: emailDetails,
-      customer: {
-        name: (profile as Profile | null)?.full_name ?? null,
-        company: (profile as Profile | null)?.company ?? null,
-        email,
-        phone: (profile as Profile | null)?.phone ?? null,
-        address: (profile as Profile | null)?.address ?? null,
-        shippingAddress: (profile as Profile | null)?.shipping_address ?? null,
-      },
-      pdfBuffer,
+      customer: dealerInfo,
+      pdfBuffer: pdfBufferInternal,
     })
   ).catch(() => {})
 }

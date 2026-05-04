@@ -185,7 +185,7 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
         )}
         {balkH > 0 && (
           <Path
-            d={`M ${lX},${svgTopCut} L ${rX},${svgTopCut} L ${rXb},${svgBottomCut} L ${lXb},${svgBottomCut} Z`}
+            d={`M ${lX},${svgTopCut} L ${rX},${svgTopCut} L ${rX},${svgBottomCut} L ${lX},${svgBottomCut} Z`}
             fill="#E8E4DF" fillOpacity={0.8} stroke="#B0ABA4" strokeWidth="0.7"
           />
         )}

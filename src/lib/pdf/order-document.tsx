@@ -167,10 +167,12 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     const cy = SIZE / 2
     const scale = r / (d / 2)
 
-    const meubelH    = shape === 'sol' ? ((opts.solMeubelHoogte as number) ?? 35)    : ((opts.lunaMeubelHoogte as number) ?? 35)
-    const onderkantH = shape === 'sol' ? ((opts.solOnderkant as number) ?? 15)        : ((opts.lunaOnderkant as number) ?? 15)
-    const afstandL   = shape === 'luna' ? ((opts.lunaAfstandLinks as number) ?? 20)  : 0
-    const afstandR   = shape === 'luna' ? ((opts.lunaAfstandRechts as number) ?? 20) : 0
+    const meubelH    = shape === 'sol' ? ((opts.solMeubelHoogte as number) ?? 35) : ((opts.lunaMeubelHoogte as number) ?? 35)
+    const onderkantH = shape === 'sol' ? ((opts.solOnderkant as number) ?? 15)   : ((opts.lunaOnderkant as number) ?? 15)
+    const lunaAfstand = shape === 'luna' ? ((opts.lunaAfstand as number) ?? 20) : 0
+    const lunaMuurZijde = shape === 'luna' ? ((opts.lunaMuurZijde as string) ?? 'links') : 'links'
+    const afstandL = lunaMuurZijde === 'links' ? lunaAfstand : 0
+    const afstandR = lunaMuurZijde === 'rechts' ? lunaAfstand : 0
 
     const svgBottomCut = cy + r - onderkantH * scale
     const svgTopCut    = cy + r - (onderkantH + meubelH) * scale
@@ -186,9 +188,10 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     const rTopY = (shape === 'luna' && svgRightCut < cx + halfChordTop)
       ? cy - Math.sqrt(Math.max(0, r * r - (svgRightCut - cx) * (svgRightCut - cx))) : svgTopCut
 
+    const solLargeArc = svgTopCut > cy ? 1 : 0
     const mainPath = shape === 'luna'
-      ? `M ${svgLeftCut},${lTopY} A ${r},${r} 0 1 0 ${svgRightCut},${rTopY} L ${svgRightCut},${svgTopCut} L ${svgLeftCut},${svgTopCut} Z`
-      : `M ${lX},${svgTopCut} A ${r},${r} 0 1 0 ${rX},${svgTopCut} Z`
+      ? `M ${svgLeftCut},${lTopY} A ${r},${r} 0 0 1 ${svgRightCut},${rTopY} L ${svgRightCut},${svgTopCut} L ${svgLeftCut},${svgTopCut} Z`
+      : `M ${lX},${svgTopCut} A ${r},${r} 0 ${solLargeArc} 1 ${rX},${svgTopCut} Z`
 
     const hasExtraDeel = svgBottomCut < cy + r
     const halfChordBottom = hasExtraDeel

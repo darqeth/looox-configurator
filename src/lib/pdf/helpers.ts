@@ -20,8 +20,8 @@ export type ConfigOptions = {
   solOnderkant?: number | null
   lunaMeubelHoogte?: number | null
   lunaOnderkant?: number | null
-  lunaAfstandLinks?: number | null
-  lunaAfstandRechts?: number | null
+  lunaAfstand?: number | null
+  lunaMuurZijde?: string | null
 }
 
 const SHAPE_LABELS: Record<string, string> = {
@@ -114,7 +114,7 @@ export function formatDimensions(
   if (shape === 'sol') return opts.diameter
     ? `⌀ ${opts.diameter} cm · meubel ${opts.solMeubelHoogte ?? '?'} cm · uitsteek ${opts.solOnderkant ?? '?'} cm` : '—'
   if (shape === 'luna') return opts.diameter
-    ? `⌀ ${opts.diameter} cm · meubel ${opts.lunaMeubelHoogte ?? '?'} cm · L${opts.lunaAfstandLinks ?? '?'}/R${opts.lunaAfstandRechts ?? '?'} cm` : '—'
+    ? `⌀ ${opts.diameter} cm · meubel ${opts.lunaMeubelHoogte ?? '?'} cm · ${opts.lunaMuurZijde ?? 'links'} ${opts.lunaAfstand ?? '?'} cm · uitsteek ${opts.lunaOnderkant ?? '?'} cm` : '—'
   if (width && height) return `B ${width} × H ${height} cm`
   return '—'
 }

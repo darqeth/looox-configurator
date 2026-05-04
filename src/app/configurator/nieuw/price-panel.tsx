@@ -613,6 +613,8 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
           <mask id="outside-mask-luna">
             <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />
             <circle cx={cx} cy={cy} r={r} fill="black" />
+            {svgLeftCut > cx - r && <rect x="0" y="0" width={svgLeftCut} height={CANVAS} fill="black" />}
+            {svgRightCut < cx + r && <rect x={svgRightCut} y="0" width={CANVAS - svgRightCut} height={CANVAS} fill="black" />}
           </mask>
         </defs>
 

@@ -21,8 +21,8 @@ interface StepAfmetingProps {
   solOnderkant: number
   lunaMeubelHoogte?: number
   lunaOnderkant?: number
-  lunaAfstandLinks?: number
-  lunaAfstandRechts?: number
+  lunaAfstand?: number
+  lunaMuurZijde?: 'links' | 'rechts'
   onChange: (updates: Partial<{
     width: number
     height: number
@@ -33,8 +33,8 @@ interface StepAfmetingProps {
     solOnderkant: number
     lunaMeubelHoogte?: number
     lunaOnderkant?: number
-    lunaAfstandLinks?: number
-    lunaAfstandRechts?: number
+    lunaAfstand?: number
+    lunaMuurZijde?: 'links' | 'rechts'
   }>) => void
 }
 
@@ -148,7 +148,7 @@ const DimInput = memo(function DimInput({
   )
 })
 
-export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstandLinks, lunaAfstandRechts, onChange }: StepAfmetingProps) {
+export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde, onChange }: StepAfmetingProps) {
   if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     const presets = [
       { w: 60, h: 80 }, { w: 80, h: 60 }, { w: 100, h: 70 },
@@ -332,7 +332,9 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
   if (shape === 'luna') {
     const LUNA_DIAMETERS = [60, 70, 80, 90, 100, 120, 140, 160, 180, 200]
     const extraDeelTeBestellen = (lunaOnderkant ?? 0) >= 15
-    const zichtbareBreedte = (diameter ?? 0) - (lunaAfstandLinks ?? 0) - (lunaAfstandRechts ?? 0)
+    const zijde = lunaMuurZijde ?? 'links'
+    const afstand = lunaAfstand ?? 20
+    const zichtbareBreedte = (diameter ?? 0) - afstand
     return (
       <div className="space-y-5">
         <div className="space-y-3">
@@ -360,17 +362,28 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
           minOverride={15}
           maxOverride={80}
         />
+        <div className="space-y-2">
+          <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Muurzijde</p>
+          <div className="flex gap-2">
+            {(['links', 'rechts'] as const).map((z) => (
+              <button
+                key={z}
+                onClick={() => onChange({ lunaMuurZijde: z })}
+                className={`flex-1 py-2 rounded-xl text-[13px] font-semibold border transition-all capitalize ${
+                  zijde === z
+                    ? 'bg-lx-cta text-white border-lx-cta'
+                    : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
+                }`}
+              >
+                {z.charAt(0).toUpperCase() + z.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
         <DimInput
-          label="Afsnede links"
-          value={lunaAfstandLinks ?? 20}
-          onChange={(v) => onChange({ lunaAfstandLinks: v })}
-          minOverride={0}
-          maxOverride={Math.floor((diameter ?? 160) / 2) - 5}
-        />
-        <DimInput
-          label="Afsnede rechts"
-          value={lunaAfstandRechts ?? 20}
-          onChange={(v) => onChange({ lunaAfstandRechts: v })}
+          label="Afstand tot muur"
+          value={afstand}
+          onChange={(v) => onChange({ lunaAfstand: v })}
           minOverride={0}
           maxOverride={Math.floor((diameter ?? 160) / 2) - 5}
         />

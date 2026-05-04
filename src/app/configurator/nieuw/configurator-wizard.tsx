@@ -36,8 +36,8 @@ interface InitialConfig {
   solOnderkant?: number
   lunaMeubelHoogte?: number
   lunaOnderkant?: number
-  lunaAfstandLinks?: number
-  lunaAfstandRechts?: number
+  lunaAfstand?: number
+  lunaMuurZijde?: 'links' | 'rechts'
 }
 
 const STEPS = [
@@ -124,8 +124,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [solOnderkant, setSolOnderkant] = useState<number>(initialConfig?.solOnderkant ?? 15)
   const [lunaMeubelHoogte, setLunaMeubelHoogte] = useState<number>(initialConfig?.lunaMeubelHoogte ?? 35)
   const [lunaOnderkant, setLunaOnderkant] = useState<number>(initialConfig?.lunaOnderkant ?? 15)
-  const [lunaAfstandLinks, setLunaAfstandLinks] = useState<number>(initialConfig?.lunaAfstandLinks ?? 20)
-  const [lunaAfstandRechts, setLunaAfstandRechts] = useState<number>(initialConfig?.lunaAfstandRechts ?? 20)
+  const [lunaAfstand, setLunaAfstand] = useState<number>(initialConfig?.lunaAfstand ?? 20)
+  const [lunaMuurZijde, setLunaMuurZijde] = useState<'links' | 'rechts'>(initialConfig?.lunaMuurZijde ?? 'links')
 
   // Step 2: lighting
   const [directLight, setDirectLight] = useState<LightConfig>(initialConfig?.directLight ?? DEFAULT_LIGHT)
@@ -163,8 +163,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       setDiameter(160)
       setLunaMeubelHoogte(35)
       setLunaOnderkant(15)
-      setLunaAfstandLinks(20)
-      setLunaAfstandRechts(20)
+      setLunaAfstand(20)
+      setLunaMuurZijde('links')
     }
   }, [])
 
@@ -181,9 +181,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       diameter !== null &&
       lunaMeubelHoogte > 0 &&
       lunaOnderkant >= 0 &&
-      lunaAfstandLinks >= 0 &&
-      lunaAfstandRechts >= 0 &&
-      lunaAfstandLinks + lunaAfstandRechts < (diameter ?? 0)
+      lunaAfstand >= 0 &&
+      lunaAfstand < (diameter ?? 0) / 2
     )
     return false
   }
@@ -239,8 +238,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         solOnderkant,
         lunaMeubelHoogte,
         lunaOnderkant,
-        lunaAfstandLinks,
-        lunaAfstandRechts,
+        lunaAfstand,
+        lunaMuurZijde,
       }
       if (isEditing && initialConfig) {
         await updateConfiguration({ ...payload, configId: initialConfig.id })
@@ -291,8 +290,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         solOnderkant,
         lunaMeubelHoogte,
         lunaOnderkant,
-        lunaAfstandLinks,
-        lunaAfstandRechts,
+        lunaAfstand,
+        lunaMuurZijde,
       })
       const awarded = await checkAndAwardMilestones()
       setNewMilestones(awarded)
@@ -511,8 +510,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     solOnderkant={solOnderkant}
                     lunaMeubelHoogte={lunaMeubelHoogte}
                     lunaOnderkant={lunaOnderkant}
-                    lunaAfstandLinks={lunaAfstandLinks}
-                    lunaAfstandRechts={lunaAfstandRechts}
+                    lunaAfstand={lunaAfstand}
+                    lunaMuurZijde={lunaMuurZijde}
                     onChange={(updates) => {
                       if (updates.width !== undefined) setWidth(updates.width)
                       if (updates.height !== undefined) setHeight(updates.height)
@@ -523,8 +522,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       if (updates.solOnderkant !== undefined) setSolOnderkant(updates.solOnderkant)
                       if (updates.lunaMeubelHoogte !== undefined) setLunaMeubelHoogte(updates.lunaMeubelHoogte)
                       if (updates.lunaOnderkant !== undefined) setLunaOnderkant(updates.lunaOnderkant)
-                      if (updates.lunaAfstandLinks !== undefined) setLunaAfstandLinks(updates.lunaAfstandLinks)
-                      if (updates.lunaAfstandRechts !== undefined) setLunaAfstandRechts(updates.lunaAfstandRechts)
+                      if (updates.lunaAfstand !== undefined) setLunaAfstand(updates.lunaAfstand)
+                      if (updates.lunaMuurZijde !== undefined) setLunaMuurZijde(updates.lunaMuurZijde)
                     }}
                   />
                 )}
@@ -570,8 +569,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       solOnderkant={solOnderkant}
                       lunaMeubelHoogte={lunaMeubelHoogte}
                       lunaOnderkant={lunaOnderkant}
-                      lunaAfstandLinks={lunaAfstandLinks}
-                      lunaAfstandRechts={lunaAfstandRechts}
+                      lunaAfstand={lunaAfstand}
+                      lunaMuurZijde={lunaMuurZijde}
                       directLight={directLight} indirectLight={indirectLight}
                       selectedOptions={selectedOptions}
                       optionSubChoices={optionSubChoices}
@@ -646,8 +645,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                 solOnderkant={solOnderkant}
                 lunaMeubelHoogte={lunaMeubelHoogte}
                 lunaOnderkant={lunaOnderkant}
-                lunaAfstandLinks={lunaAfstandLinks}
-                lunaAfstandRechts={lunaAfstandRechts}
+                lunaAfstandLinks={lunaMuurZijde === 'links' ? lunaAfstand : 0}
+                lunaAfstandRechts={lunaMuurZijde === 'rechts' ? lunaAfstand : 0}
               />
             </div>
           </div>

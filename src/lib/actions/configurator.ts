@@ -45,8 +45,8 @@ type SaveConfigInput = {
   solOnderkant?: number
   lunaMeubelHoogte?: number
   lunaOnderkant?: number
-  lunaAfstandLinks?: number
-  lunaAfstandRechts?: number
+  lunaAfstand?: number
+  lunaMuurZijde?: 'links' | 'rechts'
 }
 
 export async function saveConfiguration(input: SaveConfigInput) {

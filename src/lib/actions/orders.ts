@@ -40,8 +40,8 @@ type PlaceOrderInput = {
   solOnderkant?: number
   lunaMeubelHoogte?: number
   lunaOnderkant?: number
-  lunaAfstandLinks?: number
-  lunaAfstandRechts?: number
+  lunaAfstand?: number
+  lunaMuurZijde?: 'links' | 'rechts'
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

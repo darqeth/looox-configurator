@@ -23,6 +23,8 @@ interface StepSamenvattingProps {
   diameter: number | null
   organicSizeKey: string | null
   glasKleur: GlasKleur
+  solMeubelHoogte?: number
+  solOnderkant?: number
   directLight: LightConfig
   indirectLight: LightConfig
   selectedOptions: string[]
@@ -72,8 +74,9 @@ function getLightSummary(config: LightConfig): string {
   return [pos, type, ctrl].filter(Boolean).join(' · ')
 }
 
-function getDimensionSummary(shape: ShapeSlug, width: number, height: number, diameter: number | null, organicSizeKey: string | null): string {
+function getDimensionSummary(shape: ShapeSlug, width: number, height: number, diameter: number | null, organicSizeKey: string | null, solMeubelHoogte?: number, solOnderkant?: number): string {
   if (shape === 'rond') return diameter ? `⌀ ${diameter} cm` : '—'
+  if (shape === 'sol') return diameter ? `⌀ ${diameter} cm · meubel ${solMeubelHoogte ?? '?'} cm · uitsteek ${solOnderkant ?? '?'} cm` : '—'
   if (shape === 'organic') {
     const size = ORGANIC_SIZES.find(s => s.key === organicSizeKey)
     return size?.label ?? '—'
@@ -83,6 +86,7 @@ function getDimensionSummary(shape: ShapeSlug, width: number, height: number, di
 
 export default function StepSamenvatting({
   shape, width, height, diameter, organicSizeKey, glasKleur,
+  solMeubelHoogte, solOnderkant,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   projectName, reference,
   saving, schunineZijdenFile, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange,
@@ -119,7 +123,7 @@ export default function StepSamenvatting({
       <div className="bg-lx-panel-bg rounded-2xl p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
         <Row label="Vorm" value={shapeName} onEdit={() => onGoToStep(0)} />
-        <Row label="Afmeting" value={`${getDimensionSummary(shape, width, height, diameter, organicSizeKey)} · ${glasKleurNaam}`} onEdit={() => onGoToStep(1)} />
+        <Row label="Afmeting" value={`${getDimensionSummary(shape, width, height, diameter, organicSizeKey, solMeubelHoogte, solOnderkant)} · ${glasKleurNaam}`} onEdit={() => onGoToStep(1)} />
         <Row label="Directe verlichting" value={getLightSummary(directLight)} onEdit={() => onGoToStep(2)} />
         <Row label="Indirecte verlichting" value={getLightSummary(indirectLight)} onEdit={() => onGoToStep(2)} />
         <Row label="Extra opties" value={selectedOptionNames || 'Geen'} onEdit={() => onGoToStep(3)} />

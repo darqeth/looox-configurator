@@ -41,6 +41,8 @@ type SaveConfigInput = {
   quantity: number
   status: 'draft' | 'saved'
   attachmentUrl?: string | null
+  solMeubelHoogte?: number
+  solOnderkant?: number
 }
 
 export async function saveConfiguration(input: SaveConfigInput) {

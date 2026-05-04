@@ -36,6 +36,8 @@ type PlaceOrderInput = {
   discountType?: 'pct' | 'fixed' | null
   discountValue?: number | null
   discountUseType?: 'single' | 'per_user' | null
+  solMeubelHoogte?: number
+  solOnderkant?: number
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

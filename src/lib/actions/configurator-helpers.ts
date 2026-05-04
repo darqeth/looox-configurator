@@ -23,6 +23,8 @@ export type OptionsJsonBase = {
   description: string
   quantity: number
   attachmentUrl?: string | null
+  solMeubelHoogte?: number
+  solOnderkant?: number
 }
 
 export function buildSelectedOptionsJson(input: OptionsJsonBase) {
@@ -39,5 +41,7 @@ export function buildSelectedOptionsJson(input: OptionsJsonBase) {
     description: input.description,
     quantity: input.quantity,
     attachmentUrl: input.attachmentUrl ?? null,
+    solMeubelHoogte: input.solMeubelHoogte,
+    solOnderkant: input.solOnderkant,
   }
 }

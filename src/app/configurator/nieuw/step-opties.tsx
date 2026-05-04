@@ -80,6 +80,24 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
       }
     }
 
+    // Shape-specific incompatibilities (e.g. verwarming excludes klok+speaker for Sol)
+    const shapeConflicts = option.shapeIncompatibleWith?.[shape]
+    if (shapeConflicts) {
+      for (const conflictId of shapeConflicts) {
+        if (selectedOptions.includes(conflictId)) {
+          const conflictOpt = EXTRA_OPTIONS.find((o) => o.id === conflictId)
+          return `Niet combineerbaar met ${conflictOpt?.name ?? conflictId}`
+        }
+      }
+    }
+    // Bidirectioneel: check if a selected option has shapeIncompatibleWith that includes optionId
+    for (const selectedId of selectedOptions) {
+      const selected = EXTRA_OPTIONS.find((o) => o.id === selectedId)
+      if (selected?.shapeIncompatibleWith?.[shape]?.includes(optionId)) {
+        return `Niet combineerbaar met ${selected.name}`
+      }
+    }
+
     return null
   }
 

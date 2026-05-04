@@ -27,6 +27,7 @@ interface LightSectionProps {
   onChange: (updates: Partial<LightConfig>) => void
   controlTooltips?: Record<string, string>
   isInternational?: boolean
+  shape?: ShapeSlug
 }
 
 const CONTROL_IMG: Record<string, string> = {
@@ -59,9 +60,9 @@ const ControlIcon = memo(function ControlIcon({ id, active }: { id: string; acti
   return <div className="w-7 h-7" />
 })
 
-const LightSection = memo(function LightSection({ title, positions, config, onChange, controlTooltips, isInternational = false }: LightSectionProps) {
+const LightSection = memo(function LightSection({ title, positions, config, onChange, controlTooltips, isInternational = false, shape }: LightSectionProps) {
   const mult = isInternational ? 1.05 : 1
-  const lightTypes: LightType[] = ['3000k', '4000k', 'rgbw', 'cct']
+  const lightTypes: LightType[] = shape === 'sol' ? ['3000k', '4000k'] : ['3000k', '4000k', 'rgbw', 'cct']
 
   if (positions.length === 0) return null
 
@@ -135,7 +136,7 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {CONTROLS_FOR_TYPE[config.type].map((ctrl) => {
+                  {CONTROLS_FOR_TYPE[config.type].filter(ctrl => shape !== 'sol' || ['tip-touch', 'afstandsbediening'].includes(ctrl.id)).map((ctrl) => {
                     const price = Math.round((CONTROL_PRICES[ctrl.id] ?? 0) * mult)
                     const isActive = config.control === ctrl.id
                     const tooltip = controlTooltips?.[ctrl.id]
@@ -231,6 +232,7 @@ export default function StepVerlichting({
             onChange={onDirectChange}
             controlTooltips={controlTooltips}
             isInternational={isInternational}
+            shape={shape}
           />
           {indirectPositions.length > 0 && <div className="border-t border-lx-divider" />}
         </>
@@ -244,6 +246,7 @@ export default function StepVerlichting({
           onChange={onIndirectChange}
           controlTooltips={controlTooltips}
           isInternational={isInternational}
+          shape={shape}
         />
       )}
     </div>

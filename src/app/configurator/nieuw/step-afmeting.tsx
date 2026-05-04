@@ -17,12 +17,16 @@ interface StepAfmetingProps {
   diameter: number | null
   organicSizeKey: string | null
   glasKleur: GlasKleur
+  solMeubelHoogte: number
+  solOnderkant: number
   onChange: (updates: Partial<{
     width: number
     height: number
     diameter: number | null
     organicSizeKey: string | null
     glasKleur: GlasKleur
+    solMeubelHoogte: number
+    solOnderkant: number
   }>) => void
 }
 
@@ -63,13 +67,16 @@ const DimInput = memo(function DimInput({
   value,
   onChange,
   maxOverride,
+  minOverride,
 }: {
   label: string
   value: number
   onChange: (v: number) => void
   maxOverride?: number
+  minOverride?: number
 }) {
-  const { min, max: baseMax } = RECHTHOEK_CONSTRAINTS
+  const { min: baseMin, max: baseMax } = RECHTHOEK_CONSTRAINTS
+  const min = minOverride ?? baseMin
   const max = maxOverride !== undefined ? Math.min(baseMax, maxOverride) : baseMax
   const [raw, setRaw] = useState(String(value))
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -78,7 +85,8 @@ const DimInput = memo(function DimInput({
   useEffect(() => { setRaw(String(value)) }, [value])
 
   function commit(str: string) {
-    const v = Math.min(max, Math.max(min, parseInt(str) || min))
+    const parsed = parseInt(str)
+    const v = Math.min(max, Math.max(min, isNaN(parsed) ? min : parsed))
     onChange(v)
     setRaw(String(v))
   }
@@ -132,7 +140,7 @@ const DimInput = memo(function DimInput({
   )
 })
 
-export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, onChange }: StepAfmetingProps) {
+export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, solMeubelHoogte, solOnderkant, onChange }: StepAfmetingProps) {
   if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     const presets = [
       { w: 60, h: 80 }, { w: 80, h: 60 }, { w: 100, h: 70 },
@@ -255,6 +263,49 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
             ))}
           </div>
         </div>
+        <div className="border-t border-lx-divider pt-5">
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+        </div>
+      </div>
+    )
+  }
+
+  if (shape === 'sol') {
+    const SOL_DIAMETERS = [60, 70, 80, 90, 100, 120]
+    return (
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Diameter</p>
+          <div className="flex flex-wrap gap-2">
+            {SOL_DIAMETERS.map((d) => (
+              <button
+                key={d}
+                onClick={() => onChange({ diameter: d })}
+                className={`px-4 py-2.5 rounded-xl text-[13px] font-semibold border transition-all ${
+                  diameter === d
+                    ? 'bg-lx-cta text-white border-lx-cta'
+                    : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
+                }`}
+              >
+                ⌀ {d} cm
+              </button>
+            ))}
+          </div>
+        </div>
+        <DimInput
+          label="Meubel hoogte"
+          value={solMeubelHoogte}
+          onChange={(v) => onChange({ solMeubelHoogte: v })}
+          minOverride={15}
+          maxOverride={80}
+        />
+        <DimInput
+          label="Uitsteek onder meubel"
+          value={solOnderkant}
+          onChange={(v) => onChange({ solOnderkant: v })}
+          minOverride={0}
+          maxOverride={30}
+        />
         <div className="border-t border-lx-divider pt-5">
           <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
         </div>

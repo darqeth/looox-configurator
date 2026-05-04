@@ -33,6 +33,13 @@ function ShapeIcon({ slug }: { slug: ShapeSlug }) {
       <path d="M10,50 L54,50 L54,28 A22,22 0 0 0 10,28 Z" stroke="#9CA3AF" strokeWidth="2.5" fill="none" />
     </svg>
   )
+  if (slug === 'sol') return (
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+      <path d="M10 32 A22 22 0 0 1 54 32" stroke="#9CA3AF" strokeWidth="2.5" fill="none" />
+      <rect x="10" y="32" width="44" height="14" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
+      <path d="M10 46 A22 22 0 0 0 54 46" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="4 2" fill="none" />
+    </svg>
+  )
   return (
     <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
       <rect x="8" y="14" width="48" height="36" rx="4" stroke="#9CA3AF" strokeWidth="2.5" strokeDasharray="6 3" />

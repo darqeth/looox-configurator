@@ -32,6 +32,8 @@ interface InitialConfig {
   reference: string
   description: string
   quantity: number
+  solMeubelHoogte?: number
+  solOnderkant?: number
 }
 
 const STEPS = [
@@ -114,6 +116,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [diameter, setDiameter] = useState<number | null>(initialConfig?.diameter ?? 60)
   const [organicSizeKey, setOrganicSizeKey] = useState<string | null>(initialConfig?.organicSizeKey ?? '60x40')
   const [glasKleur, setGlasKleur] = useState<GlasKleur>(initialConfig?.glasKleur ?? 'helder')
+  const [solMeubelHoogte, setSolMeubelHoogte] = useState<number>(initialConfig?.solMeubelHoogte ?? 40)
+  const [solOnderkant, setSolOnderkant] = useState<number>(initialConfig?.solOnderkant ?? 5)
 
   // Step 2: lighting
   const [directLight, setDirectLight] = useState<LightConfig>(initialConfig?.directLight ?? DEFAULT_LIGHT)
@@ -152,6 +156,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     }
     if (shape === 'rond') return diameter !== null
     if (shape === 'organic') return organicSizeKey !== null
+    if (shape === 'sol') return diameter !== null && solMeubelHoogte > 0 && solOnderkant >= 0
     return false
   }
 
@@ -202,6 +207,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         quantity,
         status: 'saved' as const,
         attachmentUrl,
+        solMeubelHoogte,
+        solOnderkant,
       }
       if (isEditing && initialConfig) {
         await updateConfiguration({ ...payload, configId: initialConfig.id })
@@ -248,6 +255,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         discountType: discount?.type ?? null,
         discountValue: discount?.value ?? null,
         discountUseType: discount?.useType ?? null,
+        solMeubelHoogte,
+        solOnderkant,
       })
       const awarded = await checkAndAwardMilestones()
       setNewMilestones(awarded)
@@ -462,12 +471,16 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     shape={shape} width={width} height={height}
                     diameter={diameter} organicSizeKey={organicSizeKey}
                     glasKleur={glasKleur}
+                    solMeubelHoogte={solMeubelHoogte}
+                    solOnderkant={solOnderkant}
                     onChange={(updates) => {
                       if (updates.width !== undefined) setWidth(updates.width)
                       if (updates.height !== undefined) setHeight(updates.height)
                       if (updates.diameter !== undefined) setDiameter(updates.diameter)
                       if (updates.organicSizeKey !== undefined) setOrganicSizeKey(updates.organicSizeKey)
                       if (updates.glasKleur !== undefined) setGlasKleur(updates.glasKleur)
+                      if (updates.solMeubelHoogte !== undefined) setSolMeubelHoogte(updates.solMeubelHoogte)
+                      if (updates.solOnderkant !== undefined) setSolOnderkant(updates.solOnderkant)
                     }}
                   />
                 )}
@@ -506,6 +519,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       shape={shape} width={width} height={height}
                       diameter={diameter} organicSizeKey={organicSizeKey}
                       glasKleur={glasKleur}
+                      solMeubelHoogte={solMeubelHoogte}
+                      solOnderkant={solOnderkant}
                       directLight={directLight} indirectLight={indirectLight}
                       selectedOptions={selectedOptions}
                       optionSubChoices={optionSubChoices}
@@ -543,7 +558,12 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       {step === 1 ? 'Vorm wijzigen' : 'Terug'}
                     </button>
                     <button
-                      onClick={() => setStep(step + 1)}
+                      onClick={() => {
+                        if (step === 2 && shape === 'sol' && indirectLight.position !== 'geen' && !selectedOptions.includes('verwarming')) {
+                          setSelectedOptions(prev => [...prev, 'verwarming'])
+                        }
+                        setStep(step + 1)
+                      }}
                       disabled={
                         (step === 1 && !isStep1Valid()) ||
                         (step === 2 && !isStep2Valid()) ||
@@ -571,6 +591,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                 selectedOptions={selectedOptions}
                 optionSubChoices={optionSubChoices}
                 isInternational={isInternational}
+                solMeubelHoogte={solMeubelHoogte}
+                solOnderkant={solOnderkant}
               />
             </div>
           </div>

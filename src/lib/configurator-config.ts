@@ -1,4 +1,4 @@
-export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc' | 'projectspiegel'
+export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc' | 'projectspiegel' | 'sol'
 export type LightType = '3000k' | '4000k' | 'rgbw' | 'cct'
 export type GlasKleur = 'helder' | 'smoke-zwart' | 'smoke-brons'
 
@@ -9,6 +9,7 @@ export const SHAPES = [
   { slug: 'rounded-rect' as ShapeSlug, name: 'Afgeronde hoeken', description: 'Rechthoek met zacht afgeronde hoeken, volledig maatwerk', fromPrice: 149 },
   { slug: 'ovaal'        as ShapeSlug, name: 'Ovaal',            description: 'Piltvorm — beide korte zijden volledig afgerond',      fromPrice: 149 },
   { slug: 'arc'          as ShapeSlug, name: 'Arc',              description: 'Één korte zijde recht, de andere volledig afgerond',   fromPrice: 149 },
+  { slug: 'sol'          as ShapeSlug, name: 'Sol',               description: 'Cirkelvormig, passend om badkamermeubel',             fromPrice: 199 },
   { slug: 'op-aanvraag'  as ShapeSlug, name: 'Op aanvraag',      description: 'Eigen ontwerp of bijzondere maat',                     fromPrice: null },
 ]
 
@@ -30,6 +31,7 @@ export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   'rounded-rect': ['geen', 'boven', 'boven-beneden', 'links-rechts', 'rondom'],
   ovaal:          ['geen', 'rondom'],
   arc:            ['geen', 'rondom'],
+  sol:            [],
   'op-aanvraag':  ['geen', 'indirect', 'direct'],
   projectspiegel: [],
 }
@@ -41,6 +43,7 @@ export const INDIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   'rounded-rect': ['geen', 'boven-beneden', 'onder', 'links-rechts', 'rondom'],
   ovaal:          ['geen', 'rondom'],
   arc:            ['geen', 'rondom'],
+  sol:            ['geen', 'rondom'],
   'op-aanvraag':  [],
   projectspiegel: [],
 }
@@ -177,6 +180,12 @@ export const ROND_BASIS_GLAS: Record<number, number> = {
   30: 33, 40: 47, 50: 56, 60: 67, 70: 81, 80: 92, 100: 123, 120: 178,
 }
 
+// ─── Sol basisprijs per diameter (placeholder — nog in te vullen) ─────────────
+export const SOL_BASIS_GLAS: Record<number, number> = {
+  60: 199, 70: 239, 80: 285, 90: 340, 100: 399, 120: 499,
+}
+export const SOL_EXTRA_DEEL_OPSLAG = 0.15
+
 // Frameprijzen rechthoek per strekkende meter (omtrek = 2×(b+h))
 // Aluminium €20/m · Mat zwart €40/m · Geborstelde kleuren €60/m
 export const RECHTHOEK_FRAME_PRIJS_PER_METER: Record<string, number> = {
@@ -251,6 +260,7 @@ export type ExtraOption = {
   priceDisplay?: string  // label op de kaart als afwijkend van "+€{price}"
   shapes: ShapeSlug[]
   incompatibleWith: string[]
+  shapeIncompatibleWith?: Partial<Record<ShapeSlug, string[]>>
   subChoices?: {
     label: string
     options: ExtraOptionSubChoice[]
@@ -264,8 +274,9 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     description: 'Anti-condensverwarming achter de spiegel',
     price: 0,
     priceDisplay: 'v.a. €76',
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol'],
     incompatibleWith: [],
+    shapeIncompatibleWith: { sol: ['digitale-klok', 'bluetooth-speaker'] },
   },
   {
     id: 'makeup-spiegel',
@@ -288,7 +299,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Bluetooth speaker',
     description: 'Verborgen speaker in het frame',
     price: 459,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol'],
     incompatibleWith: [],
   },
   {
@@ -305,7 +316,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Digitale klok',
     description: 'LED tijdweergave geïntegreerd in de spiegel',
     price: 155,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol'],
     incompatibleWith: [],
     subChoices: {
       label: 'Positie',
@@ -342,6 +353,14 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     priceDisplay: '+30% glas',
     shapes: ['rechthoek'],
     incompatibleWith: ['afgeronde-hoeken', 'frame-in-kleur'],
+  },
+  {
+    id: 'sol-extra-deel',
+    name: 'Sol extra deel',
+    description: 'Optioneel onderste boogdeel dat onder het meubel uitsteekt',
+    price: 0,
+    shapes: ['sol'],
+    incompatibleWith: [],
   },
 ]
 
@@ -390,11 +409,40 @@ export function calcTotalPrice(state: {
   indirectControl?: string | null
   selectedOptions: string[]
   optionSubChoices?: Record<string, string>
+  solMeubelHoogte?: number
+  solOnderkant?: number
 }): number {
   const glasKleur: GlasKleur = state.glasKleur ?? 'helder'
 
   // ── Projectspiegel: prijs apart berekend ─────────────────────────────────
   if (state.shape === 'projectspiegel') return 0
+
+  // ── Sol: cirkelgebaseerde prijsberekening ─────────────────────────────────
+  if (state.shape === 'sol') {
+    const diameter = state.diameter ?? 80
+    const base = SOL_BASIS_GLAS[diameter] ?? 285
+    const glasKleurOpslag = glasKleur === 'helder' ? 0 : Math.round(base * 0.10)
+    const extraDeelOpslag = state.selectedOptions.includes('sol-extra-deel')
+      ? Math.round(base * SOL_EXTRA_DEEL_OPSLAG) : 0
+    const r = diameter / 2
+    const indirectLedMeter = (state.indirectPosition && state.indirectPosition !== 'geen' && state.indirectType)
+      ? (Math.PI * 2 * r) / 100 : 0
+    const ledKosten = Math.round(indirectLedMeter * LED_PRIJS_PER_METER)
+    const controlKosten = (state.indirectPosition !== 'geen' && state.indirectControl)
+      ? (CONTROL_PRICES[state.indirectControl] ?? 0) : 0
+    let optieKosten = 0
+    for (const optId of state.selectedOptions) {
+      if (optId === 'verwarming') {
+        optieKosten += calcRondHeatingPrice(diameter)
+      } else if (optId === 'sol-extra-deel') {
+        // al verwerkt in extraDeelOpslag
+      } else {
+        const opt = EXTRA_OPTIONS.find(o => o.id === optId)
+        if (opt) optieKosten += opt.price
+      }
+    }
+    return Math.round(base + glasKleurOpslag + extraDeelOpslag + ledKosten + controlKosten + optieKosten + VASTE_TOESLAG)
+  }
 
   // ── Rechthoek / Afgeronde hoeken / Ovaal / Arc: zelfde glasprijs + LED ─────
   if (state.shape === 'rechthoek' || state.shape === 'rounded-rect' || state.shape === 'ovaal' || state.shape === 'arc') {

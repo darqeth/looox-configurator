@@ -47,7 +47,7 @@ export type ConfigPreview = {
 }
 
 // Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen
-export const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur, size = 220 }: {
+export const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur, solMeubelHoogte, solOnderkant, size = 220 }: {
   shape: ShapeSlug
   width: number
   height: number
@@ -56,6 +56,8 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
   directPosition: string
   indirectPosition: string
   glasKleur: GlasKleur
+  solMeubelHoogte?: number
+  solOnderkant?: number
   size?: number
 }) {
   const glass = GLASS_APPEARANCE[glasKleur] ?? GLASS_APPEARANCE['helder']
@@ -486,6 +488,85 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
     )
   }
 
+  if (shape === 'sol') {
+    const d = diameter ?? 80
+    const meubelH = solMeubelHoogte ?? 40
+    const onderkantH = solOnderkant ?? 5
+    const r = Math.min(available / 2, d * 0.95)
+    const scale = r / (d / 2)
+
+    // Sol geometry in SVG space
+    // Circle center = cx, cy
+    // Circle bottom in SVG = cy + r
+    const svgBottomCut = cy + r - onderkantH * scale          // meubel bottom line
+    const svgTopCut = cy + r - (onderkantH + meubelH) * scale // meubel top line
+
+    const hasIndirect = indirectPosition !== 'geen'
+
+    // Main mirror = arc above svgTopCut
+    // Build a clipped circle: upper portion only
+    // We use clipPath to show just above svgTopCut
+    const clipId = 'sol-main-clip'
+    const extraClipId = 'sol-extra-clip'
+
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+        <defs>
+          <filter id="wall-glow-sol" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <clipPath id={clipId}>
+            <rect x={cx - r - 2} y={cy - r - 2} width={(r + 2) * 2} height={svgTopCut - (cy - r - 2)} />
+          </clipPath>
+          <clipPath id={extraClipId}>
+            <rect x={cx - r - 2} y={svgBottomCut} width={(r + 2) * 2} height={cy + r + 2 - svgBottomCut} />
+          </clipPath>
+          <mask id="outside-mask-sol">
+            <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />
+            <circle cx={cx} cy={cy} r={r} fill="black" />
+          </mask>
+        </defs>
+
+        {/* Indirecte verlichting: glow rondom de volledige cirkel */}
+        {hasIndirect && (
+          <circle cx={cx} cy={cy} r={r + 5} fill="none"
+            stroke="#FEF3C7" strokeWidth="10" opacity="0.7" filter="url(#wall-glow-sol)"
+            mask="url(#outside-mask-sol)" />
+        )}
+
+        {/* Hoofdspiegel: bovenstuk boven meubel-bovenkant */}
+        <circle cx={cx} cy={cy} r={r} fill={glass.fill} opacity={glass.fillOpacity} clipPath={`url(#${clipId})`} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={glass.stroke} strokeWidth="1.5" clipPath={`url(#${clipId})`} />
+
+        {/* Meubel zone: grijze balk */}
+        {svgTopCut < svgBottomCut && (
+          <rect
+            x={cx - Math.sqrt(Math.max(0, r * r - Math.pow(svgTopCut - cy, 2)))}
+            y={svgTopCut}
+            width={Math.sqrt(Math.max(0, r * r - Math.pow(svgTopCut - cy, 2))) * 2}
+            height={svgBottomCut - svgTopCut}
+            fill="#E8E4DF" fillOpacity="0.7" stroke="#B0ABA4" strokeWidth="1" strokeDasharray="3 2"
+          />
+        )}
+
+        {/* Extra deel: onderste boog (altijd zichtbaar, dashed als niet geselecteerd — kleur dimmer) */}
+        {svgBottomCut < cy + r && (
+          <>
+            <circle cx={cx} cy={cy} r={r} fill={glass.fill} opacity={glass.fillOpacity * 0.5}
+              clipPath={`url(#${extraClipId})`} />
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={glass.stroke} strokeWidth="1.5"
+              strokeDasharray="4 3" clipPath={`url(#${extraClipId})`} />
+          </>
+        )}
+
+        {/* Glans */}
+        <line x1={cx - r * 0.2} y1={cy - r * 0.5} x2={cx + r * 0.28} y2={cy + r * 0.38}
+          stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round"
+          clipPath={`url(#${clipId})`} />
+      </svg>
+    )
+  }
+
   // Op aanvraag
   return (
     <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
@@ -541,12 +622,14 @@ interface PricePanelProps {
   selectedOptions: string[]
   optionSubChoices: Record<string, string>
   isInternational?: boolean
+  solMeubelHoogte?: number
+  solOnderkant?: number
 }
 
 export default function PricePanel({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
-  isInternational = false,
+  isInternational = false, solMeubelHoogte, solOnderkant,
 }: PricePanelProps) {
   const mult = isInternational ? 1.05 : 1
   const netto = useMemo(() => calcTotalPrice({
@@ -689,6 +772,8 @@ export default function PricePanel({
           directPosition={directLight.position}
           indirectPosition={indirectLight.position}
           glasKleur={glasKleur}
+          solMeubelHoogte={solMeubelHoogte}
+          solOnderkant={solOnderkant}
         />
       </div>
 

@@ -40,7 +40,7 @@ function ShapeIcon({ slug }: { slug: ShapeSlug }) {
       {/* Meubel zone */}
       <rect x="12" y="40" width="40" height="10" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
       {/* Extra onderste boog — elliptische boog neerwaarts */}
-      <path d="M19 50 A13 4 0 0 1 45 50" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
+      <path d="M19 50 A13 4 0 0 0 45 50" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
     </svg>
   )
   return (

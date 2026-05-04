@@ -1,4 +1,4 @@
-export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc' | 'projectspiegel' | 'sol'
+export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc' | 'projectspiegel' | 'sol' | 'luna'
 export type LightType = '3000k' | '4000k' | 'rgbw' | 'cct'
 export type GlasKleur = 'helder' | 'smoke-zwart' | 'smoke-brons'
 
@@ -10,6 +10,7 @@ export const SHAPES = [
   { slug: 'ovaal'        as ShapeSlug, name: 'Ovaal',            description: 'Piltvorm — beide korte zijden volledig afgerond',      fromPrice: 149 },
   { slug: 'arc'          as ShapeSlug, name: 'Arc',              description: 'Één korte zijde recht, de andere volledig afgerond',   fromPrice: 149 },
   { slug: 'sol'          as ShapeSlug, name: 'Sol',               description: 'Cirkelvormig, passend om badkamermeubel',             fromPrice: 199 },
+  { slug: 'luna'         as ShapeSlug, name: 'Luna',              description: 'Cirkelvormig, passend tegen muur en badkamermeubel',   fromPrice: 199 },
   { slug: 'op-aanvraag'  as ShapeSlug, name: 'Op aanvraag',      description: 'Eigen ontwerp of bijzondere maat',                     fromPrice: null },
 ]
 
@@ -32,6 +33,7 @@ export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   ovaal:          ['geen', 'rondom'],
   arc:            ['geen', 'rondom'],
   sol:            [],
+  luna:           [],
   'op-aanvraag':  ['geen', 'indirect', 'direct'],
   projectspiegel: [],
 }
@@ -44,6 +46,7 @@ export const INDIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   ovaal:          ['geen', 'rondom'],
   arc:            ['geen', 'rondom'],
   sol:            ['geen', 'rondom'],
+  luna:           ['geen', 'rondom'],
   'op-aanvraag':  [],
   projectspiegel: [],
 }
@@ -187,6 +190,12 @@ export const SOL_BASIS_GLAS: Record<number, number> = {
 }
 export const SOL_EXTRA_DEEL_OPSLAG = 0.15
 
+export const LUNA_BASIS_GLAS: Record<number, number> = {
+  60: 199, 70: 239, 80: 285, 90: 340, 100: 399, 120: 499,
+  140: 599, 160: 699, 180: 799, 200: 899,
+}
+export const LUNA_EXTRA_DEEL_OPSLAG = 0.15
+
 // Frameprijzen rechthoek per strekkende meter (omtrek = 2×(b+h))
 // Aluminium €20/m · Mat zwart €40/m · Geborstelde kleuren €60/m
 export const RECHTHOEK_FRAME_PRIJS_PER_METER: Record<string, number> = {
@@ -275,9 +284,9 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     description: 'Anti-condensverwarming achter de spiegel',
     price: 0,
     priceDisplay: 'v.a. €76',
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna'],
     incompatibleWith: [],
-    shapeIncompatibleWith: { sol: ['digitale-klok', 'bluetooth-speaker'] },
+    shapeIncompatibleWith: { sol: ['digitale-klok', 'bluetooth-speaker'], luna: ['digitale-klok', 'bluetooth-speaker'] },
   },
   {
     id: 'makeup-spiegel',
@@ -300,7 +309,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Bluetooth speaker',
     description: 'Verborgen speaker in het frame',
     price: 459,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna'],
     incompatibleWith: [],
   },
   {
@@ -317,7 +326,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Digitale klok',
     description: 'LED tijdweergave geïntegreerd in de spiegel',
     price: 155,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna'],
     incompatibleWith: [],
     subChoices: {
       label: 'Positie',
@@ -361,6 +370,14 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     description: 'Optioneel onderste boogdeel dat onder het meubel uitsteekt',
     price: 0,
     shapes: ['sol'],
+    incompatibleWith: [],
+  },
+  {
+    id: 'luna-extra-deel',
+    name: 'Luna extra deel',
+    description: 'Optioneel onderste boogdeel dat onder het meubel uitsteekt',
+    price: 0,
+    shapes: ['luna'],
     incompatibleWith: [],
   },
 ]
@@ -441,6 +458,28 @@ export function calcTotalPrice(state: {
         const opt = EXTRA_OPTIONS.find(o => o.id === optId)
         if (opt) optieKosten += opt.price
       }
+    }
+    return Math.round(base + glasKleurOpslag + extraDeelOpslag + ledKosten + controlKosten + optieKosten + VASTE_TOESLAG)
+  }
+
+  // ── Luna: cirkelgebaseerde prijsberekening ────────────────────────────────
+  if (state.shape === 'luna') {
+    const diameter = state.diameter ?? 80
+    const base = LUNA_BASIS_GLAS[diameter] ?? 285
+    const glasKleurOpslag = glasKleur === 'helder' ? 0 : Math.round(base * 0.10)
+    const extraDeelOpslag = state.selectedOptions.includes('luna-extra-deel')
+      ? Math.round(base * LUNA_EXTRA_DEEL_OPSLAG) : 0
+    const r = diameter / 2
+    const indirectLedMeter = (state.indirectPosition && state.indirectPosition !== 'geen' && state.indirectType)
+      ? (Math.PI * 2 * r) / 100 : 0
+    const ledKosten = Math.round(indirectLedMeter * LED_PRIJS_PER_METER)
+    const controlKosten = (state.indirectPosition !== 'geen' && state.indirectControl)
+      ? (CONTROL_PRICES[state.indirectControl] ?? 0) : 0
+    let optieKosten = 0
+    for (const optId of state.selectedOptions) {
+      if (optId === 'verwarming') optieKosten += calcRondHeatingPrice(diameter)
+      else if (optId === 'luna-extra-deel') { /* al in extraDeelOpslag */ }
+      else { const opt = EXTRA_OPTIONS.find(o => o.id === optId); if (opt) optieKosten += opt.price }
     }
     return Math.round(base + glasKleurOpslag + extraDeelOpslag + ledKosten + controlKosten + optieKosten + VASTE_TOESLAG)
   }

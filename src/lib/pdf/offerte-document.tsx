@@ -176,7 +176,6 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     const extraPath = hasExtraDeel
       ? `M ${lXb},${svgBottomCut} A ${r},${r} 0 0 1 ${rXb},${svgBottomCut} Z` : ''
 
-    const balkW = rX - lX
     const balkH = svgBottomCut - svgTopCut
 
     return (
@@ -185,8 +184,10 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
           <Circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
         )}
         {balkH > 0 && (
-          <Rect x={lX} y={svgTopCut} width={balkW} height={balkH}
-            fill="#E8E4DF" fillOpacity={0.8} stroke="#B0ABA4" strokeWidth="0.7" />
+          <Path
+            d={`M ${lX},${svgTopCut} L ${rX},${svgTopCut} L ${rXb},${svgBottomCut} L ${lXb},${svgBottomCut} Z`}
+            fill="#E8E4DF" fillOpacity={0.8} stroke="#B0ABA4" strokeWidth="0.7"
+          />
         )}
         <Path d={mainPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
         <Path d={mainPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" />

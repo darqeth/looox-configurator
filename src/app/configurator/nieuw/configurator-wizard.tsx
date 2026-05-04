@@ -34,6 +34,10 @@ interface InitialConfig {
   quantity: number
   solMeubelHoogte?: number
   solOnderkant?: number
+  lunaMeubelHoogte?: number
+  lunaOnderkant?: number
+  lunaAfstandLinks?: number
+  lunaAfstandRechts?: number
 }
 
 const STEPS = [
@@ -118,6 +122,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [glasKleur, setGlasKleur] = useState<GlasKleur>(initialConfig?.glasKleur ?? 'helder')
   const [solMeubelHoogte, setSolMeubelHoogte] = useState<number>(initialConfig?.solMeubelHoogte ?? 35)
   const [solOnderkant, setSolOnderkant] = useState<number>(initialConfig?.solOnderkant ?? 15)
+  const [lunaMeubelHoogte, setLunaMeubelHoogte] = useState<number>(initialConfig?.lunaMeubelHoogte ?? 35)
+  const [lunaOnderkant, setLunaOnderkant] = useState<number>(initialConfig?.lunaOnderkant ?? 15)
+  const [lunaAfstandLinks, setLunaAfstandLinks] = useState<number>(initialConfig?.lunaAfstandLinks ?? 20)
+  const [lunaAfstandRechts, setLunaAfstandRechts] = useState<number>(initialConfig?.lunaAfstandRechts ?? 20)
 
   // Step 2: lighting
   const [directLight, setDirectLight] = useState<LightConfig>(initialConfig?.directLight ?? DEFAULT_LIGHT)
@@ -151,6 +159,13 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       setSolMeubelHoogte(35)
       setSolOnderkant(15)
     }
+    if (s === 'luna') {
+      setDiameter(160)
+      setLunaMeubelHoogte(35)
+      setLunaOnderkant(15)
+      setLunaAfstandLinks(20)
+      setLunaAfstandRechts(20)
+    }
   }, [])
 
   function isStep1Valid(): boolean {
@@ -162,6 +177,14 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     if (shape === 'rond') return diameter !== null
     if (shape === 'organic') return organicSizeKey !== null
     if (shape === 'sol') return diameter !== null && solMeubelHoogte > 0 && solOnderkant >= 0
+    if (shape === 'luna') return (
+      diameter !== null &&
+      lunaMeubelHoogte > 0 &&
+      lunaOnderkant >= 0 &&
+      lunaAfstandLinks >= 0 &&
+      lunaAfstandRechts >= 0 &&
+      lunaAfstandLinks + lunaAfstandRechts < (diameter ?? 0)
+    )
     return false
   }
 
@@ -214,6 +237,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         attachmentUrl,
         solMeubelHoogte,
         solOnderkant,
+        lunaMeubelHoogte,
+        lunaOnderkant,
+        lunaAfstandLinks,
+        lunaAfstandRechts,
       }
       if (isEditing && initialConfig) {
         await updateConfiguration({ ...payload, configId: initialConfig.id })
@@ -262,6 +289,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         discountUseType: discount?.useType ?? null,
         solMeubelHoogte,
         solOnderkant,
+        lunaMeubelHoogte,
+        lunaOnderkant,
+        lunaAfstandLinks,
+        lunaAfstandRechts,
       })
       const awarded = await checkAndAwardMilestones()
       setNewMilestones(awarded)
@@ -478,6 +509,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     glasKleur={glasKleur}
                     solMeubelHoogte={solMeubelHoogte}
                     solOnderkant={solOnderkant}
+                    lunaMeubelHoogte={lunaMeubelHoogte}
+                    lunaOnderkant={lunaOnderkant}
+                    lunaAfstandLinks={lunaAfstandLinks}
+                    lunaAfstandRechts={lunaAfstandRechts}
                     onChange={(updates) => {
                       if (updates.width !== undefined) setWidth(updates.width)
                       if (updates.height !== undefined) setHeight(updates.height)
@@ -486,6 +521,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       if (updates.glasKleur !== undefined) setGlasKleur(updates.glasKleur)
                       if (updates.solMeubelHoogte !== undefined) setSolMeubelHoogte(updates.solMeubelHoogte)
                       if (updates.solOnderkant !== undefined) setSolOnderkant(updates.solOnderkant)
+                      if (updates.lunaMeubelHoogte !== undefined) setLunaMeubelHoogte(updates.lunaMeubelHoogte)
+                      if (updates.lunaOnderkant !== undefined) setLunaOnderkant(updates.lunaOnderkant)
+                      if (updates.lunaAfstandLinks !== undefined) setLunaAfstandLinks(updates.lunaAfstandLinks)
+                      if (updates.lunaAfstandRechts !== undefined) setLunaAfstandRechts(updates.lunaAfstandRechts)
                     }}
                   />
                 )}
@@ -517,6 +556,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     isInternational={isInternational}
                     indirectPosition={indirectLight.position}
                     solOnderkant={solOnderkant}
+                    lunaOnderkant={lunaOnderkant}
                   />
                 )}
 
@@ -528,6 +568,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       glasKleur={glasKleur}
                       solMeubelHoogte={solMeubelHoogte}
                       solOnderkant={solOnderkant}
+                      lunaMeubelHoogte={lunaMeubelHoogte}
+                      lunaOnderkant={lunaOnderkant}
+                      lunaAfstandLinks={lunaAfstandLinks}
+                      lunaAfstandRechts={lunaAfstandRechts}
                       directLight={directLight} indirectLight={indirectLight}
                       selectedOptions={selectedOptions}
                       optionSubChoices={optionSubChoices}
@@ -566,7 +610,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     </button>
                     <button
                       onClick={() => {
-                        if (step === 2 && shape === 'sol' && indirectLight.position !== 'geen' && !selectedOptions.includes('verwarming')) {
+                        if (step === 2 && (shape === 'sol' || shape === 'luna') && indirectLight.position !== 'geen' && !selectedOptions.includes('verwarming')) {
                           setSelectedOptions(prev => [...prev, 'verwarming'])
                         }
                         setStep(step + 1)
@@ -600,6 +644,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                 isInternational={isInternational}
                 solMeubelHoogte={solMeubelHoogte}
                 solOnderkant={solOnderkant}
+                lunaMeubelHoogte={lunaMeubelHoogte}
+                lunaOnderkant={lunaOnderkant}
+                lunaAfstandLinks={lunaAfstandLinks}
+                lunaAfstandRechts={lunaAfstandRechts}
               />
             </div>
           </div>

@@ -35,12 +35,12 @@ function ShapeIcon({ slug }: { slug: ShapeSlug }) {
   )
   if (slug === 'sol') return (
     <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-      {/* Hoofdspiegel: grote bovenste boog (110/160 van de cirkel) */}
-      <path d="M12 40 A22 22 0 1 0 52 40" stroke="#9CA3AF" strokeWidth="2.5" fill="none" />
-      {/* Meubel zone: gestippeld rechthoek (~35/160 verhouding) */}
+      {/* Hoofdspiegel: bovenste boog via top (12,40)→(32,10)→(52,40) — small CW */}
+      <path d="M12 40 A22 22 0 0 1 52 40" stroke="#9CA3AF" strokeWidth="2.5" fill="none" />
+      {/* Meubel zone */}
       <rect x="12" y="40" width="40" height="10" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
-      {/* Extra onderste boog (~15/160 verhouding) */}
-      <path d="M19 50 A22 22 0 0 0 45 50" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
+      {/* Extra onderste boog — elliptische boog neerwaarts */}
+      <path d="M19 50 A13 4 0 0 1 45 50" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 2" fill="none" />
     </svg>
   )
   return (

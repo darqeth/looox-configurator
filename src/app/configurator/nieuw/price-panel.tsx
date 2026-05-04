@@ -47,7 +47,7 @@ export type ConfigPreview = {
 }
 
 // Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen
-export const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur, solMeubelHoogte, solOnderkant, size = 220 }: {
+export const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstandLinks, lunaAfstandRechts, size = 220 }: {
   shape: ShapeSlug
   width: number
   height: number
@@ -58,6 +58,10 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
   glasKleur: GlasKleur
   solMeubelHoogte?: number
   solOnderkant?: number
+  lunaMeubelHoogte?: number
+  lunaOnderkant?: number
+  lunaAfstandLinks?: number
+  lunaAfstandRechts?: number
   size?: number
 }) {
   const glass = GLASS_APPEARANCE[glasKleur] ?? GLASS_APPEARANCE['helder']
@@ -576,6 +580,95 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
     )
   }
 
+  if (shape === 'luna') {
+    const d = diameter ?? 80
+    const meubelH = lunaMeubelHoogte ?? 35
+    const onderkantH = lunaOnderkant ?? 15
+    const afstandL = lunaAfstandLinks ?? 20
+    const afstandR = lunaAfstandRechts ?? 20
+    const r = Math.min(available / 2, d * 0.95)
+    const scale = r / (d / 2)
+
+    const svgBottomCut = cy + r - onderkantH * scale
+    const svgTopCut = cy + r - (onderkantH + meubelH) * scale
+    const svgLeftCut = cx - r + afstandL * scale
+    const svgRightCut = cx + r - afstandR * scale
+
+    const hasIndirect = indirectPosition !== 'geen'
+    const clipId = 'luna-main-clip'
+    const extraClipId = 'luna-extra-clip'
+
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+        <defs>
+          <filter id="wall-glow-luna" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <clipPath id={clipId}>
+            <rect x={svgLeftCut} y={cy - r - 2} width={svgRightCut - svgLeftCut} height={svgTopCut - (cy - r - 2)} />
+          </clipPath>
+          <clipPath id={extraClipId}>
+            <rect x={svgLeftCut} y={svgBottomCut} width={svgRightCut - svgLeftCut} height={cy + r + 2 - svgBottomCut} />
+          </clipPath>
+          <mask id="outside-mask-luna">
+            <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />
+            <circle cx={cx} cy={cy} r={r} fill="black" />
+          </mask>
+        </defs>
+
+        {hasIndirect && (
+          <circle cx={cx} cy={cy} r={r + 5} fill="none"
+            stroke="#FEF3C7" strokeWidth="10" opacity="0.7"
+            filter="url(#wall-glow-luna)" mask="url(#outside-mask-luna)" />
+        )}
+
+        <circle cx={cx} cy={cy} r={r} fill={glass.fill} opacity={glass.fillOpacity}
+          clipPath={`url(#${clipId})`} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={glass.stroke} strokeWidth="1.5"
+          clipPath={`url(#${clipId})`} />
+
+        {svgLeftCut > cx - r && (
+          <line x1={svgLeftCut} y1={cy - r} x2={svgLeftCut} y2={cy + r}
+            stroke="#B0ABA4" strokeWidth="1" strokeDasharray="3 2" opacity="0.6" />
+        )}
+        {svgRightCut < cx + r && (
+          <line x1={svgRightCut} y1={cy - r} x2={svgRightCut} y2={cy + r}
+            stroke="#B0ABA4" strokeWidth="1" strokeDasharray="3 2" opacity="0.6" />
+        )}
+
+        {svgTopCut < svgBottomCut && (() => {
+          const balkH = svgBottomCut - svgTopCut
+          const textY = svgTopCut + balkH / 2 + 4
+          return (
+            <>
+              <rect x={svgLeftCut} y={svgTopCut} width={svgRightCut - svgLeftCut} height={balkH}
+                fill="#E8E4DF" fillOpacity="0.7" stroke="#B0ABA4" strokeWidth="1" strokeDasharray="3 2" />
+              {balkH > 14 && (
+                <text x={(svgLeftCut + svgRightCut) / 2} y={textY} textAnchor="middle"
+                  fill="#8B7F74" fontSize="10" fontWeight="600" letterSpacing="0.5">
+                  meubel
+                </text>
+              )}
+            </>
+          )
+        })()}
+
+        {svgBottomCut < cy + r && (
+          <>
+            <circle cx={cx} cy={cy} r={r} fill={glass.fill} opacity={glass.fillOpacity * 0.5}
+              clipPath={`url(#${extraClipId})`} />
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={glass.stroke} strokeWidth="1.5"
+              strokeDasharray="4 3" clipPath={`url(#${extraClipId})`} />
+          </>
+        )}
+
+        <line x1={cx - r * 0.2} y1={cy - r * 0.5} x2={cx + r * 0.28} y2={cy + r * 0.38}
+          stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round"
+          clipPath={`url(#${clipId})`} />
+      </svg>
+    )
+  }
+
   // Op aanvraag
   return (
     <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
@@ -643,7 +736,7 @@ export default function PricePanel({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   isInternational = false, solMeubelHoogte, solOnderkant,
-  lunaMeubelHoogte: _lunaMeubelHoogte, lunaOnderkant: _lunaOnderkant, lunaAfstandLinks: _lunaAfstandLinks, lunaAfstandRechts: _lunaAfstandRechts,
+  lunaMeubelHoogte, lunaOnderkant, lunaAfstandLinks, lunaAfstandRechts,
 }: PricePanelProps) {
   const mult = isInternational ? 1.05 : 1
   const netto = useMemo(() => calcTotalPrice({
@@ -788,6 +881,10 @@ export default function PricePanel({
           glasKleur={glasKleur}
           solMeubelHoogte={solMeubelHoogte}
           solOnderkant={solOnderkant}
+          lunaMeubelHoogte={lunaMeubelHoogte}
+          lunaOnderkant={lunaOnderkant}
+          lunaAfstandLinks={lunaAfstandLinks}
+          lunaAfstandRechts={lunaAfstandRechts}
         />
       </div>
 

@@ -25,6 +25,10 @@ export type OptionsJsonBase = {
   attachmentUrl?: string | null
   solMeubelHoogte?: number
   solOnderkant?: number
+  lunaMeubelHoogte?: number
+  lunaOnderkant?: number
+  lunaAfstandLinks?: number
+  lunaAfstandRechts?: number
 }
 
 export function buildSelectedOptionsJson(input: OptionsJsonBase) {
@@ -43,5 +47,9 @@ export function buildSelectedOptionsJson(input: OptionsJsonBase) {
     attachmentUrl: input.attachmentUrl ?? null,
     solMeubelHoogte: input.solMeubelHoogte,
     solOnderkant: input.solOnderkant,
+    lunaMeubelHoogte: input.lunaMeubelHoogte,
+    lunaOnderkant: input.lunaOnderkant,
+    lunaAfstandLinks: input.lunaAfstandLinks,
+    lunaAfstandRechts: input.lunaAfstandRechts,
   }
 }

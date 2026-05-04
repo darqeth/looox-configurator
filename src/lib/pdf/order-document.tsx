@@ -160,6 +160,78 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     )
   }
 
+  if (shape === 'sol' || shape === 'luna') {
+    const d = (opts.diameter as number) ?? 80
+    const r = Math.min(available / 2, available * 0.45)
+    const cx = SIZE / 2
+    const cy = SIZE / 2
+    const scale = r / (d / 2)
+
+    const meubelH    = shape === 'sol' ? ((opts.solMeubelHoogte as number) ?? 35)    : ((opts.lunaMeubelHoogte as number) ?? 35)
+    const onderkantH = shape === 'sol' ? ((opts.solOnderkant as number) ?? 15)        : ((opts.lunaOnderkant as number) ?? 15)
+    const afstandL   = shape === 'luna' ? ((opts.lunaAfstandLinks as number) ?? 20)  : 0
+    const afstandR   = shape === 'luna' ? ((opts.lunaAfstandRechts as number) ?? 20) : 0
+
+    const svgBottomCut = cy + r - onderkantH * scale
+    const svgTopCut    = cy + r - (onderkantH + meubelH) * scale
+    const svgLeftCut   = cx - r + afstandL * scale
+    const svgRightCut  = cx + r - afstandR * scale
+
+    const halfChordTop = Math.sqrt(Math.max(0, r * r - (svgTopCut - cy) * (svgTopCut - cy)))
+    const lX = shape === 'luna' ? Math.max(svgLeftCut, cx - halfChordTop) : cx - halfChordTop
+    const rX = shape === 'luna' ? Math.min(svgRightCut, cx + halfChordTop) : cx + halfChordTop
+
+    const lTopY = (shape === 'luna' && svgLeftCut > cx - halfChordTop)
+      ? cy - Math.sqrt(Math.max(0, r * r - (svgLeftCut - cx) * (svgLeftCut - cx))) : svgTopCut
+    const rTopY = (shape === 'luna' && svgRightCut < cx + halfChordTop)
+      ? cy - Math.sqrt(Math.max(0, r * r - (svgRightCut - cx) * (svgRightCut - cx))) : svgTopCut
+
+    const mainPath = shape === 'luna'
+      ? `M ${svgLeftCut},${lTopY} A ${r},${r} 0 1 0 ${svgRightCut},${rTopY} L ${svgRightCut},${svgTopCut} L ${svgLeftCut},${svgTopCut} Z`
+      : `M ${lX},${svgTopCut} A ${r},${r} 0 1 0 ${rX},${svgTopCut} Z`
+
+    const hasExtraDeel = svgBottomCut < cy + r
+    const halfChordBottom = hasExtraDeel
+      ? Math.sqrt(Math.max(0, r * r - (svgBottomCut - cy) * (svgBottomCut - cy))) : 0
+    const lXb = shape === 'luna' ? Math.max(svgLeftCut, cx - halfChordBottom) : cx - halfChordBottom
+    const rXb = shape === 'luna' ? Math.min(svgRightCut, cx + halfChordBottom) : cx + halfChordBottom
+    const extraPath = hasExtraDeel
+      ? `M ${lXb},${svgBottomCut} A ${r},${r} 0 0 1 ${rXb},${svgBottomCut} Z` : ''
+
+    const balkW = rX - lX
+    const balkH = svgBottomCut - svgTopCut
+
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        {hasIndirect && (
+          <Circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
+        )}
+        {balkH > 0 && (
+          <Rect x={lX} y={svgTopCut} width={balkW} height={balkH}
+            fill="#E8E4DF" fillOpacity={0.8} stroke="#B0ABA4" strokeWidth="0.7" />
+        )}
+        <Path d={mainPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+        <Path d={mainPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
+        {hasExtraDeel && (
+          <Path d={extraPath} fill={glass.fill} fillOpacity={glass.fillOpacity * 0.5} />
+        )}
+        {hasExtraDeel && (
+          <Path d={extraPath} fill="none" stroke={glass.stroke} strokeWidth="1" opacity={0.5} />
+        )}
+        {shape === 'luna' && afstandL > 0 && (
+          <Line x1={svgLeftCut} y1={cy - r} x2={svgLeftCut} y2={cy + r}
+            stroke="#B0ABA4" strokeWidth="0.8" opacity={0.5} />
+        )}
+        {shape === 'luna' && afstandR > 0 && (
+          <Line x1={svgRightCut} y1={cy - r} x2={svgRightCut} y2={cy + r}
+            stroke="#B0ABA4" strokeWidth="0.8" opacity={0.5} />
+        )}
+        <Line x1={cx - r * 0.15} y1={cy - r * 0.45} x2={cx + r * 0.25} y2={cy + r * 0.35}
+          stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
   // rechthoek
   return (
     <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>

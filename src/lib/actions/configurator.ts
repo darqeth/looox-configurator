@@ -43,6 +43,10 @@ type SaveConfigInput = {
   attachmentUrl?: string | null
   solMeubelHoogte?: number
   solOnderkant?: number
+  lunaMeubelHoogte?: number
+  lunaOnderkant?: number
+  lunaAfstandLinks?: number
+  lunaAfstandRechts?: number
 }
 
 export async function saveConfiguration(input: SaveConfigInput) {

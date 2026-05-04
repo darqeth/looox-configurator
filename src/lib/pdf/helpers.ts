@@ -16,6 +16,12 @@ export type ConfigOptions = {
   discountType?: 'pct' | 'fixed' | null
   discountValue?: number | null
   discountAmount?: number | null
+  solMeubelHoogte?: number | null
+  solOnderkant?: number | null
+  lunaMeubelHoogte?: number | null
+  lunaOnderkant?: number | null
+  lunaAfstandLinks?: number | null
+  lunaAfstandRechts?: number | null
 }
 
 const SHAPE_LABELS: Record<string, string> = {
@@ -26,6 +32,8 @@ const SHAPE_LABELS: Record<string, string> = {
   'rounded-rect': 'Rechthoek afgerond',
   ovaal: 'Ovaal',
   arc: 'Boog (Arc)',
+  sol: 'Sol',
+  luna: 'Luna',
 }
 
 const GLAS_LABELS: Record<string, string> = {
@@ -103,6 +111,10 @@ export function formatDimensions(
   if (shape === 'rond') return opts.diameter ? `O ${opts.diameter} cm` : '—'
   if (shape === 'organic') return opts.organicSizeKey ? (ORGANIC_LABELS[opts.organicSizeKey] ?? opts.organicSizeKey) : '—'
   if (shape === 'op-aanvraag') return 'Op aanvraag'
+  if (shape === 'sol') return opts.diameter
+    ? `⌀ ${opts.diameter} cm · meubel ${opts.solMeubelHoogte ?? '?'} cm · uitsteek ${opts.solOnderkant ?? '?'} cm` : '—'
+  if (shape === 'luna') return opts.diameter
+    ? `⌀ ${opts.diameter} cm · meubel ${opts.lunaMeubelHoogte ?? '?'} cm · L${opts.lunaAfstandLinks ?? '?'}/R${opts.lunaAfstandRechts ?? '?'} cm` : '—'
   if (width && height) return `B ${width} × H ${height} cm`
   return '—'
 }

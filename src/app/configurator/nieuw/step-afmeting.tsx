@@ -271,7 +271,8 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
   }
 
   if (shape === 'sol') {
-    const SOL_DIAMETERS = [60, 70, 80, 90, 100, 120]
+    const SOL_DIAMETERS = [60, 70, 80, 90, 100, 120, 140, 160, 180, 200]
+    const extraDeelTeBestellen = solOnderkant >= 15
     return (
       <div className="space-y-5">
         <div className="space-y-3">
@@ -299,13 +300,20 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
           minOverride={15}
           maxOverride={80}
         />
-        <DimInput
-          label="Uitsteek onder meubel"
-          value={solOnderkant}
-          onChange={(v) => onChange({ solOnderkant: v })}
-          minOverride={0}
-          maxOverride={30}
-        />
+        <div>
+          <DimInput
+            label="Uitsteek onder meubel"
+            value={solOnderkant}
+            onChange={(v) => onChange({ solOnderkant: v })}
+            minOverride={0}
+            maxOverride={30}
+          />
+          {!extraDeelTeBestellen && solOnderkant > 0 && (
+            <p className="text-[11px] text-amber-600 mt-1.5">
+              Uitsteek is minder dan 15 cm — het extra onderste deel kan niet meebesteld worden.
+            </p>
+          )}
+        </div>
         <div className="border-t border-lx-divider pt-5">
           <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
         </div>

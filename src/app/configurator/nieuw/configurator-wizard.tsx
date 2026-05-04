@@ -510,6 +510,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     onSubChoiceChange={(id, val) => setOptionSubChoices(prev => ({ ...prev, [id]: val }))}
                     optionTooltips={optionTooltips}
                     isInternational={isInternational}
+                    indirectPosition={indirectLight.position}
+                    solOnderkant={solOnderkant}
                   />
                 )}
 

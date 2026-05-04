@@ -539,15 +539,24 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
         <circle cx={cx} cy={cy} r={r} fill="none" stroke={glass.stroke} strokeWidth="1.5" clipPath={`url(#${clipId})`} />
 
         {/* Meubel zone: grijze balk */}
-        {svgTopCut < svgBottomCut && (
-          <rect
-            x={cx - Math.sqrt(Math.max(0, r * r - Math.pow(svgTopCut - cy, 2)))}
-            y={svgTopCut}
-            width={Math.sqrt(Math.max(0, r * r - Math.pow(svgTopCut - cy, 2))) * 2}
-            height={svgBottomCut - svgTopCut}
-            fill="#E8E4DF" fillOpacity="0.7" stroke="#B0ABA4" strokeWidth="1" strokeDasharray="3 2"
-          />
-        )}
+        {svgTopCut < svgBottomCut && (() => {
+          const balkW = Math.sqrt(Math.max(0, r * r - Math.pow(svgTopCut - cy, 2))) * 2
+          const balkX = cx - balkW / 2
+          const balkH = svgBottomCut - svgTopCut
+          const textY = svgTopCut + balkH / 2 + 4
+          return (
+            <>
+              <rect x={balkX} y={svgTopCut} width={balkW} height={balkH}
+                fill="#E8E4DF" fillOpacity="0.7" stroke="#B0ABA4" strokeWidth="1" strokeDasharray="3 2" />
+              {balkH > 14 && (
+                <text x={cx} y={textY} textAnchor="middle" fill="#8B7F74"
+                  fontSize="10" fontWeight="600" letterSpacing="0.5">
+                  meubel
+                </text>
+              )}
+            </>
+          )
+        })()}
 
         {/* Extra deel: onderste boog (altijd zichtbaar, dashed als niet geselecteerd — kleur dimmer) */}
         {svgBottomCut < cy + r && (

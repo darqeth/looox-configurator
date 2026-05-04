@@ -183,6 +183,7 @@ export const ROND_BASIS_GLAS: Record<number, number> = {
 // ─── Sol basisprijs per diameter (placeholder — nog in te vullen) ─────────────
 export const SOL_BASIS_GLAS: Record<number, number> = {
   60: 199, 70: 239, 80: 285, 90: 340, 100: 399, 120: 499,
+  140: 599, 160: 699, 180: 799, 200: 899,
 }
 export const SOL_EXTRA_DEEL_OPSLAG = 0.15
 

@@ -55,9 +55,11 @@ interface StepOptiesProps {
   onSubChoiceChange: (optionId: string, choiceId: string) => void
   optionTooltips?: Record<string, string>
   isInternational?: boolean
+  indirectPosition?: string
+  solOnderkant?: number
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false }: StepOptiesProps) {
+export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
   const available = EXTRA_OPTIONS.filter((opt) => opt.shapes.includes(shape))
 
@@ -101,7 +103,19 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
     return null
   }
 
+  // Sol: verwarming is vergrendeld als verlichting actief is
+  function getLockedReason(optionId: string): string | null {
+    if (shape === 'sol' && optionId === 'verwarming' && indirectPosition && indirectPosition !== 'geen') {
+      return 'Verplicht bij verlichting'
+    }
+    if (shape === 'sol' && optionId === 'sol-extra-deel' && (solOnderkant === undefined || solOnderkant < 15)) {
+      return 'Uitsteek onder meubel moet minimaal 15 cm zijn'
+    }
+    return null
+  }
+
   function toggle(optionId: string) {
+    if (getLockedReason(optionId)) return
     if (selectedOptions.includes(optionId)) {
       onChange(selectedOptions.filter((id) => id !== optionId))
     } else {
@@ -122,7 +136,10 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
       {available.map((option) => {
         const isSelected = selectedOptions.includes(option.id)
         const incompatibleReason = getIncompatibleReason(option.id)
-        const isDisabled = !isSelected && incompatibleReason !== null
+        const lockedReason = getLockedReason(option.id)
+        const isDisabled = (!isSelected && incompatibleReason !== null) || (lockedReason !== null && !(option.id === 'verwarming' && isSelected))
+        const isLocked = lockedReason !== null
+        const tooltipText = lockedReason ?? (isDisabled ? incompatibleReason : null)
         const selectedSubChoice = optionSubChoices[option.id]
 
         return (
@@ -135,17 +152,19 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
             tabIndex={isDisabled ? -1 : 0}
             onKeyDown={e => { if ((e.key === ' ' || e.key === 'Enter') && !isDisabled) toggle(option.id) }}
             className={`group/card relative flex flex-col p-4 rounded-2xl border-2 text-left transition-all ${
-              isDisabled
+              isLocked && isSelected
+                ? 'border-lx-cta bg-lx-panel-bg/50 cursor-not-allowed'
+                : isDisabled
                 ? 'opacity-45 cursor-not-allowed border-black/8 bg-white'
                 : isSelected
                 ? 'border-lx-cta bg-lx-panel-bg/50 cursor-pointer'
                 : 'border-black/10 bg-white hover:border-lx-cta/50 hover:bg-lx-panel-bg cursor-pointer'
             }`}
           >
-            {/* Tooltip bij disabled */}
-            {isDisabled && incompatibleReason && (
+            {/* Tooltip bij disabled/locked */}
+            {tooltipText && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-lx-text-primary text-white text-[11px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover/card:opacity-100 transition-opacity duration-150 pointer-events-none z-50">
-                {incompatibleReason}
+                {tooltipText}
                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-lx-text-primary" />
               </div>
             )}

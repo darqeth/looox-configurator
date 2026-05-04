@@ -116,8 +116,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [diameter, setDiameter] = useState<number | null>(initialConfig?.diameter ?? 60)
   const [organicSizeKey, setOrganicSizeKey] = useState<string | null>(initialConfig?.organicSizeKey ?? '60x40')
   const [glasKleur, setGlasKleur] = useState<GlasKleur>(initialConfig?.glasKleur ?? 'helder')
-  const [solMeubelHoogte, setSolMeubelHoogte] = useState<number>(initialConfig?.solMeubelHoogte ?? 40)
-  const [solOnderkant, setSolOnderkant] = useState<number>(initialConfig?.solOnderkant ?? 5)
+  const [solMeubelHoogte, setSolMeubelHoogte] = useState<number>(initialConfig?.solMeubelHoogte ?? 35)
+  const [solOnderkant, setSolOnderkant] = useState<number>(initialConfig?.solOnderkant ?? 15)
 
   // Step 2: lighting
   const [directLight, setDirectLight] = useState<LightConfig>(initialConfig?.directLight ?? DEFAULT_LIGHT)
@@ -146,6 +146,11 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     setIndirectLight(DEFAULT_LIGHT)
     setSelectedOptions([])
     setOptionSubChoices({})
+    if (s === 'sol') {
+      setDiameter(160)
+      setSolMeubelHoogte(35)
+      setSolOnderkant(15)
+    }
   }, [])
 
   function isStep1Valid(): boolean {

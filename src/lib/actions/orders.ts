@@ -38,6 +38,10 @@ type PlaceOrderInput = {
   discountUseType?: 'single' | 'per_user' | null
   solMeubelHoogte?: number
   solOnderkant?: number
+  lunaMeubelHoogte?: number
+  lunaOnderkant?: number
+  lunaAfstandLinks?: number
+  lunaAfstandRechts?: number
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

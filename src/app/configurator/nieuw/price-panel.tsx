@@ -633,12 +633,17 @@ interface PricePanelProps {
   isInternational?: boolean
   solMeubelHoogte?: number
   solOnderkant?: number
+  lunaMeubelHoogte?: number
+  lunaOnderkant?: number
+  lunaAfstandLinks?: number
+  lunaAfstandRechts?: number
 }
 
 export default function PricePanel({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   isInternational = false, solMeubelHoogte, solOnderkant,
+  lunaMeubelHoogte: _lunaMeubelHoogte, lunaOnderkant: _lunaOnderkant, lunaAfstandLinks: _lunaAfstandLinks, lunaAfstandRechts: _lunaAfstandRechts,
 }: PricePanelProps) {
   const mult = isInternational ? 1.05 : 1
   const netto = useMemo(() => calcTotalPrice({

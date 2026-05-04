@@ -57,9 +57,10 @@ interface StepOptiesProps {
   isInternational?: boolean
   indirectPosition?: string
   solOnderkant?: number
+  lunaOnderkant?: number
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant }: StepOptiesProps) {
+export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant, lunaOnderkant }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
   const available = EXTRA_OPTIONS.filter((opt) => opt.shapes.includes(shape))
 

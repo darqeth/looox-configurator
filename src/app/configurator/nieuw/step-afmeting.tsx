@@ -19,6 +19,10 @@ interface StepAfmetingProps {
   glasKleur: GlasKleur
   solMeubelHoogte: number
   solOnderkant: number
+  lunaMeubelHoogte?: number
+  lunaOnderkant?: number
+  lunaAfstandLinks?: number
+  lunaAfstandRechts?: number
   onChange: (updates: Partial<{
     width: number
     height: number
@@ -27,6 +31,10 @@ interface StepAfmetingProps {
     glasKleur: GlasKleur
     solMeubelHoogte: number
     solOnderkant: number
+    lunaMeubelHoogte?: number
+    lunaOnderkant?: number
+    lunaAfstandLinks?: number
+    lunaAfstandRechts?: number
   }>) => void
 }
 
@@ -140,7 +148,7 @@ const DimInput = memo(function DimInput({
   )
 })
 
-export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, solMeubelHoogte, solOnderkant, onChange }: StepAfmetingProps) {
+export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstandLinks, lunaAfstandRechts, onChange }: StepAfmetingProps) {
   if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     const presets = [
       { w: 60, h: 80 }, { w: 80, h: 60 }, { w: 100, h: 70 },
@@ -309,6 +317,75 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
             maxOverride={30}
           />
           {!extraDeelTeBestellen && solOnderkant > 0 && (
+            <p className="text-[11px] text-amber-600 mt-1.5">
+              Uitsteek is minder dan 15 cm — het extra onderste deel kan niet meebesteld worden.
+            </p>
+          )}
+        </div>
+        <div className="border-t border-lx-divider pt-5">
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+        </div>
+      </div>
+    )
+  }
+
+  if (shape === 'luna') {
+    const LUNA_DIAMETERS = [60, 70, 80, 90, 100, 120, 140, 160, 180, 200]
+    const extraDeelTeBestellen = (lunaOnderkant ?? 0) >= 15
+    const zichtbareBreedte = (diameter ?? 0) - (lunaAfstandLinks ?? 0) - (lunaAfstandRechts ?? 0)
+    return (
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Diameter</p>
+          <div className="flex flex-wrap gap-2">
+            {LUNA_DIAMETERS.map((d) => (
+              <button
+                key={d}
+                onClick={() => onChange({ diameter: d })}
+                className={`px-4 py-2.5 rounded-xl text-[13px] font-semibold border transition-all ${
+                  diameter === d
+                    ? 'bg-lx-cta text-white border-lx-cta'
+                    : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
+                }`}
+              >
+                ⌀ {d} cm
+              </button>
+            ))}
+          </div>
+        </div>
+        <DimInput
+          label="Meubel hoogte"
+          value={lunaMeubelHoogte ?? 35}
+          onChange={(v) => onChange({ lunaMeubelHoogte: v })}
+          minOverride={15}
+          maxOverride={80}
+        />
+        <DimInput
+          label="Afsnede links"
+          value={lunaAfstandLinks ?? 20}
+          onChange={(v) => onChange({ lunaAfstandLinks: v })}
+          minOverride={0}
+          maxOverride={Math.floor((diameter ?? 160) / 2) - 5}
+        />
+        <DimInput
+          label="Afsnede rechts"
+          value={lunaAfstandRechts ?? 20}
+          onChange={(v) => onChange({ lunaAfstandRechts: v })}
+          minOverride={0}
+          maxOverride={Math.floor((diameter ?? 160) / 2) - 5}
+        />
+        <p className="text-[11px] text-lx-text-secondary">
+          Zichtbare breedte: {zichtbareBreedte} cm
+        </p>
+        <div>
+          <DimInput
+            label="Uitsteek onder meubel"
+            value={lunaOnderkant ?? 15}
+            onChange={(v) => onChange({ lunaOnderkant: v })}
+            minOverride={0}
+            maxOverride={30}
+          />
+          {!extraDeelTeBestellen && (lunaOnderkant ?? 0) > 0 && (
             <p className="text-[11px] text-amber-600 mt-1.5">
               Uitsteek is minder dan 15 cm — het extra onderste deel kan niet meebesteld worden.
             </p>

@@ -62,7 +62,7 @@ const ControlIcon = memo(function ControlIcon({ id, active }: { id: string; acti
 
 const LightSection = memo(function LightSection({ title, positions, config, onChange, controlTooltips, isInternational = false, shape }: LightSectionProps) {
   const mult = isInternational ? 1.05 : 1
-  const lightTypes: LightType[] = shape === 'sol' ? ['3000k', '4000k'] : ['3000k', '4000k', 'rgbw', 'cct']
+  const lightTypes: LightType[] = (shape === 'sol' || shape === 'luna') ? ['3000k', '4000k'] : ['3000k', '4000k', 'rgbw', 'cct']
 
   if (positions.length === 0) return null
 
@@ -136,7 +136,7 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {CONTROLS_FOR_TYPE[config.type].filter(ctrl => shape !== 'sol' || ['tip-touch', 'afstandsbediening'].includes(ctrl.id)).map((ctrl) => {
+                  {CONTROLS_FOR_TYPE[config.type].filter(ctrl => (shape !== 'sol' && shape !== 'luna') || ['tip-touch', 'afstandsbediening'].includes(ctrl.id)).map((ctrl) => {
                     const price = Math.round((CONTROL_PRICES[ctrl.id] ?? 0) * mult)
                     const isActive = config.control === ctrl.id
                     const tooltip = controlTooltips?.[ctrl.id]

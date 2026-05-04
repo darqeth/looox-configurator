@@ -39,6 +39,21 @@ function ShapeIcon({ slug }: { slug: ShapeSlug }) {
       <path fill="#9CA3AF" fillRule="evenodd" d="M713.2,681.8c3.7,0,5.3,2.5,5.9,4,.6,1.5,1.2,4.3-1.4,6.9-56.5,55.2-131.2,85.6-210.2,85.6s-153.6-30.4-210.2-85.6c-2.6-2.6-2-5.4-1.4-6.9.6-1.5,2.2-4,5.9-4h411.4M713.2,664.8h-411.4c-20.9,0-31.3,25.4-16.3,40.1,57.3,55.9,135.6,90.4,222.1,90.4s164.7-34.5,222.1-90.4c15-14.6,4.6-40.1-16.3-40.1h0Z" />
     </svg>
   )
+  if (slug === 'luna') return (
+    <svg width="64" height="64" viewBox="170 140 660 660">
+      <defs>
+        <clipPath id="luna-icon-clip">
+          <rect x="310" y="0" width="400" height="1000" />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#luna-icon-clip)">
+        <path fill="#9CA3AF" fillRule="evenodd"
+          d="M507.4,176.3c40.6,0,80,8,117.1,23.6,35.8,15.2,68,36.9,95.7,64.5,27.6,27.6,49.3,59.8,64.5,95.7,15.7,37.1,23.6,76.5,23.6,117.1s-.2,12.9-.6,19.3c-.2,3.3-3,5.9-6.3,5.9H213.4c-3.3,0-6.1-2.6-6.3-5.9-.4-6.4-.6-12.9-.6-19.3,0-40.6,8-80,23.6-117.1,15.2-35.8,36.9-68,64.5-95.7,27.6-27.6,59.8-49.3,95.7-64.5,37.1-15.7,76.5-23.6,117.1-23.6M507.4,159.3c-175.6,0-318,142.4-318,318s.2,13.6.7,20.4c.8,12.3,11,21.8,23.3,21.8h588c12.3,0,22.5-9.5,23.3-21.8.4-6.7.7-13.5.7-20.4,0-175.6-142.4-318-318-318h0Z" />
+        <path fill="#9CA3AF" fillRule="evenodd"
+          d="M713.2,681.8c3.7,0,5.3,2.5,5.9,4,.6,1.5,1.2,4.3-1.4,6.9-56.5,55.2-131.2,85.6-210.2,85.6s-153.6-30.4-210.2-85.6c-2.6-2.6-2-5.4-1.4-6.9.6-1.5,2.2-4,5.9-4h411.4M713.2,664.8h-411.4c-20.9,0-31.3,25.4-16.3,40.1,57.3,55.9,135.6,90.4,222.1,90.4s164.7-34.5,222.1-90.4c15-14.6,4.6-40.1-16.3-40.1h0Z" />
+      </g>
+    </svg>
+  )
   return (
     <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
       <rect x="8" y="14" width="48" height="36" rx="4" stroke="#9CA3AF" strokeWidth="2.5" strokeDasharray="6 3" />
@@ -92,16 +107,6 @@ export default function ShapePicker({ onSelect, onClose }: ShapePickerProps) {
           ))}
         </div>
 
-        {/* Moon coming soon */}
-        <div className="mt-4 flex justify-center">
-          <div className="flex flex-col items-center gap-2 p-4 opacity-40 cursor-not-allowed select-none">
-            <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-              <path d="M44 32 C44 44 36 54 26 54 C20 54 14 50 10 44 C16 46 24 44 30 38 C36 32 38 22 36 14 C40 18 44 24 44 32Z" stroke="#9CA3AF" strokeWidth="2.5" fill="none" />
-            </svg>
-            <span className="text-[12px] font-semibold text-lx-text-secondary">Moon</span>
-            <span className="text-[10px] bg-lx-divider text-lx-text-secondary px-2 py-0.5 rounded-full font-medium">Binnenkort</span>
-          </div>
-        </div>
       </div>
     </div>
   )

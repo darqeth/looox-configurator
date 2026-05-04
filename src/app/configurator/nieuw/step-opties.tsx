@@ -104,13 +104,20 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
     return null
   }
 
-  // Sol: verwarming is vergrendeld als verlichting actief is
+  // Sol/Luna: verwarming is vergrendeld als verlichting actief is
   function getLockedReason(optionId: string): string | null {
-    if (shape === 'sol' && optionId === 'verwarming' && indirectPosition && indirectPosition !== 'geen') {
+    if ((shape === 'sol' || shape === 'luna') && optionId === 'verwarming' && indirectPosition && indirectPosition !== 'geen') {
       return 'Verplicht bij verlichting'
     }
     if (shape === 'sol' && optionId === 'sol-extra-deel' && (solOnderkant === undefined || solOnderkant < 15)) {
       return 'Uitsteek onder meubel moet minimaal 15 cm zijn'
+    }
+    if ((shape === 'sol' || shape === 'luna')) {
+      const extraDeelId = `${shape}-extra-deel`
+      const onderkant = shape === 'sol' ? solOnderkant : lunaOnderkant
+      if (optionId === extraDeelId && (onderkant === undefined || onderkant < 15)) {
+        return 'Uitsteek onder meubel moet minimaal 15 cm zijn'
+      }
     }
     return null
   }

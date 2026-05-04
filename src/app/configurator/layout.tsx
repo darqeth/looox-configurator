@@ -1,7 +1,8 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Sidebar from '@/components/layout/sidebar'
-import { fetchSidebarData } from '@/lib/sidebar-data'
+import SidebarServer from '@/components/layout/sidebar-server'
+import SidebarSkeleton from '@/components/layout/sidebar-skeleton'
 import SupportButton from '@/components/support/support-button'
 
 export default async function ConfiguratorLayout({ children }: { children: React.ReactNode }) {
@@ -9,26 +10,11 @@ export default async function ConfiguratorLayout({ children }: { children: React
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const sidebar = await fetchSidebarData(supabase, user.id)
-
   return (
     <div className="min-h-screen bg-lx-divider">
-      <Sidebar
-        userName={sidebar.userName}
-        company={sidebar.company}
-        tier={sidebar.tier}
-        configCount={sidebar.configCount}
-        orderCount={sidebar.orderCount}
-        isAdmin={sidebar.isAdmin}
-        isManager={sidebar.isManager}
-        isInternational={sidebar.isInternational}
-        canConfigure={sidebar.canConfigure}
-        avatarUrl={sidebar.avatarUrl}
-        pendingCount={sidebar.pendingCount}
-        pendingColleaguesCount={sidebar.pendingColleaguesCount}
-        closestMilestone={sidebar.closestMilestone}
-        allMilestonesAchieved={sidebar.allMilestonesAchieved}
-      />
+      <Suspense fallback={<SidebarSkeleton />}>
+        <SidebarServer userId={user.id} />
+      </Suspense>
       <main className="lg:ml-60 min-h-screen">
         {children}
       </main>

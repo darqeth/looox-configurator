@@ -43,20 +43,18 @@ export async function fetchSidebarData(
   // company_members is bron van waarheid — profile.company_id kan stale zijn na verwijdering
   const companyId = memberData?.company_id ?? null
 
-  const companyUserIds = await getCompanyUserIds(supabase, userId, companyId)
-
+  // Batch 2: getCompanyUserIds in parallel with independent queries
   const [
-    { count: configCount },
+    companyUserIds,
     { data: companyOrderCount },
     { count: ownOrderCount },
     { count: pendingCount },
     { count: pendingColleaguesCount },
     { data: milestones },
-    { data: userMilestonesData },
     { data: revenueSum },
     { data: streakData },
   ] = await Promise.all([
-    supabase.from('configurations').select('id', { count: 'exact', head: true }).in('user_id', companyUserIds).eq('status', 'saved'),
+    getCompanyUserIds(supabase, userId, companyId),
     // Company-wide orders — used for milestone calculation only
     supabase.rpc('count_company_orders', { p_user_id: userId }),
     // Own orders only — matches what /bestellingen page shows
@@ -71,19 +69,16 @@ export async function fetchSidebarData(
           .eq('approval_status', 'pending')
       : Promise.resolve({ count: 0, data: null, error: null }),
     (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('milestones').select('id, title, goal_type, goal_value').eq('is_active', true).order('sort_order'),
-    (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
     (isInternational || isGroothandel) ? Promise.resolve({ data: 0, error: null }) : supabase.rpc('sum_order_revenue', { p_user_id: userId }),
     (isInternational || isGroothandel) ? Promise.resolve({ data: null, error: null }) : supabase.from('login_streaks').select('current_streak, longest_streak, last_login_date, total_days').eq('user_id', userId).single(),
   ])
 
   // ── Login streak update — piggybacks on the streak row already fetched above ──
-  // Avoids the extra read that updateLoginStreak() in layout.tsx would do.
   // NOTE: total_days column requires a migration that may not yet be in production.
   if (!isInternational && !isGroothandel) {
     const today = new Date().toISOString().split('T')[0]
     const streak = streakData as { current_streak: number; longest_streak: number; last_login_date: string | null; total_days: number | null } | null
     if (!streak) {
-      // First-ever login: insert new row
       void supabase.from('login_streaks').insert({
         user_id: userId,
         current_streak: 1,
@@ -101,11 +96,20 @@ export async function fetchSidebarData(
         current_streak: newStreak,
         longest_streak: newLongest,
         last_login_date: today,
-        total_days: (streak.total_days ?? 0) + 1, // NOTE: total_days column requires migration
+        total_days: (streak.total_days ?? 0) + 1,
         updated_at: new Date().toISOString(),
       }).eq('user_id', userId).then(({ error }) => { if (error) console.error('[streak]', error) })
     }
   }
+
+  // Batch 3: queries that need companyUserIds (now resolved from batch 2)
+  const [
+    { count: configCount },
+    { data: userMilestonesData },
+  ] = await Promise.all([
+    supabase.from('configurations').select('id', { count: 'exact', head: true }).in('user_id', companyUserIds).eq('status', 'saved'),
+    (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
+  ])
 
   // Compute closest unachieved milestone
   const achievedIds = new Set((userMilestonesData ?? []).map((um: { milestone_id: string }) => um.milestone_id))

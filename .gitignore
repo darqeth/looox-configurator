@@ -50,4 +50,6 @@ next-env.d.ts
 "configurator flow images/"
 "extra keuzes images/"
 icons/
+!public/icons/
+!public/icons/**
 *.xlsx

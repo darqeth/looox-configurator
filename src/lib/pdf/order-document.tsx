@@ -198,8 +198,9 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
       ? Math.sqrt(Math.max(0, r * r - (svgBottomCut - cy) * (svgBottomCut - cy))) : 0
     const lXb = shape === 'luna' ? Math.max(svgLeftCut, cx - halfChordBottom) : cx - halfChordBottom
     const rXb = shape === 'luna' ? Math.min(svgRightCut, cx + halfChordBottom) : cx + halfChordBottom
+    const extraLargeArc = svgBottomCut < cy ? 1 : 0
     const extraPath = hasExtraDeel
-      ? `M ${lXb},${svgBottomCut} A ${r},${r} 0 0 1 ${rXb},${svgBottomCut} Z` : ''
+      ? `M ${lXb},${svgBottomCut} A ${r},${r} 0 ${extraLargeArc} 0 ${rXb},${svgBottomCut} Z` : ''
 
     const balkH = svgBottomCut - svgTopCut
 
@@ -208,12 +209,6 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
         {hasIndirect && (
           <Circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
         )}
-        {balkH > 0 && (
-          <Path
-            d={`M ${lX},${svgTopCut} L ${rX},${svgTopCut} L ${rX},${svgBottomCut} L ${lX},${svgBottomCut} Z`}
-            fill="#E8E4DF" fillOpacity={0.8} stroke="#B0ABA4" strokeWidth="0.7"
-          />
-        )}
         <Path d={mainPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
         <Path d={mainPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
         {hasExtraDeel && (
@@ -221,6 +216,16 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
         )}
         {hasExtraDeel && (
           <Path d={extraPath} fill="none" stroke={glass.stroke} strokeWidth="1" opacity={0.5} />
+        )}
+        {balkH > 0 && (
+          <Path
+            d={(() => {
+              const bL = (shape === 'luna' && hasExtraDeel) ? Math.min(lX, lXb) : lX
+              const bR = (shape === 'luna' && hasExtraDeel) ? Math.max(rX, rXb) : rX
+              return `M ${bL},${svgTopCut} L ${bR},${svgTopCut} L ${bR},${svgBottomCut} L ${bL},${svgBottomCut} Z`
+            })()}
+            fill="#E8E4DF" fillOpacity={0.8} stroke="#B0ABA4" strokeWidth="0.7"
+          />
         )}
         {shape === 'luna' && afstandL > 0 && (
           <Line x1={svgLeftCut} y1={cy - r} x2={svgLeftCut} y2={cy + r}

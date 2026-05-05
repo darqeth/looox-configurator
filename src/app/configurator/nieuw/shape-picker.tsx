@@ -29,12 +29,12 @@ export default function ShapePicker({ onSelect, onClose }: ShapePickerProps) {
         </div>
         <p className="text-lx-text-secondary text-[14px] mb-8">Kies de vorm van de spiegel die je wil samenstellen.</p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="flex flex-wrap justify-center gap-4">
           {SHAPES.map((shape) => (
             <button
               key={shape.slug}
               onClick={() => onSelect(shape.slug)}
-              className="group flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-transparent hover:border-lx-cta hover:bg-lx-panel-bg transition-all duration-150"
+              className="group flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-transparent hover:border-lx-cta hover:bg-lx-panel-bg transition-all duration-150 w-[calc(50%-8px)] sm:w-[calc(25%-12px)]"
             >
               <div className="group-hover:[&_path]:stroke-[#3D6B4F] group-hover:[&_rect]:stroke-[#3D6B4F] group-hover:[&_circle]:stroke-[#3D6B4F] transition-colors">
                 <ShapeIcon slug={shape.slug} />

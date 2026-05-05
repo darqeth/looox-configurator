@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { OrderApprovalButtons } from './order-approval-buttons'
+import { AdminPagination } from '@/components/admin-pagination'
 
 const PAGE_SIZE = 20
 
@@ -387,26 +388,16 @@ export async function BestellingenContent({ page, view }: { page: string; view: 
         </div>
       </div>
 
-      {/* Paginering + nieuwe spiegel */}
-      <div className="mt-5 flex items-center justify-between gap-4">
-        {totalPages > 1 ? (
-          <div className="flex items-center gap-1">
-            {currentPage > 1 && (
-              <Link href={`/bestellingen?${[validView ? `view=${view}` : '', `page=${currentPage - 1}`].filter(Boolean).join('&')}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">
-                ← Vorige
-              </Link>
-            )}
-            <span className="px-3 py-1.5 text-[12.5px] text-lx-text-secondary">
-              {currentPage} / {totalPages}
-            </span>
-            {currentPage < totalPages && (
-              <Link href={`/bestellingen?${[validView ? `view=${view}` : '', `page=${currentPage + 1}`].filter(Boolean).join('&')}`} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">
-                Volgende →
-              </Link>
-            )}
-          </div>
-        ) : <div />}
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={count ?? 0}
+        pageSize={PAGE_SIZE}
+        basePath="/bestellingen"
+        hrefParams={validView ? { view } : undefined}
+      />
 
+      <div className="mt-4 flex justify-center">
         <Link
           href="/configurator/nieuw"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors"

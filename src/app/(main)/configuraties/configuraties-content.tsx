@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import OrderButton from './order-button'
+import { AdminPagination } from '@/components/admin-pagination'
 import ConfiguratiesTabs from './configuraties-tabs'
 import ConfigActionsMenu from './config-actions-menu'
 import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
@@ -37,6 +38,18 @@ function ShapeIcon({ shape }: { shape: string }) {
   )
   if (shape === 'arc') return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><path d="M3 18 L3 12 A9 9 0 0 1 21 12 L21 18 Z"/></svg>
+  )
+  if (shape === 'sol') return (
+    <svg width="16" height="16" viewBox="170 140 660 660">
+      <path fill="var(--lx-cta)" fillRule="evenodd" d="M507.4,176.3c40.6,0,80,8,117.1,23.6,35.8,15.2,68,36.9,95.7,64.5,27.6,27.6,49.3,59.8,64.5,95.7,15.7,37.1,23.6,76.5,23.6,117.1s-.2,12.9-.6,19.3c-.2,3.3-3,5.9-6.3,5.9H213.4c-3.3,0-6.1-2.6-6.3-5.9-.4-6.4-.6-12.9-.6-19.3,0-40.6,8-80,23.6-117.1,15.2-35.8,36.9-68,64.5-95.7,27.6-27.6,59.8-49.3,95.7-64.5,37.1-15.7,76.5-23.6,117.1-23.6M507.4,159.3c-175.6,0-318,142.4-318,318s.2,13.6.7,20.4c.8,12.3,11,21.8,23.3,21.8h588c12.3,0,22.5-9.5,23.3-21.8.4-6.7.7-13.5.7-20.4,0-175.6-142.4-318-318-318h0Z"/>
+      <path fill="var(--lx-cta)" fillRule="evenodd" d="M713.2,681.8c3.7,0,5.3,2.5,5.9,4,.6,1.5,1.2,4.3-1.4,6.9-56.5,55.2-131.2,85.6-210.2,85.6s-153.6-30.4-210.2-85.6c-2.6-2.6-2-5.4-1.4-6.9.6-1.5,2.2-4,5.9-4h411.4M713.2,664.8h-411.4c-20.9,0-31.3,25.4-16.3,40.1,57.3,55.9,135.6,90.4,222.1,90.4s164.7-34.5,222.1-90.4c15-14.6,4.6-40.1-16.3-40.1h0Z"/>
+    </svg>
+  )
+  if (shape === 'luna') return (
+    <svg width="16" height="16" viewBox="78 139 676 676">
+      <path fill="var(--lx-cta)" d="M642.9,189.6c-4.9-2.3-9.9-4.5-15-6.6-37.2-15.2-77.9-23.7-120.5-23.7-175.6,0-318,142.4-318,318l.7,20.4c.8,12.3,11,21.8,23.3,21.8h426c4.6,0,8.4-3.8,8.4-8.4V197.2c0-3.3-1.9-6.2-4.8-7.6ZM627.9,502.4H213.4c-3.3,0-6.1-2.6-6.3-5.9-.4-6.4-.6-12.9-.6-19.3,0-40.6,8-80,23.6-117.1,15.2-35.8,36.9-68,64.5-95.7,27.6-27.6,59.8-49.3,95.7-64.5,37.1-15.7,76.5-23.6,117.1-23.6s80,8,117.1,23.6c1.1.5,2.3,1,3.4,1.5v301Z"/>
+      <path fill="var(--lx-cta)" d="M639.4,664.8h-337.6c-20.9,0-31.3,25.4-16.3,40.1,57.3,55.9,135.6,90.4,222.1,90.4s83.2-8.4,120.3-23.6c5.1-2.1,10.1-4.3,15-6.6,3-1.4,4.8-4.4,4.8-7.6v-84.3c0-4.6-3.8-8.4-8.4-8.4ZM627.9,753.3c-37.5,16.4-78.4,25-120.4,25-79,0-153.6-30.4-210.2-85.6-2.6-2.6-2-5.4-1.4-6.9.6-1.5,2.2-4,5.9-4h326.1v71.5Z"/>
+    </svg>
   )
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="1.9"><rect x="3" y="5" width="18" height="14" rx="1.5"/></svg>
@@ -374,17 +387,17 @@ export async function ConfiguratiesContent({
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-center gap-1">
-          {currentPage > 1 && (
-            <Link href={(() => { const p = [validView ? `view=${view}` : '', filter ? `filter=${filter}` : '', `page=${currentPage - 1}`].filter(Boolean).join('&'); return `/configuraties${p ? '?' + p : ''}` })()} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">← Vorige</Link>
-          )}
-          <span className="px-3 py-1.5 text-[12.5px] text-lx-text-secondary">{currentPage} / {totalPages}</span>
-          {currentPage < totalPages && (
-            <Link href={(() => { const p = [validView ? `view=${view}` : '', filter ? `filter=${filter}` : '', `page=${currentPage + 1}`].filter(Boolean).join('&'); return `/configuraties${p ? '?' + p : ''}` })()} className="px-3 py-1.5 rounded-lg border border-black/10 text-[12.5px] font-medium text-lx-text-secondary hover:bg-lx-panel-bg transition-colors">Volgende →</Link>
-          )}
-        </div>
-      )}
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={filteredCount ?? 0}
+        pageSize={PAGE_SIZE}
+        basePath="/configuraties"
+        hrefParams={{
+          ...(validView ? { view } : {}),
+          ...(filter ? { filter } : {}),
+        }}
+      />
     </>
   )
 }

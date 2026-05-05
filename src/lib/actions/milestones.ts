@@ -164,7 +164,7 @@ export async function checkAndAwardMilestones(): Promise<AwardedMilestone[]> {
     { data: streakData },
     { data: shapeData },
   ] = await Promise.all([
-    supabase.from('milestones').select('*').eq('is_active', true),
+    supabase.from('milestones').select('id, title, description, goal_type, goal_value, goal_shape, benefit_type, benefit_value, benefit_description, is_active, sort_order').eq('is_active', true),
     // Bedrijfsbreed: als IEMAND in het bedrijf de milestone al heeft, niet opnieuw toekennen
     supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
     // Company-brede counts via RPCs
@@ -192,19 +192,19 @@ export async function checkAndAwardMilestones(): Promise<AwardedMilestone[]> {
     if (shape) shapeCounts[shape] = (shapeCounts[shape] ?? 0) + 1
   }
 
-  for (const m of milestones) {
-    if (achievedIds.has(m.id)) continue
+  // Bepaal welke milestones nieuw verdiend zijn (geen DB calls)
+  const toAward = milestones.filter(m => {
+    if (achievedIds.has(m.id)) return false
+    if (m.goal_type === 'configs') return totalConfigs >= m.goal_value
+    if (m.goal_type === 'orders') return totalOrders >= m.goal_value
+    if (m.goal_type === 'order_revenue') return totalRevenue >= m.goal_value
+    if (m.goal_type === 'streak') return currentStreak >= m.goal_value
+    if (m.goal_type === 'shape') return m.goal_shape ? (shapeCounts[m.goal_shape] ?? 0) >= m.goal_value : false
+    return false
+  })
 
-    let achieved = false
-    if (m.goal_type === 'configs') achieved = totalConfigs >= m.goal_value
-    else if (m.goal_type === 'orders') achieved = totalOrders >= m.goal_value
-    else if (m.goal_type === 'order_revenue') achieved = totalRevenue >= m.goal_value
-    else if (m.goal_type === 'streak') achieved = currentStreak >= m.goal_value
-    else if (m.goal_type === 'shape') achieved = m.goal_shape ? (shapeCounts[m.goal_shape] ?? 0) >= m.goal_value : false
-
-    if (!achieved) continue
-
-    // Voor korting: genereer unieke code en sla op in discount_codes
+  // Parallel inserten: discount_code aanmaken + user_milestone registreren
+  const awardResults = await Promise.all(toAward.map(async (m) => {
     let discountCode: string | null = null
     if (m.benefit_type === 'discount_pct' || m.benefit_type === 'discount_fixed') {
       discountCode = generateCode('LX')
@@ -216,14 +216,12 @@ export async function checkAndAwardMilestones(): Promise<AwardedMilestone[]> {
         milestone_id: m.id,
       })
     }
-
     await supabase.from('user_milestones').insert({
       user_id: user.id,
       milestone_id: m.id,
       discount_code: discountCode,
     })
-
-    newlyAwarded.push({
+    return {
       id: m.id,
       title: m.title,
       perk: m.benefit_description ?? (
@@ -231,8 +229,9 @@ export async function checkAndAwardMilestones(): Promise<AwardedMilestone[]> {
         : m.benefit_type === 'discount_fixed' ? `€${m.benefit_value} korting`
         : 'Voordeel beschikbaar'
       ),
-    })
-  }
+    }
+  }))
+  newlyAwarded.push(...awardResults)
 
   revalidatePath('/looox-circle')
   return newlyAwarded

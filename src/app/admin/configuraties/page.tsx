@@ -28,6 +28,7 @@ export default async function AdminConfiguratiePage({
     `)
     .neq('user_id', user.id)
     .order('updated_at', { ascending: false })
+    .limit(500) // TODO: pagination
 
   if (status && ['draft', 'saved', 'ordered'].includes(status)) {
     query = query.eq('status', status)

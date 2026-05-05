@@ -107,7 +107,7 @@ export async function DashboardContent({
     supabase.from('profiles').select('korting').eq('id', userId).single(),
     supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', userId).order('updated_at', { ascending: false }).limit(5),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', ['pending', 'confirmed']),
-    supabase.from('changelogs').select('id, title, body, published_at').order('published_at', { ascending: false }),
+    supabase.from('changelogs').select('id, title, body, published_at').order('published_at', { ascending: false }).limit(20),
     supabase.from('rss_cache').select('id, title, url, summary, image_url, published_at').order('published_at', { ascending: false }).limit(4),
     (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
     (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', userId),
@@ -115,11 +115,11 @@ export async function DashboardContent({
     supabase.rpc('count_company_configs', { p_user_id: userId }),
     supabase.rpc('count_company_orders', { p_user_id: userId }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
-    supabase.from('discount_codes').select('code').eq('user_id', userId).not('used_at', 'is', null),
+    supabase.from('discount_codes').select('code').eq('user_id', userId).not('used_at', 'is', null).limit(50),
     supabase.from('downloads').select('id, title, file_url, file_ext, file_size').eq('is_active', true).order('sort_order').limit(6),
     // O(1) count voor totaal + alleen relevante statussen ophalen
     supabase.from('configurations').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-    supabase.from('configurations').select('status').eq('user_id', userId).in('status', ['saved', 'ordered']),
+    supabase.from('configurations').select('status').eq('user_id', userId).in('status', ['saved', 'ordered']).limit(500),
   ])
 
   const totalConfigCount = totalConfigCountResult ?? 0

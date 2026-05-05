@@ -65,7 +65,7 @@ export async function LoooxCircleContent() {
     { data: shapeData },
     { data: usedDiscountCodes },
   ] = await Promise.all([
-    supabase.from('milestones').select('*').eq('is_active', true).order('sort_order').order('created_at'),
+    supabase.from('milestones').select('id, title, description, goal_type, goal_value, goal_shape, benefit_type, benefit_value, benefit_description, is_active, sort_order').eq('is_active', true).order('sort_order').order('created_at'),
     supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
     supabase.from('user_milestones').select('id, milestone_id, discount_code, claimed_at').eq('user_id', user.id),
     supabase.rpc('count_company_configs', { p_user_id: user.id }),

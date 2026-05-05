@@ -22,7 +22,8 @@ export default async function GebruikersPage() {
     supabase
       .from('profiles')
       .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international, is_groothandel, is_admin, is_sub_admin, company_members(role, can_order, can_configure, own_configs_only)')
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(500), // TODO: pagination
     supabase
       .from('profiles')
       .select(`

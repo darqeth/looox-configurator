@@ -37,6 +37,7 @@ export default async function AdminBestellingenPage() {
       profiles(id, full_name, company, email)
     `)
     .order('created_at', { ascending: false })
+    .limit(500) // TODO: pagination
 
   const sorted = (orders ?? []).sort((a, b) => {
     const oa = STATUS_ORDER[a.status] ?? 99

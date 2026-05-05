@@ -21,7 +21,7 @@ export default async function AdminMilestonesPage({
   const activeTab = tab === 'kortingen' ? 'kortingen' : 'milestones'
 
   const [{ data: milestones }, { data: rawDiscountCodes }, { data: codeUses }] = await Promise.all([
-    supabase.from('milestones').select('*').order('sort_order').order('created_at'),
+    supabase.from('milestones').select('id, title, description, goal_type, goal_value, goal_shape, benefit_type, benefit_value, benefit_description, is_active, sort_order, created_at').order('sort_order').order('created_at'),
     supabase
       .from('discount_codes')
       .select('id, code, type, value, use_type, user_id, used_at, expires_at, created_at, profiles(company, full_name)')

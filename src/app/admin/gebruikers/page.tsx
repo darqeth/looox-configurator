@@ -3,6 +3,9 @@ import { isAdmin } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import { UserRow } from './user-row'
 import type { UserRowProfile } from './user-row'
+import { AdminPagination } from '@/components/admin-pagination'
+
+const PAGE_SIZE = 20
 
 type RawMember = {
   role: string
@@ -11,12 +14,19 @@ type RawMember = {
   own_configs_only: boolean
 }
 
-export default async function GebruikersPage() {
+export default async function GebruikersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
+
+  const { page: pageParam } = await searchParams
+  const currentPage = Math.max(1, parseInt(pageParam ?? '1', 10))
 
   const [{ data: rawProfiles }, { data: pendingColleagues }, { data: companies }, { data: streaks }] = await Promise.all([
     supabase
@@ -69,6 +79,10 @@ export default async function GebruikersPage() {
   const rejected = profiles.filter(p => p.approval_status === 'rejected')
 
   const totalPending = pending.length + (pendingColleagues?.length ?? 0)
+
+  const approvedTotalPages = Math.ceil(approved.length / PAGE_SIZE)
+  const approvedPage = Math.min(currentPage, Math.max(1, approvedTotalPages))
+  const pagedApproved = approved.slice((approvedPage - 1) * PAGE_SIZE, approvedPage * PAGE_SIZE)
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 w-full">
@@ -128,11 +142,20 @@ export default async function GebruikersPage() {
       <section className="mb-6">
         <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Goedgekeurd ({approved.length})</h2>
         {approved.length > 0 ? (
-          <div className="space-y-2">
-            {approved.map(p => (
-              <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
-            ))}
-          </div>
+          <>
+            <div className="space-y-2">
+              {pagedApproved.map(p => (
+                <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
+              ))}
+            </div>
+            <AdminPagination
+              currentPage={approvedPage}
+              totalPages={approvedTotalPages}
+              total={approved.length}
+              pageSize={PAGE_SIZE}
+              basePath="/admin/gebruikers"
+            />
+          </>
         ) : (
           <p className="text-[13px] text-lx-text-secondary">Nog geen goedgekeurde gebruikers</p>
         )}

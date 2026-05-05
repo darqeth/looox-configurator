@@ -3,12 +3,14 @@ import { isAdminOrSubAdmin } from '@/lib/company-utils'
 import { redirect } from 'next/navigation'
 import ConfigDetailModal from './config-detail-modal'
 import AdminConfigTabs from './admin-config-tabs'
+import { AdminPagination } from '@/components/admin-pagination'
 
+const PAGE_SIZE = 20
 
 export default async function AdminConfiguratiePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -16,7 +18,8 @@ export default async function AdminConfiguratiePage({
 
   if (!await isAdminOrSubAdmin(supabase, user.id)) redirect('/dashboard')
 
-  const { status, q } = await searchParams
+  const { status, q, page: pageParam } = await searchParams
+  const currentPage = Math.max(1, parseInt(pageParam ?? '1', 10))
 
   // Haal alle configuraties op behalve die van de ingelogde admin
   let query = supabase
@@ -60,6 +63,13 @@ export default async function AdminConfiguratiePage({
     { key: 'draft', label: 'Concept', count: counts.draft },
     { key: 'saved', label: 'Opgeslagen', count: counts.saved },
   ]
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const safePage = Math.min(currentPage, Math.max(1, totalPages))
+  const pagedItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const hrefParams: Record<string, string> = {}
+  if (status) hrefParams.status = status
+  if (q) hrefParams.q = q
 
   return (
     <div className="p-4 sm:p-6 lg:p-7">
@@ -106,7 +116,7 @@ export default async function AdminConfiguratiePage({
               <div className="w-4 flex-shrink-0" />
             </div>
             <div className="divide-y divide-lx-divider">
-            {filtered.map((config) => (
+            {pagedItems.map((config) => (
               <ConfigDetailModal
                 key={config.id}
                 config={{
@@ -128,6 +138,15 @@ export default async function AdminConfiguratiePage({
           </div>
         )}
       </div>
+
+      <AdminPagination
+        currentPage={safePage}
+        totalPages={totalPages}
+        total={filtered.length}
+        pageSize={PAGE_SIZE}
+        basePath="/admin/configuraties"
+        hrefParams={hrefParams}
+      />
     </div>
   )
 }

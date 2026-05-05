@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { OrderStatusSelect } from './order-status-row'
+import { AdminPagination } from '@/components/admin-pagination'
+
+const PAGE_SIZE = 20
 
 const STATUS_LABELS: Record<string, string> = {
   pending:          'In behandeling',
@@ -39,6 +42,7 @@ export type AdminOrder = {
 
 export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
   const [query, setQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim()
@@ -53,6 +57,11 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
       return orderNum.includes(q) || company.includes(q) || name.includes(q) || email.includes(q) || configName.includes(q) || status.includes(q)
     })
   }, [orders, query])
+
+  useEffect(() => { setCurrentPage(1) }, [query])
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const pagedOrders = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   return (
     <>
@@ -107,7 +116,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
           </div>
 
           <div className="divide-y divide-lx-divider">
-            {filtered.map(order => {
+            {pagedOrders.map(order => {
               const shape = (order.config?.selected_options as { shape?: string })?.shape ?? 'rechthoek'
               const isProjectspiegel = shape === 'projectspiegel'
               return (
@@ -165,6 +174,14 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
           </div>
         </div>
       )}
+
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={filtered.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setCurrentPage}
+      />
     </>
   )
 }

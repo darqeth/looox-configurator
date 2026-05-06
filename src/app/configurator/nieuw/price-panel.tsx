@@ -605,10 +605,10 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
             <feGaussianBlur stdDeviation="7" />
           </filter>
           <clipPath id={clipId}>
-            <rect x={svgLeftCut} y={cy - r - 2} width={svgRightCut - svgLeftCut} height={svgTopCut - (cy - r - 2)} />
+            <rect x={svgLeftCut - 1} y={cy - r - 2} width={svgRightCut - svgLeftCut + 2} height={svgTopCut - (cy - r - 2)} />
           </clipPath>
           <clipPath id={extraClipId}>
-            <rect x={svgLeftCut} y={svgBottomCut} width={svgRightCut - svgLeftCut} height={cy + r + 2 - svgBottomCut} />
+            <rect x={svgLeftCut - 1} y={svgBottomCut} width={svgRightCut - svgLeftCut + 2} height={cy + r + 2 - svgBottomCut} />
           </clipPath>
           <mask id="outside-mask-luna">
             <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />

@@ -3,6 +3,7 @@
 import { memo, useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS } from '@/lib/configurator-config'
 import ShapePicker from './shape-picker'
 import StepAfmeting from './step-afmeting'
@@ -110,6 +111,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
 
 export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrder = true, isInternational = false, optionTooltips = {}, controlTooltips = {} }: { initialConfig?: InitialConfig; korting?: number; canOrder?: boolean; isInternational?: boolean; optionTooltips?: Record<string, string>; controlTooltips?: Record<string, string> }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const isEditing = !!initialConfig
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
   const [step, setStep] = useState(1)
@@ -247,6 +249,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         await saveConfiguration(payload)
       }
       setSaved(true)
+      queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar'] })
       if (!isInternational) {
         const awarded = await checkAndAwardMilestones()
         if (awarded.length > 0) {
@@ -296,6 +300,9 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       const awarded = await checkAndAwardMilestones()
       setNewMilestones(awarded)
       setOrderResult(result)
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar'] })
     } catch (e) {
       console.error(e)
       setSaving(false)

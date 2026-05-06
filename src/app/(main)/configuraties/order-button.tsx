@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeOrderFromConfig } from '@/lib/actions/orders'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
@@ -99,6 +100,7 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
 
 export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview }: OrderButtonProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [modalStep, setModalStep] = useState<1 | 2>(1)
   const [quantity, setQuantity] = useState(1)
@@ -145,7 +147,9 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
         altShippingAddress,
       )
       setResult(orderNumber)
-      router.refresh()
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar'] })
     } catch (e) {
       console.error(e)
       setOrderError(e instanceof Error ? e.message : 'Er is iets misgegaan. Probeer het opnieuw.')

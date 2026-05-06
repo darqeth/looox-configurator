@@ -1,4 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useSuspenseQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import OrderButton from './order-button'
 import { AdminPagination } from '@/components/admin-pagination'
@@ -6,9 +8,7 @@ import ConfiguratiesTabs from './configuraties-tabs'
 import ConfigActionsMenu from './config-actions-menu'
 import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
-
-const PAGE_SIZE = 20
-
+import { fetchConfigurations } from '@/lib/queries/fetch-configurations'
 
 const shapeLabel: Record<string, string> = {
   rechthoek: 'Rechthoek',
@@ -24,7 +24,7 @@ function ShapeIcon({ shape }: { shape: string }) {
   return <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
 }
 
-export async function ConfiguratiesContent({
+export function ConfiguratiesContent({
   filter,
   page,
   view,
@@ -33,104 +33,22 @@ export async function ConfiguratiesContent({
   page: string
   view: string
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const { data } = useSuspenseQuery({
+    queryKey: ['configurations', { filter, view, page }],
+    queryFn: () => fetchConfigurations({ filter, view, page: Number(page) }),
+  })
 
-  const currentPage = Math.max(1, parseInt(page) || 1)
-  const from = (currentPage - 1) * PAGE_SIZE
-  const to = from + PAGE_SIZE - 1
+  const { configs, filteredCount, savedCount, ownCount, permissions, teamMembers, validView, viewingName, korting, currentPage, totalPages, currentUserId } = data
 
-  // Haal eigen rechten op
-  const [{ data: memberPerms }, { data: profileData }] = await Promise.all([
-    supabase
-      .from('company_members')
-      .select('role, can_order, can_configure, own_configs_only, company_id')
-      .eq('user_id', user.id)
-      .maybeSingle(),
-    supabase.from('profiles').select('korting').eq('id', user.id).single(),
-  ])
-
-  const korting = profileData?.korting ?? 50
-
-  const isManager = !memberPerms || memberPerms.role === 'manager'
-  const canOrder = isManager || (memberPerms?.can_order ?? true)
-  const canConfigure = isManager || (memberPerms?.can_configure ?? true)
-
-  // Haal teamleden op als de user manager is
-  type TeamMember = { userId: string; name: string; count: number }
-  let teamMembers: TeamMember[] = []
-
-  if (isManager && memberPerms?.company_id) {
-    const { data: rawMembers } = await supabase
-      .from('company_members')
-      .select('user_id, profiles!inner(full_name)')
-      .eq('company_id', memberPerms.company_id)
-      .neq('user_id', user.id)
-
-    const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
-
-    // Haal config-aantallen op per teamlid — één query i.p.v. N
-    const { data: memberConfigRows } = memberUserIds.length > 0
-      ? await supabase.from('configurations').select('user_id').in('user_id', memberUserIds).eq('status', 'saved')
-      : { data: [] as { user_id: string }[] }
-
-    const memberConfigCounts = (memberConfigRows ?? []).reduce<Record<string, number>>((acc, row) => {
-      acc[row.user_id] = (acc[row.user_id] ?? 0) + 1
-      return acc
-    }, {})
-
-    teamMembers = (rawMembers ?? []).map((m) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const profile = Array.isArray(m.profiles) ? (m.profiles as any[])[0] : m.profiles
-      const uid = m.user_id as string
-      return {
-        userId: uid,
-        name: (profile?.full_name as string | null) ?? 'Onbekend',
-        count: memberConfigCounts[uid] ?? 0,
-      }
-    })
-  }
-
-  // Bepaal welke user we laten zien
-  const validView = view && teamMembers.some(m => m.userId === view)
-  const viewUserId = isManager && validView ? view : user.id
-
-  const [
-    { data: configs, count: filteredCount },
-    { count: savedCount },
-  ] = await Promise.all([
-    supabase
-      .from('configurations')
-      .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
-      .eq('user_id', viewUserId)
-      .eq('status', 'saved')
-      .order('updated_at', { ascending: false })
-      .range(from, to),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved'),
-  ])
-
-  const totalPages = Math.ceil((filteredCount ?? 0) / PAGE_SIZE)
-  // Product-type tabs — toekomstbestendig (straks meer producten toevoegen)
   const productTabs = [
-    { key: '', label: 'Spiegels', count: savedCount ?? 0 },
-    { key: 'alle', label: 'Alle', count: savedCount ?? 0 },
+    { key: '', label: 'Spiegels', count: savedCount },
+    { key: 'alle', label: 'Alle', count: savedCount },
   ]
-
-  // Eigen config-count voor member tab header
-  const ownCount = isManager
-    ? (await supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'saved')).count ?? 0
-    : 0
-
-  // Geef aan wie er bekeken wordt (voor lege-state tekst)
-  const viewingName = validView
-    ? teamMembers.find(m => m.userId === view)?.name.split(' ')[0] ?? 'collega'
-    : null
 
   return (
     <>
       {/* Member tabs — alleen voor managers met teamleden */}
-      {isManager && teamMembers.length > 0 && (
+      {permissions.isManager && teamMembers.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
           {/* Eigen tab */}
           <a
@@ -186,7 +104,7 @@ export async function ConfiguratiesContent({
               <div className="flex-1 min-w-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Naam</div>
               <div className="w-[152px] flex-shrink-0 text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider hidden lg:block">Afmeting (B × H)</div>
               <div className="w-[92px] flex-shrink-0 text-right text-[10.5px] font-semibold text-lx-text-secondary uppercase tracking-wider">Prijs</div>
-              {canOrder && (
+              {permissions.canOrder && (
                 <div className="w-[96px] flex-shrink-0" />
               )}
               <div className="w-8 flex-shrink-0" />
@@ -219,7 +137,7 @@ export async function ConfiguratiesContent({
                   extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : '',
                 ].filter(Boolean)
 
-                const canDelete = config.user_id === user.id || memberPerms?.role === 'manager'
+                const canDelete = config.user_id === currentUserId || permissions.isManager
                 const isProjectspiegel = shape === 'projectspiegel'
                 const projectspiegelStuks = isProjectspiegel ? (opts?.quantity as number | undefined) : undefined
                 const displayPrice = Number(config.total_price)
@@ -260,14 +178,14 @@ export async function ConfiguratiesContent({
                           <span className="text-lx-placeholder"> · {date}</span>
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
-                          {canOrder && shape !== 'op-aanvraag' && (
+                          {permissions.canOrder && shape !== 'op-aanvraag' && (
                             <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
                             configName={config.name ?? 'Naamloze configuratie'}
                             canDownload={true}
-                            canEdit={canConfigure}
+                            canEdit={permissions.canConfigure}
                             canDelete={canDelete}
                           />
                         </div>
@@ -308,7 +226,7 @@ export async function ConfiguratiesContent({
                       </div>
 
                       {/* Col: Bestellen CTA */}
-                      {canOrder && (
+                      {permissions.canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
                           {shape !== 'op-aanvraag' && (
                             <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
@@ -322,7 +240,7 @@ export async function ConfiguratiesContent({
                           configId={config.id}
                           configName={config.name ?? 'Naamloze configuratie'}
                           canDownload={true}
-                          canEdit={canConfigure}
+                          canEdit={permissions.canConfigure}
                           canDelete={canDelete}
                         />
                       </div>
@@ -358,8 +276,8 @@ export async function ConfiguratiesContent({
       <AdminPagination
         currentPage={currentPage}
         totalPages={totalPages}
-        total={filteredCount ?? 0}
-        pageSize={PAGE_SIZE}
+        total={filteredCount}
+        pageSize={20}
         basePath="/configuraties"
         hrefParams={{
           ...(validView ? { view } : {}),

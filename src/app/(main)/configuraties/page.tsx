@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
+import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { ConfiguratiesContent, ConfiguratiesContentSkeleton } from './configuraties-content'
+import { fetchConfigurations } from '@/lib/queries/fetch-configurations'
 
 export default async function ConfiguratiesPage({
   searchParams,
@@ -8,6 +10,15 @@ export default async function ConfiguratiesPage({
   searchParams: Promise<{ filter?: string; page?: string; view?: string }>
 }) {
   const { filter, page, view } = await searchParams
+  const f = filter ?? ''
+  const p = page ?? '1'
+  const v = view ?? ''
+
+  const queryClient = new QueryClient()
+  await queryClient.prefetchQuery({
+    queryKey: ['configurations', { filter: f, view: v, page: p }],
+    queryFn: () => fetchConfigurations({ filter: f, view: v, page: Number(p) }),
+  })
 
   return (
     <div className="p-4 sm:p-6 lg:p-7">
@@ -27,10 +38,11 @@ export default async function ConfiguratiesPage({
         </Link>
       </div>
 
-      {/* Tabs + lijst — streamt zodra DB queries klaar zijn */}
-      <Suspense fallback={<ConfiguratiesContentSkeleton />}>
-        <ConfiguratiesContent filter={filter ?? ''} page={page ?? '1'} view={view ?? ''} />
-      </Suspense>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <Suspense fallback={<ConfiguratiesContentSkeleton />}>
+          <ConfiguratiesContent filter={f} page={p} view={v} />
+        </Suspense>
+      </HydrationBoundary>
 
     </div>
   )

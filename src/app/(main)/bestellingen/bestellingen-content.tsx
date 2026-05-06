@@ -1,13 +1,10 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useSuspenseQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { OrderApprovalButtons } from './order-approval-buttons'
 import { AdminPagination } from '@/components/admin-pagination'
-
-const PAGE_SIZE = 20
-
-function ShapeIcon({ shape }: { shape: string }) {
-  return <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
-}
+import { fetchOrders } from '@/lib/queries/fetch-orders'
 
 const STATUS_LABELS: Record<string, string> = {
   pending:          'In behandeling',
@@ -33,102 +30,21 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled:        'bg-red-50 text-red-600 border-red-200',
 }
 
+function ShapeIcon({ shape }: { shape: string }) {
+  return <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export async function BestellingenContent({ page, view }: { page: string; view: string }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+export function BestellingenContent({ page, view }: { page: string; view: string }) {
+  const { data } = useSuspenseQuery({
+    queryKey: ['orders', { view, page }],
+    queryFn: () => fetchOrders({ view, page: Number(page) }),
+  })
 
-  const currentPage = Math.max(1, parseInt(page, 10) || 1)
-  const from = (currentPage - 1) * PAGE_SIZE
-  const to = from + PAGE_SIZE - 1
-
-  // Haal rol op
-  const { data: memberPerms } = await supabase
-    .from('company_members')
-    .select('role, company_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  const isManager = !memberPerms || memberPerms.role === 'manager'
-
-  // Teamleden ophalen voor managers
-  type TeamMember = { userId: string; name: string; count: number }
-  let teamMembers: TeamMember[] = []
-
-  if (isManager && memberPerms?.company_id) {
-    const { data: rawMembers } = await supabase
-      .from('company_members')
-      .select('user_id, profiles!inner(full_name)')
-      .eq('company_id', memberPerms.company_id)
-      .neq('user_id', user.id)
-
-    const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
-
-    const { data: memberOrderRows } = memberUserIds.length > 0
-      ? await supabase.from('orders').select('user_id').in('user_id', memberUserIds)
-      : { data: [] as { user_id: string }[] }
-
-    const memberOrderCounts = (memberOrderRows ?? []).reduce<Record<string, number>>((acc, row) => {
-      acc[row.user_id] = (acc[row.user_id] ?? 0) + 1
-      return acc
-    }, {})
-
-    teamMembers = (rawMembers ?? []).map((m) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const profile = Array.isArray(m.profiles) ? (m.profiles as any[])[0] : m.profiles
-      const uid = m.user_id as string
-      return {
-        userId: uid,
-        name: (profile?.full_name as string | null) ?? 'Onbekend',
-        count: memberOrderCounts[uid] ?? 0,
-      }
-    })
-  }
-
-  const validView = view && teamMembers.some(m => m.userId === view)
-  const viewUserId = isManager && validView ? view : user.id
-  const viewingName = validView
-    ? teamMembers.find(m => m.userId === view)?.name.split(' ')[0] ?? 'collega'
-    : null
-
-  // Eigen order-count voor tab header
-  const ownCount = isManager
-    ? (await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', user.id)).count ?? 0
-    : 0
-
-  const { data: orders, count } = await supabase
-    .from('orders')
-    .select(`
-      id,
-      order_number,
-      quantity,
-      unit_price,
-      total_price,
-      status,
-      notes,
-      afkeur_reden,
-      created_at,
-      configurations (
-        id,
-        name,
-        width,
-        height,
-        selected_options
-      ),
-      order_drawings (
-        file_url,
-        file_name
-      )
-    `, { count: 'exact' })
-    .eq('user_id', viewUserId)
-    .order('created_at', { ascending: false })
-    .range(from, to)
-
-  const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
+  const { orders, count, totalPages, currentPage, isManager, teamMembers, validView, viewingName, ownCount } = data
 
   const memberTabs = isManager && teamMembers.length > 0 ? (
     <div className="flex flex-wrap gap-1 mb-3 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
@@ -385,8 +301,8 @@ export async function BestellingenContent({ page, view }: { page: string; view: 
       <AdminPagination
         currentPage={currentPage}
         totalPages={totalPages}
-        total={count ?? 0}
-        pageSize={PAGE_SIZE}
+        total={count}
+        pageSize={20}
         basePath="/bestellingen"
         hrefParams={validView ? { view } : undefined}
       />

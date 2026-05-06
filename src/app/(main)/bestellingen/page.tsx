@@ -1,5 +1,7 @@
 import { Suspense } from 'react'
+import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { BestellingenContent, BestellingenContentSkeleton } from './bestellingen-content'
+import { fetchOrders } from '@/lib/queries/fetch-orders'
 
 export default async function BestellingenPage({
   searchParams,
@@ -7,6 +9,14 @@ export default async function BestellingenPage({
   searchParams: Promise<{ page?: string; view?: string }>
 }) {
   const { page, view } = await searchParams
+  const p = page ?? '1'
+  const v = view ?? ''
+
+  const queryClient = new QueryClient()
+  await queryClient.prefetchQuery({
+    queryKey: ['orders', { view: v, page: p }],
+    queryFn: () => fetchOrders({ view: v, page: Number(p) }),
+  })
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 overflow-x-hidden">
@@ -17,10 +27,11 @@ export default async function BestellingenPage({
         <p className="text-[13px] text-lx-text-secondary mt-0.5">Overzicht van je offerteaanvragen en bestellingen</p>
       </div>
 
-      {/* Lijst — streamt zodra DB query klaar is */}
-      <Suspense fallback={<BestellingenContentSkeleton />}>
-        <BestellingenContent page={page ?? '1'} view={view ?? ''} />
-      </Suspense>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <Suspense fallback={<BestellingenContentSkeleton />}>
+          <BestellingenContent page={p} view={v} />
+        </Suspense>
+      </HydrationBoundary>
 
     </div>
   )

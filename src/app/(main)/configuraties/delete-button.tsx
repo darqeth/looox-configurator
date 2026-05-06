@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import type { ConfigurationsData } from '@/lib/queries/fetch-configurations'
 import { deleteConfiguration, adminDeleteConfiguration } from '@/lib/actions/configurator'
 
 export default function DeleteButton({ configId, configName, isAdmin = false }: {
@@ -9,22 +10,33 @@ export default function DeleteButton({ configId, configName, isAdmin = false }: 
   configName: string
   isAdmin?: boolean
 }) {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleDelete() {
     setLoading(true)
     try {
+      // Optimistic: verwijder direct uit alle configs-cache entries
+      queryClient.setQueriesData<ConfigurationsData>(
+        { queryKey: ['configurations'] },
+        (old) => old ? { ...old, configs: old.configs.filter(c => c.id !== configId) } : old
+      )
+      setOpen(false)
+
       if (isAdmin) {
         await adminDeleteConfiguration(configId)
       } else {
         await deleteConfiguration(configId)
       }
-      setOpen(false)
-      router.refresh()
+
+      // Sync server state op de achtergrond
+      queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar'] })
     } catch (e) {
       console.error(e)
+      // Rollback bij fout
+      queryClient.invalidateQueries({ queryKey: ['configurations'] })
       setLoading(false)
     }
   }

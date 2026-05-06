@@ -57,7 +57,7 @@ function baseTemplate(content: string) {
           <!-- Logo -->
           <tr>
             <td style="padding-bottom:28px;text-align:center;">
-              <img src="${SITE_URL}/logo-looox-grey.png" alt="LoooX" width="150" height="121" style="width:150px;height:121px;" />
+              <img src="${SITE_URL}/logo-looox-grey.png" alt="LoooX" width="250" height="202" style="width:250px;height:202px;" />
             </td>
           </tr>
           <!-- Card -->

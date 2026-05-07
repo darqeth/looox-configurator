@@ -29,12 +29,14 @@ export async function sendSupportRequest(data: {
   if (data.configId) {
     const { data: config } = await supabase
       .from('configurations')
-      .select('name, width, height')
+      .select('name, article_number, width, height')
       .eq('id', data.configId)
       .single()
     if (config) {
       const dims = config.width && config.height ? `${config.width} × ${config.height} cm` : ''
-      configLabel = dims ? `${config.name} (${dims})` : config.name
+      const art = config.article_number ? `Art. ${config.article_number}` : ''
+      const suffix = [dims, art].filter(Boolean).join(' · ')
+      configLabel = suffix ? `${config.name} (${suffix})` : config.name
     }
   }
 
@@ -62,6 +64,7 @@ export async function sendSupportRequest(data: {
 export async function getMyConfigs(): Promise<{
   id: string
   name: string
+  article_number: string | null
   width: number | null
   height: number | null
 }[]> {
@@ -71,7 +74,7 @@ export async function getMyConfigs(): Promise<{
 
   const { data } = await supabase
     .from('configurations')
-    .select('id, name, width, height')
+    .select('id, name, article_number, width, height')
     .eq('user_id', user.id)
     .eq('status', 'saved')
     .order('updated_at', { ascending: false })

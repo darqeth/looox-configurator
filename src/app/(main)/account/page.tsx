@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
-import { TabNav } from './collegas/page'
+import { TabNav } from './tab-nav'
 import { AccountContent, AccountContentSkeleton } from './account-content'
 
 export default async function AccountPage() {

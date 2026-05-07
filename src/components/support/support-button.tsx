@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { sendSupportRequest, getMyConfigs, type SupportType } from '@/lib/actions/support'
 
-type Config = { id: string; name: string; width: number | null; height: number | null }
+type Config = { id: string; name: string; article_number: string | null; width: number | null; height: number | null }
 
 const TYPE_OPTIONS: { id: SupportType; label: string; desc: string; color: string }[] = [
   { id: 'probleem',  label: 'Probleem',         desc: 'Iets werkt niet of geeft een fout',    color: '#DC2626' },
@@ -12,9 +12,10 @@ const TYPE_OPTIONS: { id: SupportType; label: string; desc: string; color: strin
   { id: 'feature',   label: 'Feature request',   desc: 'Idee of wens voor nieuwe functie',     color: '#7C3AED' },
 ]
 
-function configDims(c: Config) {
-  if (c.width && c.height) return `${c.width} × ${c.height} cm`
-  return ''
+function configLabel(c: Config) {
+  const dims = c.width && c.height ? `${c.width} × ${c.height} cm` : ''
+  const art = c.article_number ? `Art. ${c.article_number}` : ''
+  return [dims, art].filter(Boolean).join(' · ')
 }
 
 export default function SupportButton() {
@@ -235,7 +236,7 @@ export default function SupportButton() {
                       {configs === null && <option disabled>Laden…</option>}
                       {configs?.map(c => (
                         <option key={c.id} value={c.id}>
-                          {c.name}{configDims(c) ? ` · ${configDims(c)}` : ''}
+                          {c.name}{configLabel(c) ? ` · ${configLabel(c)}` : ''}
                         </option>
                       ))}
                     </select>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import OrderButton from './order-button'
 import { AdminPagination } from '@/components/admin-pagination'
@@ -33,10 +33,12 @@ export function ConfiguratiesContent({
   page: string
   view: string
 }) {
-  const { data } = useSuspenseQuery({
+  const { data } = useQuery({
     queryKey: ['configurations', { filter, view, page }],
     queryFn: () => fetchConfigurations({ filter, view, page: Number(page) }),
   })
+
+  if (!data) return <ConfiguratiesContentSkeleton />
 
   const { configs, filteredCount, savedCount, ownCount, permissions, teamMembers, validView, viewingName, korting, currentPage, totalPages, currentUserId } = data
 

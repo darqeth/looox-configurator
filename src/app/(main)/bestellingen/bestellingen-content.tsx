@@ -1,6 +1,6 @@
 'use client'
 
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { OrderApprovalButtons } from './order-approval-buttons'
 import { AdminPagination } from '@/components/admin-pagination'
@@ -39,10 +39,12 @@ function formatDate(iso: string) {
 }
 
 export function BestellingenContent({ page, view }: { page: string; view: string }) {
-  const { data } = useSuspenseQuery({
+  const { data } = useQuery({
     queryKey: ['orders', { view, page }],
     queryFn: () => fetchOrders({ view, page: Number(page) }),
   })
+
+  if (!data) return <BestellingenContentSkeleton />
 
   const { orders, count, totalPages, currentPage, isManager, teamMembers, validView, viewingName, ownCount } = data
 

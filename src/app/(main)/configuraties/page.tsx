@@ -1,8 +1,5 @@
-import { Suspense } from 'react'
 import Link from 'next/link'
-import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
-import { ConfiguratiesContent, ConfiguratiesContentSkeleton } from './configuraties-content'
-import { fetchConfigurations } from '@/lib/queries/fetch-configurations'
+import { ConfiguratiesContent } from './configuraties-content'
 
 export default async function ConfiguratiesPage({
   searchParams,
@@ -10,20 +7,10 @@ export default async function ConfiguratiesPage({
   searchParams: Promise<{ filter?: string; page?: string; view?: string }>
 }) {
   const { filter, page, view } = await searchParams
-  const f = filter ?? ''
-  const p = page ?? '1'
-  const v = view ?? ''
-
-  const queryClient = new QueryClient()
-  await queryClient.prefetchQuery({
-    queryKey: ['configurations', { filter: f, view: v, page: p }],
-    queryFn: () => fetchConfigurations({ filter: f, view: v, page: Number(p) }),
-  })
 
   return (
     <div className="p-4 sm:p-6 lg:p-7">
 
-      {/* Header — rendert direct, geen DB queries nodig */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">Configuraties</h1>
@@ -38,11 +25,7 @@ export default async function ConfiguratiesPage({
         </Link>
       </div>
 
-      <HydrationBoundary state={dehydrate(queryClient)}>
-        <Suspense fallback={<ConfiguratiesContentSkeleton />}>
-          <ConfiguratiesContent filter={f} page={p} view={v} />
-        </Suspense>
-      </HydrationBoundary>
+      <ConfiguratiesContent filter={filter ?? ''} page={page ?? '1'} view={view ?? ''} />
 
     </div>
   )

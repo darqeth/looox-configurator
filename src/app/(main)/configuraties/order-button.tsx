@@ -150,6 +150,8 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['configurations'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['looox-circle'] })
     } catch (e) {
       console.error(e)
       setOrderError(e instanceof Error ? e.message : 'Er is iets misgegaan. Probeer het opnieuw.')

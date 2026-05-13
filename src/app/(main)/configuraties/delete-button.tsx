@@ -30,9 +30,9 @@ export default function DeleteButton({ configId, configName, isAdmin = false }: 
         await deleteConfiguration(configId)
       }
 
-      // Sync server state op de achtergrond
       queryClient.invalidateQueries({ queryKey: ['configurations'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     } catch (e) {
       console.error(e)
       // Rollback bij fout

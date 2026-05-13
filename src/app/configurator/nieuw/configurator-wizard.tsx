@@ -251,6 +251,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       setSaved(true)
       queryClient.invalidateQueries({ queryKey: ['configurations'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       if (!isInternational) {
         const awarded = await checkAndAwardMilestones()
         if (awarded.length > 0) {
@@ -303,6 +304,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['configurations'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['looox-circle'] })
     } catch (e) {
       console.error(e)
       setSaving(false)

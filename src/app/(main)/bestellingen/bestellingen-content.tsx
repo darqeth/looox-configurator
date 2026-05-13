@@ -373,6 +373,7 @@ export function BestellingenContentSkeleton() {
         <div />
         <div className="h-9 w-36 rounded-xl bg-lx-divider" />
       </div>
+      <p className="mt-5 text-center text-[12px] text-lx-text-muted">Jouw data aan het ophalen…</p>
     </div>
   )
 }

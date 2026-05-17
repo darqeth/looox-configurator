@@ -14,17 +14,21 @@ export default async function NieuweConfiguratiePage() {
   let isInternational = false
   let isGroothandel = false
 
-  const [optionTooltips, controlTooltips] = await Promise.all([
+  const [
+    optionTooltips,
+    controlTooltips,
+    profileResult,
+    memberResult,
+  ] = await Promise.all([
     getExtraOptionTooltips(),
     getControlTooltips(),
+    user ? supabase.from('profiles').select('is_international, is_groothandel, korting').eq('id', user.id).single() : Promise.resolve({ data: null }),
+    user ? supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
   ])
 
   if (user) {
-    const [{ data: profile }, { data: memberData }] = await Promise.all([
-      supabase.from('profiles').select('is_international, is_groothandel, korting').eq('id', user.id).single(),
-      supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle(),
-    ])
-
+    const profile = profileResult.data
+    const memberData = memberResult.data
     const isManager = !memberData || memberData.role === 'manager'
     canOrder = isManager || (memberData?.can_order ?? true)
     isInternational = profile?.is_international ?? false

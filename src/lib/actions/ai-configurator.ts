@@ -22,9 +22,9 @@ export async function analyzeSpiegelWithAI(input: {
   const validShapes = SHAPES.map(s => s.slug).join(' | ')
   const validDiameters = ROND_DIAMETERS.join(', ')
 
-  // Build per-shape valid options list for the prompt
+  // Build per-shape valid options with id + Dutch name for better AI matching
   const shapeOptionMap = SHAPES.map(s => {
-    const opts = EXTRA_OPTIONS.filter(o => o.shapes.includes(s.slug)).map(o => o.id)
+    const opts = EXTRA_OPTIONS.filter(o => o.shapes.includes(s.slug)).map(o => `${o.id} (${o.name})`)
     return `- ${s.slug}: ${opts.length ? opts.join(', ') : 'geen'}`
   }).join('\n')
 
@@ -34,8 +34,12 @@ Retourneer ALLEEN een JSON object, geen markdown, geen uitleg.
 AFMETINGEN: Geef altijd de werkelijke afmeting in cm als maatwerk (width en height als gehele getallen). Probeer NIET te matchen op vaste maten. Gebruik "diameter" alleen voor rond/sol/luna (kies dichtstbijzijnde uit: ${validDiameters}).
 
 Geldige shapes: ${validShapes}
-Geldige glasKleur: "helder" | "smoke-zwart" | "smoke-brons"
 Breedte/hoogte bereik: ${RECHTHOEK_CONSTRAINTS.min}–${RECHTHOEK_CONSTRAINTS.max} cm
+
+GLASKLEUR — gebruik deze synoniemen:
+- "helder": normaal glas, transparant, standaard
+- "smoke-zwart": zwart glas, donker, smoke zwart, dark
+- "smoke-brons": brons glas, bruin glas, warm getint, smoke brons
 
 directLight.position per shape:
 - rechthoek/rounded-rect/arc/ovaal: "geen" | "boven" | "boven-beneden" | "links-rechts" | "rondom"
@@ -50,8 +54,27 @@ indirectLight.position per shape:
 Geldige lightType: "3000k" | "4000k" | "rgbw" | "cct"
 Geldige control: "externe-schakeling" | "tip-touch" | "3-staps-dimmer" | "wip-schakelaar" | "motion-sensor" | "afstandsbediening"
 
-OPTIES — selecteer ALLEEN opties die geldig zijn voor de gekozen shape:
+OPTIES — "selectedOptions" moet een array zijn van exacte optie-IDs (de string vóór de haakjes).
+Selecteer ALLE opties die in de invoer worden benoemd. Selecteer ALLEEN opties geldig voor de gekozen shape:
 ${shapeOptionMap}
+
+Voorbeeld: als gebruiker "verwarming en bluetooth speaker" noemt bij rechthoek → "selectedOptions": ["verwarming", "bluetooth-speaker"]
+
+OPTIE SYNONIEMEN — gebruik deze tabel om tekst te vertalen naar de juiste optie-ID:
+- verwarming: "verwarming", "spiegelverwarming", "anti-condens", "anti condens", "condensvrij", "verwarmingselement"
+- makeup-spiegel: "make-up", "makeup", "vergrotingsspiegel", "scheerspiegel", "uitklapbaar"
+- bluetooth-speaker: "speaker", "speakers", "bluetooth", "muziek", "audio", "sound"
+- afgeronde-hoeken: "afgeronde hoeken", "ronde hoeken", "zachte hoeken"
+- digitale-klok: "klok", "digitale klok", "tijd", "tijdweergave", "clock"
+- frame-in-kleur: "frame", "kader", "omlijsting", "lijst", "rand in kleur", "gekleurde rand"
+- schuine-zijden: "schuin", "schuine zijden", "diagonaal", "trapezium"
+
+FRAME KLEUREN (optionSubChoices."frame-in-kleur"):
+- "aluminium": aluminium, zilver, alu, grijs, mat grijs
+- "zwart": zwart, mat zwart, black, donker frame
+- "gun-metal": gun metal, gunmetal, antraciet, donkergrijs metallic
+- "brushed-brass": messing, goud, brass, goudkleur, warm metallic
+- "brushed-copper": koper, copper, rosé goud, roségoud
 
 Sub-keuzes (alleen invullen als duidelijk uit invoer blijkt):
 - "optionSubChoices": {

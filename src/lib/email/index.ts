@@ -140,11 +140,18 @@ function buildOrderRows(d: OrderEmailDetails) {
     d.directLight ? row('Directe verlichting', d.directLight) : '',
     d.indirectLight ? row('Indirecte verlichting', d.indirectLight) : '',
     row('Aantal', `${d.quantity}×`),
-    d.quantity > 1 ? row('Stukprijs', fmt(d.unitPrice)) : '',
-    `<tr style="border-top:1px solid #ececec;">
-      <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">Totaal</td>
-      <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${fmt(d.totalPrice)}</td>
-    </tr>`,
+    d.shape === 'op-aanvraag'
+      ? `<tr style="border-top:1px solid #ececec;">
+          <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">Prijs</td>
+          <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">Op offerte</td>
+        </tr>`
+      : [
+          d.quantity > 1 ? row('Stukprijs', fmt(d.unitPrice)) : '',
+          `<tr style="border-top:1px solid #ececec;">
+            <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">Totaal</td>
+            <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${fmt(d.totalPrice)}</td>
+          </tr>`,
+        ].join(''),
   ].join('')
 }
 

@@ -59,28 +59,29 @@ const POSITION_LABELS: Record<string, string> = {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  cct: 'CCT (warm/koud)',
-  warm: 'Warm wit',
-  koud: 'Koud wit',
-  rgb: 'RGB',
-  led: 'LED',
+  '3000k': '3000K warm wit',
+  '4000k': '4000K neutraal wit',
+  'rgbw':  'RGBW kleur',
+  'cct':   'CCT instelbaar',
 }
 
 const CONTROL_LABELS: Record<string, string> = {
-  aanraak: 'Aanraaksensor',
-  dimmer: 'Dimmer',
-  schakelaar: 'Schakelaar',
-  app: 'App-bediening',
-  ir: 'IR-afstandsbediening',
+  'externe-schakeling': 'Externe schakeling',
+  'tip-touch':          'Tip-Touch sensor',
+  '3-staps-dimmer':     '3-staps dimmer',
+  'wip-schakelaar':     'Wip schakelaar',
+  'motion-sensor':      'Bewegingssensor',
+  'afstandsbediening':  'Afstandsbediening',
 }
 
 const EXTRA_LABELS: Record<string, string> = {
-  verwarming: 'Spiegelverwarming',
-  bluetooth: 'Bluetooth speaker',
-  'make-up': 'Make-up verlichting',
-  'schuine-zijden': 'Schuine zijden',
-  'ip44': 'IP44 waterdichte uitvoering',
-  stopcontact: 'Stopcontact in lijst',
+  'verwarming':        'Spiegelverwarming',
+  'makeup-spiegel':    'Make-up spiegel',
+  'bluetooth-speaker': 'Bluetooth speaker',
+  'afgeronde-hoeken':  'Afgeronde hoeken',
+  'schuine-zijden':    'Schuine zijden',
+  'sol-extra-deel':    'Sol extra deel',
+  'luna-extra-deel':   'Luna extra deel',
 }
 
 const FRAME_LABELS: Record<string, string> = {

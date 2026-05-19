@@ -183,7 +183,9 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
               <span className={`absolute top-3 right-3 text-[11px] font-bold px-2 py-0.5 rounded-full ${
                 isSelected ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
               }`}>
-                {option.id === 'verwarming'
+                {shape === 'op-aanvraag'
+                  ? 'Op offerte'
+                  : option.id === 'verwarming'
                   ? `+€${Math.round((shape === 'rond' ? calcRondHeatingPrice(diameter ?? 60) : calcHeatingPrice(width, height)) * mult)}`
                   : option.id === 'afgeronde-hoeken'
                   ? `+€${Math.round(calcGlasKosten(width, height, glasKleur) * 0.60 * mult)}`

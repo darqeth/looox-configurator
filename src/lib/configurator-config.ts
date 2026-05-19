@@ -284,7 +284,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     description: 'Anti-condensverwarming achter de spiegel',
     price: 0,
     priceDisplay: 'v.a. €76',
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna', 'op-aanvraag'],
     incompatibleWith: [],
     shapeIncompatibleWith: { sol: ['digitale-klok', 'bluetooth-speaker'], luna: ['digitale-klok', 'bluetooth-speaker'] },
   },
@@ -293,7 +293,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Make-up spiegel',
     description: 'Ingebouwde vergrotingsspiegel',
     price: 155,
-    shapes: ['rechthoek', 'rond', 'rounded-rect', 'ovaal', 'arc'],
+    shapes: ['rechthoek', 'rond', 'rounded-rect', 'ovaal', 'arc', 'op-aanvraag'],
     incompatibleWith: [],
     subChoices: {
       label: 'Locatie',
@@ -309,7 +309,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Bluetooth speaker',
     description: 'Verborgen speaker in het frame',
     price: 459,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna', 'op-aanvraag'],
     incompatibleWith: [],
   },
   {
@@ -326,7 +326,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Digitale klok',
     description: 'LED tijdweergave geïntegreerd in de spiegel',
     price: 155,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna', 'op-aanvraag'],
     incompatibleWith: [],
     subChoices: {
       label: 'Positie',
@@ -342,7 +342,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Frame in kleur',
     description: 'Aluminium frame, keuze uit 5 kleuren',
     price: 0,
-    shapes: ['rechthoek', 'rond'],
+    shapes: ['rechthoek', 'rond', 'op-aanvraag'],
     incompatibleWith: ['afgeronde-hoeken', 'schuine-zijden'],
     subChoices: {
       label: 'Kleur',

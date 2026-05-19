@@ -126,7 +126,7 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
               {CONTROLS_FOR_TYPE[config.type][0]?.auto ? (
                 <div className="relative flex items-center gap-3 p-3 bg-lx-panel-bg rounded-xl border border-black/8">
                   <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">
-                    +€{Math.round(CONTROL_PRICES['afstandsbediening'] * mult)}
+                    {shape === 'op-aanvraag' ? 'Op offerte' : `+€${Math.round(CONTROL_PRICES['afstandsbediening'] * mult)}`}
                   </span>
                   <div className="text-lx-cta"><ControlIcon id="afstandsbediening" active={true} /></div>
                   <div className="pr-14">
@@ -153,7 +153,7 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
                           <span className={`absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                             isActive ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
                           }`}>
-                            {price === 0 ? 'Inbegrepen' : `+€${price}`}
+                            {shape === 'op-aanvraag' ? 'Op offerte' : price === 0 ? 'Inbegrepen' : `+€${price}`}
                           </span>
                           {tooltip && (
                             <span className="absolute top-2 left-2 text-lx-text-secondary/50">

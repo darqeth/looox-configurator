@@ -86,9 +86,8 @@ export function AIIntake({ onConfirm, onBack }: AIIntakeProps) {
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-
   const handleFile = useCallback((file: File) => {
+    const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
     if (!file.type.startsWith('image/')) return
     if (!ACCEPTED_TYPES.includes(file.type)) {
       alert('Gebruik een JPG, PNG, WEBP of GIF afbeelding.')
@@ -211,7 +210,7 @@ export function AIIntake({ onConfirm, onBack }: AIIntakeProps) {
           <p className="text-[13px] text-lx-text-secondary mb-4">Controleer de voorgestelde configuratie — je kunt alles nog aanpassen in de wizard.</p>
 
           <div className="rounded-xl overflow-hidden mb-4 space-y-0">
-            {reviewRows.map((row, i) => (
+            {reviewRows.map((row) => (
               <div key={row.label} className="flex items-start gap-4 px-4 py-2.5 text-[13px]">
                 <span className="text-lx-text-secondary w-36 flex-shrink-0">{row.label}</span>
                 <span className="text-lx-text-primary font-medium">{row.value}</span>

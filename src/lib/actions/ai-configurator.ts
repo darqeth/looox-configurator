@@ -20,7 +20,6 @@ export async function analyzeSpiegelWithAI(input: {
   }
 
   const validShapes = SHAPES.map(s => s.slug).join(' | ')
-  const validOptions = EXTRA_OPTIONS.map(o => o.id).join(' | ')
   const validDiameters = ROND_DIAMETERS.join(', ')
 
   // Build per-shape valid options list for the prompt

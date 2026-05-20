@@ -23,8 +23,15 @@ export async function analyzeSpiegelWithAI(input: {
   const validDiameters = ROND_DIAMETERS.join(', ')
 
   // Build per-shape valid options with id + Dutch name for better AI matching
+  // sol/luna: ONLY extra-deel, never verwarming or other options
   const shapeOptionMap = SHAPES.map(s => {
-    const opts = EXTRA_OPTIONS.filter(o => o.shapes.includes(s.slug)).map(o => `${o.id} (${o.name})`)
+    const allowedIds = (s.slug === 'sol' || s.slug === 'luna')
+      ? [s.slug === 'sol' ? 'sol-extra-deel' : 'luna-extra-deel']
+      : EXTRA_OPTIONS.filter(o => o.shapes.includes(s.slug)).map(o => o.id)
+    const opts = allowedIds.map(id => {
+      const o = EXTRA_OPTIONS.find(x => x.id === id)
+      return o ? `${o.id} (${o.name})` : id
+    })
     return `- ${s.slug}: ${opts.length ? opts.join(', ') : 'geen'}`
   }).join('\n')
 
@@ -50,6 +57,15 @@ indirectLight.position per shape:
 - rechthoek/rounded-rect: "geen" | "boven-beneden" | "onder" | "links-rechts" | "rondom"
 - rond/organic/ovaal/arc/sol/luna: "geen" | "rondom"
 - op-aanvraag: "geen" | "rondom"
+
+SOL/LUNA STRIKTE BEPERKINGEN (overschrijven alle andere regels):
+- directLight.position: ALTIJD "geen"
+- indirectLight.position: ALTIJD "rondom" (NOOIT "geen")
+- indirectLight.control: ALTIJD "externe-schakeling"
+- indirectLight.type: "3000k" of "4000k" — kies op basis van beschrijving, standaard "3000k"
+- selectedOptions: ALLEEN "sol-extra-deel" (voor sol) of "luna-extra-deel" (voor luna) indien duidelijk gevraagd
+  NOOIT: verwarming, bluetooth-speaker, digitale-klok of andere opties
+- Verwarming is ALTIJD inbegrepen in de basisprijs — zet dit NOOIT in selectedOptions
 
 Geldige lightType: "3000k" | "4000k" | "rgbw" | "cct"
 Geldige control: "externe-schakeling" | "tip-touch" | "3-staps-dimmer" | "wip-schakelaar" | "motion-sensor" | "afstandsbediening"
@@ -144,6 +160,19 @@ Default glasKleur: "helder". Default shape indien onbekend: "op-aanvraag".`
     // Validate options — only keep options valid for the selected shape
     const validOptionsForShape = EXTRA_OPTIONS.filter(o => o.shapes.includes(raw.shape)).map(o => o.id)
     raw.selectedOptions = Array.isArray(raw.selectedOptions) ? raw.selectedOptions.filter(o => validOptionsForShape.includes(o)) : []
+    // Enforce sol/luna strict restrictions server-side (cannot be bypassed via AI output)
+    if (raw.shape === 'sol' || raw.shape === 'luna') {
+      if (raw.directLight) raw.directLight.position = 'geen'
+      if (raw.indirectLight) {
+        raw.indirectLight.position = 'rondom'
+        raw.indirectLight.control = 'externe-schakeling'
+        if (!raw.indirectLight.type || (raw.indirectLight.type !== '3000k' && raw.indirectLight.type !== '4000k')) {
+          raw.indirectLight.type = '3000k'
+        }
+      }
+      const extraDeel = raw.shape === 'sol' ? 'sol-extra-deel' : 'luna-extra-deel'
+      raw.selectedOptions = raw.selectedOptions.filter(o => o === extraDeel)
+    }
     // Ensure arrays/objects exist
     raw.confidenceNotes = raw.confidenceNotes ?? []
 

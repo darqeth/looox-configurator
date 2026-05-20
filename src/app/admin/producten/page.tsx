@@ -654,13 +654,13 @@ function LunaTab() {
     <div className="space-y-5">
       <SectionCard
         title="Luna — catalogusprijzen"
-        subtitle="Vaste catalogusprijzen op basis van meubelhoogte. Glaskleur meerprijs per m² extra."
+        subtitle="Vaste catalogusprijzen. Extra deel prijs op basis van meubelhoogte én diameter. Glaskleur meerprijs per m² extra."
       >
         <InfoRow label="Zonder extra deel (SPLUNA1R90R/L)" value={fmt(LUNA_CATALOGUS.basis)} />
-        <InfoRow label="Extra deel — meubelhoogte ≤ 30 cm (SPLUNA2R90x30)" value={fmt(LUNA_CATALOGUS.basis + LUNA_CATALOGUS.extraDeel30)} />
-        <InfoRow label="Extra deel — meubelhoogte > 30 cm (SPLUNA2R90x35)" value={fmt(LUNA_CATALOGUS.basis + LUNA_CATALOGUS.extraDeel35)} />
-        <InfoRow label="Extra deel meerprijs ≤ 30 cm" value={fmt(LUNA_CATALOGUS.extraDeel30)} />
-        <InfoRow label="Extra deel meerprijs > 30 cm" value={fmt(LUNA_CATALOGUS.extraDeel35)} />
+        <InfoRow label="Extra deel — meubelhoogte ≤ 30 cm of diameter > 160 cm" value={fmt(LUNA_CATALOGUS.basis + LUNA_CATALOGUS.extraDeel30)} />
+        <InfoRow label="Extra deel — meubelhoogte > 30 cm en diameter ≤ 160 cm" value={fmt(LUNA_CATALOGUS.basis + LUNA_CATALOGUS.extraDeel35)} />
+        <InfoRow label="Extra deel meerprijs (duurste trap)" value={fmt(LUNA_CATALOGUS.extraDeel30)} />
+        <InfoRow label="Extra deel meerprijs (goedkoopste trap)" value={fmt(LUNA_CATALOGUS.extraDeel35)} />
       </SectionCard>
 
       <SectionCard

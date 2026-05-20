@@ -461,7 +461,8 @@ export function calcTotalPrice(state: {
     const heeftExtraDeel = state.selectedOptions.includes('luna-extra-deel')
     let catalogBase = LUNA_CATALOGUS.basis
     if (heeftExtraDeel) {
-      catalogBase += meubelHoogte <= 30 ? LUNA_CATALOGUS.extraDeel30 : LUNA_CATALOGUS.extraDeel35
+      const useExpensiveTier = diameter > 160 || meubelHoogte <= 30
+      catalogBase += useExpensiveTier ? LUNA_CATALOGUS.extraDeel30 : LUNA_CATALOGUS.extraDeel35
     }
     return catalogBase + glasMeerprijs
   }

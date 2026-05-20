@@ -9,8 +9,8 @@ export const SHAPES = [
   { slug: 'rounded-rect' as ShapeSlug, name: 'Afgeronde hoeken', description: 'Rechthoek met zacht afgeronde hoeken, volledig maatwerk', fromPrice: 149 },
   { slug: 'ovaal'        as ShapeSlug, name: 'Ovaal',            description: 'Piltvorm — beide korte zijden volledig afgerond',      fromPrice: 149 },
   { slug: 'arc'          as ShapeSlug, name: 'Arc',              description: 'Één korte zijde recht, de andere volledig afgerond',   fromPrice: 149 },
-  { slug: 'sol'          as ShapeSlug, name: 'Sol',               description: 'Cirkelvormig, passend om badkamermeubel',             fromPrice: 199 },
-  { slug: 'luna'         as ShapeSlug, name: 'Luna',              description: 'Cirkelvormig, passend tegen muur en badkamermeubel',   fromPrice: 199 },
+  { slug: 'sol'          as ShapeSlug, name: 'Sol',               description: 'Cirkelvormig, passend om badkamermeubel',             fromPrice: 999 },
+  { slug: 'luna'         as ShapeSlug, name: 'Luna',              description: 'Cirkelvormig, passend tegen muur en badkamermeubel',   fromPrice: 829 },
   { slug: 'op-aanvraag'  as ShapeSlug, name: 'Op aanvraag',      description: 'Eigen ontwerp of bijzondere maat',                     fromPrice: null },
 ]
 
@@ -195,6 +195,23 @@ export const LUNA_BASIS_GLAS: Record<number, number> = {
   140: 599, 160: 699, 180: 799, 200: 899,
 }
 export const LUNA_EXTRA_DEEL_OPSLAG = 0.15
+
+// ─── Sol/Luna catalogusprijzen ────────────────────────────────────────────────
+// Bron: LoooX prijslijst 2026
+
+export const SOL_CATALOGUS = {
+  basis:        999,   // SPSOL1R80 — zonder extra deel
+  metExtraDeel: 1199,  // SPSOL2R80 — incl. extra deel
+}
+
+export const LUNA_CATALOGUS = {
+  basis:       829,  // SPLUNA1R90R/L — zonder extra deel
+  extraDeel30: 210,  // Meubelhoogte ≤ 30cm: totaal €1039
+  extraDeel35: 190,  // Meubelhoogte > 30cm: totaal €1019
+}
+
+// Smoke-meerprijs per m² (smoke_m2 - helder_m2 = 236 - 175 = 61)
+export const RONDE_GLAS_SMOKE_M2 = GLAS_PRIJS_M2['smoke-zwart'] - GLAS_PRIJS_M2['helder']
 
 // Frameprijzen rechthoek per strekkende meter (omtrek = 2×(b+h))
 // Aluminium €20/m · Mat zwart €40/m · Geborstelde kleuren €60/m
@@ -429,59 +446,37 @@ export function calcTotalPrice(state: {
   optionSubChoices?: Record<string, string>
   solMeubelHoogte?: number
   solOnderkant?: number
+  lunaMeubelHoogte?: number
 }): number {
   const glasKleur: GlasKleur = state.glasKleur ?? 'helder'
 
   // ── Projectspiegel: prijs apart berekend ─────────────────────────────────
   if (state.shape === 'projectspiegel') return 0
 
-  // ── Sol: cirkelgebaseerde prijsberekening ─────────────────────────────────
+  // ── Sol: catalogusprijs + glaskleur meerprijs per m² ─────────────────────
   if (state.shape === 'sol') {
     const diameter = state.diameter ?? 80
-    const base = SOL_BASIS_GLAS[diameter] ?? 285
-    const glasKleurOpslag = glasKleur === 'helder' ? 0 : Math.round(base * 0.10)
-    const extraDeelOpslag = state.selectedOptions.includes('sol-extra-deel')
-      ? Math.round(base * SOL_EXTRA_DEEL_OPSLAG) : 0
-    const r = diameter / 2
-    const indirectLedMeter = (state.indirectPosition && state.indirectPosition !== 'geen' && state.indirectType)
-      ? (Math.PI * 2 * r) / 100 : 0
-    const ledKosten = Math.round(indirectLedMeter * LED_PRIJS_PER_METER)
-    const controlKosten = (state.indirectPosition !== 'geen' && state.indirectControl)
-      ? (CONTROL_PRICES[state.indirectControl] ?? 0) : 0
-    let optieKosten = 0
-    for (const optId of state.selectedOptions) {
-      if (optId === 'verwarming') {
-        optieKosten += calcRondHeatingPrice(diameter)
-      } else if (optId === 'sol-extra-deel') {
-        // al verwerkt in extraDeelOpslag
-      } else {
-        const opt = EXTRA_OPTIONS.find(o => o.id === optId)
-        if (opt) optieKosten += opt.price
-      }
-    }
-    return Math.round(base + glasKleurOpslag + extraDeelOpslag + ledKosten + controlKosten + optieKosten + VASTE_TOESLAG)
+    const radiusCm = diameter / 2
+    const areaM2 = Math.PI * Math.pow(radiusCm / 100, 2)
+    const glasMeerprijs = state.glasKleur === 'helder' ? 0 : Math.round(areaM2 * RONDE_GLAS_SMOKE_M2)
+    const heeftExtraDeel = state.selectedOptions.includes('sol-extra-deel')
+    const catalogBase = heeftExtraDeel ? SOL_CATALOGUS.metExtraDeel : SOL_CATALOGUS.basis
+    return catalogBase + glasMeerprijs
   }
 
-  // ── Luna: cirkelgebaseerde prijsberekening ────────────────────────────────
+  // ── Luna: catalogusprijs + glaskleur meerprijs per m² ────────────────────
   if (state.shape === 'luna') {
-    const diameter = state.diameter ?? 80
-    const base = LUNA_BASIS_GLAS[diameter] ?? 285
-    const glasKleurOpslag = glasKleur === 'helder' ? 0 : Math.round(base * 0.10)
-    const extraDeelOpslag = state.selectedOptions.includes('luna-extra-deel')
-      ? Math.round(base * LUNA_EXTRA_DEEL_OPSLAG) : 0
-    const r = diameter / 2
-    const indirectLedMeter = (state.indirectPosition && state.indirectPosition !== 'geen' && state.indirectType)
-      ? (Math.PI * 2 * r) / 100 : 0
-    const ledKosten = Math.round(indirectLedMeter * LED_PRIJS_PER_METER)
-    const controlKosten = (state.indirectPosition !== 'geen' && state.indirectControl)
-      ? (CONTROL_PRICES[state.indirectControl] ?? 0) : 0
-    let optieKosten = 0
-    for (const optId of state.selectedOptions) {
-      if (optId === 'verwarming') optieKosten += calcRondHeatingPrice(diameter)
-      else if (optId === 'luna-extra-deel') { /* al in extraDeelOpslag */ }
-      else { const opt = EXTRA_OPTIONS.find(o => o.id === optId); if (opt) optieKosten += opt.price }
+    const diameter = state.diameter ?? 90
+    const meubelHoogte = state.lunaMeubelHoogte ?? 35
+    const radiusCm = diameter / 2
+    const areaM2 = Math.PI * Math.pow(radiusCm / 100, 2)
+    const glasMeerprijs = state.glasKleur === 'helder' ? 0 : Math.round(areaM2 * RONDE_GLAS_SMOKE_M2)
+    const heeftExtraDeel = state.selectedOptions.includes('luna-extra-deel')
+    let catalogBase = LUNA_CATALOGUS.basis
+    if (heeftExtraDeel) {
+      catalogBase += meubelHoogte <= 30 ? LUNA_CATALOGUS.extraDeel30 : LUNA_CATALOGUS.extraDeel35
     }
-    return Math.round(base + glasKleurOpslag + extraDeelOpslag + ledKosten + controlKosten + optieKosten + VASTE_TOESLAG)
+    return catalogBase + glasMeerprijs
   }
 
   // ── Rechthoek / Afgeronde hoeken / Ovaal / Arc: zelfde glasprijs + LED ─────

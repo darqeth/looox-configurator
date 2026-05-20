@@ -60,6 +60,28 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
   const GLOW = '#FEF3C7'
   const GLOW_W = 5
 
+  // Position-specific direct light (white lines inside mirror)
+  function directLightIndicator(px: number, py: number, pw: number, ph: number, pos: string) {
+    const s = { stroke: 'white', strokeWidth: '3', opacity: 0.5, strokeLinecap: 'round' as const }
+    if (pos === 'rondom') return <Rect x={px+5} y={py+4} width={pw-10} height={ph-8} rx={1} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
+    if (pos === 'boven') return <Line x1={px+6} y1={py+4} x2={px+pw-6} y2={py+4} {...s} />
+    if (pos === 'onder') return <Line x1={px+6} y1={py+ph-4} x2={px+pw-6} y2={py+ph-4} {...s} />
+    if (pos === 'boven-beneden' || pos === 'boven-onder') return <>{[py+4, py+ph-4].map((ly, i) => <Line key={i} x1={px+6} y1={ly} x2={px+pw-6} y2={ly} {...s} />)}</>
+    if (pos === 'links-rechts') return <>{[px+4, px+pw-4].map((lx, i) => <Line key={i} x1={lx} y1={py+6} x2={lx} y2={py+ph-6} {...s} />)}</>
+    return <Rect x={px+5} y={py+4} width={pw-10} height={ph-8} rx={1} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
+  }
+
+  // Position-specific indirect light (yellow glow outside mirror)
+  function indirectLightGlow(px: number, py: number, pw: number, ph: number, pos: string) {
+    const g = { stroke: GLOW, strokeWidth: GLOW_W, opacity: 0.8, fill: 'none' as const }
+    if (pos === 'rondom') return <Rect x={px-4} y={py-4} width={pw+8} height={ph+8} rx={2} {...g} />
+    if (pos === 'boven') return <Line x1={px} y1={py-3} x2={px+pw} y2={py-3} {...g} />
+    if (pos === 'onder') return <Line x1={px} y1={py+ph+3} x2={px+pw} y2={py+ph+3} {...g} />
+    if (pos === 'boven-beneden' || pos === 'boven-onder') return <>{[py-3, py+ph+3].map((ly, i) => <Line key={i} x1={px} y1={ly} x2={px+pw} y2={ly} {...g} />)}</>
+    if (pos === 'links-rechts') return <>{[px-3, px+pw+3].map((lx, i) => <Line key={i} x1={lx} y1={py} x2={lx} y2={py+ph} {...g} />)}</>
+    return <Rect x={px-4} y={py-4} width={pw+8} height={ph+8} rx={2} {...g} />
+  }
+
   if (shape === 'rond') {
     const r = Math.min(available / 2, (opts.diameter as number ?? 60) * 0.95 * ratio)
     const cx2 = SIZE / 2
@@ -78,12 +100,31 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
   if (shape === 'ovaal') {
     const rx = Math.round(Math.min(w, h) / 2)
     const ry = rx
+    const og = { stroke: GLOW, strokeWidth: GLOW_W, opacity: 0.8, fill: 'none' as const }
+    const od = { stroke: 'white', strokeWidth: '3', opacity: 0.5, strokeLinecap: 'round' as const }
+    function ovaalIndirectGlow() {
+      if (indirectPos === 'rondom') return <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx+4} ry={ry+4} {...og} />
+      if (indirectPos === 'boven') return <Line x1={x} y1={y-3} x2={x+w} y2={y-3} {...og} />
+      if (indirectPos === 'onder') return <Line x1={x} y1={y+h+3} x2={x+w} y2={y+h+3} {...og} />
+      if (indirectPos === 'boven-beneden' || indirectPos === 'boven-onder') return <>{[y-3, y+h+3].map((ly, i) => <Line key={i} x1={x} y1={ly} x2={x+w} y2={ly} {...og} />)}</>
+      if (indirectPos === 'links-rechts') return <>{[x-3, x+w+3].map((lx, i) => <Line key={i} x1={lx} y1={y} x2={lx} y2={y+h} {...og} />)}</>
+      return <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx+4} ry={ry+4} {...og} />
+    }
+    function ovaalDirectIndicator() {
+      const irx = Math.round(Math.min(w-10, h-8) / 2)
+      if (directPos === 'rondom') return <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={irx} ry={irx} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
+      if (directPos === 'boven') return <Line x1={x+6} y1={y+4} x2={x+w-6} y2={y+4} {...od} />
+      if (directPos === 'onder') return <Line x1={x+6} y1={y+h-4} x2={x+w-6} y2={y+h-4} {...od} />
+      if (directPos === 'boven-beneden' || directPos === 'boven-onder') return <>{[y+4, y+h-4].map((ly, i) => <Line key={i} x1={x+6} y1={ly} x2={x+w-6} y2={ly} {...od} />)}</>
+      if (directPos === 'links-rechts') return <>{[x+4, x+w-4].map((lx, i) => <Line key={i} x1={lx} y1={y+6} x2={lx} y2={y+h-6} {...od} />)}</>
+      return <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={rx} ry={ry} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
+    }
     return (
       <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && <Rect x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={rx + 4} ry={ry + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        {hasIndirect && ovaalIndirectGlow()}
         <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill={glass.fill} fillOpacity={glass.fillOpacity} />
         <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && <Rect x={x + 6} y={y + 4} width={w - 12} height={h - 8} rx={Math.max(2, rx - 5)} ry={Math.max(2, ry - 5)} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+        {hasDirect && ovaalDirectIndicator()}
         <Line x1={x + w*0.2} y1={y + h*0.15} x2={x + w*0.55} y2={y + h*0.7} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
       </Svg>
     )
@@ -94,12 +135,30 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     const mirrorPath = `M ${x},${y + arcR} A ${arcR},${arcR} 0 0 1 ${x + w},${y + arcR} L ${x + w},${y + h} L ${x},${y + h} Z`
     const glowPath = `M ${x-4},${y + arcR} A ${arcR+4},${arcR+4} 0 0 1 ${x + w+4},${y + arcR} L ${x + w+4},${y + h+4} L ${x-4},${y + h+4} Z`
     const innerPath = `M ${x+5},${y + arcR} A ${arcR-5},${arcR-5} 0 0 1 ${x + w-5},${y + arcR} L ${x + w-5},${y + h-5} L ${x+5},${y + h-5} Z`
+    const ag = { stroke: GLOW, strokeWidth: GLOW_W, opacity: 0.8, fill: 'none' as const }
+    const ad = { stroke: 'white', strokeWidth: '3', opacity: 0.5, strokeLinecap: 'round' as const }
+    function arcIndirectGlow() {
+      if (indirectPos === 'rondom') return <Path d={glowPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
+      if (indirectPos === 'boven') return <Line x1={x} y1={y-3} x2={x+w} y2={y-3} {...ag} />
+      if (indirectPos === 'onder') return <Line x1={x} y1={y+h+3} x2={x+w} y2={y+h+3} {...ag} />
+      if (indirectPos === 'boven-beneden' || indirectPos === 'boven-onder') return <>{[y-3, y+h+3].map((ly, i) => <Line key={i} x1={x} y1={ly} x2={x+w} y2={ly} {...ag} />)}</>
+      if (indirectPos === 'links-rechts') return <>{[x-3, x+w+3].map((lx, i) => <Line key={i} x1={lx} y1={y} x2={lx} y2={y+h} {...ag} />)}</>
+      return <Path d={glowPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
+    }
+    function arcDirectIndicator() {
+      if (directPos === 'rondom') return <Path d={innerPath} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
+      if (directPos === 'boven') return <Line x1={x+6} y1={y+4} x2={x+w-6} y2={y+4} {...ad} />
+      if (directPos === 'onder') return <Line x1={x+6} y1={y+h-4} x2={x+w-6} y2={y+h-4} {...ad} />
+      if (directPos === 'boven-beneden' || directPos === 'boven-onder') return <>{[y+4, y+h-4].map((ly, i) => <Line key={i} x1={x+6} y1={ly} x2={x+w-6} y2={ly} {...ad} />)}</>
+      if (directPos === 'links-rechts') return <>{[x+4, x+w-4].map((lx, i) => <Line key={i} x1={lx} y1={y+6} x2={lx} y2={y+h-6} {...ad} />)}</>
+      return <Path d={innerPath} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
+    }
     return (
       <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && <Path d={glowPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        {hasIndirect && arcIndirectGlow()}
         <Path d={mirrorPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
         <Path d={mirrorPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && <Path d={innerPath} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+        {hasDirect && arcDirectIndicator()}
         <Line x1={x + w*0.25} y1={y + arcR*0.25} x2={x + w*0.5} y2={y + h*0.6} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
       </Svg>
     )
@@ -110,10 +169,10 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     const ry = rx
     return (
       <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx+4} ry={ry+4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+        {hasIndirect && indirectLightGlow(x, y, w, h, indirectPos)}
         <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill={glass.fill} fillOpacity={glass.fillOpacity} />
         <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={Math.max(2, rx-4)} ry={Math.max(2, ry-4)} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+        {hasDirect && directLightIndicator(x, y, w, h, directPos)}
         <Line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
       </Svg>
     )
@@ -216,13 +275,29 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     )
   }
 
+  // op-aanvraag
+  if (shape === 'op-aanvraag') {
+    const cx = SIZE / 2
+    const cy = (y + y + h) / 2
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <Rect x={x} y={y} width={w} height={h} rx={2} fill="#F0F0F0" fillOpacity={0.6}
+          stroke="#AAAAAA" strokeWidth="1.2" strokeDasharray="4 3" />
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <Text {...{ x: cx, y: cy + 7, textAnchor: 'middle', fontSize: 22, fill: '#AAAAAA', fontFamily: 'Helvetica-Bold' } as any}>?</Text>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <Text {...{ x: cx, y: y + h + 10, textAnchor: 'middle', fontSize: 6, fill: '#AAAAAA', fontFamily: 'Helvetica' } as any}>Op aanvraag</Text>
+      </Svg>
+    )
+  }
+
   // rechthoek
   return (
     <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-      {hasIndirect && <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={2} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
+      {hasIndirect && indirectLightGlow(x, y, w, h, indirectPos)}
       <Rect x={x} y={y} width={w} height={h} rx={2} fill={glass.fill} fillOpacity={glass.fillOpacity} />
       <Rect x={x} y={y} width={w} height={h} rx={2} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-      {hasDirect && <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={1} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />}
+      {hasDirect && directLightIndicator(x, y, w, h, directPos)}
       <Line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
     </Svg>
   )
@@ -559,29 +634,42 @@ export default function OfferteDocument({
         {/* Prijs */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Prijsoverzicht</Text>
-          <View style={styles.pricingBox}>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Prijs per stuk (excl. btw)</Text>
-              <Text style={styles.pricingValue}>{formatPrice(unitPrice)}</Text>
+          {opts.shape === 'op-aanvraag' ? (
+            <View style={styles.pricingBox}>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Prijs</Text>
+                <Text style={[styles.pricingValue, { color: BRAND }]}>Op offerte</Text>
+              </View>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Aantal</Text>
+                <Text style={styles.pricingValue}>{quantity}×</Text>
+              </View>
             </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Aantal</Text>
-              <Text style={styles.pricingValue}>{quantity}×</Text>
+          ) : (
+            <View style={styles.pricingBox}>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Prijs per stuk (excl. btw)</Text>
+                <Text style={styles.pricingValue}>{formatPrice(unitPrice)}</Text>
+              </View>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Aantal</Text>
+                <Text style={styles.pricingValue}>{quantity}×</Text>
+              </View>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Subtotaal excl. btw</Text>
+                <Text style={styles.pricingValue}>{formatPrice(subtotalExclBtw)}</Text>
+              </View>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>BTW 21%</Text>
+                <Text style={styles.pricingValue}>{formatPrice(btwBedrag)}</Text>
+              </View>
+              <View style={styles.pricingDivider} />
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Totaal incl. btw</Text>
+                <Text style={styles.totalValue}>{formatPrice(totalInclBtw)}</Text>
+              </View>
             </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Subtotaal excl. btw</Text>
-              <Text style={styles.pricingValue}>{formatPrice(subtotalExclBtw)}</Text>
-            </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>BTW 21%</Text>
-              <Text style={styles.pricingValue}>{formatPrice(btwBedrag)}</Text>
-            </View>
-            <View style={styles.pricingDivider} />
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Totaal incl. btw</Text>
-              <Text style={styles.totalValue}>{formatPrice(totalInclBtw)}</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* Bijzonderheden */}
@@ -599,8 +687,9 @@ export default function OfferteDocument({
           <Text style={styles.sectionTitle}>Voorwaarden</Text>
           <View style={styles.noticeBox}>
             <Text style={styles.noticeText}>
-              Deze offerte is 30 dagen geldig. Prijzen zijn excl. btw, tenzij anders vermeld. Het totaalbedrag is inclusief 21% btw.
-              Onder voorbehoud van beschikbaarheid. Productietijd is 4 tot 6 weken na akkoord. Neem contact op voor vragen of bestelling.
+              {opts.shape === 'op-aanvraag'
+                ? 'Op aanvraag spiegel — prijs wordt op maat bepaald. U ontvangt een offerte na beoordeling van de tekening en specificaties. Productietijd is 4 tot 6 weken na akkoord. Neem contact op voor vragen.'
+                : 'Deze offerte is 30 dagen geldig. Prijzen zijn excl. btw, tenzij anders vermeld. Het totaalbedrag is inclusief 21% btw. Onder voorbehoud van beschikbaarheid. Productietijd is 4 tot 6 weken na akkoord. Neem contact op voor vragen of bestelling.'}
             </Text>
           </View>
         </View>

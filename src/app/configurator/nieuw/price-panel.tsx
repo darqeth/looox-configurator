@@ -743,6 +743,7 @@ export default function PricePanel({
   const mult = isInternational ? 1.05 : 1
   const netto = useMemo(() => calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur,
+    lunaMeubelHoogte,
     directPosition: directLight.position,
     directType: directLight.type,
     directControl: directLight.control,
@@ -751,7 +752,7 @@ export default function PricePanel({
     indirectControl: indirectLight.control,
     selectedOptions,
     optionSubChoices,
-  }), [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices])
+  }), [shape, width, height, diameter, organicSizeKey, glasKleur, lunaMeubelHoogte, directLight, indirectLight, selectedOptions, optionSubChoices])
 
   function getControlName(controlId: string): string {
     for (const controls of Object.values(CONTROLS_FOR_TYPE) as { id: string; name: string }[][]) {
@@ -892,27 +893,37 @@ export default function PricePanel({
 
       {/* Prijs kaart */}
       <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-5 space-y-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">
-            Bruto ex. BTW
-          </p>
-          <AnimatedPrice price={Math.round(netto * mult)} />
-          <p className="text-[11px] text-lx-text-secondary mt-0.5">Excl. btw</p>
-        </div>
-
-        {lineItems.length > 0 && (
-          <div className="space-y-1.5 border-t border-lx-divider pt-3">
-            {lineItems.map((item, i) => (
-              <div key={i} className="flex justify-between gap-2 text-[12px]">
-                <span className="text-lx-text-secondary truncate">{item.label}</span>
-                <span className="text-lx-text-primary font-semibold flex-shrink-0">€{Math.round(item.price * mult).toLocaleString('nl-NL')}</span>
-              </div>
-            ))}
-            <div className="flex justify-between gap-2 text-[13px] font-bold pt-1.5 border-t border-lx-divider mt-1.5">
-              <span className="text-lx-text-primary">Bruto totaal</span>
-              <span className="text-lx-cta">€{Math.round(netto * mult).toLocaleString('nl-NL')}</span>
-            </div>
+        {shape === 'op-aanvraag' ? (
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">Prijs</p>
+            <p className="text-[22px] font-bold text-lx-cta">Op offerte</p>
+            <p className="text-[11px] text-lx-text-secondary mt-1 leading-snug">Prijs wordt bepaald op basis van uw tekening en gewenste specificaties.</p>
           </div>
+        ) : (
+          <>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">
+                Bruto ex. BTW
+              </p>
+              <AnimatedPrice price={Math.round(netto * mult)} />
+              <p className="text-[11px] text-lx-text-secondary mt-0.5">Excl. btw</p>
+            </div>
+
+            {lineItems.length > 0 && (
+              <div className="space-y-1.5 border-t border-lx-divider pt-3">
+                {lineItems.map((item, i) => (
+                  <div key={i} className="flex justify-between gap-2 text-[12px]">
+                    <span className="text-lx-text-secondary truncate">{item.label}</span>
+                    <span className="text-lx-text-primary font-semibold flex-shrink-0">€{Math.round(item.price * mult).toLocaleString('nl-NL')}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between gap-2 text-[13px] font-bold pt-1.5 border-t border-lx-divider mt-1.5">
+                  <span className="text-lx-text-primary">Bruto totaal</span>
+                  <span className="text-lx-cta">€{Math.round(netto * mult).toLocaleString('nl-NL')}</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

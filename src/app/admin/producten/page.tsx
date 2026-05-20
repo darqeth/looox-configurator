@@ -17,6 +17,9 @@ import {
   CONTROL_PRICES,
   CONTROLS_FOR_TYPE,
   LIGHT_TYPE_LABELS,
+  SOL_CATALOGUS,
+  LUNA_CATALOGUS,
+  RONDE_GLAS_SMOKE_M2,
 } from '@/lib/configurator-config'
 import { getExtraOptionTooltips, saveExtraOptionTooltip, getControlTooltips, saveControlTooltip } from '@/lib/actions/admin'
 import {
@@ -606,6 +609,84 @@ function BedieningTab() {
   )
 }
 
+// ─── Sol ─────────────────────────────────────────────────────────────────────
+
+function SolTab() {
+  return (
+    <div className="space-y-5">
+      <SectionCard
+        title="Sol — catalogusprijzen"
+        subtitle="Vaste catalogusprijzen. Glaskleur meerprijs per m² extra (smoke-zwart of smoke-brons)."
+      >
+        <InfoRow label="Zonder extra deel (SPSOL1R80)" value={fmt(SOL_CATALOGUS.basis)} />
+        <InfoRow label="Met extra deel (SPSOL2R80)" value={fmt(SOL_CATALOGUS.metExtraDeel)} />
+        <InfoRow label="Extra deel meerprijs" value={fmt(SOL_CATALOGUS.metExtraDeel - SOL_CATALOGUS.basis)} />
+      </SectionCard>
+
+      <SectionCard
+        title="Glaskleur meerprijs"
+        subtitle={`Smoke-zwart of smoke-brons: meerprijs op basis van cirkeloppervlak (π × r²). Meerprijs/m²: ${fmt(RONDE_GLAS_SMOKE_M2)}.`}
+      >
+        <div className="space-y-0">
+          <InfoRow label="Formule" value="π × (diameter ÷ 200)² × €61" />
+          {[60, 80, 100, 120, 160, 180].map(d => {
+            const area = Math.PI * Math.pow(d / 200, 2)
+            return (
+              <InfoRow key={d} label={`Ø${d} cm`} value={`+${fmt(Math.round(area * RONDE_GLAS_SMOKE_M2))}`} />
+            )
+          })}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Inbegrepen in catalogusprijs" subtitle="Worden NIET afzonderlijk berekend.">
+        <InfoRow label="Verwarming" value="Inbegrepen" />
+        <InfoRow label="LED verlichting rondom (indirect)" value="Inbegrepen" />
+        <InfoRow label="Bediening (extern geschakeld)" value="Inbegrepen" />
+      </SectionCard>
+    </div>
+  )
+}
+
+// ─── Luna ────────────────────────────────────────────────────────────────────
+
+function LunaTab() {
+  return (
+    <div className="space-y-5">
+      <SectionCard
+        title="Luna — catalogusprijzen"
+        subtitle="Vaste catalogusprijzen. Extra deel prijs op basis van meubelhoogte én diameter. Glaskleur meerprijs per m² extra."
+      >
+        <InfoRow label="Zonder extra deel (SPLUNA1R90R/L)" value={fmt(LUNA_CATALOGUS.basis)} />
+        <InfoRow label="Extra deel — meubelhoogte ≤ 30 cm of diameter > 160 cm" value={fmt(LUNA_CATALOGUS.basis + LUNA_CATALOGUS.extraDeel30)} />
+        <InfoRow label="Extra deel — meubelhoogte > 30 cm en diameter ≤ 160 cm" value={fmt(LUNA_CATALOGUS.basis + LUNA_CATALOGUS.extraDeel35)} />
+        <InfoRow label="Extra deel meerprijs (duurste trap)" value={fmt(LUNA_CATALOGUS.extraDeel30)} />
+        <InfoRow label="Extra deel meerprijs (goedkoopste trap)" value={fmt(LUNA_CATALOGUS.extraDeel35)} />
+      </SectionCard>
+
+      <SectionCard
+        title="Glaskleur meerprijs"
+        subtitle={`Identiek aan Sol: smoke-zwart of smoke-brons per m² cirkeloppervlak. Meerprijs/m²: ${fmt(RONDE_GLAS_SMOKE_M2)}.`}
+      >
+        <div className="space-y-0">
+          <InfoRow label="Formule" value="π × (diameter ÷ 200)² × €61" />
+          {[60, 80, 100, 120, 160, 180].map(d => {
+            const area = Math.PI * Math.pow(d / 200, 2)
+            return (
+              <InfoRow key={d} label={`Ø${d} cm`} value={`+${fmt(Math.round(area * RONDE_GLAS_SMOKE_M2))}`} />
+            )
+          })}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Inbegrepen in catalogusprijs" subtitle="Worden NIET afzonderlijk berekend.">
+        <InfoRow label="Verwarming" value="Inbegrepen" />
+        <InfoRow label="LED verlichting rondom (indirect)" value="Inbegrepen" />
+        <InfoRow label="Bediening (extern geschakeld)" value="Inbegrepen" />
+      </SectionCard>
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 const PRODUCT_CATS = [
@@ -614,14 +695,16 @@ const PRODUCT_CATS = [
 ]
 
 const SHAPE_TABS = [
-  { id: 'rechthoek',     label: 'Rechthoek',      component: RechthoekTab },
-  { id: 'rond',          label: 'Rond',           component: RondTab },
-  { id: 'organic',       label: 'Organic',        component: OrganicTab },
-  { id: 'op-aanvraag',   label: 'Op aanvraag',    component: OpAanvraagTab },
-  { id: 'projectspiegels', label: 'Projectspiegels', component: ProjectspiegelsTab },
-  { id: 'opties',        label: 'Extra opties',   component: ExtraOptiesTab },
-  { id: 'bediening',    label: 'Bediening',      component: BedieningTab },
-  { id: 'maatwerk-staffel', label: 'Staffelkorting', component: MaatwerkStaffelTab },
+  { id: 'rechthoek',        label: 'Rechthoek',       component: RechthoekTab },
+  { id: 'rond',             label: 'Rond',             component: RondTab },
+  { id: 'organic',          label: 'Organic',          component: OrganicTab },
+  { id: 'sol',              label: 'Sol',              component: SolTab },
+  { id: 'luna',             label: 'Luna',             component: LunaTab },
+  { id: 'op-aanvraag',      label: 'Op aanvraag',      component: OpAanvraagTab },
+  { id: 'projectspiegels',  label: 'Projectspiegels',  component: ProjectspiegelsTab },
+  { id: 'opties',           label: 'Extra opties',     component: ExtraOptiesTab },
+  { id: 'bediening',        label: 'Bediening',        component: BedieningTab },
+  { id: 'maatwerk-staffel', label: 'Staffelkorting',   component: MaatwerkStaffelTab },
 ]
 
 export default function ProductenPage() {

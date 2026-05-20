@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER, SOL_CATALOGUS, LUNA_CATALOGUS } from '@/lib/configurator-config'
 
 function OptionIcon({ id, active }: { id: string; active: boolean }) {
   const imgIds: Record<string, string> = {
@@ -58,11 +58,15 @@ interface StepOptiesProps {
   indirectPosition?: string
   solOnderkant?: number
   lunaOnderkant?: number
+  lunaMeubelHoogte?: number
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant, lunaOnderkant }: StepOptiesProps) {
+export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35 }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
-  const available = EXTRA_OPTIONS.filter((opt) => opt.shapes.includes(shape))
+  const available = EXTRA_OPTIONS.filter((opt) => {
+    if ((shape === 'sol' || shape === 'luna') && ['bluetooth-speaker', 'digitale-klok'].includes(opt.id)) return false
+    return opt.shapes.includes(shape)
+  })
 
   function getIncompatibleReason(optionId: string): string | null {
     const option = EXTRA_OPTIONS.find((o) => o.id === optionId)
@@ -106,8 +110,8 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
 
   // Sol/Luna: verwarming is vergrendeld als verlichting actief is
   function getLockedReason(optionId: string): string | null {
-    if ((shape === 'sol' || shape === 'luna') && optionId === 'verwarming' && indirectPosition && indirectPosition !== 'geen') {
-      return 'Verplicht bij verlichting'
+    if ((shape === 'sol' || shape === 'luna') && optionId === 'verwarming') {
+      return 'Altijd inbegrepen'
     }
     if (shape === 'sol' && optionId === 'sol-extra-deel' && (solOnderkant === undefined || solOnderkant < 15)) {
       return 'Uitsteek onder meubel moet minimaal 15 cm zijn'
@@ -183,7 +187,11 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
               <span className={`absolute top-3 right-3 text-[11px] font-bold px-2 py-0.5 rounded-full ${
                 isSelected ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
               }`}>
-                {option.id === 'verwarming'
+                {shape === 'op-aanvraag'
+                  ? 'Op offerte'
+                  : option.id === 'verwarming' && (shape === 'sol' || shape === 'luna')
+                  ? 'Inbegrepen'
+                  : option.id === 'verwarming'
                   ? `+€${Math.round((shape === 'rond' ? calcRondHeatingPrice(diameter ?? 60) : calcHeatingPrice(width, height)) * mult)}`
                   : option.id === 'afgeronde-hoeken'
                   ? `+€${Math.round(calcGlasKosten(width, height, glasKleur) * 0.60 * mult)}`
@@ -196,6 +204,10 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                       const minPrice = Math.round(calcRechthoekFramePrice(Object.keys(RECHTHOEK_FRAME_PRIJS_PER_METER).reduce((a, b) => RECHTHOEK_FRAME_PRIJS_PER_METER[a] <= RECHTHOEK_FRAME_PRIJS_PER_METER[b] ? a : b), width, height) * mult)
                       return `v.a. €${minPrice}`
                     })()
+                  : option.id === 'sol-extra-deel'
+                  ? `+€${Math.round((SOL_CATALOGUS.metExtraDeel - SOL_CATALOGUS.basis) * mult)}`
+                  : option.id === 'luna-extra-deel'
+                  ? `+€${Math.round((lunaMeubelHoogte <= 30 ? LUNA_CATALOGUS.extraDeel30 : LUNA_CATALOGUS.extraDeel35) * mult)}`
                   : (option.priceDisplay ?? `+€${Math.round(option.price * mult)}`)
                 }
               </span>

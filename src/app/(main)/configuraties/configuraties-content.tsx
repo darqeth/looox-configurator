@@ -124,7 +124,7 @@ export function ConfiguratiesContent({
                 const indirect = opts?.indirectLight as { position: string } | null
 
                 let dimensionLabel = ''
-                if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
+                if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
 
@@ -171,7 +171,7 @@ export function ConfiguratiesContent({
                             {config.name ?? 'Naamloze configuratie'}
                           </p>
                           <p className="text-[13px] font-bold text-lx-text-primary flex-shrink-0">
-                            €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                            {shape === 'op-aanvraag' ? 'Op offerte' : `€${displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
                           </p>
                         </div>
                         <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
@@ -180,8 +180,8 @@ export function ConfiguratiesContent({
                           <span className="text-lx-placeholder"> · {date}</span>
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
-                          {permissions.canOrder && shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
+                          {permissions.canOrder && (
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
@@ -222,17 +222,15 @@ export function ConfiguratiesContent({
                       {/* Col: Price */}
                       <div className="w-[92px] flex-shrink-0 text-right">
                         <p className="text-[13px] font-bold text-lx-text-primary">
-                          €{displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                          {shape === 'op-aanvraag' ? 'Op offerte' : `€${displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
                         </p>
-                        <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>
+                        {shape !== 'op-aanvraag' && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>}
                       </div>
 
-                      {/* Col: Bestellen CTA */}
+                      {/* Col: Bestellen / Aanvragen CTA */}
                       {permissions.canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
-                          {shape !== 'op-aanvraag' && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} />
-                          )}
+                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} />
                         </div>
                       )}
 

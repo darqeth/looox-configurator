@@ -126,7 +126,7 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
               {CONTROLS_FOR_TYPE[config.type][0]?.auto ? (
                 <div className="relative flex items-center gap-3 p-3 bg-lx-panel-bg rounded-xl border border-black/8">
                   <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">
-                    +€{Math.round(CONTROL_PRICES['afstandsbediening'] * mult)}
+                    {shape === 'op-aanvraag' ? 'Op offerte' : `+€${Math.round(CONTROL_PRICES['afstandsbediening'] * mult)}`}
                   </span>
                   <div className="text-lx-cta"><ControlIcon id="afstandsbediening" active={true} /></div>
                   <div className="pr-14">
@@ -153,7 +153,7 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
                           <span className={`absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                             isActive ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
                           }`}>
-                            {price === 0 ? 'Inbegrepen' : `+€${price}`}
+                            {shape === 'op-aanvraag' ? 'Op offerte' : price === 0 ? 'Inbegrepen' : `+€${price}`}
                           </span>
                           {tooltip && (
                             <span className="absolute top-2 left-2 text-lx-text-secondary/50">
@@ -239,15 +239,43 @@ export default function StepVerlichting({
       )}
 
       {indirectPositions.length > 0 && (
-        <LightSection
-          title="Indirecte verlichting"
-          positions={indirectPositions}
-          config={indirectLight}
-          onChange={onIndirectChange}
-          controlTooltips={controlTooltips}
-          isInternational={isInternational}
-          shape={shape}
-        />
+        (shape === 'sol' || shape === 'luna') ? (
+          <div className="space-y-6">
+            <div className="rounded-xl border border-lx-divider bg-lx-icon-bg px-4 py-3 text-[13px] text-lx-text-secondary leading-relaxed">
+              Verlichting is altijd inbegrepen: indirect LED rondom, extern geschakeld.
+            </div>
+            <div className="space-y-3">
+              <p className="text-[13px] font-semibold text-lx-text-primary">Lichttemperatuur</p>
+              <div className="flex flex-wrap gap-2">
+                {(['3000k', '4000k'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => onIndirectChange({ type: t })}
+                    className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-colors cursor-pointer ${
+                      indirectLight.type === t
+                        ? 'border-lx-cta bg-lx-cta text-white'
+                        : 'border-lx-divider bg-white text-lx-text-secondary hover:border-lx-cta'
+                    }`}
+                  >
+                    {LIGHT_TYPE_LABELS[t]}
+                    <span className="ml-1.5 text-[11px] font-normal opacity-70">{LIGHT_TYPE_DESCRIPTIONS[t]}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[12px] text-lx-text-muted">Geen prijsverschil tussen 3000K en 4000K.</p>
+            </div>
+          </div>
+        ) : (
+          <LightSection
+            title="Indirecte verlichting"
+            positions={indirectPositions}
+            config={indirectLight}
+            onChange={onIndirectChange}
+            controlTooltips={controlTooltips}
+            isInternational={isInternational}
+            shape={shape}
+          />
+        )
       )}
     </div>
   )

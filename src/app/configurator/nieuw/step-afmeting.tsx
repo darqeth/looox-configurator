@@ -8,6 +8,7 @@ import {
   ORGANIC_SIZES,
   RECHTHOEK_CONSTRAINTS,
   GLAS_KLEUREN,
+  LUNA_CATALOGUS,
 } from '@/lib/configurator-config'
 
 interface StepAfmetingProps {
@@ -355,13 +356,21 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
             ))}
           </div>
         </div>
-        <DimInput
-          label="Meubel hoogte"
-          value={lunaMeubelHoogte ?? 35}
-          onChange={(v) => onChange({ lunaMeubelHoogte: v })}
-          minOverride={15}
-          maxOverride={80}
-        />
+        <div className="space-y-1.5">
+          <DimInput
+            label="Meubel hoogte"
+            value={lunaMeubelHoogte ?? 35}
+            onChange={(v) => onChange({ lunaMeubelHoogte: v })}
+            minOverride={15}
+            maxOverride={80}
+          />
+          <p className="text-[11.5px] text-lx-text-muted">
+            Bepaalt prijs extra deel:{' '}
+            {(lunaMeubelHoogte ?? 35) <= 30
+              ? `≤ 30 cm → +€${LUNA_CATALOGUS.extraDeel30}`
+              : `> 30 cm → +€${LUNA_CATALOGUS.extraDeel35}`}
+          </p>
+        </div>
         <div className="space-y-2">
           <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Muurzijde</p>
           <div className="flex gap-2">

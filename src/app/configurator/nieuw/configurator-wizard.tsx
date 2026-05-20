@@ -4,8 +4,11 @@ import { memo, useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS, LightType } from '@/lib/configurator-config'
 import ShapePicker from './shape-picker'
+import { ModeSelector } from './mode-selector'
+import { AIIntake } from './ai-intake'
+import type { AISuggestion } from '@/lib/types/ai-configurator'
 import StepAfmeting from './step-afmeting'
 import StepVerlichting, { LightConfig } from './step-verlichting'
 import StepOpties from './step-opties'
@@ -50,15 +53,16 @@ const STEPS = [
 
 const DEFAULT_LIGHT: LightConfig = { position: 'geen', type: null, control: null }
 
-const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, isInternational, step, isStep1Valid, projectName, saving, onNext, onSave }: {
+const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, glasKleur, lunaMeubelHoogte, directLight, indirectLight, selectedOptions, optionSubChoices, isInternational, step, isStep1Valid, projectName, saving, onNext, onSave }: {
   shape: ShapeSlug; width: number; height: number; diameter: number | null; organicSizeKey: string | null
+  glasKleur: GlasKleur; lunaMeubelHoogte: number
   directLight: LightConfig; indirectLight: LightConfig; selectedOptions: string[]; optionSubChoices: Record<string, string>
   isInternational: boolean
   step: number; isStep1Valid: boolean; projectName: string; saving: boolean
   onNext: () => void; onSave: () => void
 }) {
   const netto = calcTotalPrice({
-    shape, width, height, diameter, organicSizeKey,
+    shape, width, height, diameter, organicSizeKey, glasKleur, lunaMeubelHoogte,
     directPosition: directLight.position, directType: directLight.type, directControl: directLight.control,
     indirectPosition: indirectLight.position, indirectType: indirectLight.type, indirectControl: indirectLight.control,
     selectedOptions, optionSubChoices,
@@ -85,7 +89,10 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[10px] text-lx-text-secondary font-medium">{priceLabel}</p>
-          <p className="text-[17px] font-bold text-lx-text-primary">€{total.toLocaleString('nl-NL')}</p>
+          {shape === 'op-aanvraag'
+            ? <p className="text-[17px] font-bold text-lx-text-primary">Op offerte</p>
+            : <p className="text-[17px] font-bold text-lx-text-primary">€{total.toLocaleString('nl-NL')}</p>
+          }
         </div>
         {step < 4 ? (
           <button
@@ -113,6 +120,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const router = useRouter()
   const queryClient = useQueryClient()
   const isEditing = !!initialConfig
+  type WizardMode = 'selecting' | 'manual' | 'ai-intake' | 'configuring'
+  const [wizardMode, setWizardMode] = useState<WizardMode>(isEditing ? 'configuring' : 'selecting')
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
   const [step, setStep] = useState(1)
 
@@ -142,11 +151,21 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [reference, setReference] = useState(initialConfig?.reference ?? '')
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [schunineZijdenFile, setSchunineZijdenFile] = useState<File | null>(null)
+  const [opAanvraagFile, setOpAanvraagFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; orderId: string } | null>(null)
   const [newMilestones, setNewMilestones] = useState<AwardedMilestone[]>([])
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  const initSolLunaDefaults = useCallback((currentType: LightType | null) => {
+    setIndirectLight({
+      position: 'rondom',
+      type: currentType ?? '3000k',
+      control: 'externe-schakeling',
+    })
+    setSelectedOptions(prev => prev.includes('verwarming') ? prev : [...prev, 'verwarming'])
+  }, [])
 
   const handleShapeSelect = useCallback((s: ShapeSlug) => {
     setShape(s)
@@ -168,7 +187,29 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       setLunaAfstand(20)
       setLunaMuurZijde('links')
     }
-  }, [])
+    if (s === 'sol' || s === 'luna') {
+      initSolLunaDefaults(null)
+    }
+  }, [initSolLunaDefaults])
+
+  const handleAIConfirm = useCallback((s: AISuggestion, aiImageFile?: File | null) => {
+    setShape(s.shape)
+    if (s.width != null)          setWidth(s.width)
+    if (s.height != null)         setHeight(s.height)
+    if (s.diameter != null)       setDiameter(s.diameter)
+    if (s.organicSizeKey != null) setOrganicSizeKey(s.organicSizeKey)
+    setGlasKleur(s.glasKleur)
+    if (s.directLight)   setDirectLight(s.directLight as LightConfig)
+    if (s.indirectLight) setIndirectLight(s.indirectLight as LightConfig)
+    setSelectedOptions(s.selectedOptions)
+    if (s.optionSubChoices) setOptionSubChoices(s.optionSubChoices)
+    if (s.shape === 'op-aanvraag' && aiImageFile) setOpAanvraagFile(aiImageFile)
+    if (s.shape === 'sol' || s.shape === 'luna') {
+      initSolLunaDefaults(s.indirectLight?.type as LightType | null)
+    }
+    setWizardMode('configuring')
+    setStep(1)
+  }, [initSolLunaDefaults])
 
   function isStep1Valid(): boolean {
     if (!shape) return false
@@ -206,13 +247,14 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   }
 
   async function uploadAttachment(): Promise<string | null> {
-    if (!schunineZijdenFile) return null
+    const fileToUpload = shape === 'op-aanvraag' ? opAanvraagFile : schunineZijdenFile
+    if (!fileToUpload) return null
     const supabase = createClient()
-    const ext = schunineZijdenFile.name.split('.').pop() ?? 'bin'
+    const ext = fileToUpload.name.split('.').pop() ?? 'bin'
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
     const { error: uploadError } = await supabase.storage
       .from('attachments')
-      .upload(path, schunineZijdenFile, { upsert: false })
+      .upload(path, fileToUpload, { upsert: false })
     if (uploadError) {
       console.error('[upload] Supabase Storage fout:', uploadError)
       return null
@@ -249,17 +291,14 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         await saveConfiguration(payload)
       }
       setSaved(true)
-      queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      router.push('/configuraties')
+      // background: sidebar/dashboard counts bijwerken
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      // milestones fire-and-forget (navigatie is al gestart)
       if (!isInternational) {
-        const awarded = await checkAndAwardMilestones()
-        if (awarded.length > 0) {
-          setNewMilestones(awarded)
-          return
-        }
+        checkAndAwardMilestones().catch(console.error)
       }
-      router.push('/configuraties')
     } catch (e) {
       console.error(e)
       setSaveError(e instanceof Error ? e.message : 'Opslaan mislukt')
@@ -298,14 +337,15 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         lunaAfstand,
         lunaMuurZijde,
       })
-      const awarded = await checkAndAwardMilestones()
-      setNewMilestones(awarded)
       setOrderResult(result)
       queryClient.invalidateQueries({ queryKey: ['orders'] })
-      queryClient.invalidateQueries({ queryKey: ['configurations'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['looox-circle'] })
+      // milestones na het tonen van de bevestiging
+      checkAndAwardMilestones().then(awarded => {
+        if (awarded.length > 0) setNewMilestones(awarded)
+      }).catch(console.error)
     } catch (e) {
       console.error(e)
       setSaving(false)
@@ -398,6 +438,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
               onClick={() => {
                 setOrderResult(null)
                 setShape(null)
+                setWizardMode('selecting')
                 setStep(1)
                 setWidth(80); setHeight(60); setDiameter(60); setOrganicSizeKey('60x40'); setGlasKleur('helder')
                 setDirectLight(DEFAULT_LIGHT); setIndirectLight(DEFAULT_LIGHT)
@@ -439,7 +480,22 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
 
   return (
     <>
-      {!shape && !isEditing && <ShapePicker onSelect={handleShapeSelect} onClose={() => router.push('/configuraties')} />}
+      {wizardMode === 'selecting' && !isEditing && (
+        <ModeSelector
+          onSelectManual={() => setWizardMode('manual')}
+          onSelectAI={() => setWizardMode('ai-intake')}
+          onClose={() => { setWizardMode('configuring'); router.push('/configuraties') }}
+        />
+      )}
+      {wizardMode === 'manual' && !shape && !isEditing && (
+        <ShapePicker
+          onSelect={(s) => { handleShapeSelect(s); setWizardMode('configuring') }}
+          onClose={() => setWizardMode('selecting')}
+        />
+      )}
+      {wizardMode === 'ai-intake' && (
+        <AIIntake onConfirm={handleAIConfirm} onBack={() => setWizardMode('selecting')} />
+      )}
 
       <div className="px-4 sm:px-6 py-6 max-w-[1100px] mx-auto pb-24 lg:pb-6">
         {/* Header */}
@@ -452,7 +508,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
           <div>
             <h1 className="text-[18px] font-bold text-lx-text-primary leading-tight">{isEditing ? 'Configuratie bewerken' : 'Nieuwe spiegel'}</h1>
             {shape && (
-              <button onClick={() => setShape(null)} className="text-[12px] text-lx-cta hover:underline font-medium">
+              <button onClick={() => { setShape(null); setWizardMode('manual') }} className="text-[12px] text-lx-cta hover:underline font-medium">
                 Vorm wijzigen
               </button>
             )}
@@ -566,6 +622,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     indirectPosition={indirectLight.position}
                     solOnderkant={solOnderkant}
                     lunaOnderkant={lunaOnderkant}
+                    lunaMeubelHoogte={lunaMeubelHoogte}
                   />
                 )}
 
@@ -587,11 +644,13 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       projectName={projectName} reference={reference}
                       saving={saving}
                       schunineZijdenFile={schunineZijdenFile}
+                      opAanvraagFile={opAanvraagFile}
                       isInternational={isInternational}
                       korting={korting}
                       onProjectNameChange={setProjectName}
                       onReferenceChange={setReference}
                       onSchunineZijdenFileChange={setSchunineZijdenFile}
+                      onOpAanvraagFileChange={setOpAanvraagFile}
                       onGoToStep={setStep}
                       onSave={handleSave}
                       onOrder={handleOrder}
@@ -609,7 +668,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                 {step < 4 && (
                   <div className="flex justify-between mt-8 pt-5 border-t border-lx-divider">
                     <button
-                      onClick={() => step > 1 ? setStep(step - 1) : setShape(null)}
+                      onClick={() => step > 1 ? setStep(step - 1) : (setShape(null), setWizardMode('manual'))}
                       className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg transition-all"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -667,6 +726,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
           <MobilePriceBar
             shape={shape} width={width} height={height}
             diameter={diameter} organicSizeKey={organicSizeKey}
+            glasKleur={glasKleur} lunaMeubelHoogte={lunaMeubelHoogte}
             directLight={directLight} indirectLight={indirectLight}
             selectedOptions={selectedOptions}
             optionSubChoices={optionSubChoices}

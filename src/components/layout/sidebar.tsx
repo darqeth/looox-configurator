@@ -146,13 +146,13 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
   const sidebarContent = (
     <div className="flex flex-col h-full bg-lx-sidebar-bg">
       {/* Logo */}
-      <div className="px-5 py-6 border-b border-white/8 text-center">
+      <div className="px-5 py-3.5 border-b border-white/8 text-center">
         <Image src="/logo-looox-grey.svg" alt="LoooX" width={160} height={56} unoptimized className="h-14 brightness-0 invert opacity-90 mx-auto" style={{ width: 'auto' }} />
-        <p className="text-white/60 text-[10.5px] mt-1.5 tracking-wide">Producten Configurator</p>
+        <p className="text-white/60 text-[10.5px] mt-0.5 tracking-wide">Producten Configurator</p>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto flex flex-col gap-0.5">
+      <nav className="flex-1 px-3 py-4 overflow-y-auto flex flex-col gap-0.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
         <SearchButton variant="sidebar" />
         <p className="text-white/45 text-[9.5px] font-semibold tracking-widest uppercase px-3 pb-2 pt-3">Menu</p>
         {navItems.map((item) => <NavItem key={item.href} item={item} />)}

@@ -183,19 +183,6 @@ export const ROND_BASIS_GLAS: Record<number, number> = {
   30: 33, 40: 47, 50: 56, 60: 67, 70: 81, 80: 92, 100: 123, 120: 178,
 }
 
-// ─── Sol basisprijs per diameter (placeholder — nog in te vullen) ─────────────
-export const SOL_BASIS_GLAS: Record<number, number> = {
-  60: 199, 70: 239, 80: 285, 90: 340, 100: 399, 120: 499,
-  140: 599, 160: 699, 180: 799, 200: 899,
-}
-export const SOL_EXTRA_DEEL_OPSLAG = 0.15
-
-export const LUNA_BASIS_GLAS: Record<number, number> = {
-  60: 199, 70: 239, 80: 285, 90: 340, 100: 399, 120: 499,
-  140: 599, 160: 699, 180: 799, 200: 899,
-}
-export const LUNA_EXTRA_DEEL_OPSLAG = 0.15
-
 // ─── Sol/Luna catalogusprijzen ────────────────────────────────────────────────
 // Bron: LoooX prijslijst 2026
 
@@ -210,7 +197,7 @@ export const LUNA_CATALOGUS = {
   extraDeel35: 190,  // Meubelhoogte > 30cm: totaal €1019
 }
 
-// Smoke-meerprijs per m² (smoke_m2 - helder_m2 = 236 - 175 = 61)
+// smoke-zwart en smoke-brons hebben dezelfde m²-prijs (€236), dus één constante is correct
 export const RONDE_GLAS_SMOKE_M2 = GLAS_PRIJS_M2['smoke-zwart'] - GLAS_PRIJS_M2['helder']
 
 // Frameprijzen rechthoek per strekkende meter (omtrek = 2×(b+h))

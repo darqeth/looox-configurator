@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER, SOL_CATALOGUS, LUNA_CATALOGUS } from '@/lib/configurator-config'
 
 function OptionIcon({ id, active }: { id: string; active: boolean }) {
   const imgIds: Record<string, string> = {
@@ -58,9 +58,10 @@ interface StepOptiesProps {
   indirectPosition?: string
   solOnderkant?: number
   lunaOnderkant?: number
+  lunaMeubelHoogte?: number
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant, lunaOnderkant }: StepOptiesProps) {
+export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35 }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
   const available = EXTRA_OPTIONS.filter((opt) => {
     if ((shape === 'sol' || shape === 'luna') && ['bluetooth-speaker', 'digitale-klok'].includes(opt.id)) return false
@@ -203,6 +204,10 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                       const minPrice = Math.round(calcRechthoekFramePrice(Object.keys(RECHTHOEK_FRAME_PRIJS_PER_METER).reduce((a, b) => RECHTHOEK_FRAME_PRIJS_PER_METER[a] <= RECHTHOEK_FRAME_PRIJS_PER_METER[b] ? a : b), width, height) * mult)
                       return `v.a. €${minPrice}`
                     })()
+                  : option.id === 'sol-extra-deel'
+                  ? `+€${Math.round((SOL_CATALOGUS.metExtraDeel - SOL_CATALOGUS.basis) * mult)}`
+                  : option.id === 'luna-extra-deel'
+                  ? `+€${Math.round((lunaMeubelHoogte <= 30 ? LUNA_CATALOGUS.extraDeel30 : LUNA_CATALOGUS.extraDeel35) * mult)}`
                   : (option.priceDisplay ?? `+€${Math.round(option.price * mult)}`)
                 }
               </span>

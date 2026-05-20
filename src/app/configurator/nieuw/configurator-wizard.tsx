@@ -53,15 +53,16 @@ const STEPS = [
 
 const DEFAULT_LIGHT: LightConfig = { position: 'geen', type: null, control: null }
 
-const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, directLight, indirectLight, selectedOptions, optionSubChoices, isInternational, step, isStep1Valid, projectName, saving, onNext, onSave }: {
+const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diameter, organicSizeKey, glasKleur, lunaMeubelHoogte, directLight, indirectLight, selectedOptions, optionSubChoices, isInternational, step, isStep1Valid, projectName, saving, onNext, onSave }: {
   shape: ShapeSlug; width: number; height: number; diameter: number | null; organicSizeKey: string | null
+  glasKleur: GlasKleur; lunaMeubelHoogte: number
   directLight: LightConfig; indirectLight: LightConfig; selectedOptions: string[]; optionSubChoices: Record<string, string>
   isInternational: boolean
   step: number; isStep1Valid: boolean; projectName: string; saving: boolean
   onNext: () => void; onSave: () => void
 }) {
   const netto = calcTotalPrice({
-    shape, width, height, diameter, organicSizeKey,
+    shape, width, height, diameter, organicSizeKey, glasKleur, lunaMeubelHoogte,
     directPosition: directLight.position, directType: directLight.type, directControl: directLight.control,
     indirectPosition: indirectLight.position, indirectType: indirectLight.type, indirectControl: indirectLight.control,
     selectedOptions, optionSubChoices,
@@ -621,6 +622,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     indirectPosition={indirectLight.position}
                     solOnderkant={solOnderkant}
                     lunaOnderkant={lunaOnderkant}
+                    lunaMeubelHoogte={lunaMeubelHoogte}
                   />
                 )}
 
@@ -724,6 +726,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
           <MobilePriceBar
             shape={shape} width={width} height={height}
             diameter={diameter} organicSizeKey={organicSizeKey}
+            glasKleur={glasKleur} lunaMeubelHoogte={lunaMeubelHoogte}
             directLight={directLight} indirectLight={indirectLight}
             selectedOptions={selectedOptions}
             optionSubChoices={optionSubChoices}

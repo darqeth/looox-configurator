@@ -743,6 +743,7 @@ export default function PricePanel({
   const mult = isInternational ? 1.05 : 1
   const netto = useMemo(() => calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur,
+    lunaMeubelHoogte,
     directPosition: directLight.position,
     directType: directLight.type,
     directControl: directLight.control,
@@ -751,7 +752,7 @@ export default function PricePanel({
     indirectControl: indirectLight.control,
     selectedOptions,
     optionSubChoices,
-  }), [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices])
+  }), [shape, width, height, diameter, organicSizeKey, glasKleur, lunaMeubelHoogte, directLight, indirectLight, selectedOptions, optionSubChoices])
 
   function getControlName(controlId: string): string {
     for (const controls of Object.values(CONTROLS_FOR_TYPE) as { id: string; name: string }[][]) {

@@ -62,7 +62,10 @@ interface StepOptiesProps {
 
 export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant, lunaOnderkant }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
-  const available = EXTRA_OPTIONS.filter((opt) => opt.shapes.includes(shape))
+  const available = EXTRA_OPTIONS.filter((opt) => {
+    if ((shape === 'sol' || shape === 'luna') && ['bluetooth-speaker', 'digitale-klok'].includes(opt.id)) return false
+    return opt.shapes.includes(shape)
+  })
 
   function getIncompatibleReason(optionId: string): string | null {
     const option = EXTRA_OPTIONS.find((o) => o.id === optionId)
@@ -106,8 +109,8 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
 
   // Sol/Luna: verwarming is vergrendeld als verlichting actief is
   function getLockedReason(optionId: string): string | null {
-    if ((shape === 'sol' || shape === 'luna') && optionId === 'verwarming' && indirectPosition && indirectPosition !== 'geen') {
-      return 'Verplicht bij verlichting'
+    if ((shape === 'sol' || shape === 'luna') && optionId === 'verwarming') {
+      return 'Altijd inbegrepen'
     }
     if (shape === 'sol' && optionId === 'sol-extra-deel' && (solOnderkant === undefined || solOnderkant < 15)) {
       return 'Uitsteek onder meubel moet minimaal 15 cm zijn'
@@ -185,6 +188,8 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
               }`}>
                 {shape === 'op-aanvraag'
                   ? 'Op offerte'
+                  : option.id === 'verwarming' && (shape === 'sol' || shape === 'luna')
+                  ? 'Inbegrepen'
                   : option.id === 'verwarming'
                   ? `+€${Math.round((shape === 'rond' ? calcRondHeatingPrice(diameter ?? 60) : calcHeatingPrice(width, height)) * mult)}`
                   : option.id === 'afgeronde-hoeken'

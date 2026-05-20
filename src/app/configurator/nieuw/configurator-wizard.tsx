@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useState, useEffect } from 'react'
+import { memo, useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -157,16 +157,14 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [newMilestones, setNewMilestones] = useState<AwardedMilestone[]>([])
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Auto-init verlichting rondom + verwarming bij sol/luna (ook edit-mode)
-  useEffect(() => {
-    if (shape === 'sol' || shape === 'luna') {
-      setIndirectLight(prev => {
-        if (prev.position === 'rondom' && prev.control === 'externe-schakeling') return prev
-        return { ...prev, position: 'rondom', control: 'externe-schakeling' }
-      })
-      setSelectedOptions(prev => prev.includes('verwarming') ? prev : [...prev, 'verwarming'])
-    }
-  }, [shape])
+  const initSolLunaDefaults = useCallback((currentType: LightType | null) => {
+    setIndirectLight({
+      position: 'rondom',
+      type: currentType ?? '3000k',
+      control: 'externe-schakeling',
+    })
+    setSelectedOptions(prev => prev.includes('verwarming') ? prev : [...prev, 'verwarming'])
+  }, [])
 
   const handleShapeSelect = useCallback((s: ShapeSlug) => {
     setShape(s)
@@ -189,14 +187,9 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       setLunaMuurZijde('links')
     }
     if (s === 'sol' || s === 'luna') {
-      setIndirectLight(prev => ({
-        position: 'rondom',
-        type: prev.type ?? '3000k',
-        control: 'externe-schakeling',
-      }))
-      setSelectedOptions(prev => prev.includes('verwarming') ? prev : [...prev, 'verwarming'])
+      initSolLunaDefaults(null)
     }
-  }, [])
+  }, [initSolLunaDefaults])
 
   const handleAIConfirm = useCallback((s: AISuggestion, aiImageFile?: File | null) => {
     setShape(s.shape)
@@ -211,16 +204,11 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     if (s.optionSubChoices) setOptionSubChoices(s.optionSubChoices)
     if (s.shape === 'op-aanvraag' && aiImageFile) setOpAanvraagFile(aiImageFile)
     if (s.shape === 'sol' || s.shape === 'luna') {
-      setIndirectLight(prev => ({
-        position: 'rondom',
-        type: (s.indirectLight?.type as LightType | null) ?? prev.type ?? '3000k',
-        control: 'externe-schakeling',
-      }))
-      setSelectedOptions(opts => opts.includes('verwarming') ? opts : [...opts, 'verwarming'])
+      initSolLunaDefaults((s.indirectLight?.type as LightType | null) ?? null)
     }
     setWizardMode('configuring')
     setStep(1)
-  }, [])
+  }, [initSolLunaDefaults])
 
   function isStep1Valid(): boolean {
     if (!shape) return false

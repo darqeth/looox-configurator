@@ -239,15 +239,43 @@ export default function StepVerlichting({
       )}
 
       {indirectPositions.length > 0 && (
-        <LightSection
-          title="Indirecte verlichting"
-          positions={indirectPositions}
-          config={indirectLight}
-          onChange={onIndirectChange}
-          controlTooltips={controlTooltips}
-          isInternational={isInternational}
-          shape={shape}
-        />
+        (shape === 'sol' || shape === 'luna') ? (
+          <div className="space-y-6">
+            <div className="rounded-xl border border-lx-divider bg-lx-icon-bg px-4 py-3 text-[13px] text-lx-text-secondary leading-relaxed">
+              Verlichting is altijd inbegrepen: indirect LED rondom, extern geschakeld.
+            </div>
+            <div className="space-y-3">
+              <p className="text-[13px] font-semibold text-lx-text-primary">Lichttemperatuur</p>
+              <div className="flex flex-wrap gap-2">
+                {(['3000k', '4000k'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => onIndirectChange({ type: t })}
+                    className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-colors cursor-pointer ${
+                      indirectLight.type === t
+                        ? 'border-lx-cta bg-lx-cta text-white'
+                        : 'border-lx-divider bg-white text-lx-text-secondary hover:border-lx-cta'
+                    }`}
+                  >
+                    {LIGHT_TYPE_LABELS[t]}
+                    <span className="ml-1.5 text-[11px] font-normal opacity-70">{LIGHT_TYPE_DESCRIPTIONS[t]}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[12px] text-lx-text-muted">Geen prijsverschil tussen 3000K en 4000K.</p>
+            </div>
+          </div>
+        ) : (
+          <LightSection
+            title="Indirecte verlichting"
+            positions={indirectPositions}
+            config={indirectLight}
+            onChange={onIndirectChange}
+            controlTooltips={controlTooltips}
+            isInternational={isInternational}
+            shape={shape}
+          />
+        )
       )}
     </div>
   )

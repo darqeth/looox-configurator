@@ -204,7 +204,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     if (s.optionSubChoices) setOptionSubChoices(s.optionSubChoices)
     if (s.shape === 'op-aanvraag' && aiImageFile) setOpAanvraagFile(aiImageFile)
     if (s.shape === 'sol' || s.shape === 'luna') {
-      initSolLunaDefaults((s.indirectLight?.type as LightType | null) ?? null)
+      initSolLunaDefaults(s.indirectLight?.type as LightType | null)
     }
     setWizardMode('configuring')
     setStep(1)

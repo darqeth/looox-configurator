@@ -36,7 +36,7 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
   const glasKleurName = GLAS_KLEUREN.find(g => g.id === preview.glasKleur)?.name ?? null
 
   let dimensionLabel = ''
-  if (preview.shape === 'rond' && preview.diameter) dimensionLabel = `⌀ ${preview.diameter} cm`
+  if ((preview.shape === 'rond' || preview.shape === 'sol' || preview.shape === 'luna') && preview.diameter) dimensionLabel = `⌀ ${preview.diameter} cm`
   else if (preview.shape === 'organic' && preview.organicSizeKey) {
     dimensionLabel = ORGANIC_SIZES.find(s => s.key === preview.organicSizeKey)?.label ?? ''
   } else if (preview.width && preview.height) dimensionLabel = `${preview.width} × ${preview.height} cm`

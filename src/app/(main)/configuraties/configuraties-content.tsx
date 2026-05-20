@@ -124,7 +124,7 @@ export function ConfiguratiesContent({
                 const indirect = opts?.indirectLight as { position: string } | null
 
                 let dimensionLabel = ''
-                if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
+                if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
 

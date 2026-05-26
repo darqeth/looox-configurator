@@ -71,6 +71,7 @@ export async function saveConfiguration(input: SaveConfigInput) {
     indirectType: input.indirectLight.type,
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
+    optionSubChoices: input.optionSubChoices,
   })
   const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
@@ -154,6 +155,7 @@ export async function updateConfiguration(input: UpdateConfigInput) {
     indirectType: input.indirectLight.type,
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
+    optionSubChoices: input.optionSubChoices,
   })
   const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 

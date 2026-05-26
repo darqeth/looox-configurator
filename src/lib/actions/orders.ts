@@ -203,6 +203,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     indirectType: input.indirectLight.type,
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
+    optionSubChoices: input.optionSubChoices,
   })
   const basePrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 

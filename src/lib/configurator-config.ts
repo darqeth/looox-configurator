@@ -392,6 +392,10 @@ export const ORGANIC_BASE_PRICES: Record<string, number> = {
   '60x40': 281, '80x60': 345, '100x70': 420, '120x80': 510,
 }
 
+export const ORGANIC_INDIRECT_LED_PRICES: Record<string, number> = {
+  '60x40': 275, '80x60': 330, '100x70': 359, '120x80': 369,
+}
+
 // ─── Prijsberekening ─────────────────────────────────────────────────────────
 
 export function calcBasePrice(
@@ -553,6 +557,7 @@ export function calcTotalPrice(state: {
     if (state.directControl) price += CONTROL_PRICES[state.directControl] ?? 0
   }
   if (state.indirectPosition !== 'geen' && state.indirectType) {
+    price += ORGANIC_INDIRECT_LED_PRICES[state.organicSizeKey ?? '60x40'] ?? 275
     if (state.indirectControl) price += CONTROL_PRICES[state.indirectControl] ?? 0
   }
 

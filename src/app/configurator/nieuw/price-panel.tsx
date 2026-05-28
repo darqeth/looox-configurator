@@ -23,6 +23,7 @@ import {
   ROND_FRAME_PRIJZEN,
   ZANDSTRAAL_PRIJS_PER_METER,
   calcRechthoekFramePrice,
+  ORGANIC_INDIRECT_LED_PRICES,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 
@@ -859,9 +860,13 @@ export default function PricePanel({
       const cp = CONTROL_PRICES[directLight.control] ?? 0
       if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(directLight.control)}`, price: cp })
     }
-    if (indirectLight.position !== 'geen' && indirectLight.type && indirectLight.control) {
-      const cp = CONTROL_PRICES[indirectLight.control] ?? 0
-      if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(indirectLight.control)}`, price: cp })
+    if (indirectLight.position !== 'geen' && indirectLight.type) {
+      const ledPrice = ORGANIC_INDIRECT_LED_PRICES[organicSizeKey ?? '60x40'] ?? 275
+      lineItems.push({ label: 'Indirect LED rondom', price: ledPrice })
+      if (indirectLight.control) {
+        const cp = CONTROL_PRICES[indirectLight.control] ?? 0
+        if (cp > 0) lineItems.push({ label: `Bediening · ${getControlName(indirectLight.control)}`, price: cp })
+      }
     }
     for (const optId of selectedOptions) {
       const opt = EXTRA_OPTIONS.find(o => o.id === optId)

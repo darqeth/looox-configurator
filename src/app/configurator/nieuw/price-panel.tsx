@@ -24,6 +24,7 @@ import {
   ZANDSTRAAL_PRIJS_PER_METER,
   calcRechthoekFramePrice,
   ORGANIC_INDIRECT_LED_PRICES,
+  RONDE_GLAS_SMOKE_M2,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 
@@ -812,7 +813,11 @@ export default function PricePanel({
   } else if (shape === 'rond') {
     const d = diameter ?? 60
     const glasNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? 'Helder'
-    lineItems.push({ label: `Rond ⌀ ${d} cm · ${glasNaam}`, price: (ROND_BASIS_GLAS[d] ?? 92) + 105 })
+    lineItems.push({ label: `Rond ⌀ ${d} cm`, price: (ROND_BASIS_GLAS[d] ?? 92) + 105 })
+    if (glasKleur !== 'helder') {
+      const smokeMeerprijs = Math.round(Math.PI * Math.pow(d / 200, 2) * RONDE_GLAS_SMOKE_M2)
+      lineItems.push({ label: `Smoke glas · ${glasNaam}`, price: smokeMeerprijs })
+    }
 
     if (directLight.position !== 'geen' && directLight.type) {
       const m = calcRondDirectLEDMeters(directLight.position, d)
@@ -855,6 +860,11 @@ export default function PricePanel({
     const dimLabel = shape === 'organic' ? (ORGANIC_SIZES.find(s => s.key === organicSizeKey)?.label ?? '') : ''
     const basePrice = calcBasePrice(shape, width, height, diameter ?? undefined, organicSizeKey ?? undefined)
     if (basePrice > 0) lineItems.push({ label: `${shapeName}${dimLabel ? ' · ' + dimLabel : ''}`, price: basePrice })
+    if (shape === 'organic' && glasKleur !== 'helder') {
+      const glasNaamO = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? ''
+      const smokeMeerprijs = Math.round((width * height / 10000) * RONDE_GLAS_SMOKE_M2)
+      lineItems.push({ label: `Smoke glas · ${glasNaamO}`, price: smokeMeerprijs })
+    }
 
     if (directLight.position !== 'geen' && directLight.type && directLight.control) {
       const cp = CONTROL_PRICES[directLight.control] ?? 0

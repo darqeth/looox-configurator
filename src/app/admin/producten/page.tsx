@@ -67,6 +67,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function RechthoekTab() {
   return (
     <div className="space-y-5">
+      <div className="rounded-xl bg-lx-panel-bg border border-lx-border px-4 py-3 text-[12.5px] text-lx-text-secondary">
+        Deze prijsstelling geldt ook voor: <span className="font-semibold text-lx-text-primary">Afgeronde hoeken, Ovaal, Arc</span> — allemaal breedte × hoogte × glasprijs/m² + vaste kosten.
+      </div>
+
       {/* Glasprijs per m² */}
       <SectionCard
         title="Glasprijs per m²"
@@ -303,6 +307,21 @@ function RondTab() {
           <InfoRow label="t/m ⌀ 200 cm" value="€285" />
         </div>
       </SectionCard>
+
+      {/* Glaskleur meerprijs */}
+      <SectionCard
+        title="Glaskleur meerprijs"
+        subtitle={`Smoke-zwart of smoke-brons: meerprijs op basis van cirkeloppervlak (π × r²). Meerprijs/m²: ${fmt(RONDE_GLAS_SMOKE_M2)}.`}
+      >
+        <div className="space-y-0">
+          <InfoRow label="Formule" value={`π × (diameter ÷ 200)² × ${fmt(RONDE_GLAS_SMOKE_M2)}`} />
+          {ROND_DIAMETERS.map(d => {
+            const meerprijs = Math.round(Math.PI * Math.pow(d / 200, 2) * RONDE_GLAS_SMOKE_M2)
+            return <InfoRow key={d} label={`⌀ ${d} cm`} value={`+${fmt(meerprijs)}`} />
+          })}
+        </div>
+        <p className="text-[11.5px] text-lx-text-secondary mt-3">Smoke-zwart en smoke-brons hebben dezelfde meerprijs.</p>
+      </SectionCard>
     </div>
   )
 }
@@ -337,6 +356,20 @@ function OrganicTab() {
             })}
           </tbody>
         </table>
+      </SectionCard>
+
+      {/* Glaskleur meerprijs */}
+      <SectionCard
+        title="Glaskleur meerprijs"
+        subtitle={`Smoke-zwart of smoke-brons: meerprijs op basis van breedte × hoogte. Meerprijs/m²: ${fmt(RONDE_GLAS_SMOKE_M2)}.`}
+      >
+        <div className="space-y-0">
+          {ORGANIC_SIZES.map(s => {
+            const meerprijs = Math.round((s.width * s.height / 10000) * RONDE_GLAS_SMOKE_M2)
+            return <InfoRow key={s.key} label={s.label} value={`+${fmt(meerprijs)}`} />
+          })}
+        </div>
+        <p className="text-[11.5px] text-lx-text-secondary mt-3">Smoke-zwart en smoke-brons hebben dezelfde meerprijs.</p>
       </SectionCard>
 
       <SectionCard title="Verlichting" subtitle="Organische spiegels: uitsluitend indirect rondom. Geen directe verlichting beschikbaar.">

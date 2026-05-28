@@ -514,6 +514,9 @@ export function calcTotalPrice(state: {
   if (state.shape === 'rond') {
     const diameter = state.diameter ?? 60
     let price = (ROND_BASIS_GLAS[diameter] ?? 92) + VASTE_TOESLAG
+    if (glasKleur !== 'helder') {
+      price += Math.round(Math.PI * Math.pow(diameter / 200, 2) * RONDE_GLAS_SMOKE_M2)
+    }
 
     // Direct LED (voor rond altijd rondom, 6cm kleiner dan spiegeldiameter)
     if (state.directPosition !== 'geen' && state.directType) {
@@ -552,6 +555,9 @@ export function calcTotalPrice(state: {
     state.diameter ?? undefined, state.organicSizeKey ?? undefined,
     glasKleur, state.directPosition,
   )
+  if (glasKleur !== 'helder') {
+    price += Math.round((state.width * state.height / 10000) * RONDE_GLAS_SMOKE_M2)
+  }
 
   if (state.directPosition !== 'geen' && state.directType) {
     if (state.directControl) price += CONTROL_PRICES[state.directControl] ?? 0

@@ -13,6 +13,8 @@ import {
   ROND_FRAME_PRIJZEN,
   RECHTHOEK_FRAME_PRIJS_PER_METER,
   ORGANIC_SIZES,
+  ORGANIC_BASE_PRICES,
+  ORGANIC_INDIRECT_LED_PRICES,
   EXTRA_OPTIONS,
   CONTROL_PRICES,
   CONTROLS_FOR_TYPE,
@@ -310,18 +312,54 @@ function RondTab() {
 function OrganicTab() {
   return (
     <div className="space-y-5">
-      <SectionCard title="Vaste prijzen per maat" subtitle="Organische spiegels worden geleverd in vaste maten. Prijs is inclusief vaste kosten.">
-        <div className="space-y-0">
-          {ORGANIC_SIZES.map(s => (
-            <InfoRow key={s.key} label={s.label} value={fmt({ '60x40': 281, '80x60': 345, '100x70': 420, '120x80': 510 }[s.key] ?? 0)} />
-          ))}
-        </div>
+      <SectionCard title="Vaste prijzen per maat" subtitle="Inclusief vaste kosten (€105). Geen maatwerk — alleen vaste afmetingen.">
+        <table className="w-full text-[12.5px]">
+          <thead>
+            <tr>
+              <th className="text-left pb-2 pr-4 text-lx-text-secondary font-medium">Maat</th>
+              <th className="text-right pb-2 px-2 text-lx-text-secondary font-medium">Basisprijs</th>
+              <th className="text-right pb-2 px-2 text-lx-text-secondary font-medium">+ Indirect LED</th>
+              <th className="text-right pb-2 text-lx-text-secondary font-medium">Totaal met LED</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ORGANIC_SIZES.map((s, i) => {
+              const base = ORGANIC_BASE_PRICES[s.key] ?? 0
+              const led  = ORGANIC_INDIRECT_LED_PRICES[s.key] ?? 0
+              return (
+                <tr key={s.key} className={i < ORGANIC_SIZES.length - 1 ? 'border-b border-lx-divider' : ''}>
+                  <td className="py-2.5 pr-4 font-medium text-lx-text-primary">{s.label}</td>
+                  <td className="py-2.5 px-2 text-right font-semibold text-lx-text-primary">{fmt(base)}</td>
+                  <td className="py-2.5 px-2 text-right font-semibold text-lx-text-primary">+{fmt(led)}</td>
+                  <td className="py-2.5 text-right font-semibold text-lx-cta">{fmt(base + led)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </SectionCard>
-      <SectionCard title="Verlichting & opties">
-        <p className="text-[12.5px] text-lx-text-secondary">
-          Organische spiegels hebben uitsluitend indirecte verlichting (rondom). LED-prijs op aanvraag — omtrek varieert per organische vorm.
-          Verwarming en overige opties: zie Extra opties hieronder.
-        </p>
+
+      <SectionCard title="Verlichting" subtitle="Organische spiegels: uitsluitend indirect rondom. Geen directe verlichting beschikbaar.">
+        <div className="space-y-0">
+          <InfoRow label="Directe verlichting" value="Niet beschikbaar" />
+          <InfoRow label="Indirecte verlichting" value="Rondom (vaste prijs per maat, zie tabel)" />
+        </div>
+        <div className="mt-4 pt-4 border-t border-lx-divider">
+          <p className="text-[11.5px] font-semibold text-lx-text-secondary uppercase tracking-wide mb-2">Bediening</p>
+          <div className="space-y-0">
+            {Object.entries(CONTROL_PRICES).map(([id, price]) => {
+              const label = {
+                'externe-schakeling': 'Externe schakeling',
+                'tip-touch':          'Tip-Touch',
+                '3-staps-dimmer':     '3-staps dimmer',
+                'wip-schakelaar':     'Wip schakelaar',
+                'motion-sensor':      'Motion sensor',
+                'afstandsbediening':  'Afstandsbediening',
+              }[id] ?? id
+              return <InfoRow key={id} label={label} value={price === 0 ? 'Geen meerprijs' : fmt(price)} />
+            })}
+          </div>
+        </div>
       </SectionCard>
     </div>
   )

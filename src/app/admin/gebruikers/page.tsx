@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { UserRow } from './user-row'
 import type { UserRowProfile } from './user-row'
 import { AdminPagination } from '@/components/admin-pagination'
+import UserTabs from './user-tabs'
 
 const PAGE_SIZE = 20
 
@@ -17,7 +18,7 @@ type RawMember = {
 export default async function GebruikersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; q?: string; status?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,7 +26,7 @@ export default async function GebruikersPage({
 
   if (!await isAdmin(supabase, user.id)) redirect('/dashboard')
 
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, q, status } = await searchParams
   const currentPage = Math.max(1, parseInt(pageParam ?? '1', 10))
 
   const [{ data: rawProfiles }, { data: pendingColleagues }, { data: companies }, { data: streaks }] = await Promise.all([
@@ -78,11 +79,56 @@ export default async function GebruikersPage({
   const approved = profiles.filter(p => p.approval_status === 'approved')
   const rejected = profiles.filter(p => p.approval_status === 'rejected')
 
+  // Zoekfilter
+  function matchesQ(name: string | null, email: string | null, company: string | null) {
+    if (!q) return true
+    const term = q.toLowerCase()
+    return (
+      (name ?? '').toLowerCase().includes(term) ||
+      (email ?? '').toLowerCase().includes(term) ||
+      (company ?? '').toLowerCase().includes(term)
+    )
+  }
+
+  type RawColleague = {
+    id: string
+    full_name: string | null
+    email: string | null
+    approval_status: string | null
+    created_at: string | null
+    company_id: string | null
+    companies: { name: string } | null
+    company_members: Array<{ invited_by: string; profiles: { full_name: string | null } | null }>
+  }
+
+  const filteredColleagues = (pendingColleagues ?? []).filter(p => {
+    const c = p as unknown as RawColleague
+    return matchesQ(p.full_name, p.email, c.companies?.name ?? null)
+  })
+  const filteredPending  = pending.filter(p => matchesQ(p.full_name, p.email, p.company))
+  const filteredApproved = approved.filter(p => matchesQ(p.full_name, p.email, p.company))
+  const filteredRejected = rejected.filter(p => matchesQ(p.full_name, p.email, p.company))
+
   const totalPending = pending.length + (pendingColleagues?.length ?? 0)
 
-  const approvedTotalPages = Math.ceil(approved.length / PAGE_SIZE)
+  const tabs = [
+    { key: '', label: 'Alle', count: profiles.length + (pendingColleagues?.length ?? 0) },
+    { key: 'pending', label: 'In afwachting', count: totalPending },
+    { key: 'approved', label: 'Goedgekeurd', count: approved.length },
+    { key: 'rejected', label: 'Afgewezen', count: rejected.length },
+  ]
+
+  const showPending  = !status || status === 'pending'
+  const showApproved = !status || status === 'approved'
+  const showRejected = !status || status === 'rejected'
+
+  const approvedTotalPages = Math.ceil(filteredApproved.length / PAGE_SIZE)
   const approvedPage = Math.min(currentPage, Math.max(1, approvedTotalPages))
-  const pagedApproved = approved.slice((approvedPage - 1) * PAGE_SIZE, approvedPage * PAGE_SIZE)
+  const pagedApproved = filteredApproved.slice((approvedPage - 1) * PAGE_SIZE, approvedPage * PAGE_SIZE)
+
+  const hrefParams: Record<string, string> = {}
+  if (status) hrefParams.status = status
+  if (q) hrefParams.q = q
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 w-full">
@@ -95,19 +141,30 @@ export default async function GebruikersPage({
         </p>
       </div>
 
+      {/* Zoekbalk + tabs */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <form method="get" action="/admin/gebruikers" className="relative flex-1 max-w-sm">
+          {status && <input type="hidden" name="status" value={status} />}
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lx-text-secondary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input
+            name="q"
+            defaultValue={q ?? ''}
+            placeholder="Zoek op naam, e-mail of bedrijf…"
+            className="w-full pl-9 pr-4 py-2.5 text-[13px] rounded-xl border border-lx-border bg-white text-lx-text-primary focus:border-lx-cta focus:ring-2 focus:ring-lx-cta/30 outline-none transition-colors"
+          />
+        </form>
+        <UserTabs tabs={tabs} currentStatus={status ?? ''} currentQ={q ?? ''} />
+      </div>
+
       {/* Collega-uitnodigingen */}
-      {(pendingColleagues?.length ?? 0) > 0 && (
+      {showPending && filteredColleagues.length > 0 && (
         <section className="mb-6">
           <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">
-            Collega-aanvragen ({pendingColleagues!.length})
+            Collega-aanvragen ({filteredColleagues.length})
           </h2>
           <div className="space-y-2">
-            {pendingColleagues!.map(p => {
-              type RawColleague = typeof p & {
-                companies: { name: string } | null
-                company_members: Array<{ invited_by: string; profiles: { full_name: string | null } | null }>
-              }
-              const colleague = p as RawColleague
+            {filteredColleagues.map(p => {
+              const colleague = p as unknown as RawColleague
               const companyName = colleague.companies?.name ?? '—'
               const inviterName = colleague.company_members?.[0]?.profiles?.full_name ?? null
               return (
@@ -127,11 +184,11 @@ export default async function GebruikersPage({
       )}
 
       {/* Wacht op goedkeuring — nieuwe dealers */}
-      {pending.length > 0 && (
+      {showPending && filteredPending.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Wacht op goedkeuring</h2>
+          <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Wacht op goedkeuring ({filteredPending.length})</h2>
           <div className="space-y-2">
-            {pending.map(p => (
+            {filteredPending.map(p => (
               <UserRow key={p.id} profile={p} showActions companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
             ))}
           </div>
@@ -139,38 +196,51 @@ export default async function GebruikersPage({
       )}
 
       {/* Goedgekeurde gebruikers */}
-      <section className="mb-6">
-        <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Goedgekeurd ({approved.length})</h2>
-        {approved.length > 0 ? (
-          <>
-            <div className="space-y-2">
-              {pagedApproved.map(p => (
-                <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
-              ))}
-            </div>
-            <AdminPagination
-              currentPage={approvedPage}
-              totalPages={approvedTotalPages}
-              total={approved.length}
-              pageSize={PAGE_SIZE}
-              basePath="/admin/gebruikers"
-            />
-          </>
-        ) : (
-          <p className="text-[13px] text-lx-text-secondary">Nog geen goedgekeurde gebruikers</p>
-        )}
-      </section>
+      {showApproved && (
+        <section className="mb-6">
+          <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Goedgekeurd ({filteredApproved.length})</h2>
+          {filteredApproved.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                {pagedApproved.map(p => (
+                  <UserRow key={p.id} profile={p} companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
+                ))}
+              </div>
+              <AdminPagination
+                currentPage={approvedPage}
+                totalPages={approvedTotalPages}
+                total={filteredApproved.length}
+                pageSize={PAGE_SIZE}
+                basePath="/admin/gebruikers"
+                hrefParams={hrefParams}
+              />
+            </>
+          ) : (
+            <p className="text-[13px] text-lx-text-secondary">
+              {q ? `Geen resultaten voor "${q}"` : 'Nog geen goedgekeurde gebruikers'}
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Afgewezen */}
-      {rejected.length > 0 && (
+      {showRejected && filteredRejected.length > 0 && (
         <section>
-          <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Afgewezen ({rejected.length})</h2>
+          <h2 className="text-[11px] font-bold text-lx-text-secondary uppercase tracking-widest mb-3">Afgewezen ({filteredRejected.length})</h2>
           <div className="space-y-2">
-            {rejected.map(p => (
+            {filteredRejected.map(p => (
               <UserRow key={p.id} profile={p} showApprove companies={companies ?? []} currentUserIsAdmin totalDays={streakMap[p.id]?.totalDays ?? 0} lastLogin={streakMap[p.id]?.lastLogin ?? null} />
             ))}
           </div>
         </section>
+      )}
+
+      {/* Leeg bericht als niets gevonden bij zoeken */}
+      {q && filteredColleagues.length === 0 && filteredPending.length === 0 && filteredApproved.length === 0 && filteredRejected.length === 0 && (
+        <div className="text-center py-16">
+          <p className="text-[14px] font-semibold text-lx-text-primary mb-1">Geen resultaten voor &ldquo;{q}&rdquo;</p>
+          <p className="text-[13px] text-lx-text-secondary">Probeer een andere zoekterm.</p>
+        </div>
       )}
     </div>
   )

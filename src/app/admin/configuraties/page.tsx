@@ -33,7 +33,7 @@ export default async function AdminConfiguratiePage({
     .order('updated_at', { ascending: false })
     .limit(500) // TODO: pagination
 
-  if (status && ['draft', 'saved', 'ordered'].includes(status)) {
+  if (status && ['saved', 'ordered'].includes(status)) {
     query = query.eq('status', status)
   }
 
@@ -54,14 +54,14 @@ export default async function AdminConfiguratiePage({
 
   const counts = {
     all: configs?.length ?? 0,
-    draft: configs?.filter(c => c.status === 'draft').length ?? 0,
     saved: configs?.filter(c => c.status === 'saved').length ?? 0,
+    ordered: configs?.filter(c => c.status === 'ordered').length ?? 0,
   }
 
   const tabs = [
     { key: '', label: 'Alle', count: counts.all },
-    { key: 'draft', label: 'Concept', count: counts.draft },
     { key: 'saved', label: 'Opgeslagen', count: counts.saved },
+    { key: 'ordered', label: 'Besteld', count: counts.ordered },
   ]
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)

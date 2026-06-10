@@ -263,6 +263,27 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     return urlData.publicUrl
   }
 
+  // Eén gedeelde volgende-stap-handler voor desktop én mobiel — de
+  // verwarming-autoselectie voor Sol/Luna mag nooit per device verschillen
+  // (audit U4: mobiel sloeg deze over → andere prijs dan desktop)
+  const goNext = () => {
+    if (step === 2 && (shape === 'sol' || shape === 'luna') && indirectLight.position !== 'geen' && !selectedOptions.includes('verwarming')) {
+      setSelectedOptions(prev => [...prev, 'verwarming'])
+    }
+    setStep(step + 1)
+  }
+
+  // Stap 0 bestaat niet — "Vorm wijzigen" vanuit de samenvatting moet terug
+  // naar de vormkiezer i.p.v. een lege stap te tonen (audit U3)
+  const goToStep = (s: number) => {
+    if (s === 0) {
+      setShape(null)
+      setWizardMode('manual')
+    } else {
+      setStep(s)
+    }
+  }
+
   const handleSave = useCallback(async () => {
     if (!shape || !projectName.trim()) return
     setSaving(true)
@@ -651,7 +672,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       onReferenceChange={setReference}
                       onSchunineZijdenFileChange={setSchunineZijdenFile}
                       onOpAanvraagFileChange={setOpAanvraagFile}
-                      onGoToStep={setStep}
+                      onGoToStep={goToStep}
                       onSave={handleSave}
                       onOrder={handleOrder}
                       canOrder={canOrder}
@@ -677,12 +698,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       {step === 1 ? 'Vorm wijzigen' : 'Terug'}
                     </button>
                     <button
-                      onClick={() => {
-                        if (step === 2 && (shape === 'sol' || shape === 'luna') && indirectLight.position !== 'geen' && !selectedOptions.includes('verwarming')) {
-                          setSelectedOptions(prev => [...prev, 'verwarming'])
-                        }
-                        setStep(step + 1)
-                      }}
+                      onClick={goNext}
                       disabled={
                         (step === 1 && !isStep1Valid()) ||
                         (step === 2 && !isStep2Valid()) ||
@@ -733,7 +749,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
             isInternational={isInternational}
             step={step} isStep1Valid={step === 1 ? isStep1Valid() : step === 2 ? isStep2Valid() : isStep3Valid()}
             projectName={projectName} saving={saving}
-            onNext={() => setStep(step + 1)}
+            onNext={goNext}
             onSave={() => handleSave()}
           />
         )}

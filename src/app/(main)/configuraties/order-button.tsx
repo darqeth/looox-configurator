@@ -8,7 +8,8 @@ import { placeOrderFromConfig } from '@/lib/actions/orders'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
 import { MirrorPreview, type ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, type GlasKleur } from '@/lib/configurator-config'
-import { getMaatwerkStaffelKorting, getMaatwerkStaffelTip, type MaatwerkStaffelTip } from '@/lib/maatwerk-staffel'
+import { getMaatwerkStaffelTip, type MaatwerkStaffelTip } from '@/lib/maatwerk-staffel'
+import { computeOrderTotals } from '@/lib/order-pricing'
 
 interface OrderButtonProps {
   configId: string
@@ -119,17 +120,29 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
   const [altProvincie, setAltProvincie] = useState('')
   const [altLand, setAltLand] = useState('NL')
 
-  const nettoNaDealer = isProjectspiegel ? price : Math.round(price * (1 - korting / 100))
-  const staffelPct = isProjectspiegel ? 0 : getMaatwerkStaffelKorting(quantity)
-  const staffelAmountPerStuk = isProjectspiegel ? 0 : Math.round(nettoNaDealer * staffelPct)
-  const nettoUnitPrice = nettoNaDealer - staffelAmountPerStuk
+  // Zelfde berekening als de server (placeOrderFromConfig), PDF en e-mail —
+  // één bron van waarheid zodat het getoonde bedrag exact het bestelde is
   const effectiveQuantity = isProjectspiegel ? 1 : quantity
-  const subtotal = nettoUnitPrice * effectiveQuantity
+  const baseTotals = computeOrderTotals({
+    brutoUnitPrice: price,
+    dealerKortingPct: korting,
+    quantity: effectiveQuantity,
+    isProjectspiegel,
+  })
+  const { nettoNaDealer, staffelPct, staffelAmountPerStuk, nettoUnitPrice, subtotal } = baseTotals
   const staffelTip: MaatwerkStaffelTip | null = isProjectspiegel
     ? null
     : getMaatwerkStaffelTip(nettoNaDealer, quantity)
-  const { input: discountInput, setInput: setDiscountInput, validating: discountValidating, error: discountError, setError: setDiscountError, applied: appliedDiscount, setApplied: setAppliedDiscount, discountAmount, validate: handleValidate, reset: resetDiscount } = useDiscountCode(subtotal)
-  const finalTotal = subtotal - discountAmount
+  const { input: discountInput, setInput: setDiscountInput, validating: discountValidating, error: discountError, setError: setDiscountError, applied: appliedDiscount, setApplied: setAppliedDiscount, validate: handleValidate, reset: resetDiscount } = useDiscountCode(subtotal)
+  const totals = computeOrderTotals({
+    brutoUnitPrice: price,
+    dealerKortingPct: korting,
+    quantity: effectiveQuantity,
+    isProjectspiegel,
+    discount: appliedDiscount ? { type: appliedDiscount.type, value: appliedDiscount.value } : null,
+  })
+  const discountAmount = totals.discountAmount
+  const finalTotal = totals.total
 
   async function handleOrder() {
     if (!checked) return

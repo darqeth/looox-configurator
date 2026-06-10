@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID } from '@/lib/actions/configurator-helpers'
-import { getMaatwerkStaffelKorting } from '@/lib/maatwerk-staffel'
+import { computeOrderTotals, type OrderDiscount } from '@/lib/order-pricing'
 import { sendOrderConfirmationEmail, sendInternalOrderEmail, type OrderEmailDetails } from '@/lib/email'
 import { getNotificationEmails } from '@/lib/actions/settings'
 import { renderOrderPDF } from '@/lib/pdf/render-order'
@@ -156,6 +156,72 @@ function generateFallbackOrderNumber(): string {
   return `LX-${ts}-${rand}`
 }
 
+// Leest type/value/use_type altijd opnieuw uit de DB en valideert geldigheid —
+// client-waarden worden nooit vertrouwd. Geeft null terug bij ongeldige code.
+async function resolveDiscountCode(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  codeId: string,
+  userId: string,
+): Promise<{ discount: OrderDiscount; useType: 'single' | 'per_user' } | null> {
+  const { data: codeRow } = await supabase
+    .from('discount_codes')
+    .select('type, value, use_type, user_id, used_at, expires_at')
+    .eq('id', codeId)
+    .single()
+  if (!codeRow) return null
+
+  // Hervalidatie (audit C10): verlopen, al gebruikt of aan een ander gebonden
+  if (codeRow.expires_at && new Date(codeRow.expires_at) < new Date()) {
+    throw new Error('Deze kortingscode is verlopen')
+  }
+  const useType = (codeRow.use_type ?? 'single') as 'single' | 'per_user'
+  if (useType === 'single' && codeRow.used_at) {
+    throw new Error('Deze kortingscode is al gebruikt')
+  }
+  if (codeRow.user_id && codeRow.user_id !== userId) {
+    throw new Error('Deze kortingscode is niet geldig voor dit account')
+  }
+
+  return {
+    discount: { type: codeRow.type as 'pct' | 'fixed', value: Number(codeRow.value) },
+    useType,
+  }
+}
+
+// Mag deze gebruiker bestellen, en (bij bestellen vanaf een config) is hij
+// eigenaar of manager binnen hetzelfde bedrijf? UI verbergt de knop al, maar
+// de server is de echte poortwachter (audit S7).
+async function assertCanOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  configOwnerId?: string,
+) {
+  const { data: member } = await supabase
+    .from('company_members')
+    .select('role, can_order, company_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const isManager = !member || member.role === 'manager'
+  if (!isManager && member?.can_order === false) {
+    throw new Error('Je hebt geen rechten om te bestellen')
+  }
+
+  if (configOwnerId && configOwnerId !== userId) {
+    if (!isManager || !member?.company_id) {
+      throw new Error('Je kunt alleen je eigen configuraties bestellen')
+    }
+    const { data: ownerMember } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', configOwnerId)
+      .maybeSingle()
+    if (ownerMember?.company_id !== member.company_id) {
+      throw new Error('Je kunt alleen configuraties van je eigen team bestellen')
+    }
+  }
+}
+
 async function applyDiscountCode(
   supabase: Awaited<ReturnType<typeof createClient>>,
   codeId: string,
@@ -184,6 +250,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
+  await assertCanOrder(supabase, user.id)
+
   // Controleer buitenlandtoeslag
   const { data: profile } = await supabase.from('profiles').select('is_international, korting').eq('id', user.id).single()
   const isInternational = profile?.is_international ?? false
@@ -204,42 +272,33 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
     optionSubChoices: input.optionSubChoices,
+    // Zonder deze params valt de berekening terug op defaults en wijkt de
+    // opgeslagen prijs af van wat de klant zag (zelfde bugklasse als
+    // optionSubChoices, gefixed 2026-05-27)
+    solMeubelHoogte: input.solMeubelHoogte,
+    solOnderkant: input.solOnderkant,
+    lunaMeubelHoogte: input.lunaMeubelHoogte,
   })
   const basePrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
-  const staffelKortingPct = getMaatwerkStaffelKorting(input.quantity)
-  const nettoNaDealer = Math.round(basePrice * (1 - dealerKortingPct / 100))
-  const staffelKortingAmount = Math.round(nettoNaDealer * staffelKortingPct) * input.quantity
+  const resolved = input.discountCodeId
+    ? await resolveDiscountCode(supabase, input.discountCodeId, user.id)
+    : null
 
-  const subtotal = basePrice * input.quantity
-  let discountAmount = 0
-  let resolvedDiscountType: 'pct' | 'fixed' | null = null
-  let resolvedDiscountValue: number | null = null
-  let resolvedDiscountUseType: 'single' | 'per_user' = 'single'
-  if (input.discountCodeId) {
-    // Re-read authoritative type/value/use_type from DB — never trust client-supplied values
-    const { data: codeRow } = await supabase
-      .from('discount_codes')
-      .select('type, value, use_type')
-      .eq('id', input.discountCodeId)
-      .single()
-    if (codeRow) {
-      resolvedDiscountType = codeRow.type as 'pct' | 'fixed'
-      resolvedDiscountValue = Number(codeRow.value)
-      resolvedDiscountUseType = (codeRow.use_type ?? 'single') as 'single' | 'per_user'
-      discountAmount = resolvedDiscountType === 'pct'
-        ? Math.round(subtotal * resolvedDiscountValue / 100)
-        : Math.min(resolvedDiscountValue, subtotal)
-    }
-  }
-  const finalTotalPrice = subtotal - staffelKortingAmount - discountAmount
+  const totals = computeOrderTotals({
+    brutoUnitPrice: basePrice,
+    dealerKortingPct,
+    quantity: input.quantity,
+    discount: resolved?.discount ?? null,
+  })
+  const resolvedDiscountUseType = resolved?.useType ?? 'single'
 
   const selectedOptionsJson = {
     ...buildSelectedOptionsJson(input),
-    ...(staffelKortingPct > 0 && { staffelKortingPct }),
-    discountType: resolvedDiscountType,
-    discountValue: resolvedDiscountValue,
-    discountAmount: discountAmount > 0 ? discountAmount : null,
+    ...(totals.staffelPct > 0 && { staffelKortingPct: totals.staffelPct }),
+    discountType: resolved?.discount?.type ?? null,
+    discountValue: resolved?.discount?.value ?? null,
+    discountAmount: totals.discountAmount > 0 ? totals.discountAmount : null,
   }
 
   const { data: config, error: configError } = await supabase
@@ -270,7 +329,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
       order_number: orderNumber,
       quantity: input.quantity,
       unit_price: basePrice.toString(),
-      total_price: finalTotalPrice.toString(),
+      total_price: totals.total.toString(),
       notes: input.description || null,
       status: 'pending',
     })
@@ -279,7 +338,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
 
   if (orderError || !order) throw new Error(orderError?.message ?? 'Order aanmaken mislukt')
 
-  if (input.discountCodeId) {
+  if (input.discountCodeId && resolved) {
     await applyDiscountCode(supabase, input.discountCodeId, order.id, user.id, resolvedDiscountUseType)
   }
 
@@ -300,7 +359,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     indirectLight: lightLabel(input.indirectLight),
     quantity: input.quantity,
     unitPrice: basePrice,
-    totalPrice: finalTotalPrice,
+    totalPrice: totals.total,
+    dealerKortingPct,
+    nettoUnitPrice: totals.nettoUnitPrice,
+    staffelPct: totals.staffelPct,
+    discountAmount: totals.discountAmount,
   }
 
   const configOptions: ConfigOptions = selectedOptionsJson as ConfigOptions
@@ -342,6 +405,9 @@ export async function placeOrderFromConfig(
 
   if (configError || !config) throw new Error('Configuratie niet gevonden')
 
+  // Eigenaarschap + bestelrechten server-side afdwingen (audit S7)
+  await assertCanOrder(supabase, user.id, config.user_id as string)
+
   const { data: profileForKorting } = await supabase
     .from('profiles')
     .select('korting')
@@ -363,31 +429,21 @@ export async function placeOrderFromConfig(
   const unitPrice = isProjectspiegel && configQty > 0
     ? Math.round((totalPriceRaw / configQty) * 100) / 100
     : totalPriceRaw
-  const subtotal = unitPrice * effectiveQuantity
-  const staffelKortingPct = isProjectspiegel ? 0 : getMaatwerkStaffelKorting(effectiveQuantity)
-  const nettoNaDealer = isProjectspiegel ? 0 : Math.round(unitPrice * (1 - dealerKortingPct / 100))
-  const staffelKortingAmount = isProjectspiegel ? 0 : Math.round(nettoNaDealer * staffelKortingPct) * effectiveQuantity
-  let discountAmount = 0
-  let resolvedDiscountType: 'pct' | 'fixed' | null = null
-  let resolvedDiscountValue: number | null = null
-  let resolvedDiscountUseType: 'single' | 'per_user' = 'single'
-  if (discountCodeId) {
-    // Re-read authoritative type/value/use_type from DB — never trust client-supplied values
-    const { data: codeRow } = await supabase
-      .from('discount_codes')
-      .select('type, value, use_type')
-      .eq('id', discountCodeId)
-      .single()
-    if (codeRow) {
-      resolvedDiscountType = codeRow.type as 'pct' | 'fixed'
-      resolvedDiscountValue = Number(codeRow.value)
-      resolvedDiscountUseType = (codeRow.use_type ?? 'single') as 'single' | 'per_user'
-      discountAmount = resolvedDiscountType === 'pct'
-        ? Math.round(subtotal * resolvedDiscountValue / 100)
-        : Math.min(resolvedDiscountValue, subtotal)
-    }
-  }
-  const finalTotalPrice = subtotal - staffelKortingAmount - discountAmount
+
+  const resolved = discountCodeId
+    ? await resolveDiscountCode(supabase, discountCodeId, user.id)
+    : null
+
+  const totals = computeOrderTotals({
+    brutoUnitPrice: unitPrice,
+    dealerKortingPct,
+    quantity: effectiveQuantity,
+    isProjectspiegel,
+    discount: resolved?.discount ?? null,
+  })
+  const staffelKortingPct = totals.staffelPct
+  const discountAmount = totals.discountAmount
+  const resolvedDiscountUseType = resolved?.useType ?? 'single'
 
   let order: { id: string } | null = null
   let orderNumber = ''
@@ -404,7 +460,7 @@ export async function placeOrderFromConfig(
         order_number: orderNumber,
         quantity: effectiveQuantity,
         unit_price: unitPrice.toString(),
-        total_price: finalTotalPrice.toString(),
+        total_price: totals.total.toString(),
         notes: notes || null,
         status: 'pending',
       })
@@ -423,9 +479,9 @@ export async function placeOrderFromConfig(
         selected_options: {
           ...(config.selected_options as object ?? {}),
           ...(staffelKortingPct > 0 && { staffelKortingPct }),
-          ...(discountAmount > 0 && {
-            discountType: resolvedDiscountType,
-            discountValue: resolvedDiscountValue,
+          ...(discountAmount > 0 && resolved?.discount && {
+            discountType: resolved.discount.type,
+            discountValue: resolved.discount.value,
             discountAmount,
           }),
           ...(altShippingAddress && { altShippingAddress }),
@@ -434,7 +490,7 @@ export async function placeOrderFromConfig(
     })
     .eq('id', configId)
 
-  if (discountCodeId) {
+  if (discountCodeId && resolved) {
     await applyDiscountCode(supabase, discountCodeId, order.id, user.id, resolvedDiscountUseType)
   }
 
@@ -455,7 +511,11 @@ export async function placeOrderFromConfig(
     indirectLight: lightLabel(opts.indirectLight),
     quantity: effectiveQuantity,
     unitPrice,
-    totalPrice: finalTotalPrice,
+    totalPrice: totals.total,
+    dealerKortingPct: isProjectspiegel ? 0 : dealerKortingPct,
+    nettoUnitPrice: totals.nettoUnitPrice,
+    staffelPct: totals.staffelPct,
+    discountAmount: totals.discountAmount,
   }
 
   sendOrderEmails(

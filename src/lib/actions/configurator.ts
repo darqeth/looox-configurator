@@ -72,6 +72,11 @@ export async function saveConfiguration(input: SaveConfigInput) {
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
     optionSubChoices: input.optionSubChoices,
+    // Zonder deze params valt de berekening terug op defaults en wijkt de
+    // opgeslagen prijs af van wat de klant zag (audit C1)
+    solMeubelHoogte: input.solMeubelHoogte,
+    solOnderkant: input.solOnderkant,
+    lunaMeubelHoogte: input.lunaMeubelHoogte,
   })
   const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
@@ -156,6 +161,11 @@ export async function updateConfiguration(input: UpdateConfigInput) {
     indirectControl: input.indirectLight.control,
     selectedOptions: input.selectedOptions,
     optionSubChoices: input.optionSubChoices,
+    // Zonder deze params valt de berekening terug op defaults en wijkt de
+    // opgeslagen prijs af van wat de klant zag (audit C1)
+    solMeubelHoogte: input.solMeubelHoogte,
+    solOnderkant: input.solOnderkant,
+    lunaMeubelHoogte: input.lunaMeubelHoogte,
   })
   const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 

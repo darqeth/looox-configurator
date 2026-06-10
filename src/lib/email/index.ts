@@ -96,6 +96,13 @@ function divider() {
   return `<hr style="border:none;border-top:1px solid #ececec;margin:24px 0;" />`
 }
 
+// Escape voor alle door gebruikers aangeleverde strings die in HTML-templates
+// belanden (namen, bedrijven, projectnamen, redenen) — voorkomt HTML-injectie
+// in mails naar LoooX-medewerkers en klanten (audit S4).
+function esc(s: string | null | undefined): string {
+  return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function row(label: string, value: string, bold = false) {
   return `<tr>
     <td style="font-size:13px;color:#666;padding:6px 0;white-space:nowrap;padding-right:16px;">${label}</td>
@@ -123,6 +130,11 @@ export type OrderEmailDetails = {
   quantity: number
   unitPrice: number
   totalPrice: number
+  /** Prijsopbouw — zelfde semantiek als computeOrderTotals (netto-gebaseerd) */
+  dealerKortingPct?: number
+  nettoUnitPrice?: number
+  staffelPct?: number
+  discountAmount?: number
 }
 
 function buildOrderRows(d: OrderEmailDetails) {
@@ -133,7 +145,7 @@ function buildOrderRows(d: OrderEmailDetails) {
 
   return [
     row('Ordernummer', d.orderNumber),
-    row('Project', d.projectName || '—'),
+    row('Project', esc(d.projectName) || '—'),
     row('Vorm', shapeLabel),
     row('Afmeting', dimensions),
     glasLabel ? row('Glaskleur', glasLabel) : '',
@@ -146,7 +158,14 @@ function buildOrderRows(d: OrderEmailDetails) {
           <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">Op offerte</td>
         </tr>`
       : [
-          d.quantity > 1 ? row('Stukprijs', fmt(d.unitPrice)) : '',
+          // Prijsopbouw: bruto → dealerkorting → staffel → kortingscode → netto
+          // totaal — identiek aan de bestelmodal en de PDF
+          d.dealerKortingPct ? row('Catalogusprijs p/st', fmt(d.unitPrice)) : '',
+          d.dealerKortingPct ? row('Dealerkorting', `−${d.dealerKortingPct}%`) : '',
+          d.staffelPct ? row('Staffelkorting', `−${Math.round(d.staffelPct * 100)}%`) : '',
+          d.nettoUnitPrice != null && d.quantity > 1 ? row('Netto p/st', fmt(d.nettoUnitPrice)) : '',
+          d.nettoUnitPrice == null && d.quantity > 1 ? row('Stukprijs', fmt(d.unitPrice)) : '',
+          d.discountAmount ? row('Kortingscode', `−${fmt(d.discountAmount)}`) : '',
           `<tr style="border-top:1px solid #ececec;">
             <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">Totaal</td>
             <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${fmt(d.totalPrice)}</td>
@@ -176,7 +195,7 @@ export async function sendInviteEmail({
     subject: `${inviterName} nodigt je uit voor LoooX Configurator`,
     html: baseTemplate(`
       ${h1('Je bent uitgenodigd!')}
-      ${p(`<strong>${inviterName}</strong> heeft je uitgenodigd om deel te nemen aan het team van <strong>${companyName}</strong> in de LoooX Configurator.`)}
+      ${p(`<strong>${esc(inviterName)}</strong> heeft je uitgenodigd om deel te nemen aan het team van <strong>${esc(companyName)}</strong> in de LoooX Configurator.`)}
       ${p('Klik op de knop hieronder om je account aan te maken. De uitnodiging is 7 dagen geldig.', true)}
       ${btn(link, 'Uitnodiging accepteren')}
       ${divider()}
@@ -202,12 +221,12 @@ export async function sendWelcomeEmail({
 
   const body = isInvited
     ? `
-      ${h1(`Welkom, ${name}!`)}
+      ${h1(`Welkom, ${esc(name)}!`)}
       ${p('Je account is aangemaakt. Je kunt nu inloggen en aan de slag met de LoooX Configurator.')}
       ${btn(`${SITE_URL}/login`, 'Inloggen')}
     `
     : `
-      ${h1(`Bedankt voor je aanvraag, ${name}!`)}
+      ${h1(`Bedankt voor je aanvraag, ${esc(name)}!`)}
       ${p('We hebben je aanvraag ontvangen en zullen deze zo snel mogelijk beoordelen.')}
       ${p('Zodra je account is goedgekeurd ontvang je een e-mail en kun je inloggen.', true)}
     `
@@ -237,7 +256,7 @@ export async function sendPasswordResetEmail({
     subject: 'Wachtwoord opnieuw instellen',
     html: baseTemplate(`
       ${h1('Wachtwoord opnieuw instellen')}
-      ${p(`Hoi ${name}, we hebben een verzoek ontvangen om het wachtwoord van je account te resetten.`)}
+      ${p(`Hoi ${esc(name)}, we hebben een verzoek ontvangen om het wachtwoord van je account te resetten.`)}
       ${p('Klik op de knop hieronder om een nieuw wachtwoord in te stellen. Deze link is 1 uur geldig.', true)}
       ${btn(resetLink, 'Wachtwoord instellen')}
       ${divider()}
@@ -265,7 +284,7 @@ export async function sendOrderConfirmationEmail({
     subject: `Bestelling ontvangen — ${order.orderNumber}`,
     html: baseTemplate(`
       ${h1('Bestelling ontvangen!')}
-      ${p(`Hoi ${name}, je bestelling is succesvol geplaatst. We gaan er zo snel mogelijk mee aan de slag.`)}
+      ${p(`Hoi ${esc(name)}, je bestelling is succesvol geplaatst. We gaan er zo snel mogelijk mee aan de slag.`)}
       ${orderTable(buildOrderRows(order))}
       ${btn(`${SITE_URL}/bestellingen`, 'Bestellingen bekijken')}
       ${divider()}
@@ -299,12 +318,12 @@ export async function sendInternalOrderEmail({
   pdfBuffer?: Buffer
 }) {
   const customerRows = [
-    customer.name ? row('Naam', customer.name) : '',
-    customer.company ? row('Bedrijf', customer.company) : '',
-    row('E-mail', `<a href="mailto:${customer.email}" style="color:#3d6b54;">${customer.email}</a>`),
-    customer.phone ? row('Telefoon', customer.phone) : '',
-    customer.address ? row('Adres', customer.address) : '',
-    customer.shippingAddress ? row('Afleveradres', customer.shippingAddress) : '',
+    customer.name ? row('Naam', esc(customer.name)) : '',
+    customer.company ? row('Bedrijf', esc(customer.company)) : '',
+    row('E-mail', `<a href="mailto:${esc(customer.email)}" style="color:#3d6b54;">${esc(customer.email)}</a>`),
+    customer.phone ? row('Telefoon', esc(customer.phone)) : '',
+    customer.address ? row('Adres', esc(customer.address)) : '',
+    customer.shippingAddress ? row('Afleveradres', esc(customer.shippingAddress)) : '',
   ].join('')
 
   const orderRows = buildOrderRows(order)
@@ -346,7 +365,7 @@ export async function sendApprovalEmail({
     to,
     subject: 'Je account is goedgekeurd — LoooX Configurator',
     html: baseTemplate(`
-      ${h1(`Welkom, ${name}!`)}
+      ${h1(`Welkom, ${esc(name)}!`)}
       ${p('Goed nieuws: je account is goedgekeurd en je kunt nu inloggen in de LoooX Configurator.')}
       ${p('Configureer je eerste spiegel en sla hem op als offerte of plaats direct een bestelling.', true)}
       ${btn(`${SITE_URL}/login`, 'Inloggen')}
@@ -425,7 +444,7 @@ export async function sendOrderStatusEmail({
     subject: `Bestelling ${orderNumber} — ${cfg.label}`,
     html: baseTemplate(`
       ${h1(`Status bijgewerkt`)}
-      ${p(`Hoi ${name}, de status van je bestelling is bijgewerkt.`)}
+      ${p(`Hoi ${esc(name)}, de status van je bestelling is bijgewerkt.`)}
       <p style="margin:16px 0 4px;font-size:12px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Nieuwe status</p>
       <p style="margin:0 0 4px;">${statusBadge}</p>
       ${divider()}
@@ -459,7 +478,7 @@ export async function sendControleVereistEmail({
     subject: `Bestelling ${orderNumber} — Tekeningen ter goedkeuring`,
     html: baseTemplate(`
       ${h1('Tekeningen ter goedkeuring')}
-      ${p(`Hoi ${name}, LoooX heeft technische tekeningen klaarstaan voor je bestelling <strong>${orderNumber}</strong>.`)}
+      ${p(`Hoi ${esc(name)}, LoooX heeft technische tekeningen klaarstaan voor je bestelling <strong>${orderNumber}</strong>.`)}
       ${p('Bekijk de tekeningen zorgvuldig en geef je goedkeuring of geef aan wat er gewijzigd moet worden.')}
       ${divider()}
       <p style="margin:0 0 8px;font-size:12px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Tekeningen</p>
@@ -495,7 +514,7 @@ export async function sendAfgekeurdEmail({
       ${p(`Dealer <strong>${dealerName}</strong> (${dealerEmail}) heeft de tekeningen bij bestelling <strong>${orderNumber}</strong> afgekeurd.`)}
       ${divider()}
       <p style="margin:0 0 8px;font-size:12px;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Reden van afkeuring</p>
-      <p style="margin:0;font-size:14px;line-height:1.6;color:#1a1a1a;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:12px 16px;">${reden}</p>
+      <p style="margin:0;font-size:14px;line-height:1.6;color:#1a1a1a;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:12px 16px;">${esc(reden)}</p>
       ${divider()}
       ${btn(`${SITE_URL}/admin/bestellingen`, 'Bekijk in admin')}
     `),
@@ -579,9 +598,9 @@ export async function sendSupportEmail({
     : ''
 
   const senderRows = [
-    row('Naam', senderName),
-    senderCompany ? row('Bedrijf', senderCompany) : '',
-    row('E-mail', `<a href="mailto:${senderEmail}" style="color:#3d6b54;">${senderEmail}</a>`),
+    row('Naam', esc(senderName)),
+    senderCompany ? row('Bedrijf', esc(senderCompany)) : '',
+    row('E-mail', `<a href="mailto:${esc(senderEmail)}" style="color:#3d6b54;">${esc(senderEmail)}</a>`),
   ].join('')
 
   const descriptionBlock = `<div style="margin:0;font-size:14px;line-height:1.7;color:#1a1a1a;background:#f8f8f6;border:1px solid #e8e8e4;border-radius:10px;padding:14px 16px;white-space:pre-wrap;">${description.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`

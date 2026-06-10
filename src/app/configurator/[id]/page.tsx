@@ -40,6 +40,14 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     reference: (opts.reference as string) ?? '',
     description: (opts.description as string) ?? '',
     quantity: (opts.quantity as number) ?? 1,
+    // Sol/Luna-velden: zonder deze vallen ze bij bewerken stil terug op
+    // defaults en klopt de prijs na heropslaan niet meer (audit U2)
+    solMeubelHoogte: (opts.solMeubelHoogte as number | undefined) ?? undefined,
+    solOnderkant: (opts.solOnderkant as number | undefined) ?? undefined,
+    lunaMeubelHoogte: (opts.lunaMeubelHoogte as number | undefined) ?? undefined,
+    lunaOnderkant: (opts.lunaOnderkant as number | undefined) ?? undefined,
+    lunaAfstand: (opts.lunaAfstand as number | undefined) ?? undefined,
+    lunaMuurZijde: (opts.lunaMuurZijde as 'links' | 'rechts' | undefined) ?? undefined,
   }
 
   const isManager = !memberData || memberData.role === 'manager'

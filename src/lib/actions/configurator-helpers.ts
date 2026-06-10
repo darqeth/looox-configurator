@@ -31,6 +31,18 @@ export type OptionsJsonBase = {
   lunaMuurZijde?: 'links' | 'rechts'
 }
 
+// attachmentUrl wordt later server-side gefetcht bij PDF-render. Alleen onze
+// eigen publieke storage-bucket toestaan voorkomt SSRF naar interne endpoints
+// (audit S3).
+export function assertValidAttachmentUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  const prefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/attachments/`
+  if (!url.startsWith(prefix)) {
+    throw new Error('Ongeldige bijlage-URL')
+  }
+  return url
+}
+
 export function buildSelectedOptionsJson(input: OptionsJsonBase) {
   return {
     shape: input.shape,
@@ -44,7 +56,7 @@ export function buildSelectedOptionsJson(input: OptionsJsonBase) {
     reference: input.reference,
     description: input.description,
     quantity: input.quantity,
-    attachmentUrl: input.attachmentUrl ?? null,
+    attachmentUrl: assertValidAttachmentUrl(input.attachmentUrl),
     solMeubelHoogte: input.solMeubelHoogte,
     solOnderkant: input.solOnderkant,
     lunaMeubelHoogte: input.lunaMeubelHoogte,

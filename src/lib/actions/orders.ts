@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID } from '@/lib/actions/configurator-helpers'
 import { computeOrderTotals, type OrderDiscount } from '@/lib/order-pricing'
+import { runAfterResponse } from '@/lib/after-response'
+import { parseOrThrow, placeOrderInputSchema, orderFromConfigSchema } from '@/lib/validation'
 import { sendOrderConfirmationEmail, sendInternalOrderEmail, type OrderEmailDetails } from '@/lib/email'
 import { getNotificationEmails } from '@/lib/actions/settings'
 import { renderOrderPDF } from '@/lib/pdf/render-order'
@@ -123,37 +125,72 @@ async function sendOrderEmails(
     quantity: emailDetails.quantity,
     notes,
     attachmentUrl,
-  }).catch(() => undefined)
+  }).catch((e) => {
+    console.error('[order-pdf]', orderNumber, e)
+    return undefined
+  })
 
-  sendOrderConfirmationEmail({
-    to: email,
-    name: profileData?.full_name ?? 'Gebruiker',
-    order: emailDetails,
-    pdfBuffer,
-  }).catch(() => {})
-
-  getNotificationEmails().then(to =>
-    sendInternalOrderEmail({
-      to,
+  // Beide mails afwachten en fouten loggen — een bestelling zonder interne
+  // notificatie mag nooit onzichtbaar blijven (audit C4)
+  const results = await Promise.allSettled([
+    sendOrderConfirmationEmail({
+      to: email,
+      name: profileData?.full_name ?? 'Gebruiker',
       order: emailDetails,
-      customer: dealerInfo,
       pdfBuffer,
-    })
-  ).catch(() => {})
+    }),
+    getNotificationEmails().then(to =>
+      sendInternalOrderEmail({
+        to,
+        order: emailDetails,
+        customer: dealerInfo,
+        pdfBuffer,
+      })
+    ),
+  ])
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error(`[order-email:${i === 0 ? 'klant' : 'intern'}]`, orderNumber, r.reason)
+    }
+  })
 }
 
-// ─── Order number ─────────────────────────────────────────────────────────────
+// ─── Atomische order-plaatsing ────────────────────────────────────────────────
+// create_order_atomic (supabase/order-transaction-migration.sql) doet config +
+// order + discount-claim in één transactie (audit C5): geen orphan-configs of
+// half-verwerkte kortingen meer.
 
-async function generateOrderNumber(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
-  const { data } = await supabase.rpc('next_order_number')
-  if (data) return data as string
-  return generateFallbackOrderNumber()
-}
+type OrderTxResult = { order_id: string; order_number: string; config_id: string }
 
-function generateFallbackOrderNumber(): string {
-  const ts = Date.now()
-  const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-  return `LX-${ts}-${rand}`
+async function createOrderAtomic(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  params: {
+    configId: string | null
+    newConfig: Record<string, unknown> | null
+    configPatch: Record<string, unknown> | null
+    quantity: number
+    unitPrice: number
+    totalPrice: number
+    notes: string
+    discountCodeId: string | null
+    discountUseType: 'single' | 'per_user'
+  },
+): Promise<OrderTxResult> {
+  const { data, error } = await supabase.rpc('create_order_atomic', {
+    p_config_id: params.configId,
+    p_new_config: params.newConfig,
+    p_config_patch: params.configPatch,
+    p_quantity: params.quantity,
+    p_unit_price: params.unitPrice,
+    p_total_price: params.totalPrice,
+    p_notes: params.notes,
+    p_discount_code_id: params.discountCodeId,
+    p_discount_use_type: params.discountUseType,
+  })
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Bestelling plaatsen mislukt')
+  }
+  return data as OrderTxResult
 }
 
 // Leest type/value/use_type altijd opnieuw uit de DB en valideert geldigheid —
@@ -222,30 +259,10 @@ async function assertCanOrder(
   }
 }
 
-async function applyDiscountCode(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  codeId: string,
-  orderId: string,
-  userId: string,
-  useType: 'single' | 'per_user',
-) {
-  if (useType === 'per_user') {
-    const { error } = await supabase.from('discount_code_uses').insert({
-      code_id: codeId,
-      user_id: userId,
-      order_id: orderId,
-    })
-    if (error) throw new Error('Kortingscode is al gebruikt')
-  } else {
-    const { data: claimed } = await supabase
-      .rpc('use_discount_code_atomic', { p_code_id: codeId, p_order_id: orderId })
-    if (!claimed) throw new Error('Kortingscode is al gebruikt')
-  }
-}
-
 // ─── placeOrder ───────────────────────────────────────────────────────────────
 
-export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber: string; orderId: string }> {
+export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumber: string; orderId: string }> {
+  const input = parseOrThrow(placeOrderInputSchema, rawInput) as PlaceOrderInput
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
@@ -301,46 +318,26 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     discountAmount: totals.discountAmount > 0 ? totals.discountAmount : null,
   }
 
-  const { data: config, error: configError } = await supabase
-    .from('configurations')
-    .insert({
-      user_id: user.id,
+  const orderDate = new Date().toISOString()
+  const tx = await createOrderAtomic(supabase, {
+    configId: null,
+    newConfig: {
       product_id: DEFAULT_PRODUCT_ID,
       name: input.projectName,
       width: input.width,
       height: input.height,
       selected_options: selectedOptionsJson,
-      total_price: basePrice.toString(),
-      status: 'ordered',
-    })
-    .select('id')
-    .single()
-
-  if (configError || !config) throw new Error(configError?.message ?? 'Config opslaan mislukt')
-
-  const orderNumber = await generateOrderNumber(supabase)
-  const orderDate = new Date().toISOString()
-
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .insert({
-      configuration_id: config.id,
-      user_id: user.id,
-      order_number: orderNumber,
-      quantity: input.quantity,
-      unit_price: basePrice.toString(),
-      total_price: totals.total.toString(),
-      notes: input.description || null,
-      status: 'pending',
-    })
-    .select('id')
-    .single()
-
-  if (orderError || !order) throw new Error(orderError?.message ?? 'Order aanmaken mislukt')
-
-  if (input.discountCodeId && resolved) {
-    await applyDiscountCode(supabase, input.discountCodeId, order.id, user.id, resolvedDiscountUseType)
-  }
+      total_price: basePrice,
+    },
+    configPatch: null,
+    quantity: input.quantity,
+    unitPrice: basePrice,
+    totalPrice: totals.total,
+    notes: input.description || '',
+    discountCodeId: resolved ? input.discountCodeId ?? null : null,
+    discountUseType: resolvedDiscountUseType,
+  })
+  const orderNumber = tx.order_number
 
   revalidatePath('/bestellingen')
   revalidatePath('/dashboard')
@@ -368,7 +365,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
 
   const configOptions: ConfigOptions = selectedOptionsJson as ConfigOptions
 
-  sendOrderEmails(
+  runAfterResponse('order-emails', sendOrderEmails(
     supabase, user.id, user.email ?? '',
     orderNumber, orderDate, null,
     emailDetails,
@@ -376,23 +373,30 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{ orderNumber:
     input.attachmentUrl ?? null,
     configOptions,
     input.width, input.height,
-  ).catch(() => {})
+  ))
 
-  return { orderNumber, orderId: order.id }
+  return { orderNumber, orderId: tx.order_id }
 }
 
 // ─── placeOrderFromConfig ─────────────────────────────────────────────────────
 
 export async function placeOrderFromConfig(
-  configId: string,
-  quantity: number,
-  notes: string,
-  discountCodeId?: string | null,
+  rawConfigId: string,
+  rawQuantity: number,
+  rawNotes: string,
+  rawDiscountCodeId?: string | null,
   discountType?: 'pct' | 'fixed' | null,
   discountValue?: number | null,
   discountUseType?: 'single' | 'per_user' | null,
-  altShippingAddress?: string | null,
+  rawAltShippingAddress?: string | null,
 ): Promise<{ orderNumber: string; orderId: string }> {
+  const { configId, quantity, notes, discountCodeId, altShippingAddress } = parseOrThrow(orderFromConfigSchema, {
+    configId: rawConfigId,
+    quantity: rawQuantity,
+    notes: rawNotes,
+    discountCodeId: rawDiscountCodeId,
+    altShippingAddress: rawAltShippingAddress,
+  })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
@@ -445,54 +449,31 @@ export async function placeOrderFromConfig(
   const discountAmount = totals.discountAmount
   const resolvedDiscountUseType = resolved?.useType ?? 'single'
 
-  let order: { id: string } | null = null
-  let orderNumber = ''
+  const configPatch = (discountAmount > 0 || staffelKortingPct > 0 || altShippingAddress)
+    ? {
+        ...(staffelKortingPct > 0 && { staffelKortingPct }),
+        ...(discountAmount > 0 && resolved?.discount && {
+          discountType: resolved.discount.type,
+          discountValue: resolved.discount.value,
+          discountAmount,
+        }),
+        ...(altShippingAddress && { altShippingAddress }),
+      }
+    : null
+
   const orderDate = new Date().toISOString()
-  for (let attempt = 0; attempt < 10; attempt++) {
-    orderNumber = attempt < 5
-      ? await generateOrderNumber(supabase)
-      : generateFallbackOrderNumber()
-    const { data, error: insertError } = await supabase
-      .from('orders')
-      .insert({
-        configuration_id: config.id,
-        user_id: user.id,
-        order_number: orderNumber,
-        quantity: effectiveQuantity,
-        unit_price: unitPrice.toString(),
-        total_price: totals.total.toString(),
-        notes: notes || null,
-        status: 'pending',
-      })
-      .select('id')
-      .single()
-    if (!insertError) { order = data; break }
-    if (insertError.code !== '23505') throw new Error(insertError.message ?? 'Order aanmaken mislukt')
-  }
-  if (!order) throw new Error('Order aanmaken mislukt. Probeer het opnieuw.')
-
-  await supabase
-    .from('configurations')
-    .update({
-      status: 'ordered',
-      ...((discountAmount > 0 || staffelKortingPct > 0 || altShippingAddress) && {
-        selected_options: {
-          ...(config.selected_options as object ?? {}),
-          ...(staffelKortingPct > 0 && { staffelKortingPct }),
-          ...(discountAmount > 0 && resolved?.discount && {
-            discountType: resolved.discount.type,
-            discountValue: resolved.discount.value,
-            discountAmount,
-          }),
-          ...(altShippingAddress && { altShippingAddress }),
-        },
-      }),
-    })
-    .eq('id', configId)
-
-  if (discountCodeId && resolved) {
-    await applyDiscountCode(supabase, discountCodeId, order.id, user.id, resolvedDiscountUseType)
-  }
+  const tx = await createOrderAtomic(supabase, {
+    configId: config.id,
+    newConfig: null,
+    configPatch,
+    quantity: effectiveQuantity,
+    unitPrice,
+    totalPrice: totals.total,
+    notes: notes || '',
+    discountCodeId: resolved ? discountCodeId ?? null : null,
+    discountUseType: resolvedDiscountUseType,
+  })
+  const orderNumber = tx.order_number
 
   revalidatePath('/bestellingen')
   revalidatePath('/dashboard')
@@ -518,7 +499,7 @@ export async function placeOrderFromConfig(
     discountAmount: totals.discountAmount,
   }
 
-  sendOrderEmails(
+  runAfterResponse('order-emails', sendOrderEmails(
     supabase, user.id, user.email ?? '',
     orderNumber, orderDate,
     (config as { article_number?: string | null }).article_number ?? null,
@@ -529,7 +510,7 @@ export async function placeOrderFromConfig(
     config.width ?? null,
     config.height ?? null,
     altShippingAddress ?? null,
-  ).catch(() => {})
+  ))
 
-  return { orderNumber, orderId: order.id }
+  return { orderNumber, orderId: tx.order_id }
 }

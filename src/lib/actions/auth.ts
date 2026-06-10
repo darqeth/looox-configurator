@@ -201,6 +201,20 @@ export async function requestPasswordReset(
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://configurator.looox.nl'
   const admin = createAdminClient()
 
+  // Rate limit (audit S9): voorkomt e-mail-bombing van bekende adressen —
+  // max 3 reset-mails per kwartier per adres. Fail-open als RPC ontbreekt.
+  const { data: allowed, error: rlError } = await admin.rpc('check_rate_limit', {
+    p_key: `pwreset:${email.toLowerCase().trim()}`,
+    p_max: 3,
+    p_window_seconds: 900,
+  })
+  if (rlError) {
+    console.error('[rate-limit] check_rate_limit niet beschikbaar:', rlError.message)
+  } else if (allowed === false) {
+    // Zelfde respons als succes — niet lekken of het adres bestaat
+    return { success: true }
+  }
+
   // Haal naam op voor persoonlijke aanhef
   const { data: profile } = await admin
     .from('profiles')

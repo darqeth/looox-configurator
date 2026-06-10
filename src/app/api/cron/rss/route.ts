@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { XMLParser } from 'fast-xml-parser'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { timingSafeEqual } from 'crypto'
 
 export const runtime = 'nodejs'
@@ -52,11 +52,17 @@ export async function GET(request: Request) {
         published_at: r.date ? new Date(String(r.date)).toISOString() : new Date().toISOString(),
       }))
 
-    const supabase = await createClient()
-    await supabase.from('rss_cache').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    const { error } = await supabase.from('rss_cache').insert(items)
-
+    // Upsert i.p.v. delete-then-insert (audit C13): faalt de insert, dan was
+    // de cache anders 24 uur leeg. Admin-client: cron is een systeemtaak.
+    const supabase = createAdminClient()
+    const { error } = await supabase.from('rss_cache').upsert(items, { onConflict: 'url' })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Verouderde items pas opruimen nadat de nieuwe set veilig staat
+    const urls = items.map(i => i.url)
+    if (urls.length > 0) {
+      await supabase.from('rss_cache').delete().not('url', 'in', `(${urls.map(u => `"${u}"`).join(',')})`)
+    }
 
     return NextResponse.json({ ok: true, count: items.length })
   } catch (err) {

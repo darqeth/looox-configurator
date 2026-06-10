@@ -5,6 +5,15 @@ import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { DEFAULT_PRODUCT_ID, buildSelectedOptionsJson } from '@/lib/actions/configurator-helpers'
+import { z } from 'zod'
+import { parseOrThrow, configInputSchema } from '@/lib/validation'
+
+const saveConfigSchema = configInputSchema.extend({
+  status: z.enum(['draft', 'saved']),
+})
+const updateConfigSchema = saveConfigSchema.extend({
+  configId: z.string().uuid(),
+})
 
 function generateArticleNumber(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -49,7 +58,8 @@ type SaveConfigInput = {
   lunaMuurZijde?: 'links' | 'rechts'
 }
 
-export async function saveConfiguration(input: SaveConfigInput) {
+export async function saveConfiguration(rawInput: SaveConfigInput) {
+  const input = parseOrThrow(saveConfigSchema, rawInput) as SaveConfigInput
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
@@ -134,10 +144,8 @@ export async function adminDeleteConfiguration(configId: string) {
 
 type UpdateConfigInput = SaveConfigInput & { configId: string }
 
-export async function updateConfiguration(input: UpdateConfigInput) {
-  if (!(['draft', 'saved'] as const).includes(input.status)) {
-    throw new Error('Ongeldige status')
-  }
+export async function updateConfiguration(rawInput: UpdateConfigInput) {
+  const input = parseOrThrow(updateConfigSchema, rawInput) as UpdateConfigInput
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

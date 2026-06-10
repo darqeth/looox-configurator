@@ -43,20 +43,27 @@ export async function sendSupportRequest(data: {
   const to = await getNotificationEmails()
   const senderEmail = profile?.email ?? ''
 
-  await sendSupportEmail({
-    to,
-    replyTo: senderEmail,
-    senderName: profile?.full_name ?? 'Gebruiker',
-    senderEmail,
-    senderCompany: profile?.company ?? '',
-    type: data.type,
-    urgent: data.urgent,
-    subject: data.subject,
-    description: data.description,
-    configLabel,
-    screenshotBase64: data.screenshotBase64,
-    screenshotName: data.screenshotName,
-  }).catch(() => {})
+  // Awaiten + fout teruggeven: een urgent ticket dat stil verdwijnt terwijl de
+  // gebruiker "verzonden" ziet is onacceptabel (audit C11)
+  try {
+    await sendSupportEmail({
+      to,
+      replyTo: senderEmail,
+      senderName: profile?.full_name ?? 'Gebruiker',
+      senderEmail,
+      senderCompany: profile?.company ?? '',
+      type: data.type,
+      urgent: data.urgent,
+      subject: data.subject,
+      description: data.description,
+      configLabel,
+      screenshotBase64: data.screenshotBase64,
+      screenshotName: data.screenshotName,
+    })
+  } catch (e) {
+    console.error('[support-email]', e)
+    return { success: false, error: 'Versturen mislukt. Probeer het later opnieuw of mail ons direct.' }
+  }
 
   return { success: true }
 }

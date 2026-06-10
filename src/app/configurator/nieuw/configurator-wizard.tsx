@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -43,6 +43,9 @@ interface InitialConfig {
   lunaAfstand?: number
   lunaMuurZijde?: 'links' | 'rechts'
 }
+
+const DRAFT_KEY = 'lx-configurator-draft-v1'
+const DRAFT_MAX_AGE_MS = 7 * 24 * 3600 * 1000
 
 const STEPS = [
   { label: 'Afmeting' },
@@ -256,11 +259,73 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       .from('attachments')
       .upload(path, fileToUpload, { upsert: false })
     if (uploadError) {
+      // Stil doorgaan zou een bestelling zonder verplichte schets opleveren
+      // (audit U5) — fout tonen zodat de gebruiker opnieuw kan proberen
       console.error('[upload] Supabase Storage fout:', uploadError)
-      return null
+      throw new Error('Uploaden van de bijlage is mislukt. Probeer het opnieuw.')
     }
     const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(path)
     return urlData.publicUrl
+  }
+
+  // ── Draft-persistentie (audit U1): F5 of tab-sluiten = configuratie kwijt ──
+  // Debounced naar localStorage; herstel-banner bij terugkomst.
+  const [draftAvailable, setDraftAvailable] = useState(false)
+
+  useEffect(() => {
+    if (isEditing) return
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const draft = JSON.parse(raw)
+      if (draft?.savedAt && Date.now() - draft.savedAt < DRAFT_MAX_AGE_MS && draft.shape) {
+        setDraftAvailable(true)
+      }
+    } catch { /* corrupte draft negeren */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (isEditing || wizardMode !== 'configuring' || !shape) return
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          savedAt: Date.now(), shape, step, width, height, diameter, organicSizeKey, glasKleur,
+          solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
+          directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity,
+        }))
+      } catch { /* storage vol/geblokkeerd — geen drama */ }
+    }, 800)
+    return () => clearTimeout(t)
+  }, [isEditing, wizardMode, shape, step, width, height, diameter, organicSizeKey, glasKleur,
+      solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
+      directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity])
+
+  const clearDraft = () => {
+    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+    setDraftAvailable(false)
+  }
+
+  const restoreDraft = () => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const d = JSON.parse(raw)
+      setShape(d.shape ?? null); setStep(d.step ?? 1)
+      setWidth(d.width ?? 80); setHeight(d.height ?? 60)
+      setDiameter(d.diameter ?? 60); setOrganicSizeKey(d.organicSizeKey ?? '60x40')
+      setGlasKleur(d.glasKleur ?? 'helder')
+      setSolMeubelHoogte(d.solMeubelHoogte ?? 35); setSolOnderkant(d.solOnderkant ?? 15)
+      setLunaMeubelHoogte(d.lunaMeubelHoogte ?? 35); setLunaOnderkant(d.lunaOnderkant ?? 15)
+      setLunaAfstand(d.lunaAfstand ?? 20); setLunaMuurZijde(d.lunaMuurZijde ?? 'links')
+      setDirectLight(d.directLight ?? DEFAULT_LIGHT); setIndirectLight(d.indirectLight ?? DEFAULT_LIGHT)
+      setSelectedOptions(d.selectedOptions ?? []); setOptionSubChoices(d.optionSubChoices ?? {})
+      setProjectName(d.projectName ?? ''); setReference(d.reference ?? ''); setQuantity(d.quantity ?? 1)
+      setWizardMode('configuring')
+      setDraftAvailable(false)
+    } catch {
+      clearDraft()
+    }
   }
 
   // Eén gedeelde volgende-stap-handler voor desktop én mobiel — de
@@ -312,6 +377,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         await saveConfiguration(payload)
       }
       setSaved(true)
+      clearDraft()
       router.push('/configuraties')
       // background: sidebar/dashboard counts bijwerken
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
@@ -501,6 +567,30 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
 
   return (
     <>
+      {/* Herstel-banner: niet-opgeslagen configuratie gevonden (audit U1) */}
+      {draftAvailable && wizardMode === 'selecting' && (
+        <div className="fixed inset-x-0 top-0 z-[60] flex justify-center p-3 pointer-events-none">
+          <div className="pointer-events-auto bg-lx-text-primary text-white rounded-2xl shadow-lg px-5 py-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 max-w-xl">
+            <p className="text-[13px] font-medium">
+              Je hebt een niet-opgeslagen configuratie. Wil je verdergaan waar je was gebleven?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={restoreDraft}
+                className="px-3.5 h-8 rounded-lg bg-white text-lx-text-primary text-[12.5px] font-semibold hover:bg-white/90 transition-colors"
+              >
+                Verdergaan
+              </button>
+              <button
+                onClick={clearDraft}
+                className="px-3.5 h-8 rounded-lg border border-white/30 text-white text-[12.5px] font-semibold hover:bg-white/10 transition-colors"
+              >
+                Opnieuw beginnen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {wizardMode === 'selecting' && !isEditing && (
         <ModeSelector
           onSelectManual={() => setWizardMode('manual')}

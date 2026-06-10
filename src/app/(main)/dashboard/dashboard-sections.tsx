@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Layers, ArrowRight } from 'lucide-react'
 import NotificationBell from './notification-bell'
+import { OnlinePresence } from '@/components/online-presence'
 import ChangelogModal from '@/components/dashboard/changelog-modal'
 import OrderButton from '@/app/(main)/configuraties/order-button'
 import CopyButton from '@/components/copy-button'
@@ -19,7 +20,7 @@ const getProfile = cache(async (userId: string) => {
   const supabase = await createClient()
   const [{ data: profile }, { data: member }] = await Promise.all([
     supabase.from('profiles')
-      .select('full_name, company, notifications_read_at, is_international, is_groothandel, korting')
+      .select('full_name, company, notifications_read_at, is_international, is_groothandel, korting, is_admin, is_sub_admin')
       .eq('id', userId).single(),
     supabase.from('company_members')
       .select('company_id, role, can_order')
@@ -236,6 +237,9 @@ export async function DashboardHeader({ userId }: { userId: string }) {
         </p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
+        {(profile?.is_admin || profile?.is_sub_admin) && (
+          <OnlinePresence isStaff showBadge />
+        )}
         <NotificationBell
           notifications={(notifications ?? []) as Parameters<typeof NotificationBell>[0]['notifications']}
           readAt={profile?.notifications_read_at ?? null}

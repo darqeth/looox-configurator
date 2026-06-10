@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from '@/lib/actions/auth'
 import type { ClosestMilestone } from '@/lib/sidebar-data'
 import SearchButton from './search-button'
+import { OnlinePresence } from '@/components/online-presence'
 
 interface SidebarProps {
   userName: string
@@ -246,6 +247,10 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
 
   return (
     <>
+      {/* Presence-tracker: meldt deze gebruiker als online (onzichtbaar).
+          Admins/beheerders zien de teller in de dashboard-header. */}
+      <OnlinePresence isStaff={isAdmin || isSubAdmin} />
+
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-60 min-h-screen fixed top-0 left-0 bottom-0 z-40 flex-col">
         {sidebarContent}

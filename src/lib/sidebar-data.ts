@@ -26,7 +26,118 @@ export type SidebarData = {
   allMilestonesAchieved: boolean
 }
 
+type Milestone = { id: string; title: string; goal_type: string; goal_value: number }
+
+function computeMilestones(
+  milestones: Milestone[],
+  achievedIds: Set<string>,
+  currentByType: Record<string, number>
+): { closest: ClosestMilestone | null; allAchieved: boolean } {
+  const unachievedCount = milestones.filter(m => !achievedIds.has(m.id)).length
+  const allAchieved = milestones.length > 0 && unachievedCount === 0
+
+  const closest = milestones
+    .filter(m => !achievedIds.has(m.id) && m.goal_type !== 'shape' && (currentByType[m.goal_type] ?? 0) < m.goal_value)
+    .map(m => {
+      const current = currentByType[m.goal_type] ?? 0
+      const pct = Math.min(Math.round((current / m.goal_value) * 100), 99)
+      const c = Math.min(current, m.goal_value)
+      const v = m.goal_value
+      let progressLabel = ''
+      if (m.goal_type === 'configs') progressLabel = `${c} / ${v} config${v !== 1 ? 's' : ''}`
+      else if (m.goal_type === 'orders') progressLabel = `${c} / ${v} order${v !== 1 ? 's' : ''}`
+      else if (m.goal_type === 'order_revenue') progressLabel = `€${Math.round(c / 100) / 10}k / €${Math.round(v / 1000)}k`
+      else if (m.goal_type === 'streak') progressLabel = `${c} / ${v} dag${v !== 1 ? 'en' : ''}`
+      return { title: m.title, pct, progressLabel }
+    })
+    .sort((a, b) => b.pct - a.pct)[0] ?? null
+
+  return { closest, allAchieved }
+}
+
+type SidebarRpcResult = {
+  profile: {
+    full_name: string | null
+    company: string | null
+    company_id: string | null
+    tier: string | null
+    is_admin: boolean | null
+    is_sub_admin: boolean | null
+    avatar_url: string | null
+    is_international: boolean | null
+    is_groothandel: boolean | null
+  } | null
+  member: { role: string | null; company_id: string | null; can_configure: boolean | null } | null
+  company_order_count: number
+  own_order_count: number
+  pending_count: number
+  pending_colleagues_count: number
+  milestones: Milestone[]
+  revenue_sum: number
+  streak: { current_streak: number } | null
+  config_count: number
+  achieved_milestone_ids: string[]
+}
+
 export async function fetchSidebarData(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<SidebarData> {
+  // Snelle pad: één RPC i.p.v. 13 losse queries in 4 sequentiële golven.
+  // Vereist supabase/sidebar-rpc-migration.sql; zolang die niet is uitgevoerd
+  // valt dit automatisch terug op het oude query-pad.
+  const { data: rpc, error } = await supabase.rpc('get_sidebar_data')
+  if (!error && rpc) return buildFromRpc(rpc as SidebarRpcResult)
+  return fetchSidebarDataLegacy(supabase, userId)
+}
+
+function buildFromRpc(rpc: SidebarRpcResult): SidebarData {
+  const profile = rpc.profile
+  const member = rpc.member && rpc.member.role !== null ? rpc.member : null
+
+  const isAdmin = profile?.is_admin ?? false
+  const isSubAdmin = profile?.is_sub_admin ?? false
+  const isInternational = profile?.is_international ?? false
+  const isGroothandel = profile?.is_groothandel ?? false
+  const isSpecial = isInternational || isGroothandel
+  const isManager = member?.role === 'manager'
+
+  const currentByType: Record<string, number> = {
+    configs: Number(rpc.config_count ?? 0),
+    orders: Number(rpc.company_order_count ?? 0),
+    order_revenue: Number(rpc.revenue_sum ?? 0),
+    streak: rpc.streak?.current_streak ?? 0,
+  }
+
+  const { closest, allAchieved } = computeMilestones(
+    rpc.milestones ?? [],
+    new Set(rpc.achieved_milestone_ids ?? []),
+    currentByType
+  )
+
+  const canConfigure = !member || member.role === 'manager' || member.can_configure !== false
+
+  return {
+    userName: profile?.full_name ?? '',
+    company: profile?.company ?? '',
+    tier: profile?.tier ?? 'Studio',
+    configCount: Number(rpc.config_count ?? 0),
+    orderCount: Number(rpc.own_order_count ?? 0),
+    isAdmin,
+    isSubAdmin,
+    isManager,
+    canConfigure,
+    isInternational,
+    isGroothandel,
+    pendingCount: Number(rpc.pending_count ?? 0),
+    pendingColleaguesCount: Number(rpc.pending_colleagues_count ?? 0),
+    avatarUrl: profile?.avatar_url ?? null,
+    closestMilestone: isSpecial ? null : closest,
+    allMilestonesAchieved: isSpecial ? false : allAchieved,
+  }
+}
+
+async function fetchSidebarDataLegacy(
   supabase: SupabaseClient,
   userId: string
 ): Promise<SidebarData> {
@@ -111,7 +222,6 @@ export async function fetchSidebarData(
     (isInternational || isGroothandel) ? Promise.resolve({ data: [], error: null }) : supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
   ])
 
-  // Compute closest unachieved milestone
   const achievedIds = new Set((userMilestonesData ?? []).map((um: { milestone_id: string }) => um.milestone_id))
   const totalConfigs = Number(configCount ?? 0)
   const totalOrders = Number(companyOrderCount ?? 0)
@@ -126,27 +236,11 @@ export async function fetchSidebarData(
     streak: currentStreak,
   }
 
-  type Milestone = { id: string; title: string; goal_type: string; goal_value: number }
-
-  const allMilestonesList = milestones as Milestone[] ?? []
-  const unachievedCount = allMilestonesList.filter(m => !achievedIds.has(m.id)).length
-  const allMilestonesAchieved = allMilestonesList.length > 0 && unachievedCount === 0
-
-  const closest = allMilestonesList
-    .filter(m => !achievedIds.has(m.id) && m.goal_type !== 'shape' && (currentByType[m.goal_type] ?? 0) < m.goal_value)
-    .map(m => {
-      const current = currentByType[m.goal_type] ?? 0
-      const pct = Math.min(Math.round((current / m.goal_value) * 100), 99)
-      const c = Math.min(current, m.goal_value)
-      const v = m.goal_value
-      let progressLabel = ''
-      if (m.goal_type === 'configs') progressLabel = `${c} / ${v} config${v !== 1 ? 's' : ''}`
-      else if (m.goal_type === 'orders') progressLabel = `${c} / ${v} order${v !== 1 ? 's' : ''}`
-      else if (m.goal_type === 'order_revenue') progressLabel = `€${Math.round(c / 100) / 10}k / €${Math.round(v / 1000)}k`
-      else if (m.goal_type === 'streak') progressLabel = `${c} / ${v} dag${v !== 1 ? 'en' : ''}`
-      return { title: m.title, pct, progressLabel }
-    })
-    .sort((a, b) => b.pct - a.pct)[0] ?? null
+  const { closest, allAchieved } = computeMilestones(
+    (milestones as Milestone[]) ?? [],
+    achievedIds,
+    currentByType
+  )
 
   const canConfigure = !memberData || memberData.role === 'manager' || memberData.can_configure !== false
 
@@ -166,6 +260,6 @@ export async function fetchSidebarData(
     pendingColleaguesCount: pendingColleaguesCount ?? 0,
     avatarUrl: profile?.avatar_url ?? null,
     closestMilestone: (isInternational || isGroothandel) ? null : closest,
-    allMilestonesAchieved: (isInternational || isGroothandel) ? false : allMilestonesAchieved,
+    allMilestonesAchieved: (isInternational || isGroothandel) ? false : allAchieved,
   }
 }

@@ -1,12 +1,22 @@
 import { chromium } from '@playwright/test';
 
 const BASE = 'http://localhost:3000';
+
+// Inloggegevens via env — nooit hardcoden (stond eerder als plaintext in git;
+// dat wachtwoord moet geroteerd worden).
+const EMAIL = process.env.PERF_EMAIL;
+const PASSWORD = process.env.PERF_PASSWORD;
+if (!EMAIL || !PASSWORD) {
+  console.error('Gebruik: PERF_EMAIL=... PERF_PASSWORD=... node perf-test.mjs');
+  process.exit(1);
+}
+
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
 
 await page.goto(`${BASE}/login`);
-await page.fill('input[type="email"]', 'mark@rmsanitair.nl');
-await page.fill('input[type="password"]', 'RMS4n1t41r!@');
+await page.fill('input[type="email"]', EMAIL);
+await page.fill('input[type="password"]', PASSWORD);
 await Promise.all([
   page.waitForURL('**/dashboard', { timeout: 20000 }).catch(() => {}),
   page.click('button[type="submit"]'),

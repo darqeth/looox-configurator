@@ -26,9 +26,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // getClaims() verifieert de JWT lokaal via de project-JWKS (ES256) — geen
+  // netwerkcall naar de Auth-server per request zoals getUser() deed.
+  // Vernieuwt net als getUser een verlopen sessie via de refresh token.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
 
   const { pathname } = request.nextUrl
   const isAuthPage =
@@ -38,7 +40,7 @@ export async function middleware(request: NextRequest) {
   const isPendingPage = pathname === '/pending'
 
   // Not logged in → stuur naar login
-  if (!user) {
+  if (!claims) {
     if (!isAuthPage) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
@@ -55,14 +57,15 @@ export async function middleware(request: NextRequest) {
   // so it's available directly from getUser() without an extra profiles query.
   // Run `supabase/improvements-migration.sql` to enable this optimisation.
   if (!isPendingPage) {
-    const approvalStatus = (user.app_metadata?.approval_status as string | undefined) ?? null
+    const appMetadata = claims.app_metadata as { approval_status?: string } | undefined
+    const approvalStatus = appMetadata?.approval_status ?? null
 
     if (approvalStatus === null) {
       // Fallback: trigger not yet run — query profiles table directly
       const { data: profile } = await supabase
         .from('profiles')
         .select('approval_status')
-        .eq('id', user.id)
+        .eq('id', claims.sub)
         .single()
 
       const status = profile?.approval_status ?? null

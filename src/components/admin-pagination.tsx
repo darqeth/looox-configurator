@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 interface AdminPaginationProps {
   currentPage: number
   totalPages: number
@@ -73,8 +75,10 @@ export function AdminPagination({
         {/* Prev */}
         {onPageChange ? (
           <button disabled={isFirst} onClick={() => onPageChange(currentPage - 1)} className={navBtnClass(isFirst)}>‹</button>
+        ) : isFirst ? (
+          <span aria-disabled className={navBtnClass(true)}>‹</span>
         ) : (
-          <a href={!isFirst ? buildHref(currentPage - 1) : undefined} aria-disabled={isFirst} className={navBtnClass(isFirst)}>‹</a>
+          <Link href={buildHref(currentPage - 1)} className={navBtnClass(false)}>‹</Link>
         )}
 
         {/* Pages */}
@@ -84,15 +88,17 @@ export function AdminPagination({
           ) : onPageChange ? (
             <button key={p} onClick={() => onPageChange(p as number)} className={pageBtnClass(p === currentPage)}>{p}</button>
           ) : (
-            <a key={p} href={buildHref(p as number)} className={pageBtnClass(p === currentPage)}>{p}</a>
+            <Link key={p} href={buildHref(p as number)} className={pageBtnClass(p === currentPage)}>{p}</Link>
           )
         )}
 
         {/* Next */}
         {onPageChange ? (
           <button disabled={isLast} onClick={() => onPageChange(currentPage + 1)} className={navBtnClass(isLast)}>›</button>
+        ) : isLast ? (
+          <span aria-disabled className={navBtnClass(true)}>›</span>
         ) : (
-          <a href={!isLast ? buildHref(currentPage + 1) : undefined} aria-disabled={isLast} className={navBtnClass(isLast)}>›</a>
+          <Link href={buildHref(currentPage + 1)} className={navBtnClass(false)}>›</Link>
         )}
       </div>
     </div>

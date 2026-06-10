@@ -7,13 +7,15 @@ import { fetchSidebarData } from '@/lib/sidebar-data'
 
 export default async function ConfiguratorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // Lokale JWT-verificatie — geen auth-roundtrip; middleware bewaakt de sessie al
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
+  if (!userId) redirect('/login')
 
   const queryClient = new QueryClient()
   await queryClient.prefetchQuery({
     queryKey: ['sidebar'],
-    queryFn: () => fetchSidebarData(supabase, user.id),
+    queryFn: () => fetchSidebarData(supabase, userId),
   })
 
   return (

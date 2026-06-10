@@ -1,5 +1,7 @@
 import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCompanyUserIds } from '@/lib/company-utils'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -35,6 +37,47 @@ const getProfile = cache(async (userId: string) => {
     company: profile?.company ?? '',
   }
 })
+
+// ─── Gedeelde gecachte globale data ───────────────────────────────────────────
+// RSS, changelogs en downloads zijn identiek voor alle gebruikers en wijzigen
+// zelden — cachen scheelt 3-4 queries per dashboard-load. Admin-client omdat
+// unstable_cache geen cookies mag lezen; het is uitsluitend read-only data.
+
+const getCachedRssItems = unstable_cache(
+  async () => {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('rss_cache').select('id, title, url, summary, image_url, published_at')
+      .order('published_at', { ascending: false }).limit(4)
+    return data ?? []
+  },
+  ['dashboard-rss'],
+  { revalidate: 1800, tags: ['rss'] }
+)
+
+const getCachedChangelogs = unstable_cache(
+  async () => {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('changelogs').select('id, title, body, published_at')
+      .order('published_at', { ascending: false }).limit(20)
+    return data ?? []
+  },
+  ['dashboard-changelogs'],
+  { revalidate: 300, tags: ['changelogs'] }
+)
+
+const getCachedDownloads = unstable_cache(
+  async () => {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('downloads').select('id, title, file_url, file_ext, file_size')
+      .eq('is_active', true).order('sort_order').limit(6)
+    return data ?? []
+  },
+  ['dashboard-downloads'],
+  { revalidate: 300, tags: ['downloads'] }
+)
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
@@ -376,10 +419,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
 // ─── News rows ────────────────────────────────────────────────────────────────
 
 export async function NewsRows() {
-  const supabase = await createClient()
-  const { data: rssItems } = await supabase
-    .from('rss_cache').select('id, title, url, summary, image_url, published_at')
-    .order('published_at', { ascending: false }).limit(4)
+  const rssItems = await getCachedRssItems()
 
   if (!rssItems || rssItems.length === 0) {
     return (
@@ -413,20 +453,14 @@ export async function NewsRows() {
 // ─── Updates rows (incl. ChangelogModal in header) ────────────────────────────
 
 export async function UpdatesHeaderExtra() {
-  const supabase = await createClient()
-  const { data: changelogs } = await supabase
-    .from('changelogs').select('id, title, body, published_at')
-    .order('published_at', { ascending: false }).limit(20)
+  const changelogs = await getCachedChangelogs()
 
   if (!changelogs || changelogs.length <= 4) return null
   return <ChangelogModal changelogs={changelogs.map(c => ({ ...c, body: c.body ?? '' }))} />
 }
 
 export async function UpdatesRows() {
-  const supabase = await createClient()
-  const { data: changelogs } = await supabase
-    .from('changelogs').select('id, title, body, published_at')
-    .order('published_at', { ascending: false }).limit(20)
+  const changelogs = await getCachedChangelogs()
 
   if (!changelogs || changelogs.length === 0) {
     return <div className="px-5 py-8 text-center"><p className="text-[13px] text-lx-text-secondary">Nog geen updates</p></div>
@@ -455,10 +489,7 @@ export async function UpdatesRows() {
 // ─── Downloads rows ───────────────────────────────────────────────────────────
 
 export async function DownloadsRows() {
-  const supabase = await createClient()
-  const { data: downloads } = await supabase
-    .from('downloads').select('id, title, file_url, file_ext, file_size')
-    .eq('is_active', true).order('sort_order').limit(6)
+  const downloads = await getCachedDownloads()
 
   if (!downloads || downloads.length === 0) {
     return <div className="px-5 py-8 text-center"><p className="text-[12.5px] text-lx-text-secondary">Nog geen downloads beschikbaar</p></div>

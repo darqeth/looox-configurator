@@ -6,10 +6,12 @@ import SupportButton from '@/components/support/support-button'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // Lokale JWT-verificatie — geen auth-roundtrip; middleware bewaakt de sessie al
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
+  if (!userId) redirect('/login')
 
-  const sidebar = await fetchSidebarData(supabase, user.id)
+  const sidebar = await fetchSidebarData(supabase, userId)
   if (!sidebar.isAdmin && !sidebar.isSubAdmin) redirect('/dashboard')
 
   return (

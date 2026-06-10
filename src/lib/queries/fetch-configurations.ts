@@ -41,8 +41,10 @@ export async function fetchConfigurations(params: {
   page: number
 }): Promise<ConfigurationsData> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
+  // Lokale JWT-verificatie — geen auth-roundtrip per aanroep
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
+  if (!userId) throw new Error('Unauthorized')
 
   const currentPage = Math.max(1, params.page || 1)
   const from = (currentPage - 1) * PAGE_SIZE
@@ -52,9 +54,9 @@ export async function fetchConfigurations(params: {
     supabase
       .from('company_members')
       .select('role, can_order, can_configure, own_configs_only, company_id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle(),
-    supabase.from('profiles').select('korting').eq('id', user.id).single(),
+    supabase.from('profiles').select('korting').eq('id', userId).single(),
   ])
 
   const korting = profileData?.korting ?? 50
@@ -62,14 +64,14 @@ export async function fetchConfigurations(params: {
   const canOrder = isManager || (memberPerms?.can_order ?? true)
   const canConfigure = isManager || (memberPerms?.can_configure ?? true)
 
-  let teamMembers: TeamMember[] = []
+  const loadTeamMembers = async (): Promise<TeamMember[]> => {
+    if (!isManager || !memberPerms?.company_id) return []
 
-  if (isManager && memberPerms?.company_id) {
     const { data: rawMembers } = await supabase
       .from('company_members')
       .select('user_id, profiles!inner(full_name)')
       .eq('company_id', memberPerms.company_id)
-      .neq('user_id', user.id)
+      .neq('user_id', userId)
 
     const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
 
@@ -82,7 +84,7 @@ export async function fetchConfigurations(params: {
       return acc
     }, {})
 
-    teamMembers = (rawMembers ?? []).map((m) => {
+    return (rawMembers ?? []).map((m) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const profile = Array.isArray(m.profiles) ? (m.profiles as any[])[0] : m.profiles
       const uid = m.user_id as string
@@ -94,13 +96,7 @@ export async function fetchConfigurations(params: {
     })
   }
 
-  const validView = !!(params.view && teamMembers.some(m => m.userId === params.view))
-  const viewUserId = isManager && validView ? params.view : user.id
-
-  const [
-    { data: configs, count: filteredCount },
-    { count: savedCount },
-  ] = await Promise.all([
+  const loadMain = (viewUserId: string) => Promise.all([
     supabase
       .from('configurations')
       .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
@@ -109,13 +105,34 @@ export async function fetchConfigurations(params: {
       .order('updated_at', { ascending: false })
       .range(from, to),
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved'),
+    isManager
+      ? supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'saved')
+      : Promise.resolve({ count: 0 }),
   ])
 
-  const totalPages = Math.ceil((filteredCount ?? 0) / PAGE_SIZE)
+  // Zonder ?view= staat de doelgebruiker al vast → hoofdqueries parallel met
+  // de teamleden-queries. Met ?view= moeten teamleden eerst (validatie).
+  let teamMembers: TeamMember[]
+  let validView: boolean
+  let mainResult: Awaited<ReturnType<typeof loadMain>>
 
-  const ownCount = isManager
-    ? (await supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'saved')).count ?? 0
-    : 0
+  if (params.view) {
+    teamMembers = await loadTeamMembers()
+    validView = teamMembers.some(m => m.userId === params.view)
+    mainResult = await loadMain(isManager && validView ? params.view : userId)
+  } else {
+    ;[mainResult, teamMembers] = await Promise.all([loadMain(userId), loadTeamMembers()])
+    validView = false
+  }
+
+  const [
+    { data: configs, count: filteredCount },
+    { count: savedCount },
+    { count: ownCountRaw },
+  ] = mainResult
+
+  const totalPages = Math.ceil((filteredCount ?? 0) / PAGE_SIZE)
+  const ownCount = isManager ? ownCountRaw ?? 0 : 0
 
   const viewingName = validView
     ? teamMembers.find(m => m.userId === params.view)?.name.split(' ')[0] ?? 'collega'
@@ -133,6 +150,6 @@ export async function fetchConfigurations(params: {
     korting,
     currentPage,
     totalPages,
-    currentUserId: user.id,
+    currentUserId: userId,
   }
 }

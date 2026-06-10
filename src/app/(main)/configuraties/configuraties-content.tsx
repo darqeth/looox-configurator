@@ -53,7 +53,7 @@ export function ConfiguratiesContent({
       {permissions.isManager && teamMembers.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
           {/* Eigen tab */}
-          <a
+          <Link
             href="/configuraties"
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors ${
               !validView
@@ -67,13 +67,13 @@ export function ConfiguratiesContent({
                 !validView ? 'bg-white/20 text-white' : 'bg-lx-divider text-lx-text-secondary'
               }`}>{ownCount}</span>
             )}
-          </a>
+          </Link>
           {/* Teamlid tabs */}
           {teamMembers.map((m) => {
             const isActive = validView && view === m.userId
             const firstName = m.name.split(' ')[0]
             return (
-              <a
+              <Link
                 key={m.userId}
                 href={`/configuraties?view=${m.userId}`}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors ${
@@ -88,7 +88,7 @@ export function ConfiguratiesContent({
                     isActive ? 'bg-white/20 text-white' : 'bg-lx-divider text-lx-text-secondary'
                   }`}>{m.count}</span>
                 )}
-              </a>
+              </Link>
             )
           })}
         </div>

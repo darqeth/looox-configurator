@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdmin, isAdminOrSubAdmin } from '@/lib/company-utils'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { headers } from 'next/headers'
 import { sendApprovalEmail, sendOrderStatusEmail, sendControleVereistEmail } from '@/lib/email'
 
@@ -367,32 +367,55 @@ export async function uploadDrawingFile(
   return { url: publicUrl, fileName: file.name }
 }
 
+// Tooltips wijzigen vrijwel nooit — cache ze 1 uur i.p.v. 2 queries per
+// configurator-load. Save-actions invalideren via revalidateTag('tooltips').
+// Admin-client: unstable_cache mag geen cookies lezen en de data is globaal.
+const getExtraOptionTooltipsCached = unstable_cache(
+  async (): Promise<Record<string, string>> => {
+    const supabase = createAdminClient()
+    const { data } = await supabase.from('extra_option_tooltips').select('id, tooltip_text')
+    const result: Record<string, string> = {}
+    for (const row of data ?? []) result[row.id] = row.tooltip_text
+    return result
+  },
+  ['extra-option-tooltips'],
+  { revalidate: 3600, tags: ['tooltips'] }
+)
+
+const getControlTooltipsCached = unstable_cache(
+  async (): Promise<Record<string, string>> => {
+    const supabase = createAdminClient()
+    const { data } = await supabase.from('control_tooltips').select('id, tooltip_text')
+    const result: Record<string, string> = {}
+    for (const row of data ?? []) result[row.id] = row.tooltip_text
+    return result
+  },
+  ['control-tooltips'],
+  { revalidate: 3600, tags: ['tooltips'] }
+)
+
 export async function getExtraOptionTooltips(): Promise<Record<string, string>> {
-  const supabase = await createClient()
-  const { data } = await supabase.from('extra_option_tooltips').select('id, tooltip_text')
-  const result: Record<string, string> = {}
-  for (const row of data ?? []) result[row.id] = row.tooltip_text
-  return result
+  return getExtraOptionTooltipsCached()
 }
 
 export async function saveExtraOptionTooltip(id: string, text: string): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
+  if (!await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
   await supabase.from('extra_option_tooltips').upsert({ id, tooltip_text: text.slice(0, 500), updated_at: new Date().toISOString() })
+  revalidateTag('tooltips')
 }
 
 export async function getControlTooltips(): Promise<Record<string, string>> {
-  const supabase = await createClient()
-  const { data } = await supabase.from('control_tooltips').select('id, tooltip_text')
-  const result: Record<string, string> = {}
-  for (const row of data ?? []) result[row.id] = row.tooltip_text
-  return result
+  return getControlTooltipsCached()
 }
 
 export async function saveControlTooltip(id: string, text: string): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
+  if (!await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
   await supabase.from('control_tooltips').upsert({ id, tooltip_text: text.slice(0, 500), updated_at: new Date().toISOString() })
+  revalidateTag('tooltips')
 }

@@ -40,8 +40,10 @@ export type OrdersData = {
 
 export async function fetchOrders(params: { view: string; page: number }): Promise<OrdersData> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
+  // Lokale JWT-verificatie — geen auth-roundtrip per aanroep
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
+  if (!userId) throw new Error('Unauthorized')
 
   const currentPage = Math.max(1, params.page || 1)
   const from = (currentPage - 1) * PAGE_SIZE
@@ -50,19 +52,19 @@ export async function fetchOrders(params: { view: string; page: number }): Promi
   const { data: memberPerms } = await supabase
     .from('company_members')
     .select('role, company_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle()
 
   const isManager = !memberPerms || memberPerms.role === 'manager'
 
-  let teamMembers: TeamMember[] = []
+  const loadTeamMembers = async (): Promise<TeamMember[]> => {
+    if (!isManager || !memberPerms?.company_id) return []
 
-  if (isManager && memberPerms?.company_id) {
     const { data: rawMembers } = await supabase
       .from('company_members')
       .select('user_id, profiles!inner(full_name)')
       .eq('company_id', memberPerms.company_id)
-      .neq('user_id', user.id)
+      .neq('user_id', userId)
 
     const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
 
@@ -75,7 +77,7 @@ export async function fetchOrders(params: { view: string; page: number }): Promi
       return acc
     }, {})
 
-    teamMembers = (rawMembers ?? []).map((m) => {
+    return (rawMembers ?? []).map((m) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const profile = Array.isArray(m.profiles) ? (m.profiles as any[])[0] : m.profiles
       const uid = m.user_id as string
@@ -87,40 +89,56 @@ export async function fetchOrders(params: { view: string; page: number }): Promi
     })
   }
 
-  const validView = !!(params.view && teamMembers.some(m => m.userId === params.view))
-  const viewUserId = isManager && validView ? params.view : user.id
-
-  const ownCount = isManager
-    ? (await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', user.id)).count ?? 0
-    : 0
-
-  const { data: orders, count } = await supabase
-    .from('orders')
-    .select(`
-      id,
-      order_number,
-      quantity,
-      unit_price,
-      total_price,
-      status,
-      notes,
-      afkeur_reden,
-      created_at,
-      configurations (
+  const loadMain = (viewUserId: string) => Promise.all([
+    supabase
+      .from('orders')
+      .select(`
         id,
-        name,
-        width,
-        height,
-        selected_options
-      ),
-      order_drawings (
-        file_url,
-        file_name
-      )
-    `, { count: 'exact' })
-    .eq('user_id', viewUserId)
-    .order('created_at', { ascending: false })
-    .range(from, to)
+        order_number,
+        quantity,
+        unit_price,
+        total_price,
+        status,
+        notes,
+        afkeur_reden,
+        created_at,
+        configurations (
+          id,
+          name,
+          width,
+          height,
+          selected_options
+        ),
+        order_drawings (
+          file_url,
+          file_name
+        )
+      `, { count: 'exact' })
+      .eq('user_id', viewUserId)
+      .order('created_at', { ascending: false })
+      .range(from, to),
+    isManager
+      ? supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', userId)
+      : Promise.resolve({ count: 0 }),
+  ])
+
+  // Zonder ?view= staat de doelgebruiker al vast → hoofdqueries parallel met
+  // de teamleden-queries. Met ?view= moeten teamleden eerst (validatie).
+  let teamMembers: TeamMember[]
+  let validView: boolean
+  let mainResult: Awaited<ReturnType<typeof loadMain>>
+
+  if (params.view) {
+    teamMembers = await loadTeamMembers()
+    validView = teamMembers.some(m => m.userId === params.view)
+    mainResult = await loadMain(isManager && validView ? params.view : userId)
+  } else {
+    ;[mainResult, teamMembers] = await Promise.all([loadMain(userId), loadTeamMembers()])
+    validView = false
+  }
+
+  const [{ data: orders, count }, { count: ownCountRaw }] = mainResult
+  const ownCount = isManager ? ownCountRaw ?? 0 : 0
 
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
 

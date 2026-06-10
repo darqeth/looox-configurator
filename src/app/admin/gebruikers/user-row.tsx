@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateApprovalStatus } from '@/lib/actions/admin'
+import { toast } from '@/components/toast'
 import { UserEditModal } from './user-modal'
 
 const statusConfig = {
@@ -60,17 +61,28 @@ export function UserRow({
   const [isPending, startTransition] = useTransition()
   const [localKorting] = useState(profile.korting)
   const [localIsInternational] = useState(profile.is_international ?? false)
+  // Optimistic (audit 2.6): badge flipt en knoppen verdwijnen direct bij
+  // goedkeuren/afwijzen; rollback + toast als de server weigert
+  const [localStatus, setLocalStatus] = useState<'approved' | 'rejected' | null>(null)
 
-  const status = statusConfig[profile.approval_status as keyof typeof statusConfig] ?? statusConfig.pending
+  const effectiveStatus = localStatus ?? profile.approval_status
+  const status = statusConfig[effectiveStatus as keyof typeof statusConfig] ?? statusConfig.pending
   const date = profile.created_at
     ? new Date(profile.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
     : ''
   const firstLetter = profile.full_name?.charAt(0)?.toUpperCase() ?? '?'
 
   function handleApproval(s: 'approved' | 'rejected') {
+    setLocalStatus(s)
     startTransition(async () => {
-      await updateApprovalStatus(profile.id, s)
-      router.refresh()
+      try {
+        await updateApprovalStatus(profile.id, s)
+        router.refresh()
+      } catch (e) {
+        console.error(e)
+        setLocalStatus(null)
+        toast('Status bijwerken mislukt. Probeer het opnieuw.')
+      }
     })
   }
 
@@ -152,7 +164,7 @@ export function UserRow({
 
         {/* Snelle acties — klik niet door naar modal */}
         <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-          {showActions && (
+          {showActions && localStatus === null && (
             <>
               <button
                 onClick={() => handleApproval('approved')}
@@ -170,7 +182,7 @@ export function UserRow({
               </button>
             </>
           )}
-          {showApprove && (
+          {showApprove && localStatus === null && (
             <button
               onClick={() => handleApproval('approved')}
               disabled={isPending}

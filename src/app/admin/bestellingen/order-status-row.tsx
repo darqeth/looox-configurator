@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { updateOrderStatus, type OrderStatus } from '@/lib/actions/admin'
 import { OrderDrawingsUploadModal } from './order-drawings-upload'
+import { toast } from '@/components/toast'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'pending',           label: 'In behandeling' },
@@ -48,7 +49,11 @@ export function OrderStatusSelect({
     setStatus(newStatus)
     startTransition(async () => {
       const result = await updateOrderStatus(orderId, newStatus as OrderStatus)
-      if (!result.success) setStatus(prev)
+      if (!result.success) {
+        // Rollback was stil (audit U8) — admin dacht dat het gelukt was
+        setStatus(prev)
+        toast(result.error ?? 'Status wijzigen mislukt. Probeer het opnieuw.')
+      }
     })
   }
 

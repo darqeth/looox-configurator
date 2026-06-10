@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import type { ConfigurationsData } from '@/lib/queries/fetch-configurations'
 import { deleteConfiguration } from '@/lib/actions/configurator'
+import { toast } from '@/components/toast'
 
 interface Props {
   configId: string
@@ -19,7 +21,7 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const menuRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
 
@@ -42,12 +44,21 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
 
   async function handleDelete() {
     setDeleting(true)
+    // Optimistic (audit 2.6): rij verdwijnt direct, rollback + toast bij fout
+    queryClient.setQueriesData<ConfigurationsData>(
+      { queryKey: ['configurations'] },
+      (old) => old ? { ...old, configs: old.configs.filter(c => c.id !== configId) } : old
+    )
+    setConfirmDelete(false)
+    setDeleting(false)
     try {
       await deleteConfiguration(configId)
-      setConfirmDelete(false)
-      router.refresh()
-    } catch {
-      setDeleting(false)
+      queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      queryClient.invalidateQueries({ queryKey: ['sidebar'] })
+    } catch (e) {
+      console.error(e)
+      queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      toast(`Verwijderen van "${configName}" is mislukt. Probeer het opnieuw.`)
     }
   }
 

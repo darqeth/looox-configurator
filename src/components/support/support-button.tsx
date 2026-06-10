@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { sendSupportRequest, getMyConfigs, type SupportType } from '@/lib/actions/support'
+import { toast } from '@/components/toast'
 
 type Config = { id: string; name: string; article_number: string | null; width: number | null; height: number | null }
 
@@ -62,7 +63,7 @@ export default function SupportButton() {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 2 * 1024 * 1024) {
-      alert('Screenshot mag maximaal 2 MB zijn.')
+      toast('Screenshot mag maximaal 2 MB zijn.')
       return
     }
     const reader = new FileReader()

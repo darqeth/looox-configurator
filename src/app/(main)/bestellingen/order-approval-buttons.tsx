@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { approveOrder, rejectOrder } from '@/lib/actions/order-approval'
+import { toast } from '@/components/toast'
 
 export function OrderApprovalButtons({
   orderId,
@@ -78,10 +79,15 @@ export function OrderApprovalButtons({
           <button
             onClick={() => {
               setError('')
+              // Optimistic (audit 2.6): direct als goedgekeurd tonen,
+              // rollback + toast als de server weigert
+              setDone('goedgekeurd')
               startTransition(async () => {
                 const result = await approveOrder(orderId)
-                if (result.success) setDone('goedgekeurd')
-                else setError(result.error ?? 'Er ging iets mis')
+                if (!result.success) {
+                  setDone(null)
+                  toast(result.error ?? 'Goedkeuren mislukt. Probeer het opnieuw.')
+                }
               })
             }}
             disabled={isPending}

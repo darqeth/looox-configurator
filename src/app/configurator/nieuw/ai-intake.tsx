@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from 'react'
 import { analyzeSpiegelWithAI } from '@/lib/actions/ai-configurator'
 import { SHAPES, EXTRA_OPTIONS, ORGANIC_SIZES } from '@/lib/configurator-config'
 import type { AISuggestion } from '@/lib/types/ai-configurator'
+import { toast } from '@/components/toast'
 
 interface AIIntakeProps {
   onConfirm: (suggestion: AISuggestion, imageFile: File | null) => void
@@ -90,11 +91,11 @@ export function AIIntake({ onConfirm, onBack }: AIIntakeProps) {
     const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
     if (!file.type.startsWith('image/')) return
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      alert('Gebruik een JPG, PNG, WEBP of GIF afbeelding.')
+      toast('Gebruik een JPG, PNG, WEBP of GIF afbeelding.')
       return
     }
     if (file.size > 10 * 1024 * 1024) {
-      alert('Afbeelding is te groot (max. 10 MB)')
+      toast('Afbeelding is te groot (max. 10 MB)')
       return
     }
     setImageFile(file)

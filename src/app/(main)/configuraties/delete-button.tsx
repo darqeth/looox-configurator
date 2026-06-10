@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { ConfigurationsData } from '@/lib/queries/fetch-configurations'
 import { deleteConfiguration, adminDeleteConfiguration } from '@/lib/actions/configurator'
+import { toast } from '@/components/toast'
 
 export default function DeleteButton({ configId, configName, isAdmin = false }: {
   configId: string
@@ -37,6 +38,7 @@ export default function DeleteButton({ configId, configName, isAdmin = false }: 
       console.error(e)
       // Rollback bij fout
       queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      toast(`Verwijderen van "${configName}" is mislukt. Probeer het opnieuw.`)
       setLoading(false)
     }
   }

@@ -287,6 +287,22 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                                 <span className="text-[12.5px] text-lx-text-secondary font-medium">Netto totaal ex. BTW</span>
                                 <span className="text-[14px] font-bold text-lx-cta">€{price.toLocaleString('nl-NL')}</span>
                               </div>
+                              {appliedDiscount && (
+                                <>
+                                  <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                                    <span className="text-[12px] text-green-600">
+                                      Kortingscode ({appliedDiscount.type === 'pct' ? `${appliedDiscount.value}%` : `€${appliedDiscount.value} eenmalig`})
+                                    </span>
+                                    <span className="text-[12px] font-semibold text-green-600">
+                                      −€{discountAmount.toLocaleString('nl-NL')}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                                    <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal</span>
+                                    <span className="text-[15px] font-bold text-lx-text-primary">€{finalTotal.toLocaleString('nl-NL')}</span>
+                                  </div>
+                                </>
+                              )}
                             </>
                           ) : (
                             <>
@@ -370,6 +386,50 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                             </p>
                           </div>
                         )}
+
+                        {/* Kortingscode — in stap 1 zodat het prijseffect
+                            direct zichtbaar is in de opbouw hierboven */}
+                        {!isOpAanvraag && (
+                        <div>
+                          <label className={labelCls}>
+                            Kortingscode <span className="font-normal">(optioneel)</span>
+                          </label>
+                          {appliedDiscount ? (
+                            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-green-50 border border-green-200">
+                              <span className="text-[12.5px] text-green-700 font-semibold font-mono">{appliedDiscount.code}</span>
+                              <button
+                                onClick={() => { setAppliedDiscount(null); setDiscountInput('') }}
+                                className="text-[11px] text-lx-text-secondary hover:text-red-400 transition-colors"
+                              >
+                                Verwijderen
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={discountInput}
+                                  onChange={(e) => { setDiscountInput(e.target.value); setDiscountError('') }}
+                                  onKeyDown={(e) => e.key === 'Enter' && discountInput.trim() && handleValidate()}
+                                  placeholder="Bijv. LX-ABCD-1234"
+                                  className="flex-1 h-9 rounded-xl border border-black/12 px-3.5 text-[13px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
+                                />
+                                <button
+                                  onClick={handleValidate}
+                                  disabled={!discountInput.trim() || discountValidating}
+                                  className="px-3.5 h-9 rounded-xl bg-lx-panel-bg border border-black/12 text-[12.5px] font-semibold text-lx-text-secondary hover:text-lx-text-primary disabled:opacity-60 transition-colors whitespace-nowrap"
+                                >
+                                  {discountValidating ? '…' : 'Valideer'}
+                                </button>
+                              </div>
+                              {discountError && (
+                                <p className="text-[11px] text-red-500 mt-1">{discountError}</p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -445,49 +505,6 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                         className="w-full rounded-xl border border-black/12 px-3.5 py-2.5 text-[13px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors resize-none"
                       />
                     </div>
-
-                    {/* Kortingscode */}
-                    {!isOpAanvraag && (
-                    <div>
-                      <label className={labelCls}>
-                        Kortingscode <span className="font-normal">(optioneel)</span>
-                      </label>
-                      {appliedDiscount ? (
-                        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-green-50 border border-green-200">
-                          <span className="text-[12.5px] text-green-700 font-semibold font-mono">{appliedDiscount.code}</span>
-                          <button
-                            onClick={() => { setAppliedDiscount(null); setDiscountInput('') }}
-                            className="text-[11px] text-lx-text-secondary hover:text-red-400 transition-colors"
-                          >
-                            Verwijderen
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={discountInput}
-                              onChange={(e) => { setDiscountInput(e.target.value); setDiscountError('') }}
-                              onKeyDown={(e) => e.key === 'Enter' && discountInput.trim() && handleValidate()}
-                              placeholder="Bijv. LX-ABCD-1234"
-                              className="flex-1 h-9 rounded-xl border border-black/12 px-3.5 text-[13px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
-                            />
-                            <button
-                              onClick={handleValidate}
-                              disabled={!discountInput.trim() || discountValidating}
-                              className="px-3.5 h-9 rounded-xl bg-lx-panel-bg border border-black/12 text-[12.5px] font-semibold text-lx-text-secondary hover:text-lx-text-primary disabled:opacity-60 transition-colors whitespace-nowrap"
-                            >
-                              {discountValidating ? '…' : 'Valideer'}
-                            </button>
-                          </div>
-                          {discountError && (
-                            <p className="text-[11px] text-red-500 mt-1">{discountError}</p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    )}
 
                     {/* Bevestig checkbox */}
                     <label className="flex items-start gap-3 cursor-pointer select-none">

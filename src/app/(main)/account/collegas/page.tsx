@@ -5,14 +5,16 @@ import { TabNav } from '../tab-nav'
 
 export default async function CollegasPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // Lokale JWT-verificatie — geen auth-roundtrip
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
+  if (!userId) redirect('/login')
 
   // company_members is bron van waarheid
   const { data: myMember } = await supabase
     .from('company_members')
     .select('role, company_id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .single()
 
   // Geen actief lidmaatschap → geen bedrijfspagina tonen
@@ -65,7 +67,7 @@ export default async function CollegasPage() {
       email: (profile?.email as string | null) ?? '—',
       avatarUrl: profile?.avatar_url as string | null,
       approvalStatus: profile?.approval_status as string | null,
-      isSelf: profile?.id === user.id,
+      isSelf: profile?.id === userId,
     }
   })
 

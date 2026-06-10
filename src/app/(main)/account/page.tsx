@@ -6,8 +6,12 @@ import { AccountContent, AccountContentSkeleton } from './account-content'
 
 export default async function AccountPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // Lokale JWT-verificatie: shell (tabs + kop) rendert direct → alleen de
+  // content-skeleton (geen route-skeleton meer die erdoor vervangen wordt)
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
+  const userEmail = (claimsData?.claims?.email as string | undefined) ?? ''
+  if (!userId) redirect('/login')
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 max-w-3xl">
@@ -21,7 +25,7 @@ export default async function AccountPage() {
 
       {/* Content — streamt zodra DB queries klaar zijn */}
       <Suspense fallback={<AccountContentSkeleton />}>
-        <AccountContent userId={user.id} userEmail={user.email ?? ''} />
+        <AccountContent userId={userId} userEmail={userEmail} />
       </Suspense>
 
     </div>

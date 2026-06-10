@@ -11,8 +11,10 @@ async function LoooxCircleData() {
 
 export default async function LoooxCirclePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // Lokale JWT-verificatie: shell rendert direct → alleen de content-skeleton
+  // (geen route-skeleton meer die erdoor vervangen wordt)
+  const { data: claimsData } = await supabase.auth.getClaims()
+  if (!claimsData?.claims?.sub) redirect('/login')
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 max-w-3xl">

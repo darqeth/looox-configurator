@@ -551,6 +551,15 @@ export function SnelStartenCard() {
 
 // ─── LoooX Circle section ─────────────────────────────────────────────────────
 
+// Gate: beslist server-side of Circle toont, via het per-request gecachte
+// profiel (gedeeld met Header/KPI — geen extra query). Houdt de flags-check
+// uit het blokkerende pad van de pagina-shell.
+export async function CircleGate({ userId }: { userId: string }) {
+  const { isInternational, isGroothandel } = await getProfile(userId)
+  if (isInternational || isGroothandel) return null
+  return <CircleSection userId={userId} />
+}
+
 export async function CircleSection({ userId }: { userId: string }) {
   const supabase = await createClient()
   const { isInternational, isGroothandel, companyId, korting: _korting } = await getProfile(userId)

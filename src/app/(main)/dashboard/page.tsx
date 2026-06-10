@@ -10,31 +10,29 @@ import {
   UpdatesRows, UpdatesRowsSkeleton, UpdatesHeaderExtra,
   DownloadsRows, DownloadsRowsSkeleton,
   SnelStartenCard,
-  CircleSection, CircleSkeleton,
+  CircleGate,
 } from './dashboard-sections'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  // Minimale fetch om Circle conditioneel te tonen zonder skeleton flash
-  const { data: flags } = await supabase
-    .from('profiles').select('is_international, is_groothandel')
-    .eq('id', user.id).single()
-  const showCircle = !(flags?.is_international || flags?.is_groothandel)
+  // Lokale JWT-verificatie + geen blokkerende flags-query: de pagina-shell
+  // rendert nu direct → géén route-skeleton meer die door de sectie-skeletons
+  // vervangen wordt (het "dubbele skeleton"-effect)
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
+  if (!userId) redirect('/login')
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 w-full">
 
       {/* Header — groet + notificaties */}
       <Suspense fallback={<HeaderSkeleton />}>
-        <DashboardHeader userId={user.id} />
+        <DashboardHeader userId={userId} />
       </Suspense>
 
       {/* KPI cards */}
       <Suspense fallback={<KpiRowSkeleton />}>
-        <KpiRow userId={user.id} />
+        <KpiRow userId={userId} />
       </Suspense>
 
       {/* Bento grid */}
@@ -49,7 +47,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
           <Suspense fallback={<ConfigRowsSkeleton />}>
-            <RecentConfigsRows userId={user.id} />
+            <RecentConfigsRows userId={userId} />
           </Suspense>
         </div>
 
@@ -97,12 +95,12 @@ export default async function DashboardPage() {
 
       </div>
 
-      {/* LoooX Circle */}
-      {showCircle && (
-        <Suspense fallback={<CircleSkeleton />}>
-          <CircleSection userId={user.id} />
-        </Suspense>
-      )}
+      {/* LoooX Circle — CircleGate beslist zelf (gedeeld gecachet profiel) of
+          Circle toont; fallback null = geen skeleton-flash voor
+          internationale/groothandel-accounts */}
+      <Suspense fallback={null}>
+        <CircleGate userId={userId} />
+      </Suspense>
 
     </div>
   )

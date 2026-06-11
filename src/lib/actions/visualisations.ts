@@ -49,7 +49,7 @@ export async function getVisualisationStatus(): Promise<VisualisationStatus> {
     dailyLimit: status.daily_limit,
     bonus: status.bonus,
     scenes: SCENES.map(s => ({ id: s.id, name: s.name })),
-    aiEnabled: !!process.env.OPENAI_API_KEY,
+    aiEnabled: !!process.env.OPENAI_API_KEY && process.env.VISUALISATION_AI_PASS === '1',
   }
 }
 
@@ -82,11 +82,13 @@ export async function generateVisualisation(rawInput: unknown): Promise<Generate
     // Eerst componeren (kost niets) — pas daarna het tegoed claimen
     const composed = await composeVisualisationWithLayers(scene, input.config as VisualisationInput)
 
-    // AI-fotorealisme-pas (fase 2): automatisch wanneer de key er is; bij
-    // falen stil terugvallen op het fase 1-composiet
+    // AI-fotorealisme-pas (fase 2): uitgeschakeld na evaluatie 2026-06-11 —
+    // op de render-scènes voegt hij niets zichtbaars toe (V7). Aanzetten:
+    // VISUALISATION_AI_PASS=1 + OPENAI_API_KEY. Herevalueren bij echte
+    // fotografie-scènes, daar kan harmonisatie wél verschil maken.
     let buffer = composed.jpeg
     let aiApplied = false
-    if (process.env.OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY && process.env.VISUALISATION_AI_PASS === '1') {
       try {
         buffer = await applyAiPass(composed)
         aiApplied = true

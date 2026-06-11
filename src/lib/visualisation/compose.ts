@@ -146,8 +146,14 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
   // ── Reflectie ──
   // Met tegenfoto (wat er tegenover de spiegel staat): echte reflectie —
   // gespiegeld, vrijwel scherp. Zonder: de scène zelf als benadering.
+  // De spiegel toont de overkant VERKLEIND (langere optische weg): we croppen
+  // een groter gebied en passen dat in de spiegelmaat (reflectionScale)
+  const rScale = scene.reflectionImage ? (scene.reflectionScale ?? 0.55) : 0.85
+  const cropW = Math.min(Math.round(wPx / rScale), scene.width)
+  const cropH = Math.min(Math.round(hPx / rScale), scene.height)
+
   let reflectionSource: Buffer
-  let cropTop: number
+  let centerY: number
   if (scene.reflectionImage) {
     reflectionSource = await sharp(await readFile(path.join(base, scene.reflectionImage)))
       .resize(scene.width, scene.height, { fit: 'cover' })
@@ -155,21 +161,23 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
       .blur(1.5)
       .modulate({ brightness: 0.94, saturation: 0.95 })
       .toBuffer()
-    const focusY = Math.round((scene.reflectionFocusY ?? 0.5) * scene.height)
-    cropTop = Math.min(Math.max(0, focusY - Math.round(hPx / 2)), scene.height - hPx)
+    centerY = Math.round((scene.reflectionFocusY ?? 0.5) * scene.height)
   } else {
     reflectionSource = await sharp(sceneBuf)
       .flop()
       .blur(4)
       .modulate({ brightness: 0.88, saturation: 0.88 })
       .toBuffer()
-    cropTop = Math.min(Math.max(0, top - Math.round(hPx * 0.04)), scene.height - hPx)
+    centerY = top + Math.round(hPx / 2)
   }
   // Horizontale positie: gespiegelde x van de spiegelpositie (parallax-gevoel)
   const parallax = Math.round(wPx * 0.06)
-  const cropLeft = Math.min(Math.max(0, scene.width - left - wPx + parallax), scene.width - wPx)
+  const centerX = scene.width - left - Math.round(wPx / 2) + parallax
+  const cropLeft = Math.min(Math.max(0, centerX - Math.round(cropW / 2)), scene.width - cropW)
+  const cropTop = Math.min(Math.max(0, centerY - Math.round(cropH / 2)), scene.height - cropH)
   const reflectionCrop = await sharp(reflectionSource)
-    .extract({ left: cropLeft, top: cropTop, width: wPx, height: hPx })
+    .extract({ left: cropLeft, top: cropTop, width: cropW, height: cropH })
+    .resize(wPx, hPx)
     .toBuffer()
 
   // Masker in spiegelvorm

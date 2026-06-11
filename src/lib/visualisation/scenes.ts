@@ -26,6 +26,9 @@ export type Scene = {
   reflectionImage?: string
   /** Welk hoogtedeel van de tegenfoto de spiegel toont (0-1, default 0.5) */
   reflectionFocusY?: number
+  /** Verkleiningsfactor van de reflectie-inhoud (spiegel toont de overkant
+      kleiner door de langere optische weg); default 0.55 bij tegenfoto */
+  reflectionScale?: number
 }
 
 export const SCENES: Scene[] = [
@@ -52,6 +55,7 @@ export const SCENES: Scene[] = [
     lightFromX: -1,
     reflectionImage: 'scenes/japandi_spiegelbeeld.jpg',
     reflectionFocusY: 0.5,
+    reflectionScale: 0.55,
   },
 ]
 

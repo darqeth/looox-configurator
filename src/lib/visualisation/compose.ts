@@ -9,7 +9,7 @@ import type { Scene } from './scenes'
 // reflectie komt uit de scène zelf (gespiegeld + vervaagd) — 0% artefacten.
 
 export type VisualisationInput = {
-  shape: 'rechthoek' | 'rond'
+  shape: 'rechthoek' | 'rounded-rect' | 'rond'
   /** cm */
   width: number
   /** cm — bij rond gelijk aan width (diameter) */
@@ -28,6 +28,12 @@ const GLOW_COLOR: Record<number, string> = {
   4000: '#EAF1FF',
 }
 
+// Hoekradius: rechthoek = scherp; alleen 'rounded-rect' (afgeronde hoeken)
+// krijgt een zichtbare radius (audit-feedback Mark, sprint 1-check)
+function rxFor(shape: VisualisationInput['shape'], w: number, h: number): number {
+  return shape === 'rounded-rect' ? Math.round(Math.min(w, h) * 0.10) : 0
+}
+
 const GLASS_TINT: Record<string, { color: string; opacity: number }> = {
   helder: { color: '#aebfc7', opacity: 0.10 },
   'smoke-zwart': { color: '#14161a', opacity: 0.42 },
@@ -37,7 +43,7 @@ const GLASS_TINT: Record<string, { color: string; opacity: number }> = {
 function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape']): string {
   const inner = shape === 'rond'
     ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}" fill="#fff"/>`
-    : `<rect x="0" y="0" width="${w}" height="${h}" rx="${Math.round(w * 0.012)}" fill="#fff"/>`
+    : `<rect x="0" y="0" width="${w}" height="${h}" rx="${rxFor(shape, w, h)}" fill="#fff"/>`
   return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
 }
 
@@ -45,7 +51,7 @@ function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'])
 function glassOverlaySvg(w: number, h: number, input: VisualisationInput): string {
   const { shape, glasKleur, directPositions } = input
   const tint = GLASS_TINT[glasKleur] ?? GLASS_TINT.helder
-  const rx = shape === 'rond' ? 0 : Math.round(w * 0.012)
+  const rx = shape === 'rond' ? 0 : rxFor(shape, w, h)
   const clip = shape === 'rond'
     ? `<clipPath id="m"><circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}"/></clipPath>`
     : `<clipPath id="m"><rect x="0" y="0" width="${w}" height="${h}" rx="${rx}"/></clipPath>`
@@ -53,25 +59,31 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput): strin
   // Directe LED: gesatineerde baan ~4.5% van de korte zijde, 6% inzet vanaf de rand
   const strip = Math.round(Math.min(w, h) * 0.045)
   const inset = Math.round(Math.min(w, h) * 0.06)
-  const stripFill = `fill="#ffffff" opacity="0.92" filter="url(#ledblur)"`
+  // Scherpe LED-banen: zachte gloed-onderlaag + solide witte kern erbovenop
+  // (verlichting moet crisp zijn — feedback sprint 1-check)
   let strips = ''
   const pos = new Set(directPositions)
+  const stripRects: Array<{ x: number; y: number; w: number; h: number }> = []
   if (shape === 'rond') {
     if (pos.size > 0) {
-      // Ronde spiegel: LED als ring
-      strips = `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - inset}" fill="none" stroke="#ffffff" stroke-width="${strip}" opacity="0.92" filter="url(#ledblur)"/>`
+      strips = `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - inset}" fill="none" stroke="#ffffff" stroke-width="${strip * 1.6}" opacity="0.45" filter="url(#ledblur)"/>
+        <circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - inset}" fill="none" stroke="#ffffff" stroke-width="${strip}" opacity="0.97"/>`
     }
   } else {
     const horW = w - inset * 2
     const verH = h - inset * 2
     if (pos.has('boven') || pos.has('boven-onder') || pos.has('rondom'))
-      strips += `<rect x="${inset}" y="${inset}" width="${horW}" height="${strip}" rx="${strip / 2}" ${stripFill}/>`
+      stripRects.push({ x: inset, y: inset, w: horW, h: strip })
     if (pos.has('onder') || pos.has('boven-onder') || pos.has('rondom'))
-      strips += `<rect x="${inset}" y="${h - inset - strip}" width="${horW}" height="${strip}" rx="${strip / 2}" ${stripFill}/>`
+      stripRects.push({ x: inset, y: h - inset - strip, w: horW, h: strip })
     if (pos.has('links') || pos.has('links-rechts') || pos.has('rondom'))
-      strips += `<rect x="${inset}" y="${inset}" width="${strip}" height="${verH}" rx="${strip / 2}" ${stripFill}/>`
+      stripRects.push({ x: inset, y: inset, w: strip, h: verH })
     if (pos.has('rechts') || pos.has('links-rechts') || pos.has('rondom'))
-      strips += `<rect x="${w - inset - strip}" y="${inset}" width="${strip}" height="${verH}" rx="${strip / 2}" ${stripFill}/>`
+      stripRects.push({ x: w - inset - strip, y: inset, w: strip, h: verH })
+    for (const r of stripRects) {
+      strips += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${strip / 2}" fill="#ffffff" opacity="0.45" filter="url(#ledblur)"/>
+        <rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${strip / 2}" fill="#ffffff" opacity="0.97"/>`
+    }
   }
 
   const edge = shape === 'rond'
@@ -79,11 +91,12 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput): strin
        <circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - 3}" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="1"/>`
     : `<rect x="1" y="1" width="${w - 2}" height="${h - 2}" rx="${rx}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>
        <rect x="3" y="3" width="${w - 6}" height="${h - 6}" rx="${Math.max(rx - 2, 0)}" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="1"/>`
+  // (rx=0 bij rechthoek: scherpe hoeken)
 
   return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     ${clip}
-    <filter id="ledblur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${Math.max(2, strip / 5)}"/></filter>
+    <filter id="ledblur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${Math.max(3, strip / 3)}"/></filter>
     <linearGradient id="hl" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
       <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.03"/>
@@ -106,7 +119,7 @@ function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['s
   const stroke = Math.round(Math.min(w, h) * 0.10)
   const inner = shape === 'rond'
     ? `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + stroke * 0.25}" fill="none" stroke="${color}" stroke-width="${stroke}"/>`
-    : `<rect x="${pad - stroke * 0.25}" y="${pad - stroke * 0.25}" width="${w + stroke * 0.5}" height="${h + stroke * 0.5}" rx="${Math.round(w * 0.02)}" fill="none" stroke="${color}" stroke-width="${stroke}"/>`
+    : `<rect x="${pad - stroke * 0.25}" y="${pad - stroke * 0.25}" width="${w + stroke * 0.5}" height="${h + stroke * 0.5}" rx="${Math.round(stroke * 0.4)}" fill="none" stroke="${color}" stroke-width="${stroke}"/>`
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
 }
 
@@ -115,7 +128,7 @@ function shadowSvg(w: number, h: number, pad: number, shape: VisualisationInput[
   const H = h + pad * 2
   const inner = shape === 'rond'
     ? `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2}" fill="#000"/>`
-    : `<rect x="${pad}" y="${pad}" width="${w}" height="${h}" rx="${Math.round(w * 0.012)}" fill="#000"/>`
+    : `<rect x="${pad}" y="${pad}" width="${w}" height="${h}" fill="#000"/>`
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
 }
 

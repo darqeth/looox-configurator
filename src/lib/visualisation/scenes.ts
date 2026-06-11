@@ -31,7 +31,7 @@ export const SCENES: Scene[] = [
     image: 'scenes/test-warm.jpg',
     width: 2336,
     height: 1600,
-    pxPerCm: 9.8,       // meubel ≈ 140 cm breed ≈ 1372 px
+    pxPerCm: 8.6,       // meubel ≈ 160 cm breed ≈ 1372 px (bijgesteld na beeldcheck)
     centerX: 1163,
     mirrorBottomY: 855, // ≈ 23 cm boven het meubelblad (lucht boven de kraan)
     lightFromX: -1,

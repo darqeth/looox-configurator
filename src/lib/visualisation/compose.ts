@@ -150,9 +150,18 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
   // (rx=0 bij rechthoek: scherpe hoeken)
 
   // Tip-Touch sensor: ringetje onder-midden, ~5cm boven de glasrand
+  // Feller dan de rest: donker contrastrandje + dikkere witte ring met gloed,
+  // zodat de sensor ook op lichte achtergronden zichtbaar is. Loopt er
+  // onderlangs een zandstraalbaan, dan komt de ring erboven te zitten.
+  const heeftOnderBaan = shape !== 'rond' && shape !== 'organic' &&
+    (pos.has('onder') || pos.has('boven-beneden') || pos.has('rondom'))
+  const tipTouchCy = heeftOnderBaan
+    ? h - inset - strip - tipTouchPx * 2.4
+    : h - tipTouchPx * 6
   const tipTouch = input.tipTouch && tipTouchPx > 0
-    ? `<circle cx="${w / 2}" cy="${h - tipTouchPx * 6}" r="${tipTouchPx}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1, tipTouchPx * 0.22)}" opacity="0.5" filter="url(#ledblur)"/>
-       <circle cx="${w / 2}" cy="${h - tipTouchPx * 6}" r="${tipTouchPx}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1, tipTouchPx * 0.18)}" opacity="0.95"/>`
+    ? `<circle cx="${w / 2}" cy="${tipTouchCy}" r="${tipTouchPx}" fill="none" stroke="#000000" stroke-width="${Math.max(2, tipTouchPx * 0.55)}" opacity="0.25" filter="url(#ledblur)"/>
+       <circle cx="${w / 2}" cy="${tipTouchCy}" r="${tipTouchPx}" fill="none" stroke="#ffffff" stroke-width="${Math.max(2, tipTouchPx * 0.4)}" opacity="0.7" filter="url(#ledblur)"/>
+       <circle cx="${w / 2}" cy="${tipTouchCy}" r="${tipTouchPx}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1.5, tipTouchPx * 0.3)}" opacity="1"/>`
     : ''
 
   return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">

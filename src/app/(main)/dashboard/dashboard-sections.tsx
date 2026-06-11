@@ -11,6 +11,7 @@ import { OnlinePresence } from '@/components/online-presence'
 import ChangelogModal from '@/components/dashboard/changelog-modal'
 import OrderButton from '@/app/(main)/configuraties/order-button'
 import CopyButton from '@/components/copy-button'
+import { ProjectBadge } from '@/components/project-badge'
 import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 
@@ -354,7 +355,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
     )
   }
 
-  const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', arc: 'Boog', sol: 'Sol', luna: 'Luna' }
+  const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', arc: 'Boog', sol: 'Sol', luna: 'Luna', projectspiegel: 'Projectspiegel' }
 
   return (
     <div className="divide-y divide-lx-divider">
@@ -390,7 +391,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2">
-                <p className="text-[13px] font-medium text-lx-text-primary truncate">{config.name ?? 'Naamloze configuratie'}</p>
+                <p className="text-[13px] font-medium text-lx-text-primary truncate">{config.name ?? 'Naamloze configuratie'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}</p>
                 {config.article_number && <span className="text-[10.5px] font-mono text-lx-text-muted flex-shrink-0">{config.article_number}</span>}
               </div>
               <p className="text-[11.5px] text-lx-text-secondary">

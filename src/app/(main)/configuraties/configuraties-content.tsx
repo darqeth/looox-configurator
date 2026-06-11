@@ -9,6 +9,7 @@ import ConfigActionsMenu from './config-actions-menu'
 import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 import { fetchConfigurations } from '@/lib/queries/fetch-configurations'
+import { ProjectBadge } from '@/components/project-badge'
 
 const shapeLabel: Record<string, string> = {
   rechthoek: 'Rechthoek',
@@ -18,6 +19,9 @@ const shapeLabel: Record<string, string> = {
   'rounded-rect': 'Afgerond',
   ovaal: 'Ovaal',
   arc: 'Boog',
+  sol: 'Sol',
+  luna: 'Luna',
+  projectspiegel: 'Projectspiegel',
 }
 
 function ShapeIcon({ shape }: { shape: string }) {
@@ -169,6 +173,7 @@ export function ConfiguratiesContent({
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-[13px] font-semibold text-lx-text-primary truncate leading-snug">
                             {config.name ?? 'Naamloze configuratie'}
+                            {isProjectspiegel && <ProjectBadge className="ml-1.5" />}
                           </p>
                           <p className="text-[13px] font-bold text-lx-text-primary flex-shrink-0">
                             {shape === 'op-aanvraag' ? 'Op offerte' : `€${displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
@@ -205,6 +210,7 @@ export function ConfiguratiesContent({
                       <div className="flex-1 min-w-0">
                         <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">
                           {config.name ?? 'Naamloze configuratie'}
+                          {isProjectspiegel && <ProjectBadge className="ml-1.5" />}
                         </p>
                         <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
                           {config.article_number && <span className="font-mono">{config.article_number} · </span>}

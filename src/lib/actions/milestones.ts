@@ -189,7 +189,8 @@ export async function checkAndAwardMilestones(): Promise<AwardedMilestone[]> {
   const shapeCounts: Record<string, number> = {}
   for (const c of (shapeData ?? [])) {
     const shape = (c.selected_options as Record<string, unknown> | null)?.shape as string | undefined
-    if (shape) shapeCounts[shape] = (shapeCounts[shape] ?? 0) + 1
+    // Projectspiegels tellen niet mee voor vorm-milestones (besluit B4)
+    if (shape && shape !== 'projectspiegel') shapeCounts[shape] = (shapeCounts[shape] ?? 0) + 1
   }
 
   // Bepaal welke milestones nieuw verdiend zijn (geen DB calls)

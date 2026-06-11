@@ -79,6 +79,7 @@ type SidebarRpcResult = {
   revenue_sum: number
   streak: { current_streak: number } | null
   config_count: number
+  maatwerk_config_count?: number
   achieved_milestone_ids: string[]
 }
 
@@ -108,7 +109,9 @@ function buildFromRpc(rpc: SidebarRpcResult): SidebarData {
   const isManager = member?.role === 'manager'
 
   const currentByType: Record<string, number> = {
-    configs: Number(rpc.config_count ?? 0),
+    // Milestones tellen alleen maatwerk (besluit B4); config_count blijft
+    // het totaal voor het menu-badge
+    configs: Number(rpc.maatwerk_config_count ?? rpc.config_count ?? 0),
     orders: Number(rpc.company_order_count ?? 0),
     order_revenue: Number(rpc.revenue_sum ?? 0),
     streak: rpc.streak?.current_streak ?? 0,

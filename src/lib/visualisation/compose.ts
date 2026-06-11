@@ -23,9 +23,9 @@ export type VisualisationInput = {
   lichtKelvin: 3000 | 4000
 }
 
-const GLOW_COLOR: Record<number, string> = {
-  3000: '#FFD9A6',
-  4000: '#EAF1FF',
+const GLOW_COLOR: Record<number, { kern: string; rand: string }> = {
+  3000: { kern: '#FFF3DC', rand: '#FFC97A' },
+  4000: { kern: '#F6FAFF', rand: '#C9DCFF' },
 }
 
 // Hoekradius: vaste productmaat — LoooX afgeronde hoeken = R60 (6 cm),
@@ -112,14 +112,18 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
 </svg>`
 }
 
-// Indirecte LED: gloeiende ring/contour áchter de spiegel
-function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['shape'], color: string): string {
+// Indirecte LED: gloeiende contour áchter de spiegel — tweelaags zodat hij
+// ook op witte muren zichtbaar is: brede kleurrand + felle bijna-witte kern
+function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['shape'], color: { kern: string; rand: string }): string {
   const W = w + pad * 2
   const H = h + pad * 2
-  const stroke = Math.round(Math.min(w, h) * 0.10)
+  const strokeRand = Math.round(Math.min(w, h) * 0.20)
+  const strokeKern = Math.round(strokeRand * 0.45)
   const inner = shape === 'rond'
-    ? `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + stroke * 0.25}" fill="none" stroke="${color}" stroke-width="${stroke}"/>`
-    : `<rect x="${pad - stroke * 0.25}" y="${pad - stroke * 0.25}" width="${w + stroke * 0.5}" height="${h + stroke * 0.5}" rx="${Math.round(stroke * 0.4)}" fill="none" stroke="${color}" stroke-width="${stroke}"/>`
+    ? `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeRand * 0.2}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
+       <circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeKern * 0.2}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
+    : `<rect x="${pad - strokeRand * 0.2}" y="${pad - strokeRand * 0.2}" width="${w + strokeRand * 0.4}" height="${h + strokeRand * 0.4}" rx="${Math.round(strokeRand * 0.4)}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
+       <rect x="${pad - strokeKern * 0.2}" y="${pad - strokeKern * 0.2}" width="${w + strokeKern * 0.4}" height="${h + strokeKern * 0.4}" rx="${Math.round(strokeKern * 0.4)}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
 }
 
@@ -199,9 +203,10 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
   // Slagschaduw (multiply, offset van het licht af)
   const shadowPad = Math.round(Math.min(wPx, hPx) * 0.12)
   const shadowOffset = Math.round(shadowPad * 0.35) * (scene.lightFromX === -1 ? 1 : -1)
+  // Indirecte LED wast de slagschaduw grotendeels weg (anders dooft de gloed)
   const shadow = await sharp(Buffer.from(shadowSvg(wPx, hPx, shadowPad, input.shape)))
     .blur(shadowPad / 2.2)
-    .ensureAlpha(0.5)
+    .ensureAlpha(input.indirect ? 0.18 : 0.5)
     .png()
     .toBuffer()
   layers.push({
@@ -213,9 +218,9 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
 
   // Indirecte LED-gloed achter de spiegel
   if (input.indirect) {
-    const haloPad = Math.round(Math.min(wPx, hPx) * 0.22)
+    const haloPad = Math.round(Math.min(wPx, hPx) * 0.28)
     const halo = await sharp(Buffer.from(haloSvg(wPx, hPx, haloPad, input.shape, GLOW_COLOR[input.lichtKelvin])))
-      .blur(haloPad / 2.5)
+      .blur(haloPad / 3.2)
       .png()
       .toBuffer()
     layers.push({ input: halo, left: left - haloPad, top: top - haloPad, blend: 'screen' })

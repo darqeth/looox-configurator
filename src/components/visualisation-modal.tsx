@@ -104,10 +104,14 @@ function VisualisationModal({ config, configurationId, onClose }: {
     setLoading(true)
     try {
       const res = await generateVisualisation({ configurationId: configurationId ?? null, sceneId, config })
+      if (!res.ok) {
+        toast(res.error)
+        return
+      }
       setResults(r => ({ ...r, [sceneId]: { url: res.url, visualisationId: res.visualisationId, inPdf: false } }))
       setStatus(s => s ? { ...s, dailyUsed: res.dailyUsed, bonus: res.bonus } : s)
-    } catch (e) {
-      toast(e instanceof Error ? e.message : 'Genereren mislukt. Probeer het opnieuw.')
+    } catch {
+      toast('Genereren mislukt. Probeer het opnieuw.')
     } finally {
       setLoading(false)
     }
@@ -122,7 +126,11 @@ function VisualisationModal({ config, configurationId, onClose }: {
       [k, { ...v, inPdf: k === sceneId ? checked : (checked ? false : v.inPdf) }]
     )))
     try {
-      await setVisualisationInPdf(result.visualisationId, checked)
+      const res = await setVisualisationInPdf(result.visualisationId, checked)
+      if (res.error) {
+        setResults(vorige)
+        toast(res.error)
+      }
     } catch {
       setResults(vorige)
       toast('Opslaan van de offerte-keuze mislukt')

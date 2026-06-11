@@ -50,71 +50,87 @@ export async function getVisualisationStatus(): Promise<VisualisationStatus> {
   }
 }
 
-export async function generateVisualisation(rawInput: unknown): Promise<{
-  url: string
-  visualisationId: string
-  dailyUsed: number
-  dailyLimit: number
-  bonus: number
-}> {
-  const input = parseOrThrow(generateSchema, rawInput)
+// Fouten als return-waarde, niet als throw: Next.js verbergt geworpen
+// action-errors in productie (digest-melding) en de gebruiker ziet dan
+// een cryptische fout i.p.v. onze nette boodschap.
+export type GenerateVisualisationResult =
+  | { ok: true; url: string; visualisationId: string; dailyUsed: number; dailyLimit: number; bonus: number }
+  | { ok: false; error: string }
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Niet ingelogd')
+export async function generateVisualisation(rawInput: unknown): Promise<GenerateVisualisationResult> {
+  try {
+    const input = parseOrThrow(generateSchema, rawInput)
 
-  // Alleen maatwerk-toegang (besluit V6)
-  const { data: profile } = await supabase
-    .from('profiles').select('configurator_access').eq('id', user.id).single()
-  const access = profile?.configurator_access ?? 'maatwerk'
-  if (access !== 'maatwerk' && access !== 'beide') {
-    throw new Error('Visualisaties zijn beschikbaar voor maatwerk-configuraties')
-  }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { ok: false, error: 'Je bent niet (meer) ingelogd. Ververs de pagina en log opnieuw in.' }
 
-  const scene = getScene(input.sceneId)
-  if (!scene) throw new Error('Onbekende stijl')
+    // Alleen maatwerk-toegang (besluit V6)
+    const { data: profile } = await supabase
+      .from('profiles').select('configurator_access').eq('id', user.id).single()
+    const access = profile?.configurator_access ?? 'maatwerk'
+    if (access !== 'maatwerk' && access !== 'beide') {
+      return { ok: false, error: 'Visualisaties zijn beschikbaar voor maatwerk-configuraties' }
+    }
 
-  // Eerst componeren (kost niets) — pas daarna het tegoed claimen
-  const buffer = await composeVisualisation(scene, input.config as VisualisationInput)
+    const scene = getScene(input.sceneId)
+    if (!scene) return { ok: false, error: 'Onbekende stijl' }
 
-  const { data: claim, error: claimError } = await supabase.rpc('claim_visualisation', {
-    p_scene_id: input.sceneId,
-    p_configuration_id: input.configurationId ?? null,
-  })
-  if (claimError || !claim) {
-    throw new Error(claimError?.message?.includes('beschikbaar')
-      ? 'Je hebt geen visualisaties meer beschikbaar vandaag. Morgen weer 4 nieuwe, of verdien er 2 met een bestelling.'
-      : claimError?.message ?? 'Visualisatie claimen mislukt')
-  }
-  const claimResult = claim as { id: string; daily_used: number; daily_limit: number; bonus: number }
+    // Eerst componeren (kost niets) — pas daarna het tegoed claimen
+    const buffer = await composeVisualisation(scene, input.config as VisualisationInput)
 
-  // Upload via service role (bucket is public-read, schrijven alleen server-side)
-  const admin = createAdminClient()
-  const imagePath = `${user.id}/${claimResult.id}.jpg`
-  const { error: uploadError } = await admin.storage
-    .from('visualisations')
-    .upload(imagePath, buffer, { contentType: 'image/jpeg', upsert: true })
-  if (uploadError) throw new Error('Opslaan van het beeld mislukt: ' + uploadError.message)
+    const { data: claim, error: claimError } = await supabase.rpc('claim_visualisation', {
+      p_scene_id: input.sceneId,
+      p_configuration_id: input.configurationId ?? null,
+    })
+    if (claimError || !claim) {
+      const msg = claimError?.message ?? ''
+      if (msg.includes('beschikbaar')) {
+        return { ok: false, error: 'Je hebt geen visualisaties meer beschikbaar vandaag. Morgen weer 4 nieuwe, of verdien er 2 met een bestelling.' }
+      }
+      if (msg.includes('foreign key') || msg.includes('configuration_id')) {
+        return { ok: false, error: 'Deze configuratie bestaat niet meer. Ververs de pagina.' }
+      }
+      console.error('[visualisatie-claim]', claimError)
+      return { ok: false, error: 'Visualisatie claimen mislukt. Probeer het opnieuw.' }
+    }
+    const claimResult = claim as { id: string; daily_used: number; daily_limit: number; bonus: number }
 
-  await supabase.from('visualisations').update({ image_path: imagePath }).eq('id', claimResult.id)
+    // Upload via service role (bucket is public-read, schrijven alleen server-side)
+    const admin = createAdminClient()
+    const imagePath = `${user.id}/${claimResult.id}.jpg`
+    const { error: uploadError } = await admin.storage
+      .from('visualisations')
+      .upload(imagePath, buffer, { contentType: 'image/jpeg', upsert: true })
+    if (uploadError) {
+      console.error('[visualisatie-upload]', uploadError)
+      return { ok: false, error: 'Opslaan van het beeld mislukt. Probeer het opnieuw.' }
+    }
 
-  const { data: { publicUrl } } = admin.storage.from('visualisations').getPublicUrl(imagePath)
+    await supabase.from('visualisations').update({ image_path: imagePath }).eq('id', claimResult.id)
 
-  return {
-    url: publicUrl,
-    visualisationId: claimResult.id,
-    dailyUsed: claimResult.daily_used,
-    dailyLimit: claimResult.daily_limit,
-    bonus: claimResult.bonus,
+    const { data: { publicUrl } } = admin.storage.from('visualisations').getPublicUrl(imagePath)
+
+    return {
+      ok: true,
+      url: publicUrl,
+      visualisationId: claimResult.id,
+      dailyUsed: claimResult.daily_used,
+      dailyLimit: claimResult.daily_limit,
+      bonus: claimResult.bonus,
+    }
+  } catch (e) {
+    console.error('[visualisatie-genereren]', e)
+    return { ok: false, error: 'Genereren mislukt. Probeer het opnieuw.' }
   }
 }
 
 // Vinkje "toon in consumentenofferte" (besluit V3). Exclusief per
 // configuratie: maar één sfeerbeeld in de offerte.
-export async function setVisualisationInPdf(visualisationId: string, inPdf: boolean): Promise<void> {
+export async function setVisualisationInPdf(visualisationId: string, inPdf: boolean): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Niet ingelogd')
+  if (!user) return { error: 'Je bent niet (meer) ingelogd' }
 
   if (inPdf) {
     const { data: viz } = await supabase
@@ -139,5 +155,9 @@ export async function setVisualisationInPdf(visualisationId: string, inPdf: bool
     .update({ in_pdf: inPdf })
     .eq('id', visualisationId)
     .eq('user_id', user.id)
-  if (error) throw new Error(error.message)
+  if (error) {
+    console.error('[visualisatie-inpdf]', error)
+    return { error: 'Opslaan van de offerte-keuze mislukt' }
+  }
+  return {}
 }

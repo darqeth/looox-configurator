@@ -23,6 +23,7 @@ const generateSchema = z.object({
     directPositions: z.array(z.string().max(30)).max(6),
     indirect: z.boolean(),
     lichtKelvin: z.union([z.literal(3000), z.literal(4000)]),
+    frameColor: z.enum(['aluminium', 'zwart', 'gun-metal', 'brushed-brass', 'brushed-copper']).nullish(),
   }),
 })
 

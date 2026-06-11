@@ -137,6 +137,9 @@ export default function StepSamenvatting({
           directPositions: directLight.position !== 'geen' && directLight.type ? [directLight.position] : [],
           indirect: indirectLight.position !== 'geen' && !!indirectLight.type,
           lichtKelvin: 3000,
+          frameColor: selectedOptions.includes('frame-in-kleur')
+            ? (optionSubChoices['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null
+            : null,
         }
       : null
 

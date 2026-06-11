@@ -23,6 +23,7 @@ export type VisualisationConfig = {
   directPositions: string[]
   indirect: boolean
   lichtKelvin: 3000 | 4000
+  frameColor?: 'aluminium' | 'zwart' | 'gun-metal' | 'brushed-brass' | 'brushed-copper' | null
 }
 
 export const VISUALISATION_SHAPES = ['rechthoek', 'rounded-rect', 'rond']

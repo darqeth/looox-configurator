@@ -21,6 +21,17 @@ export type VisualisationInput = {
   indirect: boolean
   /** 3000 = warm, 4000 = koel */
   lichtKelvin: 3000 | 4000
+  /** Frame-in-kleur subkeuze, of null voor randloos */
+  frameColor?: 'aluminium' | 'zwart' | 'gun-metal' | 'brushed-brass' | 'brushed-copper' | null
+}
+
+// Metallic frame: donkere basis + lichte highlight voor een geborsteld effect
+const FRAME_COLORS: Record<string, { dark: string; light: string }> = {
+  'aluminium':      { dark: '#9DA2A6', light: '#E6E8EA' },
+  'zwart':          { dark: '#232325', light: '#48484A' },
+  'gun-metal':      { dark: '#3C4046', light: '#646A72' },
+  'brushed-brass':  { dark: '#9A7C45', light: '#D8BC82' },
+  'brushed-copper': { dark: '#8F5A3C', light: '#C98E68' },
 }
 
 const GLOW_COLOR: Record<number, { kern: string; rand: string }> = {
@@ -49,9 +60,10 @@ function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'],
 }
 
 // Glasoverlay: tint + diagonale highlight + randje, plus directe LED-banen
-function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: number): string {
+function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: number, framePx: number): string {
   const { shape, glasKleur, directPositions } = input
   const tint = GLASS_TINT[glasKleur] ?? GLASS_TINT.helder
+  const frame = input.frameColor ? FRAME_COLORS[input.frameColor] : null
   const clip = shape === 'rond'
     ? `<clipPath id="m"><circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}"/></clipPath>`
     : `<clipPath id="m"><rect x="0" y="0" width="${w}" height="${h}" rx="${rx}"/></clipPath>`
@@ -87,11 +99,19 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
     }
   }
 
+  // Frame: dikke metallic rand langs de binnenkant van de spiegelvorm
+  // (stroke ligt half over de rand, clip houdt 'm netjes binnen de vorm)
+  let frameLayer = ''
+  if (frame && framePx > 0) {
+    const fw = framePx * 2 // stroke-helft binnen telt als framePx
+    frameLayer = shape === 'rond'
+      ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}" fill="none" stroke="url(#framegrad)" stroke-width="${fw}"/>`
+      : `<rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="none" stroke="url(#framegrad)" stroke-width="${fw}"/>`
+  }
+
   const edge = shape === 'rond'
-    ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - 1}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>
-       <circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - 3}" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="1"/>`
-    : `<rect x="1" y="1" width="${w - 2}" height="${h - 2}" rx="${rx}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>
-       <rect x="3" y="3" width="${w - 6}" height="${h - 6}" rx="${Math.max(rx - 2, 0)}" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="1"/>`
+    ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - 1}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>`
+    : `<rect x="1" y="1" width="${w - 2}" height="${h - 2}" rx="${rx}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>`
   // (rx=0 bij rechthoek: scherpe hoeken)
 
   return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
@@ -103,11 +123,17 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
       <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.03"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0.10"/>
     </linearGradient>
+    ${frame ? `<linearGradient id="framegrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${frame.light}"/>
+      <stop offset="0.5" stop-color="${frame.dark}"/>
+      <stop offset="1" stop-color="${frame.light}"/>
+    </linearGradient>` : ''}
   </defs>
   <g clip-path="url(#m)">
     <rect width="${w}" height="${h}" fill="${tint.color}" opacity="${tint.opacity}"/>
     <rect width="${w}" height="${h}" fill="url(#hl)"/>
     ${strips}
+    ${frameLayer}
   </g>
   ${edge}
 </svg>`
@@ -143,6 +169,7 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
 
   // Spiegelmaat in scène-pixels
   const rxPx = rxFor(input.shape, scene.pxPerCm)
+  const framePx = input.frameColor ? Math.round(1.8 * scene.pxPerCm) : 0 // ~1.8cm frame
   const wPx = Math.round(input.width * scene.pxPerCm)
   const hPx = Math.round((input.shape === 'rond' ? input.width : input.height) * scene.pxPerCm)
   const left = Math.round(scene.centerX - wPx / 2)
@@ -193,7 +220,7 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
     .toBuffer()
 
   // Glasoverlay (tint, highlight, LED-banen, rand)
-  const overlay = Buffer.from(glassOverlaySvg(wPx, hPx, input, rxPx))
+  const overlay = Buffer.from(glassOverlaySvg(wPx, hPx, input, rxPx, framePx))
   const mirrorLayer = await sharp(reflection)
     .composite([{ input: overlay }])
     .png()

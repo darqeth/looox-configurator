@@ -160,6 +160,9 @@ export function ConfiguratiesContent({
                         directPositions: direct?.position && direct.position !== 'geen' ? [direct.position] : [],
                         indirect: !!(indirect?.position && indirect.position !== 'geen'),
                         lichtKelvin: 3000,
+                        frameColor: extras.includes('frame-in-kleur')
+                          ? ((opts?.optionSubChoices as Record<string, string> | undefined)?.['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null
+                          : null,
                       }
                     : null
 

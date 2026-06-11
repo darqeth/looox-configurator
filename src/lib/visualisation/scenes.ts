@@ -72,6 +72,18 @@ export const SCENES: Scene[] = [
     lightFromX: 1,       // raam rechts
     reflectionWall: '#edecea',
   },
+  {
+    id: 'simple',
+    name: 'Simple',
+    image: 'scenes/simple.jpg',
+    width: 5000,
+    height: 3700,
+    pxPerCm: 17.69,      // meubel 140 cm = 2476 px (aangeleverd door Mark)
+    centerX: 2520,
+    mirrorBottomY: 1780, // net boven de wandkranen
+    lightFromX: -1,
+    reflectionWall: '#eae6e2',
+  },
 ]
 
 export function getScene(id: string): Scene | undefined {

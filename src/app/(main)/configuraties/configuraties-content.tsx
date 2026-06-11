@@ -10,6 +10,7 @@ import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 import { fetchConfigurations } from '@/lib/queries/fetch-configurations'
 import { ProjectBadge } from '@/components/project-badge'
+import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
 
 const shapeLabel: Record<string, string> = {
   rechthoek: 'Rechthoek',
@@ -148,6 +149,19 @@ export function ConfiguratiesContent({
                 const projectspiegelStuks = isProjectspiegel ? (opts?.quantity as number | undefined) : undefined
                 const displayPrice = Number(config.total_price)
                 const priceLabel = isProjectspiegel ? 'Netto ex. BTW' : 'Bruto ex. BTW'
+
+                const visualisationConfig: VisualisationConfig | null =
+                  (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond')
+                    ? {
+                        shape: shape as VisualisationConfig['shape'],
+                        width: shape === 'rond' ? (diameter ?? 80) : (config.width ?? 80),
+                        height: shape === 'rond' ? (diameter ?? 80) : (config.height ?? 60),
+                        glasKleur: ((opts?.glasKleur as string) ?? 'helder') as VisualisationConfig['glasKleur'],
+                        directPositions: direct?.position && direct.position !== 'geen' ? [direct.position] : [],
+                        indirect: !!(indirect?.position && indirect.position !== 'geen'),
+                        lichtKelvin: 3000,
+                      }
+                    : null
 
                 const configPreview: ConfigPreview | undefined = shape && shape !== 'projectspiegel' ? {
                   shape: shape as ShapeSlug,

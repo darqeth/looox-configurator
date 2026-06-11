@@ -15,6 +15,7 @@ import {
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 import { Loader2 } from 'lucide-react'
+import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
 
 interface StepSamenvattingProps {
   shape: ShapeSlug
@@ -125,8 +126,27 @@ export default function StepSamenvatting({
     .join(', ')
 
 
+  // Badkamer-visualisatie: alleen voor de vormen die de engine ondersteunt
+  const visualisationConfig: VisualisationConfig | null =
+    (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond')
+      ? {
+          shape,
+          width: shape === 'rond' ? (diameter ?? 80) : width,
+          height: shape === 'rond' ? (diameter ?? 80) : height,
+          glasKleur,
+          directPositions: directLight.position !== 'geen' && directLight.type ? [directLight.position] : [],
+          indirect: indirectLight.position !== 'geen' && !!indirectLight.type,
+          lichtKelvin: 3000,
+        }
+      : null
+
   return (
     <div className="space-y-6">
+      {visualisationConfig && (
+        <div className="flex justify-end">
+          <VisualisationButton config={visualisationConfig} />
+        </div>
+      )}
       {/* Configuratie samenvatting */}
       <div className="bg-lx-panel-bg rounded-2xl p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>

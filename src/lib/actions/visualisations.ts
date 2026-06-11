@@ -123,11 +123,30 @@ export async function generateVisualisation(rawInput: unknown): Promise<{
   }
 }
 
-// Vinkje "toon in consumentenofferte" (besluit V3) — PDF-opname volgt in sprint 3
+// Vinkje "toon in consumentenofferte" (besluit V3). Exclusief per
+// configuratie: maar één sfeerbeeld in de offerte.
 export async function setVisualisationInPdf(visualisationId: string, inPdf: boolean): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
+
+  if (inPdf) {
+    const { data: viz } = await supabase
+      .from('visualisations')
+      .select('configuration_id')
+      .eq('id', visualisationId)
+      .eq('user_id', user.id)
+      .single()
+    // Andere beelden van dezelfde configuratie eerst uit de offerte halen
+    if (viz?.configuration_id) {
+      await supabase
+        .from('visualisations')
+        .update({ in_pdf: false })
+        .eq('user_id', user.id)
+        .eq('configuration_id', viz.configuration_id)
+        .neq('id', visualisationId)
+    }
+  }
 
   const { error } = await supabase
     .from('visualisations')

@@ -527,12 +527,13 @@ export type OfferteDocumentProps = {
   unitPrice: number
   quantity: number
   attachmentUrl?: string | null
+  visualisationUrl?: string | null
 }
 
 export default function OfferteDocument({
   configName, configDate, articleNumber,
   dealer, config, unitPrice, quantity,
-  attachmentUrl,
+  attachmentUrl, visualisationUrl,
 }: OfferteDocumentProps) {
   const opts = config.options
   const subtotalExclBtw = unitPrice * quantity
@@ -701,6 +702,34 @@ export default function OfferteDocument({
         </View>
 
       </Page>
+
+      {/* Sfeerbeeld: spiegel in de badkamer (consumentenofferte) */}
+      {visualisationUrl && (
+        <Page size="A4" style={styles.page}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <View>
+              <Text style={styles.companyName}>{dealer.company ?? dealer.name ?? 'Uw leverancier'}</Text>
+              <Text style={styles.companyDetails}>{dealer.email}</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK }}>Sfeerimpressie</Text>
+              <Text style={{ fontSize: 8, color: GRAY, marginTop: 2 }}>{configName ?? ''}</Text>
+            </View>
+          </View>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
+          <Image
+            src={visualisationUrl}
+            style={{ width: 515, height: 380, objectFit: 'contain' }}
+          />
+          <Text style={{ fontSize: 8, color: GRAY, marginTop: 8, fontStyle: 'italic' }}>
+            Indicatieve weergave. De spiegel is op ware grootte in een voorbeeldbadkamer geplaatst; de afgebeelde badkamer en omgeving zijn ter illustratie.
+          </Text>
+          <View style={styles.footer} fixed>
+            <Text style={styles.footerText}>{dealer.company ?? dealer.name ?? ''} - {dealer.email}</Text>
+            <Text style={styles.footerText}>Offerte {configName ?? ''} - Sfeerimpressie</Text>
+          </View>
+        </Page>
+      )}
 
       {/* Bijlage: maattekening schuine zijden */}
       {attachmentUrl && (

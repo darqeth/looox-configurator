@@ -202,6 +202,9 @@ export function ConfiguratiesContent({
                           <span className="text-lx-placeholder"> · {date}</span>
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
+                          {visualisationConfig && (
+                            <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
+                          )}
                           {permissions.canOrder && (
                             <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} />
                           )}
@@ -257,8 +260,11 @@ export function ConfiguratiesContent({
                         </div>
                       )}
 
-                      {/* Col: 3-dot menu */}
-                      <div className="w-8 flex-shrink-0 flex justify-end">
+                      {/* Col: visualisatie + 3-dot menu */}
+                      <div className="flex-shrink-0 flex items-center justify-end gap-1">
+                        {visualisationConfig && (
+                          <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
+                        )}
                         <ConfigActionsMenu
                           configId={config.id}
                           configName={config.name ?? 'Naamloze configuratie'}

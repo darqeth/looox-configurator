@@ -39,12 +39,11 @@ const GLOW_COLOR: Record<number, { kern: string; rand: string }> = {
   4000: { kern: '#F6FAFF', rand: '#C9DCFF' },
 }
 
-// Organic-contour. LET OP: dit is het pad uit de configurator-preview;
-// Mark levert mogelijk een natuurgetrouwere SVG van het echte product.
-// Vervangen = alleen ORGANIC_PATH + ORGANIC_BBOX aanpassen (bbox meten:
-// pad renderen en trimmen, zie git-historie van deze regel).
-const ORGANIC_PATH = 'M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z'
-const ORGANIC_BBOX = { x: 21, y: 30, w: 157, h: 128 }
+// Organic-contour: de echte productvorm, aangeleverd door Mark
+// (organic_vorm.svg, Marketing NAS). Vervangen = ORGANIC_PATH +
+// ORGANIC_BBOX aanpassen (bbox meten: pad renderen en trimmen).
+const ORGANIC_PATH = 'M73.5,134c-1.1,0-2.3,0-3.4-.2-.4,0-.8,0-1.3-.2-.8-.1-1.7-.3-2.5-.5h0c-4.1-.9-8.2-2.7-12.1-5.4-20.7-14.2-36.5-33.7-48.4-59.5C.8,57.1-1.1,45.2.6,34.7,2.5,22.6,8.9,12.9,19.1,6.8,28,1.4,45.4-.6,58.1.2c20.8.7,78.6,13,98.7,39.4,6.3,8.3,8.3,17.2,6,26.4v.4c-10.5,29.2-39.2,53.3-79,66-3.4,1.1-6.9,1.7-10.4,1.7Z'
+const ORGANIC_BBOX = { x: 0, y: 0, w: 163.7, h: 134 }
 
 // Pad geschaald naar doelmaat (px) met optionele offset, als SVG-groep
 function organicGroup(w: number, h: number, offsetX: number, offsetY: number, inner: string): string {

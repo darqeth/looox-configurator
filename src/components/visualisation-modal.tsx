@@ -79,8 +79,11 @@ function VisualisationModal({ config, configurationId, onClose }: {
   const [status, setStatus] = useState<VisualisationStatus | null>(null)
   const [sceneId, setSceneId] = useState<string>('japandi')
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ url: string; visualisationId: string } | null>(null)
-  const [inPdf, setInPdf] = useState(false)
+  // Resultaat per stijl onthouden — zo kun je gratis wisselen tussen al
+  // gegenereerde stijlen zonder credit te verbruiken
+  const [results, setResults] = useState<Record<string, { url: string; visualisationId: string; inPdf: boolean }>>({})
+  const result = results[sceneId] ?? null
+  const inPdf = result?.inPdf ?? false
 
   useEffect(() => {
     getVisualisationStatus().then(s => {
@@ -101,8 +104,7 @@ function VisualisationModal({ config, configurationId, onClose }: {
     setLoading(true)
     try {
       const res = await generateVisualisation({ configurationId: configurationId ?? null, sceneId, config })
-      setResult({ url: res.url, visualisationId: res.visualisationId })
-      setInPdf(false)
+      setResults(r => ({ ...r, [sceneId]: { url: res.url, visualisationId: res.visualisationId, inPdf: false } }))
       setStatus(s => s ? { ...s, dailyUsed: res.dailyUsed, bonus: res.bonus } : s)
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Genereren mislukt. Probeer het opnieuw.')
@@ -113,11 +115,11 @@ function VisualisationModal({ config, configurationId, onClose }: {
 
   async function handleInPdf(checked: boolean) {
     if (!result) return
-    setInPdf(checked)
+    setResults(r => ({ ...r, [sceneId]: { ...r[sceneId], inPdf: checked } }))
     try {
       await setVisualisationInPdf(result.visualisationId, checked)
     } catch {
-      setInPdf(!checked)
+      setResults(r => ({ ...r, [sceneId]: { ...r[sceneId], inPdf: !checked } }))
       toast('Opslaan van de offerte-keuze mislukt')
     }
   }
@@ -153,11 +155,12 @@ function VisualisationModal({ config, configurationId, onClose }: {
                   role="radio"
                   aria-checked={sceneId === s.id}
                   onClick={() => setSceneId(s.id)}
-                  className={`px-3.5 py-1.5 rounded-lg text-[12.5px] font-semibold transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12.5px] font-semibold transition-colors cursor-pointer ${
                     sceneId === s.id ? 'bg-white text-lx-text-primary shadow-sm border border-black/6' : 'text-lx-text-secondary hover:text-lx-text-primary'
                   }`}
                 >
                   {s.name}
+                  {results[s.id] && <span className="w-1.5 h-1.5 rounded-full bg-lx-cta" title="Al gegenereerd" />}
                 </button>
               ))}
             </div>

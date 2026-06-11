@@ -169,7 +169,7 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
 
   // Spiegelmaat in scène-pixels
   const rxPx = rxFor(input.shape, scene.pxPerCm)
-  const framePx = input.frameColor ? Math.max(1, Math.round(0.26 * scene.pxPerCm)) : 0 // 2,6mm zichtbare rand
+  const framePx = input.frameColor ? Math.max(1, Math.round(0.52 * scene.pxPerCm)) : 0 // 2,6mm echt, 2x aangezet voor zichtbaarheid
   const wPx = Math.round(input.width * scene.pxPerCm)
   const hPx = Math.round((input.shape === 'rond' ? input.width : input.height) * scene.pxPerCm)
   const left = Math.round(scene.centerX - wPx / 2)

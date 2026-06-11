@@ -202,25 +202,28 @@ function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['s
     inner = `<rect x="${pad - strokeRand * 0.2}" y="${pad - strokeRand * 0.2}" width="${w + strokeRand * 0.4}" height="${h + strokeRand * 0.4}" rx="${Math.round(strokeRand * 0.4)}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
        <rect x="${pad - strokeKern * 0.2}" y="${pad - strokeKern * 0.2}" width="${w + strokeKern * 0.4}" height="${h + strokeKern * 0.4}" rx="${Math.round(strokeKern * 0.4)}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
   } else {
-    // Losse zijden: gloeiende band per gekozen kant, iets buiten de spiegelrand
+    // Losse zijden: gloeiende band per gekozen kant. De banden lopen iets
+    // voorbij de spiegelrand door: de blur vreet de uiteinden aan, zo dekt
+    // de gloed na het vervagen alsnog de volledige zijde (feedback Mark)
+    const over = strokeRand * 0.5
     const zijden: Array<{ x: number; y: number; w: number; h: number }> = []
     if (pos.has('boven-beneden')) {
-      zijden.push({ x: pad, y: pad - strokeRand * 0.5, w, h: strokeRand })
-      zijden.push({ x: pad, y: pad + h - strokeRand * 0.5, w, h: strokeRand })
+      zijden.push({ x: pad - over, y: pad - strokeRand * 0.5, w: w + over * 2, h: strokeRand })
+      zijden.push({ x: pad - over, y: pad + h - strokeRand * 0.5, w: w + over * 2, h: strokeRand })
     }
-    if (pos.has('onder')) zijden.push({ x: pad, y: pad + h - strokeRand * 0.5, w, h: strokeRand })
-    if (pos.has('boven')) zijden.push({ x: pad, y: pad - strokeRand * 0.5, w, h: strokeRand })
+    if (pos.has('onder')) zijden.push({ x: pad - over, y: pad + h - strokeRand * 0.5, w: w + over * 2, h: strokeRand })
+    if (pos.has('boven')) zijden.push({ x: pad - over, y: pad - strokeRand * 0.5, w: w + over * 2, h: strokeRand })
     if (pos.has('links-rechts')) {
-      zijden.push({ x: pad - strokeRand * 0.5, y: pad, w: strokeRand, h })
-      zijden.push({ x: pad + w - strokeRand * 0.5, y: pad, w: strokeRand, h })
+      zijden.push({ x: pad - strokeRand * 0.5, y: pad - over, w: strokeRand, h: h + over * 2 })
+      zijden.push({ x: pad + w - strokeRand * 0.5, y: pad - over, w: strokeRand, h: h + over * 2 })
     }
     inner = zijden.map(z => {
       const kx = z.x + (z.w > z.h ? 0 : (z.w - strokeKern) / 2)
       const ky = z.y + (z.w > z.h ? (z.h - strokeKern) / 2 : 0)
       const kw = z.w > z.h ? z.w : strokeKern
       const kh = z.w > z.h ? strokeKern : z.h
-      return `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${Math.min(z.w, z.h) / 2}" fill="${color.rand}"/>
-        <rect x="${kx}" y="${ky}" width="${kw}" height="${kh}" rx="${Math.min(kw, kh) / 2}" fill="${color.kern}"/>`
+      return `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${strokeRand * 0.25}" fill="${color.rand}"/>
+        <rect x="${kx}" y="${ky}" width="${kw}" height="${kh}" rx="${strokeKern * 0.25}" fill="${color.kern}"/>`
     }).join('')
   }
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`

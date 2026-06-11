@@ -35,7 +35,7 @@ function TypeSelector({ onMaatwerk, onProject, onClose }: {
               <path d="M9 7l-2 3" /><path d="M13 6l-4 6" />
             </svg>
             <p className="font-semibold text-lx-text-primary text-[15px] mb-1">Maatwerk spiegel</p>
-            <p className="text-[13px] text-lx-text-secondary leading-relaxed">Alle vormen, verlichting en opties — stap voor stap of met het LoooX hulpje.</p>
+            <p className="text-[13px] text-lx-text-secondary leading-relaxed">Alle vormen, verlichting en opties. Stap voor stap of met het LoooX hulpje.</p>
           </button>
           <button
             onClick={onProject}

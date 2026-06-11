@@ -32,7 +32,7 @@ export function OrderApprovalButtons({
     return (
       <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 border border-red-200">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-        <span className="text-[12.5px] font-semibold text-red-600">Tekeningen afgekeurd — LoooX neemt contact op</span>
+        <span className="text-[12.5px] font-semibold text-red-600">Tekeningen afgekeurd, LoooX neemt contact met je op</span>
       </div>
     )
   }
@@ -46,7 +46,7 @@ export function OrderApprovalButtons({
           </svg>
           <div>
             <p className="text-[12.5px] font-bold text-[#92400E]">Technische tekeningen ter goedkeuring</p>
-            <p className="text-[11.5px] text-[#B45309] mt-0.5">Bestelling {orderNumber} — bekijk de tekeningen en geef je goedkeuring</p>
+            <p className="text-[11.5px] text-[#B45309] mt-0.5">Bestelling {orderNumber}: bekijk de tekeningen en geef je goedkeuring</p>
           </div>
         </div>
 

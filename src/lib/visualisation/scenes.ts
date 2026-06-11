@@ -94,7 +94,7 @@ export const SCENES: Scene[] = [
     centerX: 3000,       // boven de ronde waskom
     mirrorBottomY: 1860, // net boven de wandkraan
     lightFromX: -1,      // raam links
-    reflectionImage: 'scenes/sfeervol_spiegelbeeld.jpeg',
+    reflectionImage: 'scenes/sfeervol_spiegelbeeld.jpg',
     reflectionFocusY: 0.52,
     reflectionScale: 0.55,
   },

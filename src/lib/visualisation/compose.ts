@@ -28,10 +28,11 @@ const GLOW_COLOR: Record<number, string> = {
   4000: '#EAF1FF',
 }
 
-// Hoekradius: rechthoek = scherp; alleen 'rounded-rect' (afgeronde hoeken)
-// krijgt een zichtbare radius (audit-feedback Mark, sprint 1-check)
-function rxFor(shape: VisualisationInput['shape'], w: number, h: number): number {
-  return shape === 'rounded-rect' ? Math.round(Math.min(w, h) * 0.10) : 0
+// Hoekradius: vaste productmaat — LoooX afgeronde hoeken = R60 (6 cm),
+// onafhankelijk van het spiegelformaat. Rechthoek = scherp (0).
+const ROUNDED_RECT_RADIUS_CM = 6
+function rxFor(shape: VisualisationInput['shape'], pxPerCm: number): number {
+  return shape === 'rounded-rect' ? Math.round(ROUNDED_RECT_RADIUS_CM * pxPerCm) : 0
 }
 
 const GLASS_TINT: Record<string, { color: string; opacity: number }> = {
@@ -40,18 +41,17 @@ const GLASS_TINT: Record<string, { color: string; opacity: number }> = {
   'smoke-brons': { color: '#4a3422', opacity: 0.38 },
 }
 
-function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape']): string {
+function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'], rx: number): string {
   const inner = shape === 'rond'
     ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}" fill="#fff"/>`
-    : `<rect x="0" y="0" width="${w}" height="${h}" rx="${rxFor(shape, w, h)}" fill="#fff"/>`
+    : `<rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="#fff"/>`
   return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
 }
 
 // Glasoverlay: tint + diagonale highlight + randje, plus directe LED-banen
-function glassOverlaySvg(w: number, h: number, input: VisualisationInput): string {
+function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: number): string {
   const { shape, glasKleur, directPositions } = input
   const tint = GLASS_TINT[glasKleur] ?? GLASS_TINT.helder
-  const rx = shape === 'rond' ? 0 : rxFor(shape, w, h)
   const clip = shape === 'rond'
     ? `<clipPath id="m"><circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}"/></clipPath>`
     : `<clipPath id="m"><rect x="0" y="0" width="${w}" height="${h}" rx="${rx}"/></clipPath>`
@@ -137,6 +137,7 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
   const sceneBuf = await readFile(path.join(base, scene.image))
 
   // Spiegelmaat in scène-pixels
+  const rxPx = rxFor(input.shape, scene.pxPerCm)
   const wPx = Math.round(input.width * scene.pxPerCm)
   const hPx = Math.round((input.shape === 'rond' ? input.width : input.height) * scene.pxPerCm)
   const left = Math.round(scene.centerX - wPx / 2)
@@ -158,14 +159,14 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
     .toBuffer()
 
   // Masker in spiegelvorm
-  const mask = Buffer.from(mirrorMaskSvg(wPx, hPx, input.shape))
+  const mask = Buffer.from(mirrorMaskSvg(wPx, hPx, input.shape, rxPx))
   const reflection = await sharp(reflectionCrop)
     .composite([{ input: mask, blend: 'dest-in' }])
     .png()
     .toBuffer()
 
   // Glasoverlay (tint, highlight, LED-banen, rand)
-  const overlay = Buffer.from(glassOverlaySvg(wPx, hPx, input))
+  const overlay = Buffer.from(glassOverlaySvg(wPx, hPx, input, rxPx))
   const mirrorLayer = await sharp(reflection)
     .composite([{ input: overlay }])
     .png()

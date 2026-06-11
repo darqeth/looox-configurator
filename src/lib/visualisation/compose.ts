@@ -81,8 +81,9 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
     if (pos.has('rechts') || pos.has('links-rechts') || pos.has('rondom'))
       stripRects.push({ x: w - inset - strip, y: inset, w: strip, h: verH })
     for (const r of stripRects) {
-      strips += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${strip / 2}" fill="#ffffff" opacity="0.45" filter="url(#ledblur)"/>
-        <rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${strip / 2}" fill="#ffffff" opacity="0.97"/>`
+      // Echte zandstraalbanen zijn strak rechthoekig (geen afgeronde uiteinden)
+      strips += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="#ffffff" opacity="0.45" filter="url(#ledblur)"/>
+        <rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="#ffffff" opacity="0.97"/>`
     }
   }
 

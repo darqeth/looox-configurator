@@ -15,7 +15,7 @@ export type VisualisationInput = {
   /** cm — bij rond gelijk aan width (diameter) */
   height: number
   glasKleur: 'helder' | 'smoke-zwart' | 'smoke-brons'
-  /** posities met directe LED (zandstraalbaan): boven/onder/links/rechts/rondom */
+  /** posities met directe LED: boven/onder/boven-beneden/links-rechts/rondom */
   directPositions: string[]
   /** indirecte LED achter de spiegel */
   indirect: boolean
@@ -72,9 +72,9 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
   } else {
     const horW = w - inset * 2
     const verH = h - inset * 2
-    if (pos.has('boven') || pos.has('boven-onder') || pos.has('rondom'))
+    if (pos.has('boven') || pos.has('boven-beneden') || pos.has('rondom'))
       stripRects.push({ x: inset, y: inset, w: horW, h: strip })
-    if (pos.has('onder') || pos.has('boven-onder') || pos.has('rondom'))
+    if (pos.has('onder') || pos.has('boven-beneden') || pos.has('rondom'))
       stripRects.push({ x: inset, y: h - inset - strip, w: horW, h: strip })
     if (pos.has('links') || pos.has('links-rechts') || pos.has('rondom'))
       stripRects.push({ x: inset, y: inset, w: strip, h: verH })

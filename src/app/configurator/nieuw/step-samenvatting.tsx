@@ -136,7 +136,7 @@ export default function StepSamenvatting({
           height: shape === 'rond' ? (diameter ?? 80) : shape === 'organic' ? (organicMaat[1] || 40) : height,
           glasKleur,
           directPositions: directLight.position !== 'geen' && directLight.type ? [directLight.position] : [],
-          indirect: indirectLight.position !== 'geen' && !!indirectLight.type,
+          indirectPositions: indirectLight.position !== 'geen' && indirectLight.type ? [indirectLight.position] : [],
           lichtKelvin: 3000,
           frameColor: selectedOptions.includes('frame-in-kleur')
             ? (optionSubChoices['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null

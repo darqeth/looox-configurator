@@ -17,8 +17,8 @@ export type VisualisationInput = {
   glasKleur: 'helder' | 'smoke-zwart' | 'smoke-brons'
   /** posities met directe LED: boven/onder/boven-beneden/links-rechts/rondom */
   directPositions: string[]
-  /** indirecte LED achter de spiegel */
-  indirect: boolean
+  /** posities met indirecte LED: boven-beneden/onder/links-rechts/rondom */
+  indirectPositions: string[]
   /** 3000 = warm, 4000 = koel */
   lichtKelvin: 3000 | 4000
   /** Frame-in-kleur subkeuze, of null voor randloos */
@@ -182,20 +182,47 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
 }
 
 // Indirecte LED: gloeiende contour áchter de spiegel — tweelaags zodat hij
-// ook op witte muren zichtbaar is: brede kleurrand + felle bijna-witte kern
-function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['shape'], color: { kern: string; rand: string }): string {
+// ook op witte muren zichtbaar is: brede kleurrand + felle bijna-witte kern.
+// Bij rechthoekige vormen alleen op de gekozen zijden (feedback Mark).
+function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['shape'], color: { kern: string; rand: string }, positions: string[]): string {
   const W = w + pad * 2
   const H = h + pad * 2
   const strokeRand = Math.round(Math.min(w, h) * 0.20)
   const strokeKern = Math.round(strokeRand * 0.45)
-  const inner = shape === 'organic'
-    ? organicGroup(w, h, pad, pad, `<path d="${ORGANIC_PATH}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand / organicStrokeScale(w, h)}"/>
+  const pos = new Set(positions)
+
+  let inner: string
+  if (shape === 'organic') {
+    inner = organicGroup(w, h, pad, pad, `<path d="${ORGANIC_PATH}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand / organicStrokeScale(w, h)}"/>
        <path d="${ORGANIC_PATH}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern / organicStrokeScale(w, h)}"/>`)
-    : shape === 'rond'
-    ? `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeRand * 0.2}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
+  } else if (shape === 'rond') {
+    inner = `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeRand * 0.2}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
        <circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeKern * 0.2}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
-    : `<rect x="${pad - strokeRand * 0.2}" y="${pad - strokeRand * 0.2}" width="${w + strokeRand * 0.4}" height="${h + strokeRand * 0.4}" rx="${Math.round(strokeRand * 0.4)}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
+  } else if (pos.has('rondom')) {
+    inner = `<rect x="${pad - strokeRand * 0.2}" y="${pad - strokeRand * 0.2}" width="${w + strokeRand * 0.4}" height="${h + strokeRand * 0.4}" rx="${Math.round(strokeRand * 0.4)}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
        <rect x="${pad - strokeKern * 0.2}" y="${pad - strokeKern * 0.2}" width="${w + strokeKern * 0.4}" height="${h + strokeKern * 0.4}" rx="${Math.round(strokeKern * 0.4)}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
+  } else {
+    // Losse zijden: gloeiende band per gekozen kant, iets buiten de spiegelrand
+    const zijden: Array<{ x: number; y: number; w: number; h: number }> = []
+    if (pos.has('boven-beneden')) {
+      zijden.push({ x: pad, y: pad - strokeRand * 0.5, w, h: strokeRand })
+      zijden.push({ x: pad, y: pad + h - strokeRand * 0.5, w, h: strokeRand })
+    }
+    if (pos.has('onder')) zijden.push({ x: pad, y: pad + h - strokeRand * 0.5, w, h: strokeRand })
+    if (pos.has('boven')) zijden.push({ x: pad, y: pad - strokeRand * 0.5, w, h: strokeRand })
+    if (pos.has('links-rechts')) {
+      zijden.push({ x: pad - strokeRand * 0.5, y: pad, w: strokeRand, h })
+      zijden.push({ x: pad + w - strokeRand * 0.5, y: pad, w: strokeRand, h })
+    }
+    inner = zijden.map(z => {
+      const kx = z.x + (z.w > z.h ? 0 : (z.w - strokeKern) / 2)
+      const ky = z.y + (z.w > z.h ? (z.h - strokeKern) / 2 : 0)
+      const kw = z.w > z.h ? z.w : strokeKern
+      const kh = z.w > z.h ? strokeKern : z.h
+      return `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${Math.min(z.w, z.h) / 2}" fill="${color.rand}"/>
+        <rect x="${kx}" y="${ky}" width="${kw}" height="${kh}" rx="${Math.min(kw, kh) / 2}" fill="${color.kern}"/>`
+    }).join('')
+  }
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
 }
 
@@ -311,9 +338,10 @@ export async function composeVisualisationWithLayers(scene: Scene, input: Visual
   const shadowPad = Math.round(Math.min(wPx, hPx) * 0.12)
   const shadowOffset = Math.round(shadowPad * 0.35) * (scene.lightFromX === -1 ? 1 : -1)
   // Indirecte LED wast de slagschaduw grotendeels weg (anders dooft de gloed)
+  const heeftIndirect = input.indirectPositions.length > 0
   const shadow = await sharp(Buffer.from(shadowSvg(wPx, hPx, shadowPad, input.shape)))
     .blur(shadowPad / 2.2)
-    .ensureAlpha(input.indirect ? 0.18 : 0.5)
+    .ensureAlpha(heeftIndirect ? 0.18 : 0.5)
     .png()
     .toBuffer()
   layers.push({
@@ -324,9 +352,9 @@ export async function composeVisualisationWithLayers(scene: Scene, input: Visual
   })
 
   // Indirecte LED-gloed achter de spiegel
-  if (input.indirect) {
+  if (heeftIndirect) {
     const haloPad = Math.round(Math.min(wPx, hPx) * 0.28)
-    const halo = await sharp(Buffer.from(haloSvg(wPx, hPx, haloPad, input.shape, GLOW_COLOR[input.lichtKelvin])))
+    const halo = await sharp(Buffer.from(haloSvg(wPx, hPx, haloPad, input.shape, GLOW_COLOR[input.lichtKelvin], input.indirectPositions)))
       .blur(haloPad / 3.2)
       .png()
       .toBuffer()

@@ -21,7 +21,7 @@ export type VisualisationConfig = {
   height: number
   glasKleur: 'helder' | 'smoke-zwart' | 'smoke-brons'
   directPositions: string[]
-  indirect: boolean
+  indirectPositions: string[]
   lichtKelvin: 3000 | 4000
   frameColor?: 'aluminium' | 'zwart' | 'gun-metal' | 'brushed-brass' | 'brushed-copper' | null
   tipTouch?: boolean

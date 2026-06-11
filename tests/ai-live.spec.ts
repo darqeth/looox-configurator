@@ -11,7 +11,7 @@ test('ai-pas live: echte OpenAI-afwerking + re-compose', async () => {
   const scene = SCENES.find(s => s.id === 'japandi')!
   const composed = await composeVisualisationWithLayers(scene, {
     shape: 'rechthoek', width: 120, height: 70, glasKleur: 'helder',
-    directPositions: ['boven-beneden'], indirect: true, lichtKelvin: 3000,
+    directPositions: ['boven-beneden'], indirectPositions: ['rondom'], lichtKelvin: 3000,
   })
   const ai = await applyAiPass(composed)
   expect(ai.length).toBeGreaterThan(50_000)

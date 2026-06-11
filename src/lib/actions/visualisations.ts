@@ -22,7 +22,7 @@ const generateSchema = z.object({
     height: z.number().min(20).max(300),
     glasKleur: z.enum(['helder', 'smoke-zwart', 'smoke-brons']),
     directPositions: z.array(z.string().max(30)).max(6),
-    indirect: z.boolean(),
+    indirectPositions: z.array(z.string().max(30)).max(6),
     lichtKelvin: z.union([z.literal(3000), z.literal(4000)]),
     frameColor: z.enum(['aluminium', 'zwart', 'gun-metal', 'brushed-brass', 'brushed-copper']).nullish(),
     tipTouch: z.boolean().optional(),

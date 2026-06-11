@@ -9,43 +9,47 @@ import { SCENES } from '../src/lib/visualisation/scenes'
 const VARIANTEN: Array<{ naam: string; input: VisualisationInput }> = [
   {
     naam: 'rechthoek-80x60-helder-indirect-warm',
-    input: { shape: 'rechthoek', width: 80, height: 60, glasKleur: 'helder', directPositions: [], indirect: true, lichtKelvin: 3000 },
+    input: { shape: 'rechthoek', width: 80, height: 60, glasKleur: 'helder', directPositions: [], indirectPositions: ['rondom'], lichtKelvin: 3000 },
   },
   {
     naam: 'rechthoek-120x70-smoke-direct-bo-koel',
-    input: { shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart', directPositions: ['boven-beneden'], indirect: false, lichtKelvin: 4000, tipTouch: true },
+    input: { shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart', directPositions: ['boven-beneden'], indirectPositions: [], lichtKelvin: 4000, tipTouch: true },
   },
   {
     naam: 'rond-80-helder-indirect-warm',
-    input: { shape: 'rond', width: 80, height: 80, glasKleur: 'helder', directPositions: [], indirect: true, lichtKelvin: 3000 },
+    input: { shape: 'rond', width: 80, height: 80, glasKleur: 'helder', directPositions: [], indirectPositions: ['rondom'], lichtKelvin: 3000 },
   },
   {
     naam: 'rond-100-brons-direct-ring-koel',
-    input: { shape: 'rond', width: 100, height: 100, glasKleur: 'smoke-brons', directPositions: ['rondom'], indirect: false, lichtKelvin: 4000 },
+    input: { shape: 'rond', width: 100, height: 100, glasKleur: 'smoke-brons', directPositions: ['rondom'], indirectPositions: [], lichtKelvin: 4000 },
   },
   {
     naam: 'rounded-rect-90x60-helder-direct-bo-warm',
-    input: { shape: 'rounded-rect', width: 90, height: 60, glasKleur: 'helder', directPositions: ['boven-beneden'], indirect: false, lichtKelvin: 3000 },
+    input: { shape: 'rounded-rect', width: 90, height: 60, glasKleur: 'helder', directPositions: ['boven-beneden'], indirectPositions: [], lichtKelvin: 3000 },
   },
   {
     naam: 'rechthoek-100x70-helder-aluframe-indirect-warm',
-    input: { shape: 'rechthoek', width: 100, height: 70, glasKleur: 'helder', directPositions: [], indirect: true, lichtKelvin: 3000, frameColor: 'aluminium' },
+    input: { shape: 'rechthoek', width: 100, height: 70, glasKleur: 'helder', directPositions: [], indirectPositions: ['rondom'], lichtKelvin: 3000, frameColor: 'aluminium' },
   },
   {
     naam: 'rond-90-helder-zwartframe-warm',
-    input: { shape: 'rond', width: 90, height: 90, glasKleur: 'helder', directPositions: [], indirect: false, lichtKelvin: 3000, frameColor: 'zwart' },
+    input: { shape: 'rond', width: 90, height: 90, glasKleur: 'helder', directPositions: [], indirectPositions: [], lichtKelvin: 3000, frameColor: 'zwart' },
   },
   {
     naam: 'organic-80x60-helder-indirect-warm',
-    input: { shape: 'organic', width: 80, height: 60, glasKleur: 'helder', directPositions: [], indirect: true, lichtKelvin: 3000 },
+    input: { shape: 'organic', width: 80, height: 60, glasKleur: 'helder', directPositions: [], indirectPositions: ['rondom'], lichtKelvin: 3000 },
   },
   {
     naam: 'organic-120x80-smoke-indirect-koel',
-    input: { shape: 'organic', width: 120, height: 80, glasKleur: 'smoke-zwart', directPositions: [], indirect: true, lichtKelvin: 4000 },
+    input: { shape: 'organic', width: 120, height: 80, glasKleur: 'smoke-zwart', directPositions: [], indirectPositions: ['rondom'], lichtKelvin: 4000 },
+  },
+  {
+    naam: 'rechthoek-100x60-helder-indirect-bovenbeneden-warm',
+    input: { shape: 'rechthoek', width: 100, height: 60, glasKleur: 'helder', directPositions: [], indirectPositions: ['boven-beneden'], lichtKelvin: 3000 },
   },
   {
     naam: 'rechthoek-140x80-helder-alles-warm',
-    input: { shape: 'rechthoek', width: 140, height: 80, glasKleur: 'helder', directPositions: ['rondom'], indirect: true, lichtKelvin: 3000 },
+    input: { shape: 'rechthoek', width: 140, height: 80, glasKleur: 'helder', directPositions: ['rondom'], indirectPositions: ['rondom'], lichtKelvin: 3000 },
   },
 ]
 
@@ -70,7 +74,7 @@ test('ai-pass re-compose: spiegellaag exact terug op AI-output', async () => {
   const scene = SCENES.find(s => s.id === 'japandi')!
   const composed = await composeVisualisationWithLayers(scene, {
     shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart',
-    directPositions: ['boven-beneden'], indirect: false, lichtKelvin: 4000,
+    directPositions: ['boven-beneden'], indirectPositions: [], lichtKelvin: 4000,
   })
   expect(composed.width).toBe(1800)
   expect(composed.height).toBe(1200)

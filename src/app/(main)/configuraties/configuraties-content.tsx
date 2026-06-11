@@ -158,7 +158,7 @@ export function ConfiguratiesContent({
                         height: shape === 'rond' ? (diameter ?? 80) : (config.height ?? 60),
                         glasKleur: ((opts?.glasKleur as string) ?? 'helder') as VisualisationConfig['glasKleur'],
                         directPositions: direct?.position && direct.position !== 'geen' ? [direct.position] : [],
-                        indirect: !!(indirect?.position && indirect.position !== 'geen'),
+                        indirectPositions: indirect?.position && indirect.position !== 'geen' ? [indirect.position] : [],
                         lichtKelvin: 3000,
                         frameColor: extras.includes('frame-in-kleur')
                           ? ((opts?.optionSubChoices as Record<string, string> | undefined)?.['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null

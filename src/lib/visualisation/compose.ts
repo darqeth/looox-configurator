@@ -9,7 +9,7 @@ import type { Scene } from './scenes'
 // reflectie komt uit de scène zelf (gespiegeld + vervaagd) — 0% artefacten.
 
 export type VisualisationInput = {
-  shape: 'rechthoek' | 'rounded-rect' | 'rond'
+  shape: 'rechthoek' | 'rounded-rect' | 'rond' | 'organic'
   /** cm */
   width: number
   /** cm — bij rond gelijk aan width (diameter) */
@@ -39,6 +39,25 @@ const GLOW_COLOR: Record<number, { kern: string; rand: string }> = {
   4000: { kern: '#F6FAFF', rand: '#C9DCFF' },
 }
 
+// Organic-contour. LET OP: dit is het pad uit de configurator-preview;
+// Mark levert mogelijk een natuurgetrouwere SVG van het echte product.
+// Vervangen = alleen ORGANIC_PATH + ORGANIC_BBOX aanpassen (bbox meten:
+// pad renderen en trimmen, zie git-historie van deze regel).
+const ORGANIC_PATH = 'M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z'
+const ORGANIC_BBOX = { x: 21, y: 30, w: 157, h: 128 }
+
+// Pad geschaald naar doelmaat (px) met optionele offset, als SVG-groep
+function organicGroup(w: number, h: number, offsetX: number, offsetY: number, inner: string): string {
+  const sx = w / ORGANIC_BBOX.w
+  const sy = h / ORGANIC_BBOX.h
+  return `<g transform="translate(${offsetX - ORGANIC_BBOX.x * sx}, ${offsetY - ORGANIC_BBOX.y * sy}) scale(${sx}, ${sy})">${inner}</g>`
+}
+
+// Gemiddelde schaal: compenseert stroke-breedtes binnen de geschaalde groep
+function organicStrokeScale(w: number, h: number): number {
+  return (w / ORGANIC_BBOX.w + h / ORGANIC_BBOX.h) / 2
+}
+
 // Hoekradius: vaste productmaat — LoooX afgeronde hoeken = R60 (6 cm),
 // onafhankelijk van het spiegelformaat. Rechthoek = scherp (0).
 const ROUNDED_RECT_RADIUS_CM = 6
@@ -53,7 +72,9 @@ const GLASS_TINT: Record<string, { color: string; opacity: number }> = {
 }
 
 function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'], rx: number): string {
-  const inner = shape === 'rond'
+  const inner = shape === 'organic'
+    ? organicGroup(w, h, 0, 0, `<path d="${ORGANIC_PATH}" fill="#fff"/>`)
+    : shape === 'rond'
     ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}" fill="#fff"/>`
     : `<rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="#fff"/>`
   return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
@@ -64,7 +85,9 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
   const { shape, glasKleur, directPositions } = input
   const tint = GLASS_TINT[glasKleur] ?? GLASS_TINT.helder
   const frame = input.frameColor ? FRAME_COLORS[input.frameColor] : null
-  const clip = shape === 'rond'
+  const clip = shape === 'organic'
+    ? `<clipPath id="m">${organicGroup(w, h, 0, 0, `<path d="${ORGANIC_PATH}"/>`)}</clipPath>`
+    : shape === 'rond'
     ? `<clipPath id="m"><circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}"/></clipPath>`
     : `<clipPath id="m"><rect x="0" y="0" width="${w}" height="${h}" rx="${rx}"/></clipPath>`
 
@@ -109,7 +132,9 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
       : `<rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="none" stroke="url(#framegrad)" stroke-width="${fw}"/>`
   }
 
-  const edge = shape === 'rond'
+  const edge = shape === 'organic'
+    ? organicGroup(w, h, 0, 0, `<path d="${ORGANIC_PATH}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="${2 / organicStrokeScale(w, h)}"/>`)
+    : shape === 'rond'
     ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - 1}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>`
     : `<rect x="1" y="1" width="${w - 2}" height="${h - 2}" rx="${rx}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>`
   // (rx=0 bij rechthoek: scherpe hoeken)
@@ -146,7 +171,10 @@ function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['s
   const H = h + pad * 2
   const strokeRand = Math.round(Math.min(w, h) * 0.20)
   const strokeKern = Math.round(strokeRand * 0.45)
-  const inner = shape === 'rond'
+  const inner = shape === 'organic'
+    ? organicGroup(w, h, pad, pad, `<path d="${ORGANIC_PATH}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand / organicStrokeScale(w, h)}"/>
+       <path d="${ORGANIC_PATH}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern / organicStrokeScale(w, h)}"/>`)
+    : shape === 'rond'
     ? `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeRand * 0.2}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
        <circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeKern * 0.2}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
     : `<rect x="${pad - strokeRand * 0.2}" y="${pad - strokeRand * 0.2}" width="${w + strokeRand * 0.4}" height="${h + strokeRand * 0.4}" rx="${Math.round(strokeRand * 0.4)}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
@@ -157,7 +185,9 @@ function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['s
 function shadowSvg(w: number, h: number, pad: number, shape: VisualisationInput['shape']): string {
   const W = w + pad * 2
   const H = h + pad * 2
-  const inner = shape === 'rond'
+  const inner = shape === 'organic'
+    ? organicGroup(w, h, pad, pad, `<path d="${ORGANIC_PATH}" fill="#000"/>`)
+    : shape === 'rond'
     ? `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2}" fill="#000"/>`
     : `<rect x="${pad}" y="${pad}" width="${w}" height="${h}" fill="#000"/>`
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`

@@ -11,7 +11,7 @@ import { parseOrThrow } from '@/lib/validation'
 // Badkamer-visualisatie (epic, sprint 2). Credits: 4/dag + bonustegoed,
 // afgedwongen in claim_visualisation (SECURITY DEFINER, besluit V4).
 
-const SUPPORTED_SHAPES = ['rechthoek', 'rounded-rect', 'rond'] as const
+const SUPPORTED_SHAPES = ['rechthoek', 'rounded-rect', 'rond', 'organic'] as const
 
 const generateSchema = z.object({
   configurationId: z.string().uuid().nullish(),

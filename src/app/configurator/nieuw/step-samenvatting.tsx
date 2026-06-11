@@ -127,12 +127,13 @@ export default function StepSamenvatting({
 
 
   // Badkamer-visualisatie: alleen voor de vormen die de engine ondersteunt
+  const organicMaat = (organicSizeKey ?? '60x40').split('x').map(Number)
   const visualisationConfig: VisualisationConfig | null =
-    (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond')
+    (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic')
       ? {
           shape,
-          width: shape === 'rond' ? (diameter ?? 80) : width,
-          height: shape === 'rond' ? (diameter ?? 80) : height,
+          width: shape === 'rond' ? (diameter ?? 80) : shape === 'organic' ? (organicMaat[0] || 60) : width,
+          height: shape === 'rond' ? (diameter ?? 80) : shape === 'organic' ? (organicMaat[1] || 40) : height,
           glasKleur,
           directPositions: directLight.position !== 'geen' && directLight.type ? [directLight.position] : [],
           indirect: indirectLight.position !== 'geen' && !!indirectLight.type,

@@ -84,6 +84,20 @@ export const SCENES: Scene[] = [
     lightFromX: -1,
     reflectionWall: '#eae6e2',
   },
+  {
+    id: 'sfeervol',
+    name: 'Sfeervol',
+    image: 'scenes/sfeervol.jpg',
+    width: 5000,
+    height: 3700,
+    pxPerCm: 12.27,      // meubel 125 cm = 1533 px (aangeleverd door Mark)
+    centerX: 3000,       // boven de ronde waskom
+    mirrorBottomY: 1860, // net boven de wandkraan
+    lightFromX: -1,      // raam links
+    reflectionImage: 'scenes/sfeervol_spiegelbeeld.jpeg',
+    reflectionFocusY: 0.52,
+    reflectionScale: 0.55,
+  },
 ]
 
 export function getScene(id: string): Scene | undefined {

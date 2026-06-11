@@ -13,7 +13,7 @@ const VARIANTEN: Array<{ naam: string; input: VisualisationInput }> = [
   },
   {
     naam: 'rechthoek-120x70-smoke-direct-bo-koel',
-    input: { shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart', directPositions: ['boven-beneden'], indirect: false, lichtKelvin: 4000 },
+    input: { shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart', directPositions: ['boven-beneden'], indirect: false, lichtKelvin: 4000, tipTouch: true },
   },
   {
     naam: 'rond-80-helder-indirect-warm',

@@ -141,6 +141,7 @@ export default function StepSamenvatting({
           frameColor: selectedOptions.includes('frame-in-kleur')
             ? (optionSubChoices['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null
             : null,
+          tipTouch: directLight.control === 'tip-touch' || indirectLight.control === 'tip-touch',
         }
       : null
 

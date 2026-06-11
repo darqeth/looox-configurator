@@ -24,6 +24,7 @@ export type VisualisationConfig = {
   indirect: boolean
   lichtKelvin: 3000 | 4000
   frameColor?: 'aluminium' | 'zwart' | 'gun-metal' | 'brushed-brass' | 'brushed-copper' | null
+  tipTouch?: boolean
 }
 
 export const VISUALISATION_SHAPES = ['rechthoek', 'rounded-rect', 'rond', 'organic']

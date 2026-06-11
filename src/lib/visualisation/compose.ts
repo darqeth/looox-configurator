@@ -23,6 +23,8 @@ export type VisualisationInput = {
   lichtKelvin: 3000 | 4000
   /** Frame-in-kleur subkeuze, of null voor randloos */
   frameColor?: 'aluminium' | 'zwart' | 'gun-metal' | 'brushed-brass' | 'brushed-copper' | null
+  /** Tip-Touch bediening: klein lichtgevend cirkeltje onderin het glas */
+  tipTouch?: boolean
 }
 
 // Metallic frame: donkere basis + lichte highlight voor een geborsteld effect
@@ -89,7 +91,7 @@ function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'],
 }
 
 // Glasoverlay: tint + diagonale highlight + randje, plus directe LED-banen
-function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: number, framePx: number, stripPx: number): string {
+function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: number, framePx: number, stripPx: number, tipTouchPx: number): string {
   const { shape, glasKleur, directPositions } = input
   const tint = GLASS_TINT[glasKleur] ?? GLASS_TINT.helder
   const frame = input.frameColor ? FRAME_COLORS[input.frameColor] : null
@@ -147,6 +149,12 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
     : `<rect x="1" y="1" width="${w - 2}" height="${h - 2}" rx="${rx}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>`
   // (rx=0 bij rechthoek: scherpe hoeken)
 
+  // Tip-Touch sensor: ringetje onder-midden, ~5cm boven de glasrand
+  const tipTouch = input.tipTouch && tipTouchPx > 0
+    ? `<circle cx="${w / 2}" cy="${h - tipTouchPx * 6}" r="${tipTouchPx}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1, tipTouchPx * 0.22)}" opacity="0.5" filter="url(#ledblur)"/>
+       <circle cx="${w / 2}" cy="${h - tipTouchPx * 6}" r="${tipTouchPx}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1, tipTouchPx * 0.18)}" opacity="0.95"/>`
+    : ''
+
   return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     ${clip}
@@ -166,6 +174,7 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
     <rect width="${w}" height="${h}" fill="${tint.color}" opacity="${tint.opacity}"/>
     <rect width="${w}" height="${h}" fill="url(#hl)"/>
     ${strips}
+    ${tipTouch}
     ${frameLayer}
   </g>
   ${edge}
@@ -223,6 +232,7 @@ export async function composeVisualisationWithLayers(scene: Scene, input: Visual
   const rxPx = rxFor(input.shape, scene.pxPerCm)
   const framePx = input.frameColor ? Math.max(1, Math.round(0.52 * scene.pxPerCm)) : 0 // 2,6mm echt, 2x aangezet voor zichtbaarheid
   const stripPx = Math.max(2, Math.round(1.8 * scene.pxPerCm)) // zandstraalbaan 18mm
+  const tipTouchPx = Math.max(3, Math.round(0.8 * scene.pxPerCm)) // sensor-ring ~16mm
   const wPx = Math.round(input.width * scene.pxPerCm)
   const hPx = Math.round((input.shape === 'rond' ? input.width : input.height) * scene.pxPerCm)
   const left = Math.round(scene.centerX - wPx / 2)
@@ -289,7 +299,7 @@ export async function composeVisualisationWithLayers(scene: Scene, input: Visual
     .toBuffer()
 
   // Glasoverlay (tint, highlight, LED-banen, rand)
-  const overlay = Buffer.from(glassOverlaySvg(wPx, hPx, input, rxPx, framePx, stripPx))
+  const overlay = Buffer.from(glassOverlaySvg(wPx, hPx, input, rxPx, framePx, stripPx, tipTouchPx))
   const mirrorLayer = await sharp(reflection)
     .composite([{ input: overlay }])
     .png()

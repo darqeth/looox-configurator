@@ -125,8 +125,8 @@ export function ConfiguratiesContent({
                 const diameter = opts?.diameter as number | null
                 const organicKey = opts?.organicSize as string | null
                 const extras = (opts?.extras as string[]) ?? []
-                const direct = opts?.directLight as { position: string } | null
-                const indirect = opts?.indirectLight as { position: string } | null
+                const direct = opts?.directLight as { position: string; control?: string | null } | null
+                const indirect = opts?.indirectLight as { position: string; control?: string | null } | null
 
                 let dimensionLabel = ''
                 if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
@@ -163,6 +163,7 @@ export function ConfiguratiesContent({
                         frameColor: extras.includes('frame-in-kleur')
                           ? ((opts?.optionSubChoices as Record<string, string> | undefined)?.['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null
                           : null,
+                        tipTouch: direct?.control === 'tip-touch' || indirect?.control === 'tip-touch',
                       }
                     : null
 

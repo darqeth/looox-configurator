@@ -69,6 +69,10 @@ BEGIN
     RAISE EXCEPTION 'Niet ingelogd';
   END IF;
 
+  -- Rij-lock per gebruiker: parallelle claims kunnen anders allebei
+  -- dezelfde dagstand lezen en samen over de limiet heen
+  PERFORM 1 FROM profiles WHERE id = v_uid FOR UPDATE;
+
   SELECT count(*) INTO v_today_used
   FROM visualisations
   WHERE user_id = v_uid
@@ -143,5 +147,27 @@ $$;
 
 REVOKE ALL ON FUNCTION public.grant_order_visualisation_bonus FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.grant_order_visualisation_bonus TO authenticated;
+
+-- Status voor de modal-teller: zelfde dagdefinitie als claim_visualisation
+CREATE OR REPLACE FUNCTION public.get_visualisation_status()
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'daily_used', (
+      SELECT count(*) FROM visualisations
+      WHERE user_id = auth.uid()
+        AND (created_at AT TIME ZONE 'Europe/Amsterdam')::date = (now() AT TIME ZONE 'Europe/Amsterdam')::date
+    ),
+    'daily_limit', 4,
+    'bonus', (SELECT COALESCE(visualisation_bonus_credits, 0) FROM profiles WHERE id = auth.uid())
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.get_visualisation_status FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_visualisation_status TO authenticated;
 
 COMMIT;

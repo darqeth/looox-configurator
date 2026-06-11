@@ -36,32 +36,18 @@ export type VisualisationStatus = {
 
 export async function getVisualisationStatus(): Promise<VisualisationStatus> {
   const supabase = await createClient()
-  const { data: claimsData } = await supabase.auth.getClaims()
-  const userId = claimsData?.claims?.sub
-  if (!userId) throw new Error('Niet ingelogd')
-
-  const [{ count }, { data: profile }] = await Promise.all([
-    supabase
-      .from('visualisations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', amsterdamDayStartIso()),
-    supabase.from('profiles').select('visualisation_bonus_credits').eq('id', userId).single(),
-  ])
+  // Eén bron van waarheid voor de Amsterdamse dag: dezelfde SQL-logica als
+  // claim_visualisation (een JS-benadering week af rond de klokwissel)
+  const { data, error } = await supabase.rpc('get_visualisation_status')
+  if (error || !data) throw new Error(error?.message ?? 'Status ophalen mislukt')
+  const status = data as { daily_used: number; daily_limit: number; bonus: number }
 
   return {
-    dailyUsed: count ?? 0,
-    dailyLimit: 4,
-    bonus: profile?.visualisation_bonus_credits ?? 0,
+    dailyUsed: status.daily_used,
+    dailyLimit: status.daily_limit,
+    bonus: status.bonus,
     scenes: SCENES.map(s => ({ id: s.id, name: s.name })),
   }
-}
-
-function amsterdamDayStartIso(): string {
-  const nu = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }))
-  const offsetMs = Date.now() - nu.getTime()
-  const dagStart = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate())
-  return new Date(dagStart.getTime() + offsetMs).toISOString()
 }
 
 export async function generateVisualisation(rawInput: unknown): Promise<{

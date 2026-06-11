@@ -340,9 +340,10 @@ export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumb
   const orderNumber = tx.order_number
 
   // +2 visualisatie-tegoed per geplaatste bestelling (besluit V4) — de RPC
-  // valideert dat de order echt, vers en van de aanroeper is
-  supabase.rpc('grant_order_visualisation_bonus', { p_order_id: tx.order_id })
-    .then(({ error }) => { if (error) console.error('[visualisatie-bonus]', error) })
+  // valideert dat de order echt, vers en van de aanroeper is. Bewust
+  // awaiten: een losse promise kan op Vercel bevriezen voor hij afrondt.
+  const { error: bonusError } = await supabase.rpc('grant_order_visualisation_bonus', { p_order_id: tx.order_id })
+  if (bonusError) console.error('[visualisatie-bonus]', bonusError)
 
   revalidatePath('/bestellingen')
   revalidatePath('/dashboard')
@@ -481,9 +482,10 @@ export async function placeOrderFromConfig(
   const orderNumber = tx.order_number
 
   // +2 visualisatie-tegoed per geplaatste bestelling (besluit V4) — de RPC
-  // valideert dat de order echt, vers en van de aanroeper is
-  supabase.rpc('grant_order_visualisation_bonus', { p_order_id: tx.order_id })
-    .then(({ error }) => { if (error) console.error('[visualisatie-bonus]', error) })
+  // valideert dat de order echt, vers en van de aanroeper is. Bewust
+  // awaiten: een losse promise kan op Vercel bevriezen voor hij afrondt.
+  const { error: bonusError } = await supabase.rpc('grant_order_visualisation_bonus', { p_order_id: tx.order_id })
+  if (bonusError) console.error('[visualisatie-bonus]', bonusError)
 
   revalidatePath('/bestellingen')
   revalidatePath('/dashboard')

@@ -115,11 +115,16 @@ function VisualisationModal({ config, configurationId, onClose }: {
 
   async function handleInPdf(checked: boolean) {
     if (!result) return
-    setResults(r => ({ ...r, [sceneId]: { ...r[sceneId], inPdf: checked } }))
+    const vorige = results
+    // Server maakt het vinkje exclusief per configuratie — de lokale cache
+    // moet dat spiegelen, anders lijkt een oude stijl nog aangevinkt
+    setResults(r => Object.fromEntries(Object.entries(r).map(([k, v]) =>
+      [k, { ...v, inPdf: k === sceneId ? checked : (checked ? false : v.inPdf) }]
+    )))
     try {
       await setVisualisationInPdf(result.visualisationId, checked)
     } catch {
-      setResults(r => ({ ...r, [sceneId]: { ...r[sceneId], inPdf: !checked } }))
+      setResults(vorige)
       toast('Opslaan van de offerte-keuze mislukt')
     }
   }

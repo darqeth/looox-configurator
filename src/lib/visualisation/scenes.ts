@@ -93,7 +93,9 @@ export const SCENES: Scene[] = [
     centerX: 1797,
     mirrorBottomY: 2330, // net boven de wandkraan
     lightFromX: 1,
-    reflectionWall: '#d8cec3',
+    reflectionImage: 'scenes/botanisch_spiegelbeeld.jpg',
+    reflectionFocusY: 0.45,
+    reflectionScale: 0.55,
   },
 ]
 

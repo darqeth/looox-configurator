@@ -13,7 +13,7 @@ const VARIANTEN: Array<{ naam: string; input: VisualisationInput }> = [
   },
   {
     naam: 'rechthoek-120x70-smoke-direct-bo-koel',
-    input: { shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart', directPositions: ['boven-onder'], indirect: false, lichtKelvin: 4000 },
+    input: { shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart', directPositions: ['boven-beneden'], indirect: false, lichtKelvin: 4000 },
   },
   {
     naam: 'rond-80-helder-indirect-warm',
@@ -25,7 +25,7 @@ const VARIANTEN: Array<{ naam: string; input: VisualisationInput }> = [
   },
   {
     naam: 'rounded-rect-90x60-helder-direct-bo-warm',
-    input: { shape: 'rounded-rect', width: 90, height: 60, glasKleur: 'helder', directPositions: ['boven-onder'], indirect: false, lichtKelvin: 3000 },
+    input: { shape: 'rounded-rect', width: 90, height: 60, glasKleur: 'helder', directPositions: ['boven-beneden'], indirect: false, lichtKelvin: 3000 },
   },
   {
     naam: 'rechthoek-140x80-helder-alles-warm',

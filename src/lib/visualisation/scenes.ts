@@ -66,7 +66,7 @@ export const SCENES: Scene[] = [
     image: 'scenes/stijlvol.jpg',
     width: 5000,
     height: 3700,
-    pxPerCm: 8.1,        // meubel ≈ 300 cm = 2432 px (schatting, check Mark)
+    pxPerCm: 7.97,       // meubel 305 cm = 2432 px (bevestigd door Mark)
     centerX: 2550,       // midden tussen de twee wandkranen
     mirrorBottomY: 1700, // net boven de wandkranen
     lightFromX: 1,       // raam rechts

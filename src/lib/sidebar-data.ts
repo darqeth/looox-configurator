@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getCompanyUserIds } from './company-utils'
+import { parseConfiguratorAccess, type ConfiguratorAccess } from './configurator-access'
 
 export type ClosestMilestone = {
   title: string
@@ -19,6 +20,7 @@ export type SidebarData = {
   canConfigure: boolean
   isInternational: boolean
   isGroothandel: boolean
+  configuratorAccess: ConfiguratorAccess
   pendingCount: number
   pendingColleaguesCount: number
   avatarUrl: string | null
@@ -66,6 +68,7 @@ type SidebarRpcResult = {
     avatar_url: string | null
     is_international: boolean | null
     is_groothandel: boolean | null
+    configurator_access: string | null
   } | null
   member: { role: string | null; company_id: string | null; can_configure: boolean | null } | null
   company_order_count: number
@@ -98,7 +101,9 @@ function buildFromRpc(rpc: SidebarRpcResult): SidebarData {
   const isAdmin = profile?.is_admin ?? false
   const isSubAdmin = profile?.is_sub_admin ?? false
   const isInternational = profile?.is_international ?? false
-  const isGroothandel = profile?.is_groothandel ?? false
+  const configuratorAccess = parseConfiguratorAccess(profile?.configurator_access)
+  // 'project'-stand verbergt Circle/milestones (besluit B4); 'beide' ziet alles
+  const isGroothandel = configuratorAccess === 'project'
   const isSpecial = isInternational || isGroothandel
   const isManager = member?.role === 'manager'
 
@@ -129,6 +134,7 @@ function buildFromRpc(rpc: SidebarRpcResult): SidebarData {
     canConfigure,
     isInternational,
     isGroothandel,
+    configuratorAccess,
     pendingCount: Number(rpc.pending_count ?? 0),
     pendingColleaguesCount: Number(rpc.pending_colleagues_count ?? 0),
     avatarUrl: profile?.avatar_url ?? null,
@@ -142,14 +148,15 @@ async function fetchSidebarDataLegacy(
   userId: string
 ): Promise<SidebarData> {
   const [{ data: profile }, { data: memberData }] = await Promise.all([
-    supabase.from('profiles').select('full_name, company, company_id, tier, is_admin, is_sub_admin, avatar_url, is_international, is_groothandel').eq('id', userId).single(),
+    supabase.from('profiles').select('full_name, company, company_id, tier, is_admin, is_sub_admin, avatar_url, is_international, is_groothandel, configurator_access').eq('id', userId).single(),
     supabase.from('company_members').select('role, company_id, can_configure').eq('user_id', userId).single(),
   ])
 
   const isAdmin = profile?.is_admin ?? false
   const isSubAdmin = profile?.is_sub_admin ?? false
   const isInternational = profile?.is_international ?? false
-  const isGroothandel = profile?.is_groothandel ?? false
+  const configuratorAccess = parseConfiguratorAccess((profile as { configurator_access?: string | null } | null)?.configurator_access)
+  const isGroothandel = configuratorAccess === 'project'
   const isManager = memberData?.role === 'manager'
   // company_members is bron van waarheid — profile.company_id kan stale zijn na verwijdering
   const companyId = memberData?.company_id ?? null
@@ -256,6 +263,7 @@ async function fetchSidebarDataLegacy(
     canConfigure,
     isInternational,
     isGroothandel,
+    configuratorAccess,
     pendingCount: pendingCount ?? 0,
     pendingColleaguesCount: pendingColleaguesCount ?? 0,
     avatarUrl: profile?.avatar_url ?? null,

@@ -13,7 +13,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
 
   const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([
     supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).single(),
-    supabase.from('profiles').select('korting, is_international, is_groothandel').eq('id', user.id).single(),
+    supabase.from('profiles').select('korting, is_international, is_groothandel, configurator_access').eq('id', user.id).single(),
     supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle(),
   ])
 
@@ -54,7 +54,8 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const canOrder = isManager || (memberData?.can_order ?? true)
   const korting = profile?.korting ?? 50
   const isInternational = profile?.is_international ?? false
-  const isGroothandel = profile?.is_groothandel ?? false
+  // Sprint 1: routeren op accountstand; sprint 2 routeert op config-type
+  const isGroothandel = (profile as { configurator_access?: string | null } | null)?.configurator_access === 'project'
 
   if (isGroothandel) {
     return (

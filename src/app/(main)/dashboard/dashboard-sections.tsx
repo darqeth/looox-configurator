@@ -20,7 +20,7 @@ const getProfile = cache(async (userId: string) => {
   const supabase = await createClient()
   const [{ data: profile }, { data: member }] = await Promise.all([
     supabase.from('profiles')
-      .select('full_name, company, notifications_read_at, is_international, is_groothandel, korting, is_admin, is_sub_admin')
+      .select('full_name, company, notifications_read_at, is_international, is_groothandel, configurator_access, korting, is_admin, is_sub_admin')
       .eq('id', userId).single(),
     supabase.from('company_members')
       .select('company_id, role, can_order')
@@ -30,7 +30,8 @@ const getProfile = cache(async (userId: string) => {
     profile,
     member,
     isInternational: profile?.is_international ?? false,
-    isGroothandel: profile?.is_groothandel ?? false,
+    // 'project'-stand = geen Circle/milestones; 'beide' ziet alles (besluit B4)
+    isGroothandel: (profile as { configurator_access?: string | null } | null)?.configurator_access === 'project',
     korting: profile?.korting ?? 50,
     canOrder: !member || member.role === 'manager' || (member?.can_order ?? true),
     companyId: member?.company_id ?? null,

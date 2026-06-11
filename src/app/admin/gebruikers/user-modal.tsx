@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react'
 import {
   updateKorting,
   toggleInternational,
-  toggleGroothandel,
+  setConfiguratorAccess,
   linkUserToCompany,
   updateMemberPermissions,
   generatePasswordResetLink,
@@ -17,6 +17,8 @@ import {
   updateSuperAdmin,
 } from '@/lib/actions/admin'
 import type { UserRowProfile } from './user-row'
+import { parseConfiguratorAccess, ACCESS_LABELS, type ConfiguratorAccess } from '@/lib/configurator-access'
+import { toast } from '@/components/toast'
 
 export function UserEditModal({
   profile,
@@ -41,7 +43,7 @@ export function UserEditModal({
 
   // Internationaal
   const [isInternational, setIsInternational] = useState(profile.is_international ?? false)
-  const [isGroothandel, setIsGroothandel] = useState(profile.is_groothandel ?? false)
+  const [configuratorAccess, setConfiguratorAccessState] = useState(parseConfiguratorAccess(profile.configurator_access))
 
   // Bedrijfskoppeling
   const matchedCompany = companies.find(c => c.name.toLowerCase() === (profile.company ?? '').toLowerCase())
@@ -103,11 +105,17 @@ export function UserEditModal({
     })
   }
 
-  function handleToggleGroothandel() {
-    const next = !isGroothandel
-    setIsGroothandel(next)
+  function handleSetAccess(access: ConfiguratorAccess) {
+    const prev = configuratorAccess
+    setConfiguratorAccessState(access)
     startTransition(async () => {
-      await toggleGroothandel(profile.id, next)
+      try {
+        await setConfiguratorAccess(profile.id, access)
+      } catch (e) {
+        console.error(e)
+        setConfiguratorAccessState(prev)
+        toast('Stand wijzigen mislukt. Probeer het opnieuw.')
+      }
     })
   }
 
@@ -345,22 +353,29 @@ export function UserEditModal({
               </button>
             </div>
 
-            {/* Groothandelaar */}
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-lx-divider">
-              <div>
-                <p className="text-[13px] font-medium text-lx-text-primary">Project</p>
-                <p className="text-[11.5px] text-lx-text-secondary">Toegang tot projectspiegel configurator — geen reguliere spiegels of milestones</p>
+            {/* Configurator-toegang: drie standen (epic EN/EN) */}
+            <div className="mt-4 pt-4 border-t border-lx-divider">
+              <p className="text-[13px] font-medium text-lx-text-primary">Configurator-toegang</p>
+              <p className="text-[11.5px] text-lx-text-secondary mb-2.5">Maatwerk = wizard + milestones · Alleen project = projectspiegels (netto, geen milestones) · Beide = keuze per configuratie</p>
+              <div className="flex gap-1 bg-lx-panel-bg rounded-xl p-1 w-fit" role="radiogroup" aria-label="Configurator-toegang">
+                {(['maatwerk', 'beide', 'project'] as const).map((access) => (
+                  <button
+                    key={access}
+                    type="button"
+                    role="radio"
+                    aria-checked={configuratorAccess === access}
+                    onClick={() => handleSetAccess(access)}
+                    disabled={isPending}
+                    className={`px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-colors disabled:opacity-60 cursor-pointer ${
+                      configuratorAccess === access
+                        ? 'bg-white text-lx-text-primary shadow-sm border border-black/6'
+                        : 'text-lx-text-secondary hover:text-lx-text-primary'
+                    }`}
+                  >
+                    {ACCESS_LABELS[access]}
+                  </button>
+                ))}
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isGroothandel}
-                onClick={handleToggleGroothandel}
-                disabled={isPending}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-60 cursor-pointer ${isGroothandel ? 'bg-lx-cta' : 'bg-gray-200'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${isGroothandel ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
             </div>
           </div>
 

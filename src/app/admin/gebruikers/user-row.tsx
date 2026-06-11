@@ -24,6 +24,7 @@ export type UserRowProfile = {
   korting: number | null
   is_international: boolean | null
   is_groothandel: boolean | null
+  configurator_access: string | null
   is_admin: boolean
   is_sub_admin: boolean
   company_id: string | null
@@ -119,9 +120,14 @@ export function UserRow({
                 Buitenland +5%
               </span>
             )}
-            {profile.is_groothandel && (
+            {profile.configurator_access === 'project' && (
               <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">
                 Project
+              </span>
+            )}
+            {profile.configurator_access === 'beide' && (
+              <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">
+                Maatwerk + Project
               </span>
             )}
             {profile.is_admin && (

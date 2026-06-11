@@ -15,11 +15,13 @@ export async function toggleInternational(userId: string, value: boolean): Promi
   revalidatePath('/admin/gebruikers')
 }
 
-export async function toggleGroothandel(userId: string, value: boolean): Promise<void> {
+// Drie standen (epic EN/EN): de DB-trigger houdt is_groothandel gespiegeld
+export async function setConfiguratorAccess(userId: string, access: 'maatwerk' | 'beide' | 'project'): Promise<void> {
+  if (!['maatwerk', 'beide', 'project'].includes(access)) throw new Error('Ongeldige stand')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !await isAdmin(supabase, user.id)) return
-  await supabase.from('profiles').update({ is_groothandel: value }).eq('id', userId)
+  await supabase.from('profiles').update({ configurator_access: access }).eq('id', userId)
   revalidatePath('/admin/gebruikers')
 }
 

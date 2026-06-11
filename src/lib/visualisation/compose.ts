@@ -60,7 +60,7 @@ function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'],
 }
 
 // Glasoverlay: tint + diagonale highlight + randje, plus directe LED-banen
-function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: number, framePx: number): string {
+function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: number, framePx: number, stripPx: number): string {
   const { shape, glasKleur, directPositions } = input
   const tint = GLASS_TINT[glasKleur] ?? GLASS_TINT.helder
   const frame = input.frameColor ? FRAME_COLORS[input.frameColor] : null
@@ -69,7 +69,7 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
     : `<clipPath id="m"><rect x="0" y="0" width="${w}" height="${h}" rx="${rx}"/></clipPath>`
 
   // Directe LED: gesatineerde baan ~4.5% van de korte zijde, 6% inzet vanaf de rand
-  const strip = Math.round(Math.min(w, h) * 0.045)
+  const strip = stripPx // 18mm zandstraalbaan, vaste maat
   const inset = Math.round(Math.min(w, h) * 0.06)
   // Scherpe LED-banen: zachte gloed-onderlaag + solide witte kern erbovenop
   // (verlichting moet crisp zijn — feedback sprint 1-check)
@@ -170,6 +170,7 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
   // Spiegelmaat in scène-pixels
   const rxPx = rxFor(input.shape, scene.pxPerCm)
   const framePx = input.frameColor ? Math.max(1, Math.round(0.52 * scene.pxPerCm)) : 0 // 2,6mm echt, 2x aangezet voor zichtbaarheid
+  const stripPx = Math.max(2, Math.round(1.8 * scene.pxPerCm)) // zandstraalbaan 18mm
   const wPx = Math.round(input.width * scene.pxPerCm)
   const hPx = Math.round((input.shape === 'rond' ? input.width : input.height) * scene.pxPerCm)
   const left = Math.round(scene.centerX - wPx / 2)
@@ -220,7 +221,7 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
     .toBuffer()
 
   // Glasoverlay (tint, highlight, LED-banen, rand)
-  const overlay = Buffer.from(glassOverlaySvg(wPx, hPx, input, rxPx, framePx))
+  const overlay = Buffer.from(glassOverlaySvg(wPx, hPx, input, rxPx, framePx, stripPx))
   const mirrorLayer = await sharp(reflection)
     .composite([{ input: overlay }])
     .png()

@@ -17,6 +17,8 @@ interface SelectedOptions {
   height?: number
   diameter?: number
   organicSize?: string
+  quantity?: number
+  glasdikte?: string
   directLight?: { position?: string; type?: string; control?: string }
   indirectLight?: { position?: string; type?: string; control?: string }
   extras?: string[]
@@ -248,9 +250,16 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
               {config.article_number && <ModalRow label="Artikelnummer" value={config.article_number} />}
               <ModalRow label="Vorm" value={shapeName} />
               <ModalRow label="Afmeting" value={dimensionLabel || '—'} />
-              <ModalRow label="Directe verlichting" value={getLightSummary(opts.directLight)} />
-              <ModalRow label="Indirecte verlichting" value={getLightSummary(opts.indirectLight)} />
-              <ModalRow label="Extra opties" value={extras || 'Geen'} />
+              {opts.quantity != null && <ModalRow label="Aantal" value={`${opts.quantity}×`} />}
+              {isProjectspiegel ? (
+                <ModalRow label="Glasdikte" value={opts.glasdikte ? `${opts.glasdikte} mm` : '—'} />
+              ) : (
+                <>
+                  <ModalRow label="Directe verlichting" value={getLightSummary(opts.directLight)} />
+                  <ModalRow label="Indirecte verlichting" value={getLightSummary(opts.indirectLight)} />
+                  <ModalRow label="Extra opties" value={extras || 'Geen'} />
+                </>
+              )}
             </div>
 
             {/* Footer: downloads + prijs + verwijderen */}

@@ -46,7 +46,7 @@ export const SCENES: Scene[] = [
     image: 'scenes/japandi.jpg',
     width: 5000,
     height: 3700,
-    pxPerCm: 11.04,      // meubel 200 cm = 2208 px (aangeleverd door Mark)
+    pxPerCm: 8.83,       // meubel 250 cm = 2208 px (bijgesteld na beeldcheck)
     centerX: 2496,
     mirrorBottomY: 1860, // net boven de kraanplaatjes (20cm lager na beeldcheck)
     lightFromX: -1,

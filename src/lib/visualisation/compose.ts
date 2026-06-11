@@ -143,17 +143,31 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
   const left = Math.round(scene.centerX - wPx / 2)
   const top = Math.round(scene.mirrorBottomY - hPx)
 
-  // ── Reflectie: de scène zelf, horizontaal gespiegeld, vervaagd en gedimd ──
-  // (reflectieplaat-truc; bij echte LoooX-foto's kan hier de tegenfoto in)
-  const reflectionSource = await sharp(sceneBuf)
-    .flop()
-    .blur(4)
-    .modulate({ brightness: 0.88, saturation: 0.88 })
-    .toBuffer()
-  // Crop het gebied rond de spiegelpositie (licht verschoven voor parallax-gevoel)
+  // ── Reflectie ──
+  // Met tegenfoto (wat er tegenover de spiegel staat): echte reflectie —
+  // gespiegeld, vrijwel scherp. Zonder: de scène zelf als benadering.
+  let reflectionSource: Buffer
+  let cropTop: number
+  if (scene.reflectionImage) {
+    reflectionSource = await sharp(await readFile(path.join(base, scene.reflectionImage)))
+      .resize(scene.width, scene.height, { fit: 'cover' })
+      .flop()
+      .blur(1.5)
+      .modulate({ brightness: 0.94, saturation: 0.95 })
+      .toBuffer()
+    const focusY = Math.round((scene.reflectionFocusY ?? 0.5) * scene.height)
+    cropTop = Math.min(Math.max(0, focusY - Math.round(hPx / 2)), scene.height - hPx)
+  } else {
+    reflectionSource = await sharp(sceneBuf)
+      .flop()
+      .blur(4)
+      .modulate({ brightness: 0.88, saturation: 0.88 })
+      .toBuffer()
+    cropTop = Math.min(Math.max(0, top - Math.round(hPx * 0.04)), scene.height - hPx)
+  }
+  // Horizontale positie: gespiegelde x van de spiegelpositie (parallax-gevoel)
   const parallax = Math.round(wPx * 0.06)
   const cropLeft = Math.min(Math.max(0, scene.width - left - wPx + parallax), scene.width - wPx)
-  const cropTop = Math.min(Math.max(0, top - Math.round(hPx * 0.04)), scene.height - hPx)
   const reflectionCrop = await sharp(reflectionSource)
     .extract({ left: cropLeft, top: cropTop, width: wPx, height: hPx })
     .toBuffer()

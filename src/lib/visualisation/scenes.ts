@@ -22,6 +22,10 @@ export type Scene = {
   mirrorBottomY: number
   /** Richting van het daglicht voor de slagschaduw: -1 = licht van links */
   lightFromX: -1 | 1
+  /** Tegenfoto (wat er tegenover de spiegel staat) — echte reflectie */
+  reflectionImage?: string
+  /** Welk hoogtedeel van de tegenfoto de spiegel toont (0-1, default 0.5) */
+  reflectionFocusY?: number
 }
 
 export const SCENES: Scene[] = [
@@ -35,6 +39,19 @@ export const SCENES: Scene[] = [
     centerX: 1163,
     mirrorBottomY: 855, // ≈ 23 cm boven het meubelblad (lucht boven de kraan)
     lightFromX: -1,
+  },
+  {
+    id: 'japandi',
+    name: 'Japandi',
+    image: 'scenes/japandi.jpg',
+    width: 5000,
+    height: 3700,
+    pxPerCm: 11.04,      // meubel 200 cm = 2208 px (aangeleverd door Mark)
+    centerX: 2496,
+    mirrorBottomY: 1640, // net boven de wandkranen
+    lightFromX: -1,
+    reflectionImage: 'scenes/japandi_spiegelbeeld.jpg',
+    reflectionFocusY: 0.5,
   },
 ]
 

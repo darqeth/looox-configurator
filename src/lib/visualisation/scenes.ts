@@ -29,6 +29,9 @@ export type Scene = {
   /** Verkleiningsfactor van de reflectie-inhoud (spiegel toont de overkant
       kleiner door de langere optische weg); default 0.55 bij tegenfoto */
   reflectionScale?: number
+  /** Egale muur als reflectie (hex): voor scènes waar tegenover de spiegel
+      een kale witte muur zit — rustiger dan de scène-benadering */
+  reflectionWall?: string
 }
 
 export const SCENES: Scene[] = [
@@ -56,6 +59,18 @@ export const SCENES: Scene[] = [
     reflectionImage: 'scenes/japandi_spiegelbeeld.jpg',
     reflectionFocusY: 0.5,
     reflectionScale: 0.55,
+  },
+  {
+    id: 'stijlvol',
+    name: 'Stijlvol',
+    image: 'scenes/stijlvol.jpg',
+    width: 5000,
+    height: 3700,
+    pxPerCm: 8.1,        // meubel ≈ 300 cm = 2432 px (schatting, check Mark)
+    centerX: 2550,       // midden tussen de twee wandkranen
+    mirrorBottomY: 1700, // net boven de wandkranen
+    lightFromX: 1,       // raam rechts
+    reflectionWall: '#edecea',
   },
 ]
 

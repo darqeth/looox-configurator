@@ -239,7 +239,20 @@ export async function composeVisualisationWithLayers(scene: Scene, input: Visual
 
   let reflectionSource: Buffer
   let centerY: number
-  if (scene.reflectionImage) {
+  if (scene.reflectionWall) {
+    // Kale muur tegenover de spiegel: egale tint met subtiel verticaal verloop
+    const wallSvg = `<svg width="${scene.width}" height="${scene.height}" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="w" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+        <stop offset="0.6" stop-color="${scene.reflectionWall}" stop-opacity="0"/>
+        <stop offset="1" stop-color="#000000" stop-opacity="0.06"/>
+      </linearGradient></defs>
+      <rect width="${scene.width}" height="${scene.height}" fill="${scene.reflectionWall}"/>
+      <rect width="${scene.width}" height="${scene.height}" fill="url(#w)"/>
+    </svg>`
+    reflectionSource = await sharp(Buffer.from(wallSvg)).jpeg().toBuffer()
+    centerY = top + Math.round(hPx / 2)
+  } else if (scene.reflectionImage) {
     reflectionSource = await sharp(await readFile(path.join(base, scene.reflectionImage)))
       .resize(scene.width, scene.height, { fit: 'cover' })
       .flop()

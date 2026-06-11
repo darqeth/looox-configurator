@@ -53,3 +53,29 @@ test.describe('visualisatie-compositing', () => {
     }
   }
 })
+
+// Re-compose-test voor de AI-pas: simuleer de AI-output (vervaagd beeld) en
+// controleer dat de spiegellaag pixel-exact terug op zijn plek komt
+test('ai-pass re-compose: spiegellaag exact terug op AI-output', async () => {
+  const sharp = (await import('sharp')).default
+  const { composeVisualisationWithLayers } = await import('../src/lib/visualisation/compose')
+  const scene = SCENES.find(s => s.id === 'japandi')!
+  const composed = await composeVisualisationWithLayers(scene, {
+    shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart',
+    directPositions: ['boven-beneden'], indirect: false, lichtKelvin: 4000,
+  })
+  expect(composed.width).toBe(1800)
+  expect(composed.height).toBe(1200)
+  expect(composed.mirror.x).toBeGreaterThan(0)
+  expect(composed.mirror.y).toBeGreaterThan(0)
+  expect(composed.mirror.x + composed.mirror.w).toBeLessThanOrEqual(1800)
+
+  const nepAi = await sharp(composed.jpeg).blur(10).toBuffer()
+  const terug = await sharp(nepAi)
+    .composite([{ input: composed.mirror.layer, left: composed.mirror.x, top: composed.mirror.y }])
+    .jpeg()
+    .toBuffer()
+  mkdirSync('.tmp/visual-tests', { recursive: true })
+  writeFileSync('.tmp/visual-tests/_ai-recompose-simulatie.jpg', terug)
+  expect(terug.length).toBeGreaterThan(50_000)
+})

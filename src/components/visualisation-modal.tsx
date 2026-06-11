@@ -232,7 +232,7 @@ function VisualisationModal({ config, configurationId, onClose }: {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Genereren…
+                  {status?.aiEnabled ? 'Genereren… dit kan ±20 sec duren' : 'Genereren…'}
                 </>
               ) : result ? 'Opnieuw genereren' : 'Genereer visualisatie'}
             </button>

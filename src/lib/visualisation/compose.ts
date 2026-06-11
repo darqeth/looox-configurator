@@ -163,7 +163,21 @@ function shadowSvg(w: number, h: number, pad: number, shape: VisualisationInput[
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
 }
 
+// Resultaat met losse spiegellaag: de AI-pas (fase 2) bewerkt het hele beeld
+// en daarna plakken we de spiegel pixel-exact terug (product nooit uit AI)
+export type ComposedVisualisation = {
+  jpeg: Buffer
+  /** Spiegellaag + positie in de coördinaten van het eindbeeld (1800x1200) */
+  mirror: { layer: Buffer; x: number; y: number; w: number; h: number }
+  width: number
+  height: number
+}
+
 export async function composeVisualisation(scene: Scene, input: VisualisationInput, publicDir?: string): Promise<Buffer> {
+  return (await composeVisualisationWithLayers(scene, input, publicDir)).jpeg
+}
+
+export async function composeVisualisationWithLayers(scene: Scene, input: VisualisationInput, publicDir?: string): Promise<ComposedVisualisation> {
   const base = publicDir ?? path.join(process.cwd(), 'public')
   const sceneBuf = await readFile(path.join(base, scene.image))
 
@@ -259,10 +273,42 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
   layers.push({ input: mirrorLayer, left, top })
 
   // Let op: sharp past resize vóór composite toe als je ze in één keten zet —
-  // eerst composen op volle resolutie, daarna apart verkleinen
+  // eerst composen op volle resolutie, daarna apart uitsnijden en verkleinen
   const composed = await sharp(sceneBuf).composite(layers).png().toBuffer()
-  return sharp(composed)
-    .resize({ width: 1800, withoutEnlargement: true })
+
+  // Vaste 3:2-uitsnede rond de spiegel: zo hebben het fase 1-beeld en de
+  // AI-output (1536x1024) dezelfde verhouding en blijft re-compose exact
+  const OUT_W = 1800
+  const OUT_H = 1200
+  let outCropW = scene.width
+  let outCropH = Math.round(scene.width / 1.5)
+  if (outCropH > scene.height) {
+    outCropH = scene.height
+    outCropW = Math.round(scene.height * 1.5)
+  }
+  const mirrorCx = left + wPx / 2
+  const mirrorCy = top + hPx / 2
+  // Verticaal: midden tussen spiegel en scènecentrum, zodat meubel én spiegel in beeld blijven
+  const focusCy = (mirrorCy + scene.height / 2) / 2
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
+  const outCropX = clamp(Math.round(mirrorCx - outCropW / 2), 0, scene.width - outCropW)
+  const outCropY = clamp(Math.round(focusCy - outCropH / 2), 0, scene.height - outCropH)
+
+  const jpeg = await sharp(composed)
+    .extract({ left: outCropX, top: outCropY, width: outCropW, height: outCropH })
+    .resize(OUT_W, OUT_H)
     .jpeg({ quality: 88 })
     .toBuffer()
+
+  // Spiegellaag omrekenen naar eindbeeld-coördinaten voor de re-compose
+  const scale = OUT_W / outCropW
+  const outMirror = {
+    layer: await sharp(mirrorLayer).resize(Math.max(1, Math.round(wPx * scale)), Math.max(1, Math.round(hPx * scale))).png().toBuffer(),
+    x: Math.round((left - outCropX) * scale),
+    y: Math.round((top - outCropY) * scale),
+    w: Math.max(1, Math.round(wPx * scale)),
+    h: Math.max(1, Math.round(hPx * scale)),
+  }
+
+  return { jpeg, mirror: outMirror, width: OUT_W, height: OUT_H }
 }

@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { composeVisualisation, type VisualisationInput } from '@/lib/visualisation/compose'
+import { composeVisualisationWithLayers, type VisualisationInput } from '@/lib/visualisation/compose'
+import { applyAiPass } from '@/lib/visualisation/ai-pass'
 import { getScene, SCENES } from '@/lib/visualisation/scenes'
 import { z } from 'zod'
 import { parseOrThrow } from '@/lib/validation'
@@ -32,6 +33,7 @@ export type VisualisationStatus = {
   dailyLimit: number
   bonus: number
   scenes: { id: string; name: string }[]
+  aiEnabled: boolean
 }
 
 export async function getVisualisationStatus(): Promise<VisualisationStatus> {
@@ -47,6 +49,7 @@ export async function getVisualisationStatus(): Promise<VisualisationStatus> {
     dailyLimit: status.daily_limit,
     bonus: status.bonus,
     scenes: SCENES.map(s => ({ id: s.id, name: s.name })),
+    aiEnabled: !!process.env.OPENAI_API_KEY,
   }
 }
 
@@ -54,7 +57,7 @@ export async function getVisualisationStatus(): Promise<VisualisationStatus> {
 // action-errors in productie (digest-melding) en de gebruiker ziet dan
 // een cryptische fout i.p.v. onze nette boodschap.
 export type GenerateVisualisationResult =
-  | { ok: true; url: string; visualisationId: string; dailyUsed: number; dailyLimit: number; bonus: number }
+  | { ok: true; url: string; visualisationId: string; dailyUsed: number; dailyLimit: number; bonus: number; aiApplied: boolean }
   | { ok: false; error: string }
 
 export async function generateVisualisation(rawInput: unknown): Promise<GenerateVisualisationResult> {
@@ -77,7 +80,20 @@ export async function generateVisualisation(rawInput: unknown): Promise<Generate
     if (!scene) return { ok: false, error: 'Onbekende stijl' }
 
     // Eerst componeren (kost niets) — pas daarna het tegoed claimen
-    const buffer = await composeVisualisation(scene, input.config as VisualisationInput)
+    const composed = await composeVisualisationWithLayers(scene, input.config as VisualisationInput)
+
+    // AI-fotorealisme-pas (fase 2): automatisch wanneer de key er is; bij
+    // falen stil terugvallen op het fase 1-composiet
+    let buffer = composed.jpeg
+    let aiApplied = false
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        buffer = await applyAiPass(composed)
+        aiApplied = true
+      } catch (e) {
+        console.error('[visualisatie-ai-pas]', e)
+      }
+    }
 
     const { data: claim, error: claimError } = await supabase.rpc('claim_visualisation', {
       p_scene_id: input.sceneId,
@@ -118,6 +134,7 @@ export async function generateVisualisation(rawInput: unknown): Promise<Generate
       dailyUsed: claimResult.daily_used,
       dailyLimit: claimResult.daily_limit,
       bonus: claimResult.bonus,
+      aiApplied,
     }
   } catch (e) {
     console.error('[visualisatie-genereren]', e)

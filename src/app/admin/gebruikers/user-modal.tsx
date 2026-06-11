@@ -107,16 +107,16 @@ export function UserEditModal({
 
   function handleSetAccess(access: ConfiguratorAccess) {
     const prev = configuratorAccess
+    // Optimistic, buiten de gedeelde transition — anders bevriest de hele
+    // modal tot de actie én pagina-rerender klaar zijn
     setConfiguratorAccessState(access)
-    startTransition(async () => {
-      try {
-        await setConfiguratorAccess(profile.id, access)
-      } catch (e) {
+    setConfiguratorAccess(profile.id, access)
+      .then(() => router.refresh())
+      .catch((e) => {
         console.error(e)
         setConfiguratorAccessState(prev)
         toast('Stand wijzigen mislukt. Probeer het opnieuw.')
-      }
-    })
+      })
   }
 
   function handleSaveCompany() {
@@ -365,8 +365,7 @@ export function UserEditModal({
                     role="radio"
                     aria-checked={configuratorAccess === access}
                     onClick={() => handleSetAccess(access)}
-                    disabled={isPending}
-                    className={`px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-colors disabled:opacity-60 cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
                       configuratorAccess === access
                         ? 'bg-white text-lx-text-primary shadow-sm border border-black/6'
                         : 'text-lx-text-secondary hover:text-lx-text-primary'

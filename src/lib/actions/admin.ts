@@ -15,14 +15,17 @@ export async function toggleInternational(userId: string, value: boolean): Promi
   revalidatePath('/admin/gebruikers')
 }
 
-// Drie standen (epic EN/EN): de DB-trigger houdt is_groothandel gespiegeld
+// Drie standen (epic EN/EN): de DB-trigger houdt is_groothandel gespiegeld.
+// Bewust GEEN revalidatePath: dat laat de actie wachten op het hele
+// opnieuw renderen van de gebruikerspagina (traag) en bevroor de modal.
+// De client doet router.refresh() op de achtergrond.
 export async function setConfiguratorAccess(userId: string, access: 'maatwerk' | 'beide' | 'project'): Promise<void> {
   if (!['maatwerk', 'beide', 'project'].includes(access)) throw new Error('Ongeldige stand')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !await isAdmin(supabase, user.id)) return
-  await supabase.from('profiles').update({ configurator_access: access }).eq('id', userId)
-  revalidatePath('/admin/gebruikers')
+  if (!user || !await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
+  const { error } = await supabase.from('profiles').update({ configurator_access: access }).eq('id', userId)
+  if (error) throw new Error(error.message)
 }
 
 export async function updateKorting(userId: string, korting: number): Promise<void> {

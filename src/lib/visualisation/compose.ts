@@ -75,8 +75,8 @@ const GLASS_TINT: Record<string, { color: string; opacity: number }> = {
 // zelf moet donkerder en getint
 const GLASS_REFLECTION: Record<string, { brightness: number; saturation: number; tint?: { r: number; g: number; b: number } }> = {
   helder: { brightness: 1, saturation: 1 },
-  'smoke-zwart': { brightness: 0.48, saturation: 0.7 },
-  'smoke-brons': { brightness: 0.58, saturation: 0.8, tint: { r: 205, g: 168, b: 118 } },
+  'smoke-zwart': { brightness: 0.74, saturation: 0.85 },
+  'smoke-brons': { brightness: 0.79, saturation: 0.9, tint: { r: 205, g: 168, b: 118 } },
 }
 
 function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'], rx: number): string {

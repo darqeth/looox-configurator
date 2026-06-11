@@ -2,10 +2,6 @@
 // Per scène: schaal-anker (px per cm, gekalibreerd op een object met bekende
 // breedte), spiegelpositie en lichtinformatie. Foto's staan in public/scenes/.
 //
-// LET OP: 'warm' is de tijdelijke bouwscène (AI-gegenereerd). Zodra Mark's
-// LoooX-foto's binnen zijn worden ze hier gekalibreerd toegevoegd en gaat de
-// testscène eruit (besluit V1).
-
 export type Scene = {
   id: string
   name: string
@@ -35,17 +31,6 @@ export type Scene = {
 }
 
 export const SCENES: Scene[] = [
-  {
-    id: 'warm',
-    name: 'Warm minimalistisch',
-    image: 'scenes/test-warm.jpg',
-    width: 2336,
-    height: 1600,
-    pxPerCm: 8.6,       // meubel ≈ 160 cm breed ≈ 1372 px (bijgesteld na beeldcheck)
-    centerX: 1163,
-    mirrorBottomY: 855, // ≈ 23 cm boven het meubelblad (lucht boven de kraan)
-    lightFromX: -1,
-  },
   {
     id: 'japandi',
     name: 'Japandi',

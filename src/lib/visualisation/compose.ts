@@ -66,8 +66,17 @@ function rxFor(shape: VisualisationInput['shape'], pxPerCm: number): number {
 
 const GLASS_TINT: Record<string, { color: string; opacity: number }> = {
   helder: { color: '#aebfc7', opacity: 0.10 },
-  'smoke-zwart': { color: '#14161a', opacity: 0.42 },
-  'smoke-brons': { color: '#4a3422', opacity: 0.38 },
+  'smoke-zwart': { color: '#14161a', opacity: 0.30 },
+  'smoke-brons': { color: '#4a3422', opacity: 0.25 },
+}
+
+// Rookglas dooft en kleurt wat er IN de spiegel te zien is — een overlay
+// alleen is op lichte scènes onzichtbaar (feedback Mark): de reflectie
+// zelf moet donkerder en getint
+const GLASS_REFLECTION: Record<string, { brightness: number; saturation: number; tint?: { r: number; g: number; b: number } }> = {
+  helder: { brightness: 1, saturation: 1 },
+  'smoke-zwart': { brightness: 0.48, saturation: 0.7 },
+  'smoke-brons': { brightness: 0.58, saturation: 0.8, tint: { r: 205, g: 168, b: 118 } },
 }
 
 function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'], rx: number): string {
@@ -251,10 +260,13 @@ export async function composeVisualisationWithLayers(scene: Scene, input: Visual
   const centerX = scene.width - left - Math.round(wPx / 2) + parallax
   const cropLeft = Math.min(Math.max(0, centerX - Math.round(cropW / 2)), scene.width - cropW)
   const cropTop = Math.min(Math.max(0, centerY - Math.round(cropH / 2)), scene.height - cropH)
-  const reflectionCrop = await sharp(reflectionSource)
+  const glasEffect = GLASS_REFLECTION[input.glasKleur] ?? GLASS_REFLECTION.helder
+  let reflectionPipeline = sharp(reflectionSource)
     .extract({ left: cropLeft, top: cropTop, width: cropW, height: cropH })
     .resize(wPx, hPx)
-    .toBuffer()
+    .modulate({ brightness: glasEffect.brightness, saturation: glasEffect.saturation })
+  if (glasEffect.tint) reflectionPipeline = reflectionPipeline.tint(glasEffect.tint)
+  const reflectionCrop = await reflectionPipeline.toBuffer()
 
   // Masker in spiegelvorm
   const mask = Buffer.from(mirrorMaskSvg(wPx, hPx, input.shape, rxPx))

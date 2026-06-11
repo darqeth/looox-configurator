@@ -58,11 +58,32 @@ type SaveConfigInput = {
   lunaMuurZijde?: 'links' | 'rechts'
 }
 
+
+// Server-side poort (epic EN/EN): de standen zijn niet via de API te omzeilen.
+async function assertConfiguratorAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  type: 'maatwerk' | 'project',
+) {
+  const { data: profile } = await supabase
+    .from('profiles').select('configurator_access').eq('id', userId).single()
+  const access = profile?.configurator_access ?? 'maatwerk'
+  const toegestaan = type === 'maatwerk'
+    ? access === 'maatwerk' || access === 'beide'
+    : access === 'project' || access === 'beide'
+  if (!toegestaan) {
+    throw new Error(type === 'maatwerk'
+      ? 'Dit account heeft geen toegang tot de maatwerk-configurator'
+      : 'Dit account heeft geen toegang tot de projectspiegel-configurator')
+  }
+}
+
 export async function saveConfiguration(rawInput: SaveConfigInput) {
   const input = parseOrThrow(saveConfigSchema, rawInput) as SaveConfigInput
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
+  await assertConfiguratorAccess(supabase, user.id, 'maatwerk')
 
   const { data: profile } = await supabase.from('profiles').select('is_international').eq('id', user.id).single()
   const isInternational = profile?.is_international ?? false
@@ -150,6 +171,7 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
+  await assertConfiguratorAccess(supabase, user.id, 'maatwerk')
 
   const { data: profile } = await supabase.from('profiles').select('is_international').eq('id', user.id).single()
   const isInternational = profile?.is_international ?? false
@@ -200,6 +222,7 @@ export async function updateProjectspiegelConfiguration(configId: string, input:
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
+  await assertConfiguratorAccess(supabase, user.id, 'project')
 
   const { calcBasisprijs, calcTotaal } = await import('@/lib/projectspiegel-config')
   const basisprijs = calcBasisprijs({
@@ -262,6 +285,7 @@ export async function saveProjectspiegelConfiguration(input: SaveProjectspiegelI
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
+  await assertConfiguratorAccess(supabase, user.id, 'project')
 
   const { calcBasisprijs, calcTotaal } = await import('@/lib/projectspiegel-config')
   const basisprijs = calcBasisprijs({

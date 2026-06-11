@@ -54,10 +54,11 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const canOrder = isManager || (memberData?.can_order ?? true)
   const korting = profile?.korting ?? 50
   const isInternational = profile?.is_international ?? false
-  // Sprint 1: routeren op accountstand; sprint 2 routeert op config-type
-  const isGroothandel = (profile as { configurator_access?: string | null } | null)?.configurator_access === 'project'
+  // Routeren op het TYPE van de configuratie, niet op de accountstand —
+  // een 'beide'-account moet beide typen kunnen bewerken (sprint 2)
+  const isProjectConfig = (opts.shape as string | undefined) === 'projectspiegel'
 
-  if (isGroothandel) {
+  if (isProjectConfig) {
     return (
       <ProjectspiegelConfigurator
         initialConfig={{

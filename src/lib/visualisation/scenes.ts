@@ -48,7 +48,7 @@ export const SCENES: Scene[] = [
     height: 3700,
     pxPerCm: 11.04,      // meubel 200 cm = 2208 px (aangeleverd door Mark)
     centerX: 2496,
-    mirrorBottomY: 1640, // net boven de wandkranen
+    mirrorBottomY: 1860, // net boven de kraanplaatjes (20cm lager na beeldcheck)
     lightFromX: -1,
     reflectionImage: 'scenes/japandi_spiegelbeeld.jpg',
     reflectionFocusY: 0.5,

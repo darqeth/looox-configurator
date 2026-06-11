@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { VERPAKKING_DREMPEL } from '@/lib/projectspiegel-config'
 import { saveProjectspiegelConfiguration, updateProjectspiegelConfiguration } from '@/lib/actions/configurator'
@@ -9,6 +9,7 @@ import StepAfmeting from './step-afmeting'
 import StepOpties from './step-opties'
 import StepSamenvatting from './step-samenvatting'
 import PreviewPanel from './preview-panel'
+import { loadDraft, saveDraft, clearDraft, type ProjectDraftData } from '@/lib/configurator-draft'
 
 const STEPS = [
   { label: 'Afmeting' },
@@ -29,7 +30,7 @@ interface InitialConfig {
   reference: string
 }
 
-export default function ProjectspiegelConfigurator({ initialConfig }: { initialConfig?: InitialConfig }) {
+export default function ProjectspiegelConfigurator({ initialConfig, resumeDraft = false }: { initialConfig?: InitialConfig; resumeDraft?: boolean }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -44,6 +45,46 @@ export default function ProjectspiegelConfigurator({ initialConfig }: { initialC
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [verpakkingPerStuk, setVerpakkingPerStuk] = useState(initialConfig?.verpakkingPerStuk ?? true)
   const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
+
+  // ── Gedeelde draft (één save-state met de maatwerk-wizard) ──
+  const [draftAvailable, setDraftAvailable] = useState(false)
+
+  const restoreFromDraft = () => {
+    const draft = loadDraft()
+    if (draft?.type !== 'project') return
+    const d = draft.data as ProjectDraftData
+    setStep(d.step ?? 0)
+    setLengte(d.lengte ?? 120); setHoogte(d.hoogte ?? 80)
+    setGlasdikte((d.glasdikte as GlasdikteType) ?? '5')
+    setOphanging(d.ophanging ?? true); setVoormonteren(d.voormonteren ?? true)
+    setVerpakkingPerStuk(d.verpakkingPerStuk ?? true)
+    setQuantity(d.quantity ?? 1); setProjectName(d.projectName ?? '')
+    setDraftAvailable(false)
+  }
+
+  useEffect(() => {
+    if (isEditing) return
+    const draft = loadDraft()
+    if (draft?.type !== 'project') return
+    if (resumeDraft) restoreFromDraft()
+    else setDraftAvailable(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (isEditing) return
+    // Niet opslaan zolang alles nog op de defaults staat
+    const isDefault = step === 0 && lengte === 120 && hoogte === 80 && glasdikte === '5'
+      && ophanging && voormonteren && verpakkingPerStuk && quantity === 1 && projectName === ''
+    if (isDefault) return
+    const t = setTimeout(() => {
+      saveDraft('project', {
+        step, lengte, hoogte, glasdikte, ophanging, voormonteren,
+        verpakkingPerStuk, quantity, projectName,
+      })
+    }, 800)
+    return () => clearTimeout(t)
+  }, [isEditing, step, lengte, hoogte, glasdikte, ophanging, voormonteren, verpakkingPerStuk, quantity, projectName])
 
   const effectiveVerpakking = quantity < VERPAKKING_DREMPEL ? true : verpakkingPerStuk
 
@@ -70,12 +111,36 @@ export default function ProjectspiegelConfigurator({ initialConfig }: { initialC
       } else {
         await saveProjectspiegelConfiguration(payload)
       }
+      clearDraft()
       router.push('/configuraties')
     })
   }
 
   return (
     <div className="flex flex-col min-h-screen bg-lx-divider">
+      {draftAvailable && (
+        <div className="fixed inset-x-0 top-0 z-[60] flex justify-center p-3 pointer-events-none">
+          <div className="pointer-events-auto bg-lx-text-primary text-white rounded-2xl shadow-lg px-5 py-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 max-w-xl">
+            <p className="text-[13px] font-medium">
+              Je hebt een niet-opgeslagen projectspiegel. Wil je verdergaan waar je was gebleven?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={restoreFromDraft}
+                className="px-3.5 h-8 rounded-lg bg-white text-lx-text-primary text-[12.5px] font-semibold hover:bg-white/90 transition-colors"
+              >
+                Verdergaan
+              </button>
+              <button
+                onClick={() => { clearDraft(); setDraftAvailable(false) }}
+                className="px-3.5 h-8 rounded-lg border border-white/30 text-white text-[12.5px] font-semibold hover:bg-white/10 transition-colors"
+              >
+                Opnieuw beginnen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Stappen header */}
       <div className="bg-white border-b border-lx-divider sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3">

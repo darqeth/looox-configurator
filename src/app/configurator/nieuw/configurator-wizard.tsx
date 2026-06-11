@@ -19,6 +19,7 @@ import { placeOrder } from '@/lib/actions/orders'
 import { checkAndAwardMilestones, type AwardedMilestone } from '@/lib/actions/milestones'
 import MilestoneCelebration from '@/app/(main)/looox-circle/milestone-celebration'
 import { createClient } from '@/lib/supabase/client'
+import { loadDraft, saveDraft, clearDraft as clearSharedDraft } from '@/lib/configurator-draft'
 
 interface InitialConfig {
   id: string
@@ -43,9 +44,6 @@ interface InitialConfig {
   lunaAfstand?: number
   lunaMuurZijde?: 'links' | 'rechts'
 }
-
-const DRAFT_KEY = 'lx-configurator-draft-v1'
-const DRAFT_MAX_AGE_MS = 7 * 24 * 3600 * 1000
 
 const STEPS = [
   { label: 'Afmeting' },
@@ -119,7 +117,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
   )
 })
 
-export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrder = true, isInternational = false, optionTooltips = {}, controlTooltips = {} }: { initialConfig?: InitialConfig; korting?: number; canOrder?: boolean; isInternational?: boolean; optionTooltips?: Record<string, string>; controlTooltips?: Record<string, string> }) {
+export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrder = true, isInternational = false, resumeDraft = false, optionTooltips = {}, controlTooltips = {} }: { initialConfig?: InitialConfig; korting?: number; canOrder?: boolean; isInternational?: boolean; resumeDraft?: boolean; optionTooltips?: Record<string, string>; controlTooltips?: Record<string, string> }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const isEditing = !!initialConfig
@@ -274,27 +272,25 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
 
   useEffect(() => {
     if (isEditing) return
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY)
-      if (!raw) return
-      const draft = JSON.parse(raw)
-      if (draft?.savedAt && Date.now() - draft.savedAt < DRAFT_MAX_AGE_MS && draft.shape) {
-        setDraftAvailable(true)
-      }
-    } catch { /* corrupte draft negeren */ }
+    const draft = loadDraft()
+    if (draft?.type !== 'maatwerk' || !draft.data?.shape) return
+    if (resumeDraft) {
+      // Via de typekeuze al bevestigd: direct herstellen, geen tweede banner
+      restoreDraft()
+    } else {
+      setDraftAvailable(true)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     if (isEditing || wizardMode !== 'configuring' || !shape) return
     const t = setTimeout(() => {
-      try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({
-          savedAt: Date.now(), shape, step, width, height, diameter, organicSizeKey, glasKleur,
-          solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
-          directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity,
-        }))
-      } catch { /* storage vol/geblokkeerd — geen drama */ }
+      saveDraft('maatwerk', {
+        shape, step, width, height, diameter, organicSizeKey, glasKleur,
+        solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
+        directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity,
+      })
     }, 800)
     return () => clearTimeout(t)
   }, [isEditing, wizardMode, shape, step, width, height, diameter, organicSizeKey, glasKleur,
@@ -302,15 +298,16 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity])
 
   const clearDraft = () => {
-    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+    clearSharedDraft()
     setDraftAvailable(false)
   }
 
   const restoreDraft = () => {
     try {
-      const raw = localStorage.getItem(DRAFT_KEY)
-      if (!raw) return
-      const d = JSON.parse(raw)
+      const draft = loadDraft()
+      if (draft?.type !== 'maatwerk') return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const d = draft.data as Record<string, any>
       setShape(d.shape ?? null); setStep(d.step ?? 1)
       setWidth(d.width ?? 80); setHeight(d.height ?? 60)
       setDiameter(d.diameter ?? 60); setOrganicSizeKey(d.organicSizeKey ?? '60x40')

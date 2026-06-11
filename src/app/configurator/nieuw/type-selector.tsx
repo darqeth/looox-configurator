@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { cloneElement, isValidElement, useEffect, useState, type ReactElement, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
+import { loadDraft, clearDraft } from '@/lib/configurator-draft'
 
 // Typekeuze voor accounts met stand 'beide' (besluit B2): eerst kiezen tussen
 // maatwerk en projectspiegel; daarna volgt bij maatwerk de bestaande
@@ -60,9 +61,52 @@ export function ConfiguratorTypeChooser({ wizard, project }: {
 }) {
   const router = useRouter()
   const [type, setType] = useState<'maatwerk' | 'project' | null>(null)
+  const [resume, setResume] = useState(false)
+  // Eén gedeelde save-state: bestaat er een draft (van welk type dan ook),
+  // dan eerst vragen of de gebruiker daar verder wil
+  const [draftType, setDraftType] = useState<'maatwerk' | 'project' | null>(null)
 
-  if (type === 'maatwerk') return <>{wizard}</>
-  if (type === 'project') return <>{project}</>
+  useEffect(() => {
+    const draft = loadDraft()
+    if (draft) setDraftType(draft.type)
+  }, [])
+
+  // resumeDraft-prop injecteren zodat het gekozen scherm direct herstelt
+  const withResume = (node: ReactNode) =>
+    resume && isValidElement(node)
+      ? cloneElement(node as ReactElement<{ resumeDraft?: boolean }>, { resumeDraft: true })
+      : node
+
+  if (type === 'maatwerk') return <>{withResume(wizard)}</>
+  if (type === 'project') return <>{withResume(project)}</>
+
+  if (draftType) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 text-center">
+          <h2 className="text-[18px] font-bold text-lx-text-primary mb-1.5">Verdergaan waar je was?</h2>
+          <p className="text-[13px] text-lx-text-secondary leading-relaxed mb-5">
+            Je hebt een niet-opgeslagen {draftType === 'project' ? 'projectspiegel' : 'maatwerk spiegel'}.
+          </p>
+          <div className="flex gap-2.5 justify-center">
+            <button
+              onClick={() => { setResume(true); setType(draftType) }}
+              className="px-5 h-10 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors"
+            >
+              Verdergaan
+            </button>
+            <button
+              onClick={() => { clearDraft(); setDraftType(null) }}
+              className="px-5 h-10 rounded-xl border border-black/10 text-lx-text-secondary text-[13px] font-semibold hover:bg-lx-panel-bg transition-colors"
+            >
+              Opnieuw beginnen
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <TypeSelector
       onMaatwerk={() => setType('maatwerk')}

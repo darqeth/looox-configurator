@@ -83,6 +83,18 @@ export const SCENES: Scene[] = [
     reflectionFocusY: 0.52,
     reflectionScale: 0.55,
   },
+  {
+    id: 'botanisch',
+    name: 'Botanisch',
+    image: 'scenes/botanisch.jpg',
+    width: 3700,
+    height: 5000,
+    pxPerCm: 13.22,      // meubel 120 cm = 1587 px (aangeleverd door Mark)
+    centerX: 1797,
+    mirrorBottomY: 2330, // net boven de wandkraan
+    lightFromX: 1,
+    reflectionWall: '#d8cec3',
+  },
 ]
 
 export function getScene(id: string): Scene | undefined {

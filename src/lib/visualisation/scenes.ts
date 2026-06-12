@@ -35,11 +35,11 @@ export const SCENES: Scene[] = [
     id: 'japandi',
     name: 'Japandi',
     image: 'scenes/japandi.jpg',
-    width: 5000,
-    height: 3700,
-    pxPerCm: 8.83,       // meubel 250 cm = 2208 px (bijgesteld na beeldcheck)
-    centerX: 2496,
-    mirrorBottomY: 1772, // net boven de wandkranen (10cm hoger na 2e beeldcheck)
+    width: 2600,
+    height: 1924,
+    pxPerCm: 4.592,      // meubel 250 cm (geschaald 0.52: lambda-bundel klein houden)
+    centerX: 1298,
+    mirrorBottomY: 921,  // net boven de wandkranen
     lightFromX: -1,
     reflectionImage: 'scenes/japandi_spiegelbeeld.jpg',
     reflectionFocusY: 0.5,
@@ -49,11 +49,11 @@ export const SCENES: Scene[] = [
     id: 'stijlvol',
     name: 'Stijlvol',
     image: 'scenes/stijlvol.jpg',
-    width: 5000,
-    height: 3700,
-    pxPerCm: 7.97,       // meubel 305 cm = 2432 px (bevestigd door Mark)
-    centerX: 2550,       // midden tussen de twee wandkranen
-    mirrorBottomY: 1700, // net boven de wandkranen
+    width: 2600,
+    height: 1924,
+    pxPerCm: 4.144,      // meubel 305 cm (geschaald 0.52)
+    centerX: 1326,       // midden tussen de twee wandkranen
+    mirrorBottomY: 884,  // net boven de wandkranen
     lightFromX: 1,       // raam rechts
     reflectionWall: '#edecea',
   },
@@ -61,11 +61,11 @@ export const SCENES: Scene[] = [
     id: 'simple',
     name: 'Simple',
     image: 'scenes/simple.jpg',
-    width: 5000,
-    height: 3700,
-    pxPerCm: 17.69,      // meubel 140 cm = 2476 px (aangeleverd door Mark)
-    centerX: 2520,
-    mirrorBottomY: 1780, // net boven de wandkranen
+    width: 2600,
+    height: 1924,
+    pxPerCm: 9.199,      // meubel 140 cm (geschaald 0.52)
+    centerX: 1310,
+    mirrorBottomY: 926,  // net boven de wandkranen
     lightFromX: -1,
     reflectionWall: '#eae6e2',
   },
@@ -73,11 +73,11 @@ export const SCENES: Scene[] = [
     id: 'sfeervol',
     name: 'Sfeervol',
     image: 'scenes/sfeervol.jpg',
-    width: 5000,
-    height: 3700,
-    pxPerCm: 12.27,      // meubel 125 cm = 1533 px (aangeleverd door Mark)
-    centerX: 3000,       // boven de ronde waskom
-    mirrorBottomY: 1860, // net boven de wandkraan
+    width: 2600,
+    height: 1924,
+    pxPerCm: 6.380,      // meubel 125 cm (geschaald 0.52)
+    centerX: 1560,       // boven de ronde waskom
+    mirrorBottomY: 967,  // net boven de wandkraan
     lightFromX: -1,      // raam links
     reflectionImage: 'scenes/sfeervol_spiegelbeeld.jpg',
     reflectionFocusY: 0.52,
@@ -87,11 +87,11 @@ export const SCENES: Scene[] = [
     id: 'botanisch',
     name: 'Botanisch',
     image: 'scenes/botanisch.jpg',
-    width: 3700,
-    height: 5000,
-    pxPerCm: 13.22,      // meubel 120 cm = 1587 px (aangeleverd door Mark)
-    centerX: 1797,
-    mirrorBottomY: 2330, // net boven de wandkraan
+    width: 1924,
+    height: 2600,
+    pxPerCm: 6.874,      // meubel 120 cm (geschaald 0.52)
+    centerX: 934,
+    mirrorBottomY: 1212, // net boven de wandkraan
     lightFromX: 1,
     reflectionImage: 'scenes/botanisch_spiegelbeeld.jpg',
     reflectionFocusY: 0.45,

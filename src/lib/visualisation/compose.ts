@@ -9,7 +9,7 @@ import type { Scene } from './scenes'
 // reflectie komt uit de scène zelf (gespiegeld + vervaagd) — 0% artefacten.
 
 export type VisualisationInput = {
-  shape: 'rechthoek' | 'rounded-rect' | 'rond' | 'organic'
+  shape: 'rechthoek' | 'rounded-rect' | 'rond' | 'organic' | 'ovaal' | 'arc'
   /** cm */
   width: number
   /** cm — bij rond gelijk aan width (diameter) */
@@ -59,6 +59,13 @@ function organicStrokeScale(w: number, h: number): number {
   return (w / ORGANIC_BBOX.w + h / ORGANIC_BBOX.h) / 2
 }
 
+// Boogvorm (arc): vlakke onderkant, halfronde top. Offset o > 0 geeft de
+// binnencontour (zandstraalbaan), o < 0 de buitencontour (gloed).
+function arcPath(w: number, h: number, o = 0): string {
+  const r = w / 2
+  return `M ${o},${r} A ${r - o},${r - o} 0 0 1 ${w - o},${r} L ${w - o},${h - o} L ${o},${h - o} Z`
+}
+
 // Hoekradius: vaste productmaat — LoooX afgeronde hoeken = R60 (6 cm),
 // onafhankelijk van het spiegelformaat. Rechthoek = scherp (0).
 const ROUNDED_RECT_RADIUS_CM = 6
@@ -84,6 +91,8 @@ const GLASS_REFLECTION: Record<string, { brightness: number; saturation: number;
 function mirrorMaskSvg(w: number, h: number, shape: VisualisationInput['shape'], rx: number): string {
   const inner = shape === 'organic'
     ? organicGroup(w, h, 0, 0, `<path d="${ORGANIC_PATH}" fill="#fff"/>`)
+    : shape === 'arc'
+    ? `<path d="${arcPath(w, h)}" fill="#fff"/>`
     : shape === 'rond'
     ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}" fill="#fff"/>`
     : `<rect x="0" y="0" width="${w}" height="${h}" rx="${rx}" fill="#fff"/>`
@@ -97,6 +106,8 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
   const frame = input.frameColor ? FRAME_COLORS[input.frameColor] : null
   const clip = shape === 'organic'
     ? `<clipPath id="m">${organicGroup(w, h, 0, 0, `<path d="${ORGANIC_PATH}"/>`)}</clipPath>`
+    : shape === 'arc'
+    ? `<clipPath id="m"><path d="${arcPath(w, h)}"/></clipPath>`
     : shape === 'rond'
     ? `<clipPath id="m"><circle cx="${w / 2}" cy="${h / 2}" r="${w / 2}"/></clipPath>`
     : `<clipPath id="m"><rect x="0" y="0" width="${w}" height="${h}" rx="${rx}"/></clipPath>`
@@ -113,6 +124,17 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
     if (pos.size > 0) {
       strips = `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - inset}" fill="none" stroke="#ffffff" stroke-width="${strip * 1.6}" opacity="0.45" filter="url(#ledblur)"/>
         <circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - inset}" fill="none" stroke="#ffffff" stroke-width="${strip}" opacity="0.97"/>`
+    }
+  } else if (shape === 'ovaal') {
+    if (pos.size > 0) {
+      const ringRx = Math.max(2, Math.min(w, h) / 2 - inset)
+      strips = `<rect x="${inset}" y="${inset}" width="${w - inset * 2}" height="${h - inset * 2}" rx="${ringRx}" fill="none" stroke="#ffffff" stroke-width="${strip * 1.6}" opacity="0.45" filter="url(#ledblur)"/>
+        <rect x="${inset}" y="${inset}" width="${w - inset * 2}" height="${h - inset * 2}" rx="${ringRx}" fill="none" stroke="#ffffff" stroke-width="${strip}" opacity="0.97"/>`
+    }
+  } else if (shape === 'arc') {
+    if (pos.size > 0) {
+      strips = `<path d="${arcPath(w, h, inset)}" fill="none" stroke="#ffffff" stroke-width="${strip * 1.6}" opacity="0.45" filter="url(#ledblur)"/>
+        <path d="${arcPath(w, h, inset)}" fill="none" stroke="#ffffff" stroke-width="${strip}" opacity="0.97"/>`
     }
   } else {
     const horW = w - inset * 2
@@ -144,6 +166,8 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
 
   const edge = shape === 'organic'
     ? organicGroup(w, h, 0, 0, `<path d="${ORGANIC_PATH}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="${2 / organicStrokeScale(w, h)}"/>`)
+    : shape === 'arc'
+    ? `<path d="${arcPath(w, h, 1)}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>`
     : shape === 'rond'
     ? `<circle cx="${w / 2}" cy="${h / 2}" r="${w / 2 - 1}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>`
     : `<rect x="1" y="1" width="${w - 2}" height="${h - 2}" rx="${rx}" fill="none" stroke="#000" stroke-opacity="0.28" stroke-width="2"/>`
@@ -153,7 +177,7 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
   // Feller dan de rest: donker contrastrandje + dikkere witte ring met gloed,
   // zodat de sensor ook op lichte achtergronden zichtbaar is. Loopt er
   // onderlangs een zandstraalbaan, dan komt de ring erboven te zitten.
-  const heeftOnderBaan = shape !== 'rond' && shape !== 'organic' &&
+  const heeftOnderBaan = shape !== 'organic' &&
     (pos.has('onder') || pos.has('boven-beneden') || pos.has('rondom'))
   const tipTouchCy = heeftOnderBaan
     ? h - inset - strip - tipTouchPx * 2.4
@@ -207,6 +231,15 @@ function haloSvg(w: number, h: number, pad: number, shape: VisualisationInput['s
   } else if (shape === 'rond') {
     inner = `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeRand * 0.2}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
        <circle cx="${W / 2}" cy="${H / 2}" r="${w / 2 + strokeKern * 0.2}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
+  } else if (shape === 'ovaal') {
+    const haloRx = Math.min(w, h) / 2 + strokeRand * 0.2
+    inner = `<rect x="${pad - strokeRand * 0.2}" y="${pad - strokeRand * 0.2}" width="${w + strokeRand * 0.4}" height="${h + strokeRand * 0.4}" rx="${haloRx}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
+       <rect x="${pad - strokeKern * 0.2}" y="${pad - strokeKern * 0.2}" width="${w + strokeKern * 0.4}" height="${h + strokeKern * 0.4}" rx="${haloRx}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
+  } else if (shape === 'arc') {
+    inner = `<g transform="translate(${pad}, ${pad})">
+       <path d="${arcPath(w, h, -strokeRand * 0.2)}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
+       <path d="${arcPath(w, h, -strokeKern * 0.2)}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>
+     </g>`
   } else if (pos.has('rondom')) {
     inner = `<rect x="${pad - strokeRand * 0.2}" y="${pad - strokeRand * 0.2}" width="${w + strokeRand * 0.4}" height="${h + strokeRand * 0.4}" rx="${Math.round(strokeRand * 0.4)}" fill="none" stroke="${color.rand}" stroke-width="${strokeRand}"/>
        <rect x="${pad - strokeKern * 0.2}" y="${pad - strokeKern * 0.2}" width="${w + strokeKern * 0.4}" height="${h + strokeKern * 0.4}" rx="${Math.round(strokeKern * 0.4)}" fill="none" stroke="${color.kern}" stroke-width="${strokeKern}"/>`
@@ -243,9 +276,11 @@ function shadowSvg(w: number, h: number, pad: number, shape: VisualisationInput[
   const H = h + pad * 2
   const inner = shape === 'organic'
     ? organicGroup(w, h, pad, pad, `<path d="${ORGANIC_PATH}" fill="#000"/>`)
+    : shape === 'arc'
+    ? `<g transform="translate(${pad}, ${pad})"><path d="${arcPath(w, h)}" fill="#000"/></g>`
     : shape === 'rond'
     ? `<circle cx="${W / 2}" cy="${H / 2}" r="${w / 2}" fill="#000"/>`
-    : `<rect x="${pad}" y="${pad}" width="${w}" height="${h}" fill="#000"/>`
+    : `<rect x="${pad}" y="${pad}" width="${w}" height="${h}" rx="${shape === 'ovaal' ? Math.min(w, h) / 2 : 0}" fill="#000"/>`
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`
 }
 
@@ -268,7 +303,9 @@ export async function composeVisualisationWithLayers(scene: Scene, input: Visual
   const sceneBuf = await readFile(path.join(base, scene.image))
 
   // Spiegelmaat in scène-pixels
-  const rxPx = rxFor(input.shape, scene.pxPerCm)
+  const rxPx = input.shape === 'ovaal'
+    ? Math.round(Math.min(input.width, input.height) * scene.pxPerCm / 2)
+    : rxFor(input.shape, scene.pxPerCm)
   const framePx = input.frameColor ? Math.max(1, Math.round(0.52 * scene.pxPerCm)) : 0 // 2,6mm echt, 2x aangezet voor zichtbaarheid
   const stripPx = Math.max(2, Math.round(1.8 * scene.pxPerCm)) // zandstraalbaan 18mm
   const tipTouchPx = Math.max(3, Math.round(0.8 * scene.pxPerCm)) // sensor-ring ~16mm

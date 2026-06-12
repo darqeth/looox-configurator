@@ -151,7 +151,7 @@ export function ConfiguratiesContent({
                 const priceLabel = isProjectspiegel ? 'Netto ex. BTW' : 'Bruto ex. BTW'
 
                 const visualisationConfig: VisualisationConfig | null =
-                  (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic')
+                  (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic' || shape === 'ovaal' || shape === 'arc')
                     ? {
                         shape: shape as VisualisationConfig['shape'],
                         width: shape === 'rond' ? (diameter ?? 80) : (config.width ?? 80),

@@ -16,7 +16,7 @@ import { toast } from '@/components/toast'
 // consumentenofferte. Teller toont dag- en bonustegoed (besluit V4).
 
 export type VisualisationConfig = {
-  shape: 'rechthoek' | 'rounded-rect' | 'rond' | 'organic'
+  shape: 'rechthoek' | 'rounded-rect' | 'rond' | 'organic' | 'ovaal' | 'arc'
   width: number
   height: number
   glasKleur: 'helder' | 'smoke-zwart' | 'smoke-brons'
@@ -27,7 +27,7 @@ export type VisualisationConfig = {
   tipTouch?: boolean
 }
 
-export const VISUALISATION_SHAPES = ['rechthoek', 'rounded-rect', 'rond', 'organic']
+export const VISUALISATION_SHAPES = ['rechthoek', 'rounded-rect', 'rond', 'organic', 'ovaal', 'arc']
 
 export function VisualisationButton({ config, configurationId, variant = 'knop' }: {
   config: VisualisationConfig

@@ -48,6 +48,18 @@ const VARIANTEN: Array<{ naam: string; input: VisualisationInput }> = [
     input: { shape: 'rechthoek', width: 100, height: 60, glasKleur: 'helder', directPositions: [], indirectPositions: ['boven-beneden'], lichtKelvin: 3000 },
   },
   {
+    naam: 'ovaal-60x120-helder-direct-ring-indirect-warm',
+    input: { shape: 'ovaal', width: 60, height: 120, glasKleur: 'helder', directPositions: ['rondom'], indirectPositions: ['rondom'], lichtKelvin: 3000, tipTouch: true },
+  },
+  {
+    naam: 'arc-70x110-helder-direct-ring-warm',
+    input: { shape: 'arc', width: 70, height: 110, glasKleur: 'helder', directPositions: ['rondom'], indirectPositions: [], lichtKelvin: 3000, tipTouch: true },
+  },
+  {
+    naam: 'rond-90-helder-direct-ring-tiptouch-koel',
+    input: { shape: 'rond', width: 90, height: 90, glasKleur: 'helder', directPositions: ['rondom'], indirectPositions: [], lichtKelvin: 4000, tipTouch: true },
+  },
+  {
     naam: 'rechthoek-140x80-helder-alles-warm',
     input: { shape: 'rechthoek', width: 140, height: 80, glasKleur: 'helder', directPositions: ['rondom'], indirectPositions: ['rondom'], lichtKelvin: 3000 },
   },

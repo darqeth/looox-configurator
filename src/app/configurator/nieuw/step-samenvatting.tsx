@@ -129,7 +129,7 @@ export default function StepSamenvatting({
   // Badkamer-visualisatie: alleen voor de vormen die de engine ondersteunt
   const organicMaat = (organicSizeKey ?? '60x40').split('x').map(Number)
   const visualisationConfig: VisualisationConfig | null =
-    (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic')
+    (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic' || shape === 'ovaal' || shape === 'arc')
       ? {
           shape,
           width: shape === 'rond' ? (diameter ?? 80) : shape === 'organic' ? (organicMaat[0] || 60) : width,

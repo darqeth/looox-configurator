@@ -1,11 +1,11 @@
 // Badkamerscènes voor de visualisatie (epic, besluit V1/V8).
 // Per scène: schaal-anker (px per cm, gekalibreerd op een object met bekende
-// breedte), spiegelpositie en lichtinformatie. Foto's staan in public/scenes/.
+// breedte), spiegelpositie en lichtinformatie. Foto's staan in assets/scenes/.
 //
 export type Scene = {
   id: string
   name: string
-  /** Pad relatief aan public/ */
+  /** Pad relatief aan assets/ */
   image: string
   /** Volledige beeldbreedte/hoogte in px (bron) */
   width: number

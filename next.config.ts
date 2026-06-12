@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
   // Visualisatie-engine leest scènefoto's van schijf; op Vercel zit public/
   // niet in de serverless-functie tenzij expliciet meegebundeld
   outputFileTracingIncludes: {
-    '/configurator/nieuw': ['./public/scenes/**/*'],
-    '/configuraties': ['./public/scenes/**/*'],
+    '/configurator/nieuw': ['./assets/scenes/**/*'],
+    '/configuraties': ['./assets/scenes/**/*'],
   },
   experimental: {
     serverActions: {

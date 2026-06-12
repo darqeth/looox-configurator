@@ -298,8 +298,10 @@ export async function composeVisualisation(scene: Scene, input: VisualisationInp
   return (await composeVisualisationWithLayers(scene, input, publicDir)).jpeg
 }
 
-export async function composeVisualisationWithLayers(scene: Scene, input: VisualisationInput, publicDir?: string): Promise<ComposedVisualisation> {
-  const base = publicDir ?? path.join(process.cwd(), 'public')
+export async function composeVisualisationWithLayers(scene: Scene, input: VisualisationInput, assetsDir?: string): Promise<ComposedVisualisation> {
+  // Buiten public/: Vercel stript public-bestanden uit serverless-bundels
+  // (CDN-assets), ook met outputFileTracingIncludes
+  const base = assetsDir ?? path.join(process.cwd(), 'assets')
   const sceneBuf = await readFile(path.join(base, scene.image))
 
   // Spiegelmaat in scène-pixels

@@ -342,7 +342,7 @@ export async function composeVisualisationWithLayers(scene: Scene, input: Visual
     reflectionSource = await sharp(await readFile(path.join(base, scene.reflectionImage)))
       .resize(scene.width, scene.height, { fit: 'cover' })
       .flop()
-      .blur(1.5)
+      .blur(5)
       .modulate({ brightness: 0.94, saturation: 0.95 })
       .toBuffer()
     centerY = Math.round((scene.reflectionFocusY ?? 0.5) * scene.height)

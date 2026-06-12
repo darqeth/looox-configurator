@@ -207,6 +207,29 @@ export function computeSolRestmaten(diameter: number, meubelHoogte: number, onde
   }
 }
 
+// Luna = Sol met daarnaast een verticale muur-afsnede aan één zijde:
+// 'afstand' cm van de cirkel verdwijnt achter de muur. Het meubelvlak wordt
+// daardoor aan die kant begrensd door de muur i.p.v. de cirkelrand.
+// De zijde (links/rechts) maakt voor de maten niet uit.
+export function computeLunaRestmaten(diameter: number, meubelHoogte: number, onderkant: number, afstand: number): {
+  bovendeelHoogte: number
+  meubelVlakBreedte: number
+  valid: boolean
+} {
+  const r = diameter / 2
+  const meubelTop = onderkant + meubelHoogte
+  const bovendeelHoogte = diameter - meubelTop
+  const distVanCentrum = meubelTop - r
+  const halveKoorde = Math.sqrt(Math.max(0, r * r - distVanCentrum * distVanCentrum))
+  // Koorde-uiteinden op ±halveKoorde; muurcut op (afstand - r) vanaf het centrum
+  const breedte = Math.min(2 * halveKoorde, halveKoorde + r - afstand)
+  return {
+    bovendeelHoogte: Math.round(bovendeelHoogte),
+    meubelVlakBreedte: Math.round(Math.max(0, breedte)),
+    valid: bovendeelHoogte > 0,
+  }
+}
+
 // ─── Sol/Luna catalogusprijzen ────────────────────────────────────────────────
 // Bron: LoooX prijslijst 2026
 

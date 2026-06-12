@@ -83,3 +83,26 @@ test.describe('computeSolRestmaten', () => {
     expect(r.valid).toBe(false)
   })
 })
+
+test.describe('computeLunaRestmaten', () => {
+  test('muurcut binnen de koorde begrenst het meubelvlak', async () => {
+    const { computeLunaRestmaten } = await import('../src/lib/configurator-config')
+    // d=90, meubel 35, uitsteek 15, afstand 20: K=44.72 -> 44.72+45-20 = 69.7
+    const r = computeLunaRestmaten(90, 35, 15, 20)
+    expect(r.bovendeelHoogte).toBe(40)
+    expect(r.meubelVlakBreedte).toBe(70)
+    expect(r.valid).toBe(true)
+  })
+
+  test('muurcut buiten de koorde -> volledige koorde zoals Sol', async () => {
+    const { computeLunaRestmaten, computeSolRestmaten } = await import('../src/lib/configurator-config')
+    const luna = computeLunaRestmaten(80, 35, 15, 1)
+    const sol = computeSolRestmaten(80, 35, 15)
+    expect(luna.meubelVlakBreedte).toBe(sol.meubelVlakBreedte)
+  })
+
+  test('meubel hoger dan spiegel -> ongeldig', async () => {
+    const { computeLunaRestmaten } = await import('../src/lib/configurator-config')
+    expect(computeLunaRestmaten(60, 70, 10, 20).valid).toBe(false)
+  })
+})

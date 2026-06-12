@@ -10,6 +10,7 @@ import {
   GLAS_KLEUREN,
   LUNA_CATALOGUS,
   computeSolRestmaten,
+  computeLunaRestmaten,
 } from '@/lib/configurator-config'
 
 interface StepAfmetingProps {
@@ -40,12 +41,11 @@ interface StepAfmetingProps {
   }>) => void
 }
 
-// Berekende reststukken bij de Sol — hulp bij het bestellen van het meubel.
+// Berekende reststukken bij Sol/Luna — hulp bij het bestellen van het meubel.
 // Read-only resultaten, visueel onderscheiden van de invoervelden.
-const SolRestmaten = memo(function SolRestmaten({ diameter, meubelHoogte, onderkant }: {
-  diameter: number; meubelHoogte: number; onderkant: number
+const RestmatenKaart = memo(function RestmatenKaart({ rest }: {
+  rest: { bovendeelHoogte: number; meubelVlakBreedte: number; valid: boolean }
 }) {
-  const rest = computeSolRestmaten(diameter, meubelHoogte, onderkant)
   return (
     <div className="rounded-xl border border-lx-cta/25 bg-lx-icon-bg/40 p-4">
       <p className="text-[11px] font-bold uppercase tracking-wide text-lx-text-secondary mb-3">
@@ -384,7 +384,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
             </p>
           )}
         </div>
-        <SolRestmaten diameter={diameter ?? 80} meubelHoogte={solMeubelHoogte} onderkant={solOnderkant} />
+        <RestmatenKaart rest={computeSolRestmaten(diameter ?? 80, solMeubelHoogte, solOnderkant)} />
         <div className="border-t border-lx-divider pt-5">
           <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
         </div>
@@ -475,6 +475,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
             </p>
           )}
         </div>
+        <RestmatenKaart rest={computeLunaRestmaten(diameter ?? 90, lunaMeubelHoogte ?? 35, lunaOnderkant ?? 15, afstand)} />
         <div className="border-t border-lx-divider pt-5">
           <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
         </div>

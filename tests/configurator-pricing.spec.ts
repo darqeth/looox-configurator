@@ -58,3 +58,28 @@ test.describe('Sol catalogusprijs', () => {
     expect(sol({ selectedOptions: ['sol-extra-deel'] })).toBe(SOL_CATALOGUS.metExtraDeel)
   })
 })
+
+// ─── Sol restmaten ────────────────────────────────────────────────────────────
+test.describe('computeSolRestmaten', () => {
+  test('standaardgeval ⌀80, meubel 35, uitsteek 15', async () => {
+    const { computeSolRestmaten } = await import('../src/lib/configurator-config')
+    const r = computeSolRestmaten(80, 35, 15)
+    expect(r.bovendeelHoogte).toBe(30)   // 80 - 15 - 35
+    expect(r.meubelVlakBreedte).toBe(77) // 2*sqrt(40² - 10²) = 77.46
+    expect(r.valid).toBe(true)
+  })
+
+  test('koorde door het centrum = volledige diameter', async () => {
+    const { computeSolRestmaten } = await import('../src/lib/configurator-config')
+    // meubelTop op het centrum (r=50): onderkant+meubel = 50
+    const r = computeSolRestmaten(100, 40, 10)
+    expect(r.meubelVlakBreedte).toBe(100)
+    expect(r.bovendeelHoogte).toBe(50)
+  })
+
+  test('meubel hoger dan de spiegel → ongeldig', async () => {
+    const { computeSolRestmaten } = await import('../src/lib/configurator-config')
+    const r = computeSolRestmaten(60, 70, 10)
+    expect(r.valid).toBe(false)
+  })
+})

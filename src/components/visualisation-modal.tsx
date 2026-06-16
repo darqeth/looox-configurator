@@ -41,7 +41,7 @@ export function VisualisationButton({ config, configurationId, variant = 'knop' 
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="viz-shine-btn inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-lx-cta/40 text-lx-cta text-[13px] font-semibold hover:bg-lx-icon-bg transition-colors"
+          className="viz-shine-btn inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-lx-cta text-[13px] font-semibold hover:bg-lx-icon-bg transition-colors"
         >
           <CameraIcon />
           Bekijk in badkamer

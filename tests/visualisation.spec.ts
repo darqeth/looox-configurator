@@ -28,6 +28,10 @@ const VARIANTEN: Array<{ naam: string; input: VisualisationInput }> = [
     input: { shape: 'rounded-rect', width: 90, height: 60, glasKleur: 'helder', directPositions: ['boven-beneden'], indirectPositions: [], lichtKelvin: 3000 },
   },
   {
+    naam: 'rounded-rect-100x70-helder-direct-rondom-tiptouch-koel',
+    input: { shape: 'rounded-rect', width: 100, height: 70, glasKleur: 'helder', directPositions: ['rondom'], indirectPositions: [], lichtKelvin: 4000, tipTouch: true },
+  },
+  {
     naam: 'rechthoek-100x70-helder-aluframe-indirect-warm',
     input: { shape: 'rechthoek', width: 100, height: 70, glasKleur: 'helder', directPositions: [], indirectPositions: ['rondom'], lichtKelvin: 3000, frameColor: 'aluminium' },
   },

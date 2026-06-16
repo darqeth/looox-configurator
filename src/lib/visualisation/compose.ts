@@ -136,6 +136,18 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
       strips = `<path d="${arcPath(w, h, inset)}" fill="none" stroke="#ffffff" stroke-width="${strip * 1.6}" opacity="0.45" filter="url(#ledblur)"/>
         <path d="${arcPath(w, h, inset)}" fill="none" stroke="#ffffff" stroke-width="${strip}" opacity="0.97"/>`
     }
+  } else if (shape === 'rounded-rect' && pos.has('rondom')) {
+    // Doorlopende band die de afgeronde hoeken volgt (feedback Mark): echte
+    // productmaat 4cm van de rand, 1cm dik. Bandradius = hoekradius - inzet,
+    // zodat de band parallel aan de spiegelrand loopt
+    const pxPerCm = strip / 1.8
+    const ci = 4.5 * pxPerCm            // centrum van de band: 4-5cm vanaf de rand
+    const thick = Math.max(2, Math.round(1 * pxPerCm))
+    const bw = w - ci * 2
+    const bh = h - ci * 2
+    const brx = Math.max(0, rx - ci)
+    strips = `<rect x="${ci}" y="${ci}" width="${bw}" height="${bh}" rx="${brx}" fill="none" stroke="#ffffff" stroke-width="${thick * 1.6}" opacity="0.45" filter="url(#ledblur)"/>
+      <rect x="${ci}" y="${ci}" width="${bw}" height="${bh}" rx="${brx}" fill="none" stroke="#ffffff" stroke-width="${thick}" opacity="0.97"/>`
   } else {
     const horW = w - inset * 2
     const verH = h - inset * 2

@@ -142,6 +142,9 @@ export default function StepSamenvatting({
             ? (optionSubChoices['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null
             : null,
           tipTouch: directLight.control === 'tip-touch' || indirectLight.control === 'tip-touch',
+          clockPosition: selectedOptions.includes('digitale-klok')
+            ? ((optionSubChoices['digitale-klok'] as VisualisationConfig['clockPosition']) ?? 'midden')
+            : null,
         }
       : null
 

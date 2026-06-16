@@ -64,6 +64,14 @@ const VARIANTEN: Array<{ naam: string; input: VisualisationInput }> = [
     input: { shape: 'rond', width: 90, height: 90, glasKleur: 'helder', directPositions: ['rondom'], indirectPositions: [], lichtKelvin: 4000, tipTouch: true },
   },
   {
+    naam: 'rechthoek-120x70-helder-direct-bo-klok-links-warm',
+    input: { shape: 'rechthoek', width: 120, height: 70, glasKleur: 'helder', directPositions: ['boven-beneden'], indirectPositions: [], lichtKelvin: 3000, tipTouch: true, clockPosition: 'links' },
+  },
+  {
+    naam: 'rechthoek-120x70-smoke-klok-midden-koel',
+    input: { shape: 'rechthoek', width: 120, height: 70, glasKleur: 'smoke-zwart', directPositions: [], indirectPositions: [], lichtKelvin: 4000, clockPosition: 'midden' },
+  },
+  {
     naam: 'rechthoek-140x80-helder-alles-warm',
     input: { shape: 'rechthoek', width: 140, height: 80, glasKleur: 'helder', directPositions: ['rondom'], indirectPositions: ['rondom'], lichtKelvin: 3000 },
   },

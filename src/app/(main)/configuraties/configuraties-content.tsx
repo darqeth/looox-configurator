@@ -164,6 +164,9 @@ export function ConfiguratiesContent({
                           ? ((opts?.optionSubChoices as Record<string, string> | undefined)?.['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null
                           : null,
                         tipTouch: direct?.control === 'tip-touch' || indirect?.control === 'tip-touch',
+                        clockPosition: extras.includes('digitale-klok')
+                          ? (((opts?.optionSubChoices as Record<string, string> | undefined)?.['digitale-klok'] as VisualisationConfig['clockPosition']) ?? 'midden')
+                          : null,
                       }
                     : null
 

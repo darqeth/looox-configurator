@@ -26,6 +26,7 @@ const generateSchema = z.object({
     lichtKelvin: z.union([z.literal(3000), z.literal(4000)]),
     frameColor: z.enum(['aluminium', 'zwart', 'gun-metal', 'brushed-brass', 'brushed-copper']).nullish(),
     tipTouch: z.boolean().optional(),
+    clockPosition: z.enum(['links', 'midden', 'rechts']).nullish(),
   }),
 })
 

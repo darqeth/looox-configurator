@@ -25,6 +25,60 @@ export type VisualisationInput = {
   frameColor?: 'aluminium' | 'zwart' | 'gun-metal' | 'brushed-brass' | 'brushed-copper' | null
   /** Tip-Touch bediening: klein lichtgevend cirkeltje onderin het glas */
   tipTouch?: boolean
+  /** Digitale klok: wit LED-display, positie links/midden/rechts */
+  clockPosition?: 'links' | 'midden' | 'rechts' | null
+}
+
+// Digitale klok als 7-segment-display (wekkerstijl), wit oplichtend zoals de
+// tip-touch. Toont een vaste voorbeeldtijd. Twee passes (gloed + scherpe kern).
+const SEVEN_SEG: Record<string, string> = {
+  '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd', '4': 'fgbc',
+  '5': 'afgcd', '6': 'afgedc', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg',
+}
+
+function sevenSegDigit(x: number, y: number, dw: number, dh: number, t: number, digit: string): string {
+  const on = new Set((SEVEN_SEG[digit] ?? '').split(''))
+  const vH = dh / 2 - 1.5 * t
+  const seg = (sx: number, sy: number, sw: number, sh: number) =>
+    `<rect x="${sx.toFixed(1)}" y="${sy.toFixed(1)}" width="${sw.toFixed(1)}" height="${sh.toFixed(1)}" rx="${(Math.min(sw, sh) / 2).toFixed(1)}"/>`
+  let p = ''
+  if (on.has('a')) p += seg(x + t, y, dw - 2 * t, t)
+  if (on.has('b')) p += seg(x + dw - t, y + t, t, vH)
+  if (on.has('c')) p += seg(x + dw - t, y + dh / 2 + 0.5 * t, t, vH)
+  if (on.has('d')) p += seg(x + t, y + dh - t, dw - 2 * t, t)
+  if (on.has('e')) p += seg(x, y + dh / 2 + 0.5 * t, t, vH)
+  if (on.has('f')) p += seg(x, y + t, t, vH)
+  if (on.has('g')) p += seg(x + t, y + dh / 2 - t / 2, dw - 2 * t, t)
+  return p
+}
+
+// Klokvorm rond middelpunt (cx, cy), cijferhoogte dh. Tijd "10:24" als voorbeeld.
+function digitalClockSvg(cx: number, cy: number, dh: number): { svg: string; width: number } {
+  const dw = dh * 0.54
+  const t = dh * 0.14
+  const gap = dw * 0.32
+  const colonW = dw * 0.5
+  const elems: Array<{ type: 'digit' | 'colon'; ch?: string; w: number }> = [
+    { type: 'digit', ch: '1', w: dw }, { type: 'digit', ch: '0', w: dw },
+    { type: 'colon', w: colonW },
+    { type: 'digit', ch: '2', w: dw }, { type: 'digit', ch: '4', w: dw },
+  ]
+  const totalW = elems.reduce((s, e) => s + e.w, 0) + gap * (elems.length - 1)
+  let x = cx - totalW / 2
+  const y = cy - dh / 2
+  let shapes = ''
+  elems.forEach((e, i) => {
+    if (i > 0) x += gap
+    if (e.type === 'colon') {
+      const r = t * 0.6
+      shapes += `<circle cx="${(x + e.w / 2).toFixed(1)}" cy="${(y + dh * 0.34).toFixed(1)}" r="${r.toFixed(1)}"/><circle cx="${(x + e.w / 2).toFixed(1)}" cy="${(y + dh * 0.66).toFixed(1)}" r="${r.toFixed(1)}"/>`
+    } else {
+      shapes += sevenSegDigit(x, y, dw, dh, t, e.ch!)
+    }
+    x += e.w
+  })
+  const svg = `<g fill="#ffffff" opacity="0.5" filter="url(#ledblur)">${shapes}</g><g fill="#ffffff" opacity="0.97">${shapes}</g>`
+  return { svg, width: totalW }
 }
 
 // Metallic frame: donkere basis + lichte highlight voor een geborsteld effect
@@ -200,6 +254,26 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
        <circle cx="${w / 2}" cy="${tipTouchCy}" r="${tipTouchPx}" fill="none" stroke="#ffffff" stroke-width="${Math.max(1.5, tipTouchPx * 0.3)}" opacity="1"/>`
     : ''
 
+  // Digitale klok: een klein stukje boven de tip-touch positie. Cijferhoogte
+  // ~3cm; links/rechts blijven binnen de directe LED-banen (inset + strip).
+  let clock = ''
+  if (input.clockPosition) {
+    const pxPerCm = strip / 1.8
+    const digitH = 3 * pxPerCm
+    const clockCy = tipTouchCy - tipTouchPx * 1.5 - digitH / 2
+    const { width: clockW } = digitalClockSvg(0, 0, digitH)
+    const marge = 1 * pxPerCm
+    let clockCx: number
+    if (input.clockPosition === 'links') {
+      clockCx = inset + strip + marge + clockW / 2
+    } else if (input.clockPosition === 'rechts') {
+      clockCx = w - inset - strip - marge - clockW / 2
+    } else {
+      clockCx = w / 2
+    }
+    clock = digitalClockSvg(clockCx, clockCy, digitH).svg
+  }
+
   return `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     ${clip}
@@ -219,6 +293,7 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
     <rect width="${w}" height="${h}" fill="${tint.color}" opacity="${tint.opacity}"/>
     <rect width="${w}" height="${h}" fill="url(#hl)"/>
     ${strips}
+    ${clock}
     ${tipTouch}
     ${frameLayer}
   </g>

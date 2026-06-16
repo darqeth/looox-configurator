@@ -171,8 +171,8 @@
   }
 }
 /* ─── "Bekijk in badkamer"-knop: zacht gloeiende rand die continu rondstroomt ──
- * Een brede lichtboog die naadloos en rustig rond de rand draait (geen pauze),
- * met een zachte gloed-halo erachter. Geïnspireerd op AI-mode-knoppen. */
+ * Een brede lichtboog die naadloos en rustig rond de rand draait (geen pauze).
+ * Alleen op de rand gemaskeerd, zodat er niets door de knop heen zweeft. */
 @property --viz-shine-angle {
   syntax: '<angle>';
   initial-value: 0deg;
@@ -185,16 +185,16 @@
 
 .viz-shine-btn {
   position: relative;
-  isolation: isolate;
 }
 
 /* Brede lichtboog: transparant → groen → zacht wit → groen → transparant.
  * Symmetrisch zodat 0deg en 360deg gelijk zijn → naadloze loop. */
-.viz-shine-btn::before,
 .viz-shine-btn::after {
   content: "";
   position: absolute;
+  inset: 0;
   border-radius: inherit;
+  padding: 1.5px;
   background: conic-gradient(
     from var(--viz-shine-angle),
     transparent 0deg,
@@ -203,30 +203,14 @@
     color-mix(in srgb, var(--lx-cta) 45%, transparent) 245deg,
     transparent 360deg
   );
-  animation: viz-border-flow 5.5s linear infinite;
-  pointer-events: none;
-}
-
-/* Scherpe lichtrand (gemaskeerd tot alleen de rand) */
-.viz-shine-btn::after {
-  inset: 0;
-  padding: 1.5px;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
           mask-composite: exclude;
-  z-index: 1;
-}
-
-/* Zachte gloed-halo erachter */
-.viz-shine-btn::before {
-  inset: -2.5px;
-  filter: blur(6px);
-  opacity: 0.45;
-  z-index: -1;
+  animation: viz-border-flow 5.5s linear infinite;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .viz-shine-btn::before,
   .viz-shine-btn::after { animation: none; }
 }

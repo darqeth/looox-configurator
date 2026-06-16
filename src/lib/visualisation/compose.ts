@@ -259,7 +259,7 @@ function glassOverlaySvg(w: number, h: number, input: VisualisationInput, rx: nu
   let clock = ''
   if (input.clockPosition) {
     const pxPerCm = strip / 1.8
-    const digitH = 3 * pxPerCm
+    const digitH = 2.1 * pxPerCm // 30% kleiner na beeldcheck
     const clockCy = tipTouchCy - tipTouchPx * 1.5 - digitH / 2
     const { width: clockW } = digitalClockSvg(0, 0, digitH)
     const marge = 1 * pxPerCm

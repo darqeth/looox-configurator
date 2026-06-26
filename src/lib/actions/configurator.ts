@@ -111,6 +111,13 @@ export async function saveConfiguration(rawInput: SaveConfigInput) {
   })
   const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
+  if (input.shape === 'op-aanvraag' && !input.attachmentUrl) {
+    throw new Error('Upload een schets of tekening om een spiegel op aanvraag op te slaan.')
+  }
+  if (input.selectedOptions.includes('schuine-zijden') && !input.attachmentUrl) {
+    throw new Error('Upload een maattekening voor de schuine zijden om op te slaan.')
+  }
+
   const selectedOptionsJson = buildSelectedOptionsJson(input)
 
   const { error } = await supabase.from('configurations').insert({
@@ -198,6 +205,13 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
     lunaMeubelHoogte: input.lunaMeubelHoogte,
   })
   const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
+
+  if (input.shape === 'op-aanvraag' && !input.attachmentUrl) {
+    throw new Error('Upload een schets of tekening om een spiegel op aanvraag op te slaan.')
+  }
+  if (input.selectedOptions.includes('schuine-zijden') && !input.attachmentUrl) {
+    throw new Error('Upload een maattekening voor de schuine zijden om op te slaan.')
+  }
 
   const selectedOptionsJson = buildSelectedOptionsJson(input)
 

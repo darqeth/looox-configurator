@@ -641,57 +641,70 @@ export default function OrderDocument({
         </View>
 
         {/* Prijs */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Prijsoverzicht (excl. BTW)</Text>
-          <View style={styles.pricingBox}>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Bruto ex. BTW</Text>
-              <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
-            </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
-              <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(Math.round(unitPrice * korting / 100))}</Text>
-            </View>
-            {staffelAmountPerStuk > 0 && (
+        {isOpAanvraag ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Prijs</Text>
+            <View style={styles.pricingBox}>
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>
-                  Staffelkorting ({((staffelKortingPct ?? 0) * 100).toFixed(0)}%)
-                </Text>
-                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(staffelAmountPerStuk)}</Text>
+                <Text style={styles.pricingLabel}>Prijs</Text>
+                <Text style={styles.pricingValue}>Op aanvraag</Text>
               </View>
-            )}
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Netto ex. BTW</Text>
-              <Text style={styles.pricingValue}>{formatPrice(finalNettoUnitPrice)}</Text>
+              <Text style={styles.vatNote}>De prijs wordt nader bepaald en gecommuniceerd.</Text>
             </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Aantal</Text>
-              <Text style={styles.pricingValue}>{quantity}×</Text>
-            </View>
-            {opts.discountType && opts.discountAmount ? (
-              <>
-                <View style={styles.pricingRow}>
-                  <Text style={styles.pricingLabel}>Subtotaal</Text>
-                  <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(nettoSubtotal)}</Text>
-                </View>
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Prijsoverzicht (excl. BTW)</Text>
+            <View style={styles.pricingBox}>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Bruto ex. BTW</Text>
+                <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
+              </View>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
+                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(Math.round(unitPrice * korting / 100))}</Text>
+              </View>
+              {staffelAmountPerStuk > 0 && (
                 <View style={styles.pricingRow}>
                   <Text style={styles.pricingLabel}>
-                    Kortingscode ({opts.discountType === 'pct' ? `${opts.discountValue}%` : `${formatPrice(opts.discountValue ?? 0)} eenmalig`})
+                    Staffelkorting ({((staffelKortingPct ?? 0) * 100).toFixed(0)}%)
                   </Text>
-                  <Text style={[styles.pricingValue, { color: BRAND }]}>
-                    -{formatPrice(discountAmount)}
-                  </Text>
+                  <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(staffelAmountPerStuk)}</Text>
                 </View>
-              </>
-            ) : null}
-            <View style={styles.pricingDivider} />
-            <View style={styles.pricingRow}>
-              <Text style={styles.totalLabel}>Totaal</Text>
-              <Text style={styles.totalValue}>{formatPrice(nettoTotal)}</Text>
+              )}
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Netto ex. BTW</Text>
+                <Text style={styles.pricingValue}>{formatPrice(finalNettoUnitPrice)}</Text>
+              </View>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Aantal</Text>
+                <Text style={styles.pricingValue}>{quantity}×</Text>
+              </View>
+              {opts.discountType && opts.discountAmount ? (
+                <>
+                  <View style={styles.pricingRow}>
+                    <Text style={styles.pricingLabel}>Subtotaal</Text>
+                    <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(nettoSubtotal)}</Text>
+                  </View>
+                  <View style={styles.pricingRow}>
+                    <Text style={styles.pricingLabel}>
+                      Kortingscode ({opts.discountType === 'pct' ? `${opts.discountValue}%` : `${formatPrice(opts.discountValue ?? 0)} eenmalig`})
+                    </Text>
+                    <Text style={[styles.pricingValue, { color: BRAND }]}>
+                      -{formatPrice(discountAmount)}
+                    </Text>
+                  </View>
+                </>
+              ) : null}
+              <View style={styles.pricingDivider} />
+              <View style={styles.pricingRow}>
+                <Text style={styles.totalLabel}>Totaal</Text>
+                <Text style={styles.totalValue}>{formatPrice(nettoTotal)}</Text>
+              </View>
+              <Text style={styles.vatNote}>Alle prijzen excl. BTW</Text>
             </View>
-            <Text style={styles.vatNote}>Alle prijzen excl. BTW</Text>
           </View>
-        </View>
+        )}
 
         {/* Bijzonderheden */}
         {(notes || opts.description) && (

@@ -501,6 +501,9 @@ export default function OrderDocument({
   dealer, config, unitPrice, korting, quantity, notes, attachmentUrl, staffelKortingPct,
 }: OrderDocumentProps) {
   const opts = config.options
+  const isOpAanvraag = (opts.shape as string) === 'op-aanvraag'
+  const docTitle = isOpAanvraag ? 'Offerte aanvraag' : 'Orderbevestiging'
+  const nummerLabel = isOpAanvraag ? 'Offertenummer' : 'Ordernummer'
   const nettoUnitPrice = Math.round(unitPrice * (1 - korting / 100))
   const staffelAmountPerStuk = staffelKortingPct && staffelKortingPct > 0
     ? Math.round(nettoUnitPrice * staffelKortingPct)
@@ -512,7 +515,7 @@ export default function OrderDocument({
 
   return (
     <Document
-      title={`Orderbevestiging ${orderNumber}`}
+      title={`${docTitle} ${orderNumber}`}
       author="LoooX"
       creator="LoooX Configurator"
     >
@@ -525,8 +528,8 @@ export default function OrderDocument({
             <Text style={[styles.headerMeta, { marginTop: 4 }]}>Spiegel op maat</Text>
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.docTitle}>Orderbevestiging</Text>
-            <Text style={styles.headerMeta}>Ordernummer: {orderNumber}</Text>
+            <Text style={styles.docTitle}>{docTitle}</Text>
+            <Text style={styles.headerMeta}>{nummerLabel}: {orderNumber}</Text>
             <Text style={styles.headerMeta}>Datum: {formatDate(orderDate)}</Text>
             <Text style={styles.headerMeta}>Status: {STATUS_NL[status] ?? status}</Text>
           </View>

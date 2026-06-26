@@ -179,11 +179,11 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
   }
 
   if (shape === 'organic') {
-    const organicPath = "M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"
+    const organicPath = "M73.5,134c-1.1,0-2.3,0-3.4-.2-.4,0-.8,0-1.3-.2-.8-.1-1.7-.3-2.5-.5h0c-4.1-.9-8.2-2.7-12.1-5.4-20.7-14.2-36.5-33.7-48.4-59.5C.8,57.1-1.1,45.2.6,34.7,2.5,22.6,8.9,12.9,19.1,6.8,28,1.4,45.4-.6,58.1.2c20.8.7,78.6,13,98.7,39.4,6.3,8.3,8.3,17.2,6,26.4v.4c-10.5,29.2-39.2,53.3-79,66-3.4,1.1-6.9,1.7-10.4,1.7Z" // echte productvorm (organic_vorm.svg)
     const scale = available / 200
     return (
       <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        <G transform={`translate(${PAD} ${PAD}) scale(${scale})`}>
+        <G transform={`translate(${PAD + 18.15 * scale} ${PAD + 33 * scale}) scale(${scale})`}>
           {hasIndirect && <Path d={organicPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W / scale} opacity={0.7} />}
           <Path d={organicPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
           <Path d={organicPath} fill="none" stroke={glass.stroke} strokeWidth={1.2 / scale} />
@@ -527,12 +527,13 @@ export type OfferteDocumentProps = {
   unitPrice: number
   quantity: number
   attachmentUrl?: string | null
+  visualisationUrl?: string | null
 }
 
 export default function OfferteDocument({
   configName, configDate, articleNumber,
   dealer, config, unitPrice, quantity,
-  attachmentUrl,
+  attachmentUrl, visualisationUrl,
 }: OfferteDocumentProps) {
   const opts = config.options
   const subtotalExclBtw = unitPrice * quantity
@@ -701,6 +702,34 @@ export default function OfferteDocument({
         </View>
 
       </Page>
+
+      {/* Sfeerbeeld: spiegel in de badkamer (consumentenofferte) */}
+      {visualisationUrl && (
+        <Page size="A4" style={styles.page}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <View>
+              <Text style={styles.companyName}>{dealer.company ?? dealer.name ?? 'Uw leverancier'}</Text>
+              <Text style={styles.companyDetails}>{dealer.email}</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK }}>Sfeerimpressie</Text>
+              <Text style={{ fontSize: 8, color: GRAY, marginTop: 2 }}>{configName ?? ''}</Text>
+            </View>
+          </View>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
+          <Image
+            src={visualisationUrl}
+            style={{ width: 515, height: 380, objectFit: 'contain' }}
+          />
+          <Text style={{ fontSize: 8, color: GRAY, marginTop: 8, fontStyle: 'italic' }}>
+            Indicatieve weergave. De spiegel is op ware grootte in een voorbeeldbadkamer geplaatst; de afgebeelde badkamer en omgeving zijn ter illustratie.
+          </Text>
+          <View style={styles.footer} fixed>
+            <Text style={styles.footerText}>{dealer.company ?? dealer.name ?? ''} - {dealer.email}</Text>
+            <Text style={styles.footerText}>Offerte {configName ?? ''} - Sfeerimpressie</Text>
+          </View>
+        </Page>
+      )}
 
       {/* Bijlage: maattekening schuine zijden */}
       {attachmentUrl && (

@@ -32,6 +32,19 @@ export async function GET(
     .eq('id', user.id)
     .single()
 
+  // Aangevinkt sfeerbeeld voor deze configuratie (besluit V3, exclusief)
+  const { data: viz } = await supabase
+    .from('visualisations')
+    .select('image_path')
+    .eq('configuration_id', id)
+    .eq('in_pdf', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const visualisationUrl = viz?.image_path
+    ? supabase.storage.from('visualisations').getPublicUrl(viz.image_path).data.publicUrl
+    : null
+
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const quantity = (opts.quantity as number | undefined) ?? 1
   const totalPrice = Number(config.total_price)
@@ -62,6 +75,7 @@ export async function GET(
     unitPrice,
     quantity,
     attachmentUrl,
+    visualisationUrl,
   }) as React.ReactElement<DocumentProps>)
 
   const safeName = (config.name ?? 'offerte').replace(/[^a-z0-9\-_]/gi, '-')

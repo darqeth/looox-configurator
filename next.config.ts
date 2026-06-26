@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   devIndicators: false,
   serverExternalPackages: ['@react-pdf/renderer'],
+  // Visualisatie-engine leest scènefoto's van schijf; op Vercel zit public/
+  // niet in de serverless-functie tenzij expliciet meegebundeld
+  outputFileTracingIncludes: {
+    '/configurator/nieuw': ['./assets/scenes/**/*'],
+    '/configuraties': ['./assets/scenes/**/*'],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',

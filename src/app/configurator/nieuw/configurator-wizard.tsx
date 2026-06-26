@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -43,6 +43,7 @@ interface InitialConfig {
   lunaOnderkant?: number
   lunaAfstand?: number
   lunaMuurZijde?: 'links' | 'rechts'
+  attachmentUrl?: string | null
 }
 
 const STEPS = [
@@ -153,6 +154,9 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [schunineZijdenFile, setSchunineZijdenFile] = useState<File | null>(null)
   const [opAanvraagFile, setOpAanvraagFile] = useState<File | null>(null)
+  const opAanvraagFileRef = useRef<File | null>(null)
+  const schunineZijdenFileRef = useRef<File | null>(null)
+  const [existingAttachmentUrl] = useState<string | null>(initialConfig?.attachmentUrl ?? null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [orderResult, setOrderResult] = useState<{ orderNumber: string; orderId: string } | null>(null)
@@ -204,7 +208,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     if (s.indirectLight) setIndirectLight(s.indirectLight as LightConfig)
     setSelectedOptions(s.selectedOptions)
     if (s.optionSubChoices) setOptionSubChoices(s.optionSubChoices)
-    if (s.shape === 'op-aanvraag' && aiImageFile) setOpAanvraagFile(aiImageFile)
+    if (s.shape === 'op-aanvraag' && aiImageFile) { opAanvraagFileRef.current = aiImageFile; setOpAanvraagFile(aiImageFile) }
     if (s.shape === 'sol' || s.shape === 'luna') {
       initSolLunaDefaults(s.indirectLight?.type as LightType | null)
     }
@@ -248,8 +252,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   }
 
   async function uploadAttachment(): Promise<string | null> {
-    const fileToUpload = shape === 'op-aanvraag' ? opAanvraagFile : schunineZijdenFile
-    if (!fileToUpload) return null
+    const fileToUpload = shape === 'op-aanvraag' ? opAanvraagFileRef.current : schunineZijdenFileRef.current
+    if (!fileToUpload) return existingAttachmentUrl
     const supabase = createClient()
     const ext = fileToUpload.name.split('.').pop() ?? 'bin'
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
@@ -753,12 +757,13 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       saving={saving}
                       schunineZijdenFile={schunineZijdenFile}
                       opAanvraagFile={opAanvraagFile}
+                      existingAttachmentUrl={existingAttachmentUrl}
                       isInternational={isInternational}
                       korting={korting}
                       onProjectNameChange={setProjectName}
                       onReferenceChange={setReference}
-                      onSchunineZijdenFileChange={setSchunineZijdenFile}
-                      onOpAanvraagFileChange={setOpAanvraagFile}
+                      onSchunineZijdenFileChange={(f) => { schunineZijdenFileRef.current = f; setSchunineZijdenFile(f) }}
+                      onOpAanvraagFileChange={(f) => { opAanvraagFileRef.current = f; setOpAanvraagFile(f) }}
                       onGoToStep={goToStep}
                       onSave={handleSave}
                       onOrder={handleOrder}

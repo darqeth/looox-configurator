@@ -15,6 +15,7 @@ import {
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 import { Loader2 } from 'lucide-react'
+import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
 
 interface StepSamenvattingProps {
   shape: ShapeSlug
@@ -38,6 +39,7 @@ interface StepSamenvattingProps {
   saving: boolean
   schunineZijdenFile: File | null
   opAanvraagFile: File | null
+  existingAttachmentUrl?: string | null
   isInternational?: boolean
   korting?: number
   onProjectNameChange: (v: string) => void
@@ -97,7 +99,7 @@ export default function StepSamenvatting({
   lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   projectName, reference,
-  saving, schunineZijdenFile, opAanvraagFile, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange,
+  saving, schunineZijdenFile, opAanvraagFile, existingAttachmentUrl, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange,
   onSchunineZijdenFileChange, onOpAanvraagFileChange,
   onGoToStep, onSave, onOrder: _onOrder, canOrder: _canOrder = true,
 }: StepSamenvattingProps) {
@@ -125,8 +127,35 @@ export default function StepSamenvatting({
     .join(', ')
 
 
+  // Badkamer-visualisatie: alleen voor de vormen die de engine ondersteunt
+  const organicMaat = (organicSizeKey ?? '60x40').split('x').map(Number)
+  const visualisationConfig: VisualisationConfig | null =
+    (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic' || shape === 'ovaal' || shape === 'arc')
+      ? {
+          shape,
+          width: shape === 'rond' ? (diameter ?? 80) : shape === 'organic' ? (organicMaat[0] || 60) : width,
+          height: shape === 'rond' ? (diameter ?? 80) : shape === 'organic' ? (organicMaat[1] || 40) : height,
+          glasKleur,
+          directPositions: directLight.position !== 'geen' && directLight.type ? [directLight.position] : [],
+          indirectPositions: indirectLight.position !== 'geen' && indirectLight.type ? [indirectLight.position] : [],
+          lichtKelvin: 3000,
+          frameColor: selectedOptions.includes('frame-in-kleur')
+            ? (optionSubChoices['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null
+            : null,
+          tipTouch: directLight.control === 'tip-touch' || indirectLight.control === 'tip-touch',
+          clockPosition: selectedOptions.includes('digitale-klok')
+            ? ((optionSubChoices['digitale-klok'] as VisualisationConfig['clockPosition']) ?? 'midden')
+            : null,
+        }
+      : null
+
   return (
     <div className="space-y-6">
+      {visualisationConfig && (
+        <div className="flex justify-end">
+          <VisualisationButton config={visualisationConfig} />
+        </div>
+      )}
       {/* Configuratie samenvatting */}
       <div className="bg-lx-panel-bg rounded-2xl p-4">
         <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
@@ -201,6 +230,17 @@ export default function StepSamenvatting({
                   </svg>
                 </button>
               </div>
+            ) : existingAttachmentUrl ? (
+              <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-lx-panel-bg border border-lx-cta/20">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span className="flex-1 text-[13px] text-lx-text-primary font-medium">Bijlage al geüpload</span>
+                <label className="text-[11.5px] text-lx-cta font-semibold cursor-pointer hover:underline flex-shrink-0">
+                  Vervangen
+                  <input type="file" accept="image/*,.pdf" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) onOpAanvraagFileChange(f) }} />
+                </label>
+              </div>
             ) : (
               <label className="block cursor-pointer">
                 <input
@@ -250,6 +290,17 @@ export default function StepSamenvatting({
                   </svg>
                 </button>
               </div>
+            ) : existingAttachmentUrl ? (
+              <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-lx-panel-bg border border-lx-cta/20">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lx-cta)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span className="flex-1 text-[13px] text-lx-text-primary font-medium">Maattekening al geüpload</span>
+                <label className="text-[11.5px] text-lx-cta font-semibold cursor-pointer hover:underline flex-shrink-0">
+                  Vervangen
+                  <input type="file" accept="image/*,.pdf" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) onSchunineZijdenFileChange(f) }} />
+                </label>
+              </div>
             ) : (
               <label className="block cursor-pointer">
                 <input
@@ -289,7 +340,7 @@ export default function StepSamenvatting({
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={() => onSave(false)}
-          disabled={!projectName.trim() || saving || (shape === 'op-aanvraag' && !opAanvraagFile)}
+          disabled={!projectName.trim() || saving || (shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl) || (hasSchunineZijden && !schunineZijdenFile && !existingAttachmentUrl)}
           className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {saving ? (
@@ -303,8 +354,11 @@ export default function StepSamenvatting({
       {!projectName.trim() && (
         <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>
       )}
-      {shape === 'op-aanvraag' && !opAanvraagFile && projectName.trim() && (
+      {shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl && projectName.trim() && (
         <p className="text-[11px] text-lx-text-secondary text-center">Upload een schets of tekening om op te slaan</p>
+      )}
+      {hasSchunineZijden && !schunineZijdenFile && !existingAttachmentUrl && projectName.trim() && (
+        <p className="text-[11px] text-lx-text-secondary text-center">Upload een maattekening voor de schuine zijden om op te slaan</p>
       )}
     </div>
   )

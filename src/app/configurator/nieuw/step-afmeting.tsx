@@ -9,6 +9,8 @@ import {
   RECHTHOEK_CONSTRAINTS,
   GLAS_KLEUREN,
   LUNA_CATALOGUS,
+  computeSolRestmaten,
+  computeLunaRestmaten,
 } from '@/lib/configurator-config'
 
 interface StepAfmetingProps {
@@ -37,6 +39,65 @@ interface StepAfmetingProps {
     lunaAfstand?: number
     lunaMuurZijde?: 'links' | 'rechts'
   }>) => void
+}
+
+// Berekende reststukken bij Sol/Luna — hulp bij het bestellen van het meubel.
+// Read-only resultaten, visueel onderscheiden van de invoervelden.
+const RestmatenKaart = memo(function RestmatenKaart({ rest }: {
+  rest: { bovendeelHoogte: number; meubelVlakBreedte: number; valid: boolean }
+}) {
+  return (
+    <div className="rounded-xl border border-lx-cta/25 bg-lx-icon-bg/40 p-4">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-lx-text-secondary mb-3">
+        Reststukken <span className="font-medium normal-case tracking-normal text-lx-placeholder">· automatisch berekend</span>
+      </p>
+      {rest.valid ? (
+        <div className="grid grid-cols-2 gap-4">
+          <RestmaatItem
+            value={rest.bovendeelHoogte}
+            label="Hoogte bovendeel"
+            hint="Het ronde deel dat boven je meubel uitkomt"
+            icon="height"
+          />
+          <RestmaatItem
+            value={rest.meubelVlakBreedte}
+            label="Breedte op meubel"
+            hint="Zo breed moet je meubel minimaal zijn"
+            icon="width"
+          />
+        </div>
+      ) : (
+        <p className="text-[11.5px] text-amber-600 leading-snug">
+          Het meubel is hoger dan de spiegel — er blijft geen bovendeel over. Verlaag de meubelhoogte of kies een grotere diameter.
+        </p>
+      )}
+    </div>
+  )
+})
+
+function RestmaatItem({ value, label, hint, icon }: { value: number; label: string; hint: string; icon: 'height' | 'width' }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 text-lx-cta mb-1">
+        {icon === 'height' ? (
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 2v12M8 2L5 5M8 2l3 3M8 14l-3-3M8 14l3-3" />
+          </svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 8h12M2 8l3-3M2 8l3 3M14 8l-3-3M14 8l-3 3" />
+          </svg>
+        )}
+        <span className="text-[10.5px] font-semibold uppercase tracking-wide">{icon === 'height' ? 'Hoogte' : 'Breedte'}</span>
+      </div>
+      <div className="flex items-baseline gap-1">
+        <span className="text-[24px] font-bold text-lx-text-primary tabular-nums leading-none">{value}</span>
+        <span className="text-[12px] text-lx-text-secondary">cm</span>
+      </div>
+      <p className="text-[11.5px] font-semibold text-lx-text-primary mt-1.5">{label}</p>
+      <p className="text-[10.5px] text-lx-text-secondary leading-snug">{hint}</p>
+    </div>
+  )
 }
 
 const GlaskleurPicker = memo(function GlaskleurPicker({ glasKleur, onChange }: { glasKleur: GlasKleur; onChange: (k: GlasKleur) => void }) {
@@ -323,6 +384,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
             </p>
           )}
         </div>
+        <RestmatenKaart rest={computeSolRestmaten(diameter ?? 80, solMeubelHoogte, solOnderkant)} />
         <div className="border-t border-lx-divider pt-5">
           <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
         </div>
@@ -413,6 +475,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
             </p>
           )}
         </div>
+        <RestmatenKaart rest={computeLunaRestmaten(diameter ?? 90, lunaMeubelHoogte ?? 35, lunaOnderkant ?? 15, afstand)} />
         <div className="border-t border-lx-divider pt-5">
           <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
         </div>

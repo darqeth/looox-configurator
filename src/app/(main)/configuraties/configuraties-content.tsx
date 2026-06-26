@@ -10,6 +10,7 @@ import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 import { fetchConfigurations } from '@/lib/queries/fetch-configurations'
 import { ProjectBadge } from '@/components/project-badge'
+import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
 
 const shapeLabel: Record<string, string> = {
   rechthoek: 'Rechthoek',
@@ -113,7 +114,7 @@ export function ConfiguratiesContent({
               {permissions.canOrder && (
                 <div className="w-[96px] flex-shrink-0" />
               )}
-              <div className="w-8 flex-shrink-0" />
+              <div className="w-[68px] flex-shrink-0" />
             </div>
 
             <div className="divide-y divide-lx-divider">
@@ -124,8 +125,8 @@ export function ConfiguratiesContent({
                 const diameter = opts?.diameter as number | null
                 const organicKey = opts?.organicSize as string | null
                 const extras = (opts?.extras as string[]) ?? []
-                const direct = opts?.directLight as { position: string } | null
-                const indirect = opts?.indirectLight as { position: string } | null
+                const direct = opts?.directLight as { position: string; control?: string | null } | null
+                const indirect = opts?.indirectLight as { position: string; control?: string | null } | null
 
                 let dimensionLabel = ''
                 if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
@@ -148,6 +149,26 @@ export function ConfiguratiesContent({
                 const projectspiegelStuks = isProjectspiegel ? (opts?.quantity as number | undefined) : undefined
                 const displayPrice = Number(config.total_price)
                 const priceLabel = isProjectspiegel ? 'Netto ex. BTW' : 'Bruto ex. BTW'
+
+                const visualisationConfig: VisualisationConfig | null =
+                  (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic' || shape === 'ovaal' || shape === 'arc')
+                    ? {
+                        shape: shape as VisualisationConfig['shape'],
+                        width: shape === 'rond' ? (diameter ?? 80) : (config.width ?? 80),
+                        height: shape === 'rond' ? (diameter ?? 80) : (config.height ?? 60),
+                        glasKleur: ((opts?.glasKleur as string) ?? 'helder') as VisualisationConfig['glasKleur'],
+                        directPositions: direct?.position && direct.position !== 'geen' ? [direct.position] : [],
+                        indirectPositions: indirect?.position && indirect.position !== 'geen' ? [indirect.position] : [],
+                        lichtKelvin: 3000,
+                        frameColor: extras.includes('frame-in-kleur')
+                          ? ((opts?.optionSubChoices as Record<string, string> | undefined)?.['frame-in-kleur'] as VisualisationConfig['frameColor']) ?? null
+                          : null,
+                        tipTouch: direct?.control === 'tip-touch' || indirect?.control === 'tip-touch',
+                        clockPosition: extras.includes('digitale-klok')
+                          ? (((opts?.optionSubChoices as Record<string, string> | undefined)?.['digitale-klok'] as VisualisationConfig['clockPosition']) ?? 'midden')
+                          : null,
+                      }
+                    : null
 
                 const configPreview: ConfigPreview | undefined = shape && shape !== 'projectspiegel' ? {
                   shape: shape as ShapeSlug,
@@ -185,6 +206,9 @@ export function ConfiguratiesContent({
                           <span className="text-lx-placeholder"> · {date}</span>
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
+                          {visualisationConfig && (
+                            <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
+                          )}
                           {permissions.canOrder && (
                             <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} />
                           )}
@@ -240,8 +264,11 @@ export function ConfiguratiesContent({
                         </div>
                       )}
 
-                      {/* Col: 3-dot menu */}
-                      <div className="w-8 flex-shrink-0 flex justify-end">
+                      {/* Col: visualisatie + 3-dot menu */}
+                      <div className="w-[68px] flex-shrink-0 flex items-center justify-end gap-1">
+                        {visualisationConfig && (
+                          <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
+                        )}
                         <ConfigActionsMenu
                           configId={config.id}
                           configName={config.name ?? 'Naamloze configuratie'}
@@ -338,7 +365,8 @@ export function ConfiguratiesContentSkeleton() {
               <div className="hidden sm:block w-[96px] flex-shrink-0">
                 <div className="h-8 w-full bg-lx-divider rounded-xl" />
               </div>
-              <div className="w-8 flex-shrink-0">
+              <div className="w-[68px] flex-shrink-0 flex justify-end gap-1">
+                <div className="w-7 h-7 rounded-lg bg-lx-divider" />
                 <div className="w-8 h-8 rounded-lg bg-lx-divider" />
               </div>
             </div>

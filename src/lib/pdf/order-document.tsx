@@ -145,11 +145,11 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
   }
 
   if (shape === 'organic') {
-    const organicPath = "M97.8,156.3c-2.7.7-5.4,1.3-8.2,1.1s-1.6-.1-2.2-.3c-3.6-.9-7-1.8-10.2-3.9-22.6-14.7-38.4-35.2-49.6-59.6-9.1-20-8.5-45.1,11.5-56.1s23.8-6.8,36.6-6c27.2,1.8,53.5,9.3,77.2,22.5s22.1,16.3,24.3,28.6c.8,4.4-.7,9.4-.7,9.4-2.6,8.3-7.1,15.4-12.4,22.3-10.1,13-22.9,21.9-37.3,30.2-5.4,3.1-20.8,9.5-29,11.7Z"
+    const organicPath = "M73.5,134c-1.1,0-2.3,0-3.4-.2-.4,0-.8,0-1.3-.2-.8-.1-1.7-.3-2.5-.5h0c-4.1-.9-8.2-2.7-12.1-5.4-20.7-14.2-36.5-33.7-48.4-59.5C.8,57.1-1.1,45.2.6,34.7,2.5,22.6,8.9,12.9,19.1,6.8,28,1.4,45.4-.6,58.1.2c20.8.7,78.6,13,98.7,39.4,6.3,8.3,8.3,17.2,6,26.4v.4c-10.5,29.2-39.2,53.3-79,66-3.4,1.1-6.9,1.7-10.4,1.7Z" // echte productvorm (organic_vorm.svg)
     const scale = available / 200
     return (
       <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        <G transform={`translate(${PAD} ${PAD}) scale(${scale})`}>
+        <G transform={`translate(${PAD + 18.15 * scale} ${PAD + 33 * scale}) scale(${scale})`}>
           {hasIndirect && <Path d={organicPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W / scale} opacity={0.7} />}
           <Path d={organicPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
           <Path d={organicPath} fill="none" stroke={glass.stroke} strokeWidth={1.2 / scale} />
@@ -237,6 +237,22 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
         )}
         <Line x1={cx - r * 0.15} y1={cy - r * 0.45} x2={cx + r * 0.25} y2={cy + r * 0.35}
           stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  // op-aanvraag
+  if (shape === 'op-aanvraag') {
+    const cx = SIZE / 2
+    const cy = (y + y + h) / 2
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <Rect x={x} y={y} width={w} height={h} rx={2} fill="#F0F0F0" fillOpacity={0.6}
+          stroke="#AAAAAA" strokeWidth="1.2" strokeDasharray="4 3" />
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <Text {...{ x: cx, y: cy + 7, textAnchor: 'middle', fontSize: 22, fill: '#AAAAAA', fontFamily: 'Helvetica-Bold' } as any}>?</Text>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <Text {...{ x: cx, y: y + h + 10, textAnchor: 'middle', fontSize: 6, fill: '#AAAAAA', fontFamily: 'Helvetica' } as any}>Op aanvraag</Text>
       </Svg>
     )
   }
@@ -485,6 +501,9 @@ export default function OrderDocument({
   dealer, config, unitPrice, korting, quantity, notes, attachmentUrl, staffelKortingPct,
 }: OrderDocumentProps) {
   const opts = config.options
+  const isOpAanvraag = (opts.shape as string) === 'op-aanvraag'
+  const docTitle = isOpAanvraag ? 'Offerte aanvraag' : 'Orderbevestiging'
+  const nummerLabel = isOpAanvraag ? 'Offertenummer' : 'Ordernummer'
   const nettoUnitPrice = Math.round(unitPrice * (1 - korting / 100))
   const staffelAmountPerStuk = staffelKortingPct && staffelKortingPct > 0
     ? Math.round(nettoUnitPrice * staffelKortingPct)
@@ -496,7 +515,7 @@ export default function OrderDocument({
 
   return (
     <Document
-      title={`Orderbevestiging ${orderNumber}`}
+      title={`${docTitle} ${orderNumber}`}
       author="LoooX"
       creator="LoooX Configurator"
     >
@@ -509,8 +528,8 @@ export default function OrderDocument({
             <Text style={[styles.headerMeta, { marginTop: 4 }]}>Spiegel op maat</Text>
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.docTitle}>Orderbevestiging</Text>
-            <Text style={styles.headerMeta}>Ordernummer: {orderNumber}</Text>
+            <Text style={styles.docTitle}>{docTitle}</Text>
+            <Text style={styles.headerMeta}>{nummerLabel}: {orderNumber}</Text>
             <Text style={styles.headerMeta}>Datum: {formatDate(orderDate)}</Text>
             <Text style={styles.headerMeta}>Status: {STATUS_NL[status] ?? status}</Text>
           </View>
@@ -622,57 +641,70 @@ export default function OrderDocument({
         </View>
 
         {/* Prijs */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Prijsoverzicht (excl. BTW)</Text>
-          <View style={styles.pricingBox}>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Bruto ex. BTW</Text>
-              <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
-            </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
-              <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(Math.round(unitPrice * korting / 100))}</Text>
-            </View>
-            {staffelAmountPerStuk > 0 && (
+        {isOpAanvraag ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Prijs</Text>
+            <View style={styles.pricingBox}>
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>
-                  Staffelkorting ({((staffelKortingPct ?? 0) * 100).toFixed(0)}%)
-                </Text>
-                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(staffelAmountPerStuk)}</Text>
+                <Text style={styles.pricingLabel}>Prijs</Text>
+                <Text style={styles.pricingValue}>Op aanvraag</Text>
               </View>
-            )}
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Netto ex. BTW</Text>
-              <Text style={styles.pricingValue}>{formatPrice(finalNettoUnitPrice)}</Text>
+              <Text style={styles.vatNote}>De prijs wordt nader bepaald en gecommuniceerd.</Text>
             </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Aantal</Text>
-              <Text style={styles.pricingValue}>{quantity}×</Text>
-            </View>
-            {opts.discountType && opts.discountAmount ? (
-              <>
-                <View style={styles.pricingRow}>
-                  <Text style={styles.pricingLabel}>Subtotaal</Text>
-                  <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(nettoSubtotal)}</Text>
-                </View>
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Prijsoverzicht (excl. BTW)</Text>
+            <View style={styles.pricingBox}>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Bruto ex. BTW</Text>
+                <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
+              </View>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
+                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(Math.round(unitPrice * korting / 100))}</Text>
+              </View>
+              {staffelAmountPerStuk > 0 && (
                 <View style={styles.pricingRow}>
                   <Text style={styles.pricingLabel}>
-                    Kortingscode ({opts.discountType === 'pct' ? `${opts.discountValue}%` : `${formatPrice(opts.discountValue ?? 0)} eenmalig`})
+                    Staffelkorting ({((staffelKortingPct ?? 0) * 100).toFixed(0)}%)
                   </Text>
-                  <Text style={[styles.pricingValue, { color: BRAND }]}>
-                    -{formatPrice(discountAmount)}
-                  </Text>
+                  <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(staffelAmountPerStuk)}</Text>
                 </View>
-              </>
-            ) : null}
-            <View style={styles.pricingDivider} />
-            <View style={styles.pricingRow}>
-              <Text style={styles.totalLabel}>Totaal</Text>
-              <Text style={styles.totalValue}>{formatPrice(nettoTotal)}</Text>
+              )}
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Netto ex. BTW</Text>
+                <Text style={styles.pricingValue}>{formatPrice(finalNettoUnitPrice)}</Text>
+              </View>
+              <View style={styles.pricingRow}>
+                <Text style={styles.pricingLabel}>Aantal</Text>
+                <Text style={styles.pricingValue}>{quantity}×</Text>
+              </View>
+              {opts.discountType && opts.discountAmount ? (
+                <>
+                  <View style={styles.pricingRow}>
+                    <Text style={styles.pricingLabel}>Subtotaal</Text>
+                    <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(nettoSubtotal)}</Text>
+                  </View>
+                  <View style={styles.pricingRow}>
+                    <Text style={styles.pricingLabel}>
+                      Kortingscode ({opts.discountType === 'pct' ? `${opts.discountValue}%` : `${formatPrice(opts.discountValue ?? 0)} eenmalig`})
+                    </Text>
+                    <Text style={[styles.pricingValue, { color: BRAND }]}>
+                      -{formatPrice(discountAmount)}
+                    </Text>
+                  </View>
+                </>
+              ) : null}
+              <View style={styles.pricingDivider} />
+              <View style={styles.pricingRow}>
+                <Text style={styles.totalLabel}>Totaal</Text>
+                <Text style={styles.totalValue}>{formatPrice(nettoTotal)}</Text>
+              </View>
+              <Text style={styles.vatNote}>Alle prijzen excl. BTW</Text>
             </View>
-            <Text style={styles.vatNote}>Alle prijzen excl. BTW</Text>
           </View>
-        </View>
+        )}
 
         {/* Bijzonderheden */}
         {(notes || opts.description) && (

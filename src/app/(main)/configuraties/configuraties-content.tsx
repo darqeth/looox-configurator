@@ -114,7 +114,7 @@ export function ConfiguratiesContent({
               {permissions.canOrder && (
                 <div className="w-[96px] flex-shrink-0" />
               )}
-              <div className="w-8 flex-shrink-0" />
+              <div className="w-[68px] flex-shrink-0" />
             </div>
 
             <div className="divide-y divide-lx-divider">
@@ -265,7 +265,7 @@ export function ConfiguratiesContent({
                       )}
 
                       {/* Col: visualisatie + 3-dot menu */}
-                      <div className="flex-shrink-0 flex items-center justify-end gap-1">
+                      <div className="w-[68px] flex-shrink-0 flex items-center justify-end gap-1">
                         {visualisationConfig && (
                           <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
                         )}
@@ -365,7 +365,8 @@ export function ConfiguratiesContentSkeleton() {
               <div className="hidden sm:block w-[96px] flex-shrink-0">
                 <div className="h-8 w-full bg-lx-divider rounded-xl" />
               </div>
-              <div className="w-8 flex-shrink-0">
+              <div className="w-[68px] flex-shrink-0 flex justify-end gap-1">
+                <div className="w-7 h-7 rounded-lg bg-lx-divider" />
                 <div className="w-8 h-8 rounded-lg bg-lx-divider" />
               </div>
             </div>

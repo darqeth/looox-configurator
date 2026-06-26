@@ -46,6 +46,7 @@ export function VisualisationButton({ config, configurationId, variant = 'knop' 
         >
           <CameraIcon />
           Bekijk in badkamer
+          <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full leading-none">Beta</span>
         </button>
       ) : (
         <button
@@ -149,7 +150,10 @@ function VisualisationModal({ config, configurationId, onClose }: {
       >
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-lx-divider">
           <div>
-            <h2 className="text-[17px] font-bold text-lx-text-primary">Bekijk in badkamer</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[17px] font-bold text-lx-text-primary">Bekijk in badkamer</h2>
+              <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full leading-none">Beta</span>
+            </div>
             <p className="text-[12px] text-lx-text-secondary mt-0.5">
               Jouw spiegel op ware grootte in een badkamer geplaatst
             </p>

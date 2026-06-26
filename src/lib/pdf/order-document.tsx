@@ -241,6 +241,22 @@ function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
     )
   }
 
+  // op-aanvraag
+  if (shape === 'op-aanvraag') {
+    const cx = SIZE / 2
+    const cy = (y + y + h) / 2
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <Rect x={x} y={y} width={w} height={h} rx={2} fill="#F0F0F0" fillOpacity={0.6}
+          stroke="#AAAAAA" strokeWidth="1.2" strokeDasharray="4 3" />
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <Text {...{ x: cx, y: cy + 7, textAnchor: 'middle', fontSize: 22, fill: '#AAAAAA', fontFamily: 'Helvetica-Bold' } as any}>?</Text>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <Text {...{ x: cx, y: y + h + 10, textAnchor: 'middle', fontSize: 6, fill: '#AAAAAA', fontFamily: 'Helvetica' } as any}>Op aanvraag</Text>
+      </Svg>
+    )
+  }
+
   // rechthoek
   return (
     <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>

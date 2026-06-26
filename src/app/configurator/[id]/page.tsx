@@ -48,6 +48,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     lunaOnderkant: (opts.lunaOnderkant as number | undefined) ?? undefined,
     lunaAfstand: (opts.lunaAfstand as number | undefined) ?? undefined,
     lunaMuurZijde: (opts.lunaMuurZijde as 'links' | 'rechts' | undefined) ?? undefined,
+    attachmentUrl: (opts.attachmentUrl as string | null) ?? null,
   }
 
   const isManager = !memberData || memberData.role === 'manager'

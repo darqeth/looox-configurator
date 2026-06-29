@@ -119,7 +119,6 @@ function RechthoekTab() {
               const label = {
                 'externe-schakeling': 'Externe schakeling',
                 'tip-touch':          'Tip-Touch',
-                '3-staps-dimmer':     '3-staps dimmer',
                 'wip-schakelaar':     'Wip schakelaar',
                 'motion-sensor':      'Motion sensor',
                 'afstandsbediening':  'Afstandsbediening',
@@ -287,7 +286,6 @@ function RondTab() {
               const label = {
                 'externe-schakeling': 'Externe schakeling',
                 'tip-touch':          'Tip-Touch',
-                '3-staps-dimmer':     '3-staps dimmer',
                 'wip-schakelaar':     'Wip schakelaar',
                 'motion-sensor':      'Motion sensor',
                 'afstandsbediening':  'Afstandsbediening',
@@ -384,7 +382,6 @@ function OrganicTab() {
               const label = {
                 'externe-schakeling': 'Externe schakeling',
                 'tip-touch':          'Tip-Touch',
-                '3-staps-dimmer':     '3-staps dimmer',
                 'wip-schakelaar':     'Wip schakelaar',
                 'motion-sensor':      'Motion sensor',
                 'afstandsbediening':  'Afstandsbediening',

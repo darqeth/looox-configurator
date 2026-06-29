@@ -32,7 +32,6 @@ interface LightSectionProps {
 
 const CONTROL_IMG: Record<string, string> = {
   'tip-touch': '/icons/tiptouch.png',
-  '3-staps-dimmer': '/icons/3traps_dimmer.png',
   'wip-schakelaar': '/icons/wipschakelaar.png',
   'motion-sensor': '/icons/motion.png',
 }

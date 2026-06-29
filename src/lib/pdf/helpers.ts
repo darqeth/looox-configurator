@@ -68,7 +68,6 @@ const TYPE_LABELS: Record<string, string> = {
 const CONTROL_LABELS: Record<string, string> = {
   'externe-schakeling': 'Externe schakeling',
   'tip-touch':          'Tip-Touch sensor',
-  '3-staps-dimmer':     '3-staps dimmer',
   'wip-schakelaar':     'Wip schakelaar',
   'motion-sensor':      'Bewegingssensor',
   'afstandsbediening':  'Afstandsbediening',

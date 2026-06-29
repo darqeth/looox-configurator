@@ -81,7 +81,7 @@ SOL/LUNA STRIKTE BEPERKINGEN (overschrijven alle andere regels):
 - Verwarming is ALTIJD inbegrepen in de basisprijs — zet dit NOOIT in selectedOptions
 
 Geldige lightType: "3000k" | "4000k" | "rgbw" | "cct"
-Geldige control: "externe-schakeling" | "tip-touch" | "3-staps-dimmer" | "wip-schakelaar" | "motion-sensor" | "afstandsbediening"
+Geldige control: "externe-schakeling" | "tip-touch" | "wip-schakelaar" | "motion-sensor" | "afstandsbediening"
 
 OPTIES — "selectedOptions" moet een array zijn van exacte optie-IDs (de string vóór de haakjes).
 Selecteer ALLE opties die in de invoer worden benoemd. Selecteer ALLEEN opties geldig voor de gekozen shape:

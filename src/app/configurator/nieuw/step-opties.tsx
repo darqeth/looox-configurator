@@ -61,7 +61,7 @@ interface StepOptiesProps {
   lunaMeubelHoogte?: number
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35 }: StepOptiesProps) {
+export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition: _indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35 }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
   const available = EXTRA_OPTIONS.filter((opt) => {
     if ((shape === 'sol' || shape === 'luna') && ['bluetooth-speaker', 'digitale-klok'].includes(opt.id)) return false

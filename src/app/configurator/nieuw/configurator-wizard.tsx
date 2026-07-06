@@ -65,8 +65,9 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
 }) {
   const netto = calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur, lunaMeubelHoogte,
-    directPosition: directLight.position, directType: directLight.type, directControl: directLight.control,
-    indirectPosition: indirectLight.position, indirectType: indirectLight.type, indirectControl: indirectLight.control,
+    directPosition: directLight.position, directType: directLight.type,
+    indirectPosition: indirectLight.position, indirectType: indirectLight.type,
+    lightControl: directLight.control ?? indirectLight.control,
     selectedOptions, optionSubChoices,
   })
   const total = isInternational ? Math.round(netto * 1.05) : netto

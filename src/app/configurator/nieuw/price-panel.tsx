@@ -749,10 +749,9 @@ export default function PricePanel({
     lunaMeubelHoogte,
     directPosition: directLight.position,
     directType: directLight.type,
-    directControl: directLight.control,
     indirectPosition: indirectLight.position,
     indirectType: indirectLight.type,
-    indirectControl: indirectLight.control,
+    lightControl: directLight.control ?? indirectLight.control,
     selectedOptions,
     optionSubChoices,
   }), [shape, width, height, diameter, organicSizeKey, glasKleur, lunaMeubelHoogte, directLight, indirectLight, selectedOptions, optionSubChoices])

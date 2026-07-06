@@ -473,10 +473,9 @@ export function calcTotalPrice(state: {
   glasKleur?: GlasKleur | null
   directPosition: string
   directType: LightType | null
-  directControl?: string | null
   indirectPosition: string
   indirectType: LightType | null
-  indirectControl?: string | null
+  lightControl?: string | null    // gedeelde bediening; 1× geprijsd
   selectedOptions: string[]
   optionSubChoices?: Record<string, string>
   solMeubelHoogte?: number
@@ -484,6 +483,12 @@ export function calcTotalPrice(state: {
   lunaMeubelHoogte?: number
 }): number {
   const glasKleur: GlasKleur = state.glasKleur ?? 'helder'
+
+  // Bediening wordt 1× geprijsd zodra er minstens één actief licht is (direct of indirect).
+  const hasAnyLight =
+    (state.directPosition !== 'geen' && state.directType != null) ||
+    (state.indirectPosition !== 'geen' && state.indirectType != null)
+  const controlPrice = hasAnyLight && state.lightControl ? (CONTROL_PRICES[state.lightControl] ?? 0) : 0
 
   // ── Projectspiegel: prijs apart berekend ─────────────────────────────────
   if (state.shape === 'projectspiegel') return 0
@@ -525,14 +530,14 @@ export function calcTotalPrice(state: {
       const directM = calcDirectLEDMeters(state.directPosition, state.width, state.height)
       price += directM * LED_PRIJS_PER_METER
       price += directM * ZANDSTRAAL_PRIJS_PER_METER
-      if (state.directControl) price += CONTROL_PRICES[state.directControl] ?? 0
     }
 
     // Indirect LED (geen glasprijs-toeslag, wel LED-meters)
     if (state.indirectPosition !== 'geen' && state.indirectType) {
       price += calcIndirectLEDMeters(state.indirectPosition, state.width, state.height) * LED_PRIJS_PER_METER
-      if (state.indirectControl) price += CONTROL_PRICES[state.indirectControl] ?? 0
     }
+
+    price += controlPrice
 
     // Extra opties
     for (const optId of state.selectedOptions) {
@@ -565,14 +570,14 @@ export function calcTotalPrice(state: {
     // Direct LED (voor rond altijd rondom, 6cm kleiner dan spiegeldiameter)
     if (state.directPosition !== 'geen' && state.directType) {
       price += calcRondDirectLEDMeters(state.directPosition, diameter) * LED_PRIJS_PER_METER
-      if (state.directControl) price += CONTROL_PRICES[state.directControl] ?? 0
     }
 
     // Indirect LED (volledige omtrek)
     if (state.indirectPosition !== 'geen' && state.indirectType) {
       price += calcRondIndirectLEDMeters(state.indirectPosition, diameter) * LED_PRIJS_PER_METER
-      if (state.indirectControl) price += CONTROL_PRICES[state.indirectControl] ?? 0
     }
+
+    price += controlPrice
 
     // Extra opties
     for (const optId of state.selectedOptions) {
@@ -603,13 +608,10 @@ export function calcTotalPrice(state: {
     price += Math.round((state.width * state.height / 10000) * RONDE_GLAS_SMOKE_M2)
   }
 
-  if (state.directPosition !== 'geen' && state.directType) {
-    if (state.directControl) price += CONTROL_PRICES[state.directControl] ?? 0
-  }
   if (state.indirectPosition !== 'geen' && state.indirectType) {
     price += ORGANIC_INDIRECT_LED_PRICES[state.organicSizeKey ?? '60x40'] ?? 275
-    if (state.indirectControl) price += CONTROL_PRICES[state.indirectControl] ?? 0
   }
+  price += controlPrice
 
   for (const optId of state.selectedOptions) {
     if (optId === 'verwarming') {

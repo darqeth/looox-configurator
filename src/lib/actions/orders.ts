@@ -283,10 +283,9 @@ export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumb
     glasKleur: input.glasKleur,
     directPosition: input.directLight.position,
     directType: input.directLight.type,
-    directControl: input.directLight.control,
     indirectPosition: input.indirectLight.position,
     indirectType: input.indirectLight.type,
-    indirectControl: input.indirectLight.control,
+    lightControl: input.directLight.control ?? input.indirectLight.control,
     selectedOptions: input.selectedOptions,
     optionSubChoices: input.optionSubChoices,
     // Zonder deze params valt de berekening terug op defaults en wijkt de

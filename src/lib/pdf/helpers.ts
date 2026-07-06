@@ -7,6 +7,8 @@ export type ConfigOptions = {
   glasKleur?: string
   directLight?: { position?: string; type?: string | null; control?: string | null }
   indirectLight?: { position?: string; type?: string | null; control?: string | null }
+  lightType?: string | null       // gedeeld lichttype voor direct + indirect
+  lightControl?: string | null    // gedeelde bediening, 1× geprijsd
   extras?: string[]
   optionSubChoices?: Record<string, string>
   reference?: string
@@ -123,11 +125,14 @@ export function formatGlas(glasKleur?: string): string {
   return GLAS_LABELS[glasKleur ?? 'helder'] ?? (glasKleur ?? 'Helder')
 }
 
-export function formatLight(light?: ConfigOptions['directLight']): string {
+export function formatLight(light?: ConfigOptions['directLight'], opts?: ConfigOptions): string {
   if (!light || !light.position || light.position === 'geen') return 'Geen'
   const pos = POSITION_LABELS[light.position] ?? light.position
-  const type = light.type ? (TYPE_LABELS[light.type] ?? light.type) : ''
-  const ctrl = light.control ? (CONTROL_LABELS[light.control] ?? light.control) : ''
+  // Type/bediening zijn gedeeld; val terug op oude per-licht velden voor bestaande records.
+  const sharedType = opts?.lightType ?? light.type ?? opts?.directLight?.type ?? opts?.indirectLight?.type ?? null
+  const sharedControl = opts?.lightControl ?? light.control ?? opts?.directLight?.control ?? opts?.indirectLight?.control ?? null
+  const type = sharedType ? (TYPE_LABELS[sharedType] ?? sharedType) : ''
+  const ctrl = sharedControl ? (CONTROL_LABELS[sharedControl] ?? sharedControl) : ''
   return [pos, type, ctrl].filter(Boolean).join(' / ')
 }
 

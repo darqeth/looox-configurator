@@ -51,6 +51,9 @@ export function buildSelectedOptionsJson(input: OptionsJsonBase) {
     glasKleur: input.glasKleur ?? 'helder',
     directLight: input.directLight,
     indirectLight: input.indirectLight,
+    // Gedeeld lichttype/bediening (gespiegeld op beide lichten) — gebruikt door PDF's en overzichten.
+    lightType: input.directLight.type ?? input.indirectLight.type ?? null,
+    lightControl: input.directLight.control ?? input.indirectLight.control ?? null,
     extras: input.selectedOptions,
     optionSubChoices: input.optionSubChoices ?? {},
     reference: input.reference,

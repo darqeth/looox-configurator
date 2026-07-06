@@ -111,10 +111,9 @@ export default function StepSamenvatting({
     shape, width, height, diameter, organicSizeKey, glasKleur,
     directPosition: directLight.position,
     directType: directLight.type,
-    directControl: directLight.control,
     indirectPosition: indirectLight.position,
     indirectType: indirectLight.type,
-    indirectControl: indirectLight.control,
+    lightControl: directLight.control ?? indirectLight.control,
     selectedOptions,
     optionSubChoices,
   })

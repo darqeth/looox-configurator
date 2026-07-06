@@ -623,11 +623,11 @@ export default function OfferteDocument({
             </View>
             <View style={styles.tableRow}>
               <Text style={styles.tableLabel}>Directe verlichting</Text>
-              <Text style={styles.tableValue}>{formatLight(opts.directLight)}</Text>
+              <Text style={styles.tableValue}>{formatLight(opts.directLight, opts)}</Text>
             </View>
             <View style={styles.tableRow}>
               <Text style={styles.tableLabel}>Indirecte verlichting</Text>
-              <Text style={styles.tableValue}>{formatLight(opts.indirectLight)}</Text>
+              <Text style={styles.tableValue}>{formatLight(opts.indirectLight, opts)}</Text>
             </View>
             <View style={styles.tableRowLast}>
               <Text style={styles.tableLabel}>Extra opties</Text>

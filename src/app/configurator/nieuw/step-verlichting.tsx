@@ -20,16 +20,6 @@ type LightConfig = {
   control: string | null
 }
 
-interface LightSectionProps {
-  title: string
-  positions: string[]
-  config: LightConfig
-  onChange: (updates: Partial<LightConfig>) => void
-  controlTooltips?: Record<string, string>
-  isInternational?: boolean
-  shape?: ShapeSlug
-}
-
 const CONTROL_IMG: Record<string, string> = {
   'tip-touch': '/icons/tiptouch.png',
   'wip-schakelaar': '/icons/wipschakelaar.png',
@@ -59,24 +49,24 @@ const ControlIcon = memo(function ControlIcon({ id, active }: { id: string; acti
   return <div className="w-7 h-7" />
 })
 
-const LightSection = memo(function LightSection({ title, positions, config, onChange, controlTooltips, isInternational = false, shape }: LightSectionProps) {
-  const mult = isInternational ? 1.05 : 1
-  const lightTypes: LightType[] = (shape === 'sol' || shape === 'luna') ? ['3000k', '4000k'] : ['3000k', '4000k', 'rgbw', 'cct']
-
+// Positiekiezer per lichtsectie (direct / indirect).
+const PositionPicker = memo(function PositionPicker({ title, positions, selected, onSelect }: {
+  title: string
+  positions: string[]
+  selected: string
+  onSelect: (pos: string) => void
+}) {
   if (positions.length === 0) return null
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <p className="text-[13px] font-semibold text-lx-text-primary">{title}</p>
-
-      {/* Positie */}
       <div className="flex flex-wrap gap-2">
         {positions.map((pos) => (
           <button
             key={pos}
-            onClick={() => onChange({ position: pos, type: pos === 'geen' ? null : config.type, control: pos === 'geen' ? null : config.control })}
+            onClick={() => onSelect(pos)}
             className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-all ${
-              config.position === pos
+              selected === pos
                 ? 'bg-lx-cta text-white border-lx-cta'
                 : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
             }`}
@@ -85,98 +75,116 @@ const LightSection = memo(function LightSection({ title, positions, config, onCh
           </button>
         ))}
       </div>
+    </div>
+  )
+})
 
+// Gedeeld lichttype + bediening: geldt voor direct én indirect samen, 1× geprijsd.
+const SharedLightSettings = memo(function SharedLightSettings({
+  shape, type, control, onTypeChange, onControlChange, controlTooltips, isInternational = false,
+}: {
+  shape: ShapeSlug
+  type: LightType | null
+  control: string | null
+  onTypeChange: (type: LightType) => void
+  onControlChange: (control: string) => void
+  controlTooltips?: Record<string, string>
+  isInternational?: boolean
+}) {
+  const mult = isInternational ? 1.05 : 1
+  const lightTypes: LightType[] = (shape === 'sol' || shape === 'luna') ? ['3000k', '4000k'] : ['3000k', '4000k', 'rgbw', 'cct']
+
+  return (
+    <div className="pl-0.5 space-y-4 pt-4 border-t border-lx-divider">
       {/* Lichttype */}
-      {config.position !== 'geen' && (
-        <div className="pl-0.5 space-y-3">
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5">
+          <p className="text-[11.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Lichttype</p>
+          {!type && (
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Verplicht</span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {lightTypes.map((lt) => (
+            <button
+              key={lt}
+              onClick={() => onTypeChange(lt)}
+              className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                type === lt
+                  ? 'bg-lx-panel-bg border-lx-cta text-lx-cta'
+                  : 'bg-white border-black/10 text-lx-text-primary hover:border-lx-cta/50'
+              }`}
+            >
+              <span className="text-[13px] font-bold">{LIGHT_TYPE_LABELS[lt]}</span>
+              <span className="text-[10.5px] text-lx-text-secondary leading-tight">{LIGHT_TYPE_DESCRIPTIONS[lt]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Bediening */}
+      {type && (
+        <div className="space-y-3 pt-1">
           <div className="flex items-center gap-1.5">
-            <p className="text-[11.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Lichttype</p>
-            {!config.type && (
+            <p className="text-[11.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Bediening</p>
+            {!control && !CONTROLS_FOR_TYPE[type][0]?.auto && (
               <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Verplicht</span>
             )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {lightTypes.map((lt) => (
-              <button
-                key={lt}
-                onClick={() => onChange({ type: lt, control: CONTROLS_FOR_TYPE[lt][0]?.auto ? CONTROLS_FOR_TYPE[lt][0].id : null })}
-                className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
-                  config.type === lt
-                    ? 'bg-lx-panel-bg border-lx-cta text-lx-cta'
-                    : 'bg-white border-black/10 text-lx-text-primary hover:border-lx-cta/50'
-                }`}
-              >
-                <span className="text-[13px] font-bold">{LIGHT_TYPE_LABELS[lt]}</span>
-                <span className="text-[10.5px] text-lx-text-secondary leading-tight">{LIGHT_TYPE_DESCRIPTIONS[lt]}</span>
-              </button>
-            ))}
-          </div>
 
-          {/* Bediening */}
-          {config.type && (
-            <div className="space-y-3 pt-1">
-              <div className="flex items-center gap-1.5">
-                <p className="text-[11.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Bediening</p>
-                {!config.control && !CONTROLS_FOR_TYPE[config.type][0]?.auto && (
-                  <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Verplicht</span>
-                )}
+          {CONTROLS_FOR_TYPE[type][0]?.auto ? (
+            <div className="relative flex items-center gap-3 p-3 bg-lx-panel-bg rounded-xl border border-black/8">
+              <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">
+                {shape === 'op-aanvraag' ? 'Op offerte' : `+€${Math.round(CONTROL_PRICES['afstandsbediening'] * mult)}`}
+              </span>
+              <div className="text-lx-cta"><ControlIcon id="afstandsbediening" active={true} /></div>
+              <div className="pr-14">
+                <p className="text-[13px] font-semibold text-lx-text-primary">Afstandsbediening</p>
+                <p className="text-[11px] text-lx-text-secondary">RGB+W werkt altijd met afstandsbediening</p>
               </div>
-
-              {CONTROLS_FOR_TYPE[config.type][0]?.auto ? (
-                <div className="relative flex items-center gap-3 p-3 bg-lx-panel-bg rounded-xl border border-black/8">
-                  <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">
-                    {shape === 'op-aanvraag' ? 'Op offerte' : `+€${Math.round(CONTROL_PRICES['afstandsbediening'] * mult)}`}
-                  </span>
-                  <div className="text-lx-cta"><ControlIcon id="afstandsbediening" active={true} /></div>
-                  <div className="pr-14">
-                    <p className="text-[13px] font-semibold text-lx-text-primary">Afstandsbediening</p>
-                    <p className="text-[11px] text-lx-text-secondary">RGB+W werkt altijd met afstandsbediening</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {CONTROLS_FOR_TYPE[config.type].filter(ctrl => (shape !== 'sol' && shape !== 'luna') || ['tip-touch', 'afstandsbediening'].includes(ctrl.id)).map((ctrl) => {
-                    const price = Math.round((CONTROL_PRICES[ctrl.id] ?? 0) * mult)
-                    const isActive = config.control === ctrl.id
-                    const tooltip = controlTooltips?.[ctrl.id]
-                    return (
-                      <div key={ctrl.id} className="relative group/tooltip">
-                        <button
-                          onClick={() => onChange({ control: ctrl.id })}
-                          className={`relative w-full flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
-                            isActive
-                              ? 'bg-lx-panel-bg border-lx-cta text-lx-cta'
-                              : 'bg-white border-black/10 text-lx-text-secondary hover:border-lx-cta/50 hover:text-lx-cta'
-                          }`}
-                        >
-                          <span className={`absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                            isActive ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
-                          }`}>
-                            {shape === 'op-aanvraag' ? 'Op offerte' : price === 0 ? 'Inbegrepen' : `+€${price}`}
-                          </span>
-                          {tooltip && (
-                            <span className="absolute top-2 left-2 text-lx-text-secondary/50">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
-                              </svg>
-                            </span>
-                          )}
-                          <ControlIcon id={ctrl.id} active={isActive} />
-                          <span className="text-[11.5px] font-semibold text-center leading-tight text-lx-text-primary">{ctrl.name}</span>
-                        </button>
-                        {tooltip && (
-                          <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-150">
-                            <div className="bg-gray-900 text-white text-[11.5px] rounded-lg px-2.5 py-2 w-48 leading-relaxed shadow-lg text-center">
-                              {tooltip}
-                            </div>
-                            <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
-                          </div>
-                        )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {CONTROLS_FOR_TYPE[type].filter(ctrl => (shape !== 'sol' && shape !== 'luna') || ['tip-touch', 'afstandsbediening'].includes(ctrl.id)).map((ctrl) => {
+                const price = Math.round((CONTROL_PRICES[ctrl.id] ?? 0) * mult)
+                const isActive = control === ctrl.id
+                const tooltip = controlTooltips?.[ctrl.id]
+                return (
+                  <div key={ctrl.id} className="relative group/tooltip">
+                    <button
+                      onClick={() => onControlChange(ctrl.id)}
+                      className={`relative w-full flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                        isActive
+                          ? 'bg-lx-panel-bg border-lx-cta text-lx-cta'
+                          : 'bg-white border-black/10 text-lx-text-secondary hover:border-lx-cta/50 hover:text-lx-cta'
+                      }`}
+                    >
+                      <span className={`absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        isActive ? 'bg-lx-icon-bg text-lx-cta' : 'bg-lx-panel-bg text-lx-text-secondary'
+                      }`}>
+                        {shape === 'op-aanvraag' ? 'Op offerte' : price === 0 ? 'Inbegrepen' : `+€${price}`}
+                      </span>
+                      {tooltip && (
+                        <span className="absolute top-2 left-2 text-lx-text-secondary/50">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+                          </svg>
+                        </span>
+                      )}
+                      <ControlIcon id={ctrl.id} active={isActive} />
+                      <span className="text-[11.5px] font-semibold text-center leading-tight text-lx-text-primary">{ctrl.name}</span>
+                    </button>
+                    {tooltip && (
+                      <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-150">
+                        <div className="bg-gray-900 text-white text-[11.5px] rounded-lg px-2.5 py-2 w-48 leading-relaxed shadow-lg text-center">
+                          {tooltip}
+                        </div>
+                        <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
                       </div>
-                    )
-                  })}
-                </div>
-              )}
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -220,61 +228,89 @@ export default function StepVerlichting({
     )
   }
 
-  return (
-    <div className="space-y-8">
-      {directPositions.length > 0 && (
-        <>
-          <LightSection
-            title="Directe verlichting"
-            positions={directPositions}
-            config={directLight}
-            onChange={onDirectChange}
-            controlTooltips={controlTooltips}
-            isInternational={isInternational}
-            shape={shape}
-          />
-          {indirectPositions.length > 0 && <div className="border-t border-lx-divider" />}
-        </>
-      )}
-
-      {indirectPositions.length > 0 && (
-        (shape === 'sol' || shape === 'luna') ? (
-          <div className="space-y-6">
-            <div className="rounded-xl border border-lx-divider bg-lx-icon-bg px-4 py-3 text-[13px] text-lx-text-secondary leading-relaxed">
-              Verlichting is altijd inbegrepen: indirect LED rondom, extern geschakeld.
-            </div>
-            <div className="space-y-3">
-              <p className="text-[13px] font-semibold text-lx-text-primary">Lichttemperatuur</p>
-              <div className="flex flex-wrap gap-2">
-                {(['3000k', '4000k'] as const).map(t => (
-                  <button
-                    key={t}
-                    onClick={() => onIndirectChange({ type: t })}
-                    className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-colors cursor-pointer ${
-                      indirectLight.type === t
-                        ? 'border-lx-cta bg-lx-cta text-white'
-                        : 'border-lx-divider bg-white text-lx-text-secondary hover:border-lx-cta'
-                    }`}
-                  >
-                    {LIGHT_TYPE_LABELS[t]}
-                    <span className="ml-1.5 text-[11px] font-normal opacity-70">{LIGHT_TYPE_DESCRIPTIONS[t]}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-[12px] text-lx-text-muted">Geen prijsverschil tussen 3000K en 4000K.</p>
-            </div>
+  // ── Sol/Luna: verlichting is vast (indirect rondom, extern) — alleen temp-keuze ──
+  if (shape === 'sol' || shape === 'luna') {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-lx-divider bg-lx-icon-bg px-4 py-3 text-[13px] text-lx-text-secondary leading-relaxed">
+          Verlichting is altijd inbegrepen: indirect LED rondom, extern geschakeld.
+        </div>
+        <div className="space-y-3">
+          <p className="text-[13px] font-semibold text-lx-text-primary">Lichttemperatuur</p>
+          <div className="flex flex-wrap gap-2">
+            {(['3000k', '4000k'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => onIndirectChange({ type: t })}
+                className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-colors cursor-pointer ${
+                  indirectLight.type === t
+                    ? 'border-lx-cta bg-lx-cta text-white'
+                    : 'border-lx-divider bg-white text-lx-text-secondary hover:border-lx-cta'
+                }`}
+              >
+                {LIGHT_TYPE_LABELS[t]}
+                <span className="ml-1.5 text-[11px] font-normal opacity-70">{LIGHT_TYPE_DESCRIPTIONS[t]}</span>
+              </button>
+            ))}
           </div>
-        ) : (
-          <LightSection
-            title="Indirecte verlichting"
-            positions={indirectPositions}
-            config={indirectLight}
-            onChange={onIndirectChange}
-            controlTooltips={controlTooltips}
-            isInternational={isInternational}
-            shape={shape}
-          />
-        )
+          <p className="text-[12px] text-lx-text-muted">Geen prijsverschil tussen 3000K en 4000K.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Overige vormen: positie per sectie, daarna 1× gedeeld type + bediening ──
+  const sharedType = directLight.type ?? indirectLight.type
+  const sharedControl = directLight.control ?? indirectLight.control
+  const anyActive = directLight.position !== 'geen' || indirectLight.position !== 'geen'
+
+  // Bij activeren van een lichtsectie: neem het reeds gekozen gedeelde type/bediening over.
+  function selectDirect(pos: string) {
+    if (pos === 'geen') onDirectChange({ position: 'geen', type: null, control: null })
+    else onDirectChange({ position: pos, type: sharedType, control: sharedControl })
+  }
+  function selectIndirect(pos: string) {
+    if (pos === 'geen') onIndirectChange({ position: 'geen', type: null, control: null })
+    else onIndirectChange({ position: pos, type: sharedType, control: sharedControl })
+  }
+
+  // Gedeeld type/bediening: zet beide actieve lichten gelijk.
+  function setSharedType(t: LightType) {
+    const autoCtrl = CONTROLS_FOR_TYPE[t][0]?.auto ? CONTROLS_FOR_TYPE[t][0].id : null
+    if (directLight.position !== 'geen') onDirectChange({ type: t, control: autoCtrl })
+    if (indirectLight.position !== 'geen') onIndirectChange({ type: t, control: autoCtrl })
+  }
+  function setSharedControl(c: string) {
+    if (directLight.position !== 'geen') onDirectChange({ control: c })
+    if (indirectLight.position !== 'geen') onIndirectChange({ control: c })
+  }
+
+  return (
+    <div className="space-y-6">
+      <PositionPicker
+        title="Directe verlichting"
+        positions={directPositions}
+        selected={directLight.position}
+        onSelect={selectDirect}
+      />
+
+      <PositionPicker
+        title="Indirecte verlichting"
+        positions={indirectPositions}
+        selected={indirectLight.position}
+        onSelect={selectIndirect}
+      />
+
+      {anyActive && (
+        <SharedLightSettings
+          shape={shape}
+          type={sharedType}
+          control={sharedControl}
+          onTypeChange={setSharedType}
+          onControlChange={setSharedControl}
+          controlTooltips={controlTooltips}
+          isInternational={isInternational}
+        />
       )}
     </div>
   )

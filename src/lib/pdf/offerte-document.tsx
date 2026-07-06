@@ -13,6 +13,7 @@ import {
   Line,
   G,
 } from '@react-pdf/renderer'
+import { LooxBathroomsLogo } from './looox-bathrooms-logo'
 import {
   ConfigOptions,
   formatShape,
@@ -323,8 +324,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 24,
-    paddingBottom: 16,
+    marginBottom: 14,
+    paddingBottom: 10,
     borderBottomWidth: 2,
     borderBottomColor: BRAND,
   },
@@ -356,7 +357,7 @@ const styles = StyleSheet.create({
 
   // Section
   section: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 7.5,
@@ -549,6 +550,11 @@ export default function OfferteDocument({
       creator="LoooX Configurator"
     >
       <Page size="A4" style={styles.page}>
+
+        {/* Logo gecentreerd bovenaan */}
+        <View style={{ alignItems: 'center', marginBottom: 4 }}>
+          <LooxBathroomsLogo width={110} />
+        </View>
 
         {/* Header */}
         <View style={styles.header}>

@@ -2,6 +2,21 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getCompanyUserIds } from './company-utils'
 import { parseConfiguratorAccess, type ConfiguratorAccess } from './configurator-access'
 
+// Werkweek voor login-streak: dinsdag t/m zaterdag (getDay: di=2 .. za=6).
+function isWorkingDay(date: Date): boolean {
+  const day = date.getDay()
+  return day >= 2 && day <= 6
+}
+
+// Vorige werkdag als YYYY-MM-DD (bv. dinsdag -> zaterdag, want zo/ma tellen niet mee).
+function prevWorkingDay(dateStr: string): string {
+  const d = new Date(dateStr)
+  do {
+    d.setDate(d.getDate() - 1)
+  } while (!isWorkingDay(d))
+  return d.toISOString().split('T')[0]
+}
+
 export type ClosestMilestone = {
   title: string
   pct: number
@@ -196,8 +211,10 @@ async function fetchSidebarDataLegacy(
 
   // ── Login streak update — piggybacks on the streak row already fetched above ──
   // NOTE: total_days column requires a migration that may not yet be in production.
-  if (!isInternational && !isGroothandel) {
-    const today = new Date().toISOString().split('T')[0]
+  // Werkweek is di t/m za (getDay 2..6). Zondag/maandag tellen niet mee en breken de streak niet.
+  const now = new Date()
+  if (!isInternational && !isGroothandel && isWorkingDay(now)) {
+    const today = now.toISOString().split('T')[0]
     const streak = streakData as { current_streak: number; longest_streak: number; last_login_date: string | null; total_days: number | null } | null
     if (!streak) {
       void supabase.from('login_streaks').insert({
@@ -208,10 +225,8 @@ async function fetchSidebarDataLegacy(
         total_days: 1,
       }).then(({ error }) => { if (error) console.error('[streak]', error) })
     } else if (streak.last_login_date !== today) {
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
-      const newStreak = streak.last_login_date === yesterdayStr ? streak.current_streak + 1 : 1
+      const prevDay = prevWorkingDay(today)
+      const newStreak = streak.last_login_date === prevDay ? streak.current_streak + 1 : 1
       const newLongest = Math.max(newStreak, streak.longest_streak)
       void supabase.from('login_streaks').update({
         current_streak: newStreak,

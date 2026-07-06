@@ -39,7 +39,7 @@ const GOAL_ICONS: Record<string, ReactElement> = {
 function goalText(milestone: MilestoneCardProps['milestone']) {
   if (milestone.goal_type === 'shape') return `Vorm configureren: ${milestone.goal_shape}`
   if (milestone.goal_type === 'order_revenue') return `€${Number(milestone.goal_value).toLocaleString('nl-NL')} totaal besteld`
-  if (milestone.goal_type === 'streak') return `${milestone.goal_value} dagen op rij ingelogd`
+  if (milestone.goal_type === 'streak') return `${milestone.goal_value} werkdagen op rij ingelogd`
   if (milestone.goal_type === 'configs') return `${milestone.goal_value} configuratie${Number(milestone.goal_value) !== 1 ? 's' : ''}`
   if (milestone.goal_type === 'orders') return `${milestone.goal_value} bestelling${Number(milestone.goal_value) !== 1 ? 'en' : ''}`
   return ''
@@ -152,6 +152,19 @@ export default function MilestoneCard({ milestone }: MilestoneCardProps) {
       <div className={`flex items-center gap-1.5 text-[11px] mb-2.5 ${isUpcoming ? 'text-lx-placeholder' : 'text-lx-text-secondary'}`}>
         <span className={isUpcoming ? 'opacity-40' : 'opacity-60'}>{goalIcon}</span>
         {goalText(milestone)}
+        {milestone.goal_type === 'streak' && (
+          <span className="relative group/streak-tip inline-flex">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50 cursor-default">
+              <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+            </svg>
+            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-20 opacity-0 group-hover/streak-tip:opacity-100 transition-opacity whitespace-nowrap">
+              <span className="bg-gray-900 text-white text-[11px] rounded-lg px-2.5 py-1.5 shadow-lg block">
+                Werkdagen: dinsdag t/m zaterdag
+              </span>
+              <span className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1 block" />
+            </span>
+          </span>
+        )}
       </div>
 
       {/* Progress bar — alleen voor actieve milestones */}

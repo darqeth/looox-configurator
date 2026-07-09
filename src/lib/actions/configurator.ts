@@ -135,13 +135,17 @@ export async function deleteConfiguration(configId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
-  const { error } = await supabase
+  // Geen .eq('user_id') filter: RLS bepaalt wie mag verwijderen (eigenaar,
+  // manager binnen hetzelfde bedrijf, of admin). .select() maakt van een
+  // door RLS geblokkeerde/niet-bestaande rij een expliciete fout i.p.v. stil falen.
+  const { data, error } = await supabase
     .from('configurations')
     .delete()
     .eq('id', configId)
-    .eq('user_id', user.id)
+    .select('id')
 
   if (error) throw new Error(error.message)
+  if (!data || data.length === 0) throw new Error('Configuratie niet gevonden of geen rechten om te verwijderen')
 
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
@@ -199,7 +203,9 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
 
   const selectedOptionsJson = buildSelectedOptionsJson(input)
 
-  const { error } = await supabase.from('configurations').update({
+  // Geen .eq('user_id') filter: RLS staat eigenaar én manager-binnen-bedrijf toe.
+  // .select() zet een geblokkeerde/niet-bestaande rij om in een fout i.p.v. stil falen.
+  const { data, error } = await supabase.from('configurations').update({
     name: input.projectName,
     width: input.width,
     height: input.height,
@@ -207,9 +213,10 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
     total_price: totalPrice.toString(),
     status: input.status,
     updated_at: new Date().toISOString(),
-  }).eq('id', input.configId).eq('user_id', user.id)
+  }).eq('id', input.configId).select('id')
 
   if (error) throw new Error(error.message)
+  if (!data || data.length === 0) throw new Error('Configuratie niet gevonden of geen rechten om op te slaan')
 
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
@@ -251,16 +258,18 @@ export async function updateProjectspiegelConfiguration(configId: string, input:
     attachmentUrl: null,
   }
 
-  const { error } = await supabase.from('configurations').update({
+  // Geen .eq('user_id') filter: RLS staat eigenaar én manager-binnen-bedrijf toe.
+  const { data, error } = await supabase.from('configurations').update({
     name: input.projectName,
     width: input.lengte,
     height: input.hoogte,
     selected_options: selectedOptionsJson,
     total_price: totalPrice.toString(),
     updated_at: new Date().toISOString(),
-  }).eq('id', configId).eq('user_id', user.id)
+  }).eq('id', configId).select('id')
 
   if (error) throw new Error(error.message)
+  if (!data || data.length === 0) throw new Error('Configuratie niet gevonden of geen rechten om op te slaan')
 
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')

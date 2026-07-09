@@ -58,6 +58,9 @@ const POSITION_LABELS: Record<string, string> = {
   'boven-onder': 'Boven & onder',
   'boven-beneden': 'Boven & onder',
   'links-rechts': 'Links & rechts',
+  // Op-aanvraag: de verlichtingskeuze is de soort (direct/indirect), opgeslagen in directLight.position
+  direct: 'Direct',
+  indirect: 'Indirect',
 }
 
 const TYPE_LABELS: Record<string, string> = {

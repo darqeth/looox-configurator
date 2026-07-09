@@ -621,14 +621,23 @@ export default function OfferteDocument({
               <Text style={styles.tableLabel}>Glas</Text>
               <Text style={styles.tableValue}>{formatGlas(opts.glasKleur)}</Text>
             </View>
-            <View style={styles.tableRow}>
-              <Text style={styles.tableLabel}>Directe verlichting</Text>
-              <Text style={styles.tableValue}>{formatLight(opts.directLight, opts)}</Text>
-            </View>
-            <View style={styles.tableRow}>
-              <Text style={styles.tableLabel}>Indirecte verlichting</Text>
-              <Text style={styles.tableValue}>{formatLight(opts.indirectLight, opts)}</Text>
-            </View>
+            {opts.shape === 'op-aanvraag' ? (
+              <View style={styles.tableRow}>
+                <Text style={styles.tableLabel}>Verlichting</Text>
+                <Text style={styles.tableValue}>{formatLight(opts.directLight, opts)}</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableLabel}>Directe verlichting</Text>
+                  <Text style={styles.tableValue}>{formatLight(opts.directLight, opts)}</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableLabel}>Indirecte verlichting</Text>
+                  <Text style={styles.tableValue}>{formatLight(opts.indirectLight, opts)}</Text>
+                </View>
+              </>
+            )}
             <View style={styles.tableRowLast}>
               <Text style={styles.tableLabel}>Extra opties</Text>
               <Text style={styles.tableValue}>

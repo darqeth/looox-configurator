@@ -34,7 +34,8 @@ export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   arc:            ['geen', 'rondom'],
   sol:            [],
   luna:           [],
-  'op-aanvraag':  ['geen', 'indirect', 'direct'],
+  // Op-aanvraag: zelfde direct/indirect keuzes als rechthoek (beide onafhankelijk)
+  'op-aanvraag':  ['geen', 'boven', 'boven-beneden', 'links-rechts', 'rondom'],
   projectspiegel: [],
 }
 
@@ -47,7 +48,7 @@ export const INDIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   arc:            ['geen', 'rondom'],
   sol:            ['geen', 'rondom'],
   luna:           ['geen', 'rondom'],
-  'op-aanvraag':  [],
+  'op-aanvraag':  ['geen', 'boven-beneden', 'onder', 'links-rechts', 'rondom'],
   projectspiegel: [],
 }
 

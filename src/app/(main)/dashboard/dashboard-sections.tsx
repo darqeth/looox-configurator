@@ -400,7 +400,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-[13px] font-semibold text-lx-text-primary">
-                €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                {shape === 'op-aanvraag' ? 'Op offerte' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
               </span>
               {config.status === 'ordered' ? (
                 <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">Besteld</span>

@@ -108,7 +108,11 @@ export async function saveConfiguration(rawInput: SaveConfigInput) {
     solOnderkant: input.solOnderkant,
     lunaMeubelHoogte: input.lunaMeubelHoogte,
   })
-  const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
+  // Spiegel op aanvraag heeft geen prijs vanuit de configurator — die volgt
+  // pas na offerte. Sla dus 0 op i.p.v. een misleidende rechthoek-prijs.
+  const totalPrice = input.shape === 'op-aanvraag'
+    ? 0
+    : isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
   const selectedOptionsJson = buildSelectedOptionsJson(input)
 
@@ -199,7 +203,11 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
     solOnderkant: input.solOnderkant,
     lunaMeubelHoogte: input.lunaMeubelHoogte,
   })
-  const totalPrice = isInternational ? Math.round(calcPrice * 1.05) : calcPrice
+  // Spiegel op aanvraag heeft geen prijs vanuit de configurator — die volgt
+  // pas na offerte. Sla dus 0 op i.p.v. een misleidende rechthoek-prijs.
+  const totalPrice = input.shape === 'op-aanvraag'
+    ? 0
+    : isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
   const selectedOptionsJson = buildSelectedOptionsJson(input)
 

@@ -133,7 +133,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
             </p>
             <div className="flex items-center justify-between mt-1">
               <span className="text-[11px] text-lx-text-secondary">{metaParts.join(' · ')} · {date}</span>
-              <span className="text-[12.5px] font-bold text-lx-text-primary">€{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}</span>
+              <span className="text-[12.5px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}</span>
             </div>
           </div>
         </div>
@@ -178,9 +178,9 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
           {/* Col: Prijs */}
           <div className="w-[88px] flex-shrink-0 text-right">
             <p className="text-[13px] font-bold text-lx-text-primary">
-              €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+              {shape === 'op-aanvraag' ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
             </p>
-            <p className="text-[10.5px] text-lx-text-secondary mt-0.5">excl. btw</p>
+            {shape !== 'op-aanvraag' && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">excl. btw</p>}
           </div>
 
           {/* Col: Status */}
@@ -298,9 +298,9 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                 />
                 <div className="text-right">
                   <span className="text-[16px] font-bold text-lx-cta">
-                    €{Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
+                    {shape === 'op-aanvraag' ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
                   </span>
-                  <span className="text-[11px] text-lx-text-muted ml-1.5">excl. btw</span>
+                  {shape !== 'op-aanvraag' && <span className="text-[11px] text-lx-text-muted ml-1.5">excl. btw</span>}
                 </div>
               </div>
             </div>

@@ -115,7 +115,7 @@ export function formatDimensions(
 ): string {
   if (shape === 'rond') return opts.diameter ? `O ${opts.diameter} cm` : '—'
   if (shape === 'organic') return opts.organicSizeKey ? (ORGANIC_LABELS[opts.organicSizeKey] ?? opts.organicSizeKey) : '—'
-  if (shape === 'op-aanvraag') return 'Op aanvraag'
+  if (shape === 'op-aanvraag') return width && height ? `B ${width} × H ${height} cm` : 'Op aanvraag'
   if (shape === 'sol') return opts.diameter
     ? `⌀ ${opts.diameter} cm · meubel ${opts.solMeubelHoogte ?? '?'} cm · uitsteek ${opts.solOnderkant ?? '?'} cm` : '—'
   if (shape === 'luna') return opts.diameter

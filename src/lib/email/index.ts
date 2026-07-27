@@ -34,7 +34,7 @@ export function formatDimensions(
 ) {
   if (shape === 'rond' && diameter) return `⌀${diameter} cm`
   if (shape === 'organic' && organicSizeKey) return organicSizeKey
-  if (shape === 'op-aanvraag') return 'Op aanvraag'
+  if (shape === 'op-aanvraag') return width && height ? `B ${width} × H ${height} cm` : 'Op aanvraag'
   if (width && height) return `B ${width} × H ${height} cm`
   return '—'
 }

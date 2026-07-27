@@ -426,6 +426,7 @@ export async function placeOrderFromConfig(
 
   const opts = (config.selected_options ?? {}) as ConfigOptions
   const isProjectspiegel = (opts.shape as string | undefined) === 'projectspiegel'
+  const isOpAanvraag = (opts.shape as string | undefined) === 'op-aanvraag'
   const configQty = (opts.quantity as number | undefined) ?? 1
 
   // Projectspiegels: total_price is al het totaal voor configQty stuks.
@@ -434,7 +435,9 @@ export async function placeOrderFromConfig(
   // total_price stored at save time already includes international surcharge — do not re-apply here.
   // Note: if is_international status changed after config was saved, the stored price reflects the
   // status at save time. This is intentional (price locked at save time), not a bug.
-  const totalPriceRaw = Number(config.total_price)
+  // Op aanvraag: nooit een prijs vanuit de configurator, ook niet bij oude
+  // configs die nog een berekende prijs opgeslagen hebben.
+  const totalPriceRaw = isOpAanvraag ? 0 : Number(config.total_price)
   const unitPrice = isProjectspiegel && configQty > 0
     ? Math.round((totalPriceRaw / configQty) * 100) / 100
     : totalPriceRaw

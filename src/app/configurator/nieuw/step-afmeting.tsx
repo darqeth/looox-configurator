@@ -490,9 +490,14 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
         <DimInput label="Breedte" value={width} onChange={(v) => onChange({ width: v })} />
         <DimInput label="Hoogte" value={height} onChange={(v) => onChange({ height: v })} />
       </div>
-      <p className="text-[12px] text-lx-text-secondary">
-        Vul de gewenste afmeting in. Wij nemen contact op als de maat buiten het standaard assortiment valt.
-      </p>
+      <div className="rounded-xl border border-lx-cta/25 bg-lx-icon-bg/40 px-4 py-3">
+        <p className="text-[12px] text-lx-text-primary leading-relaxed">
+          Vul de gewenste afmeting in. Vermeld deze maat ook op de bijgevoegde tekening of schets, zodat de aanvraag compleet is.
+        </p>
+        <p className="text-[11.5px] text-lx-text-secondary mt-1.5 leading-snug">
+          Wij nemen contact op als de maat buiten het standaard assortiment valt.
+        </p>
+      </div>
     </div>
   )
 }

@@ -884,6 +884,16 @@ export default function PricePanel({
     }
   }
 
+  // Eén bediening voor beide verlichtingen: direct- én indirect-blok pushen elk
+  // een "Bediening ·"-regel. Toon 'm maar één keer (het bruto totaal telt de
+  // bediening sowieso apart en maar één keer — dit is puur cosmetisch).
+  const eersteBediening = lineItems.findIndex(li => li.label.startsWith('Bediening ·'))
+  if (eersteBediening !== -1) {
+    for (let i = lineItems.length - 1; i > eersteBediening; i--) {
+      if (lineItems[i].label.startsWith('Bediening ·')) lineItems.splice(i, 1)
+    }
+  }
+
   return (
     <div className="sticky top-6 space-y-4">
       {/* Preview kaart */}

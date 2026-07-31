@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { OrderStatusSelect } from './order-status-row'
 import { AdminPagination } from '@/components/admin-pagination'
+import { OfferteBadge } from '@/components/project-badge'
 
 const PAGE_SIZE = 20
 
@@ -117,8 +118,10 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
             {pagedOrders.map(order => {
               const shape = (order.config?.selected_options as { shape?: string })?.shape ?? 'rechthoek'
               const isProjectspiegel = shape === 'projectspiegel'
+              const isOpAanvraag = shape === 'op-aanvraag'
+              const priceLabel = isOpAanvraag ? 'Op offerte' : `€${Number(order.total_price).toLocaleString('nl-NL')}`
               return (
-                <div key={order.id} className={`transition-colors ${isProjectspiegel ? 'border-l-[3px] border-l-violet-500 bg-violet-50/30 hover:bg-violet-50/50' : 'hover:bg-lx-panel-bg/40'}`}>
+                <div key={order.id} className={`transition-colors ${isProjectspiegel ? 'border-l-[3px] border-l-violet-500 bg-violet-50/30 hover:bg-violet-50/50' : isOpAanvraag ? 'border-l-[3px] border-l-amber-400 bg-amber-50/30 hover:bg-amber-50/50' : 'hover:bg-lx-panel-bg/40'}`}>
                   {/* Mobile */}
                   <div className="lg:hidden px-4 py-3.5 flex gap-3">
                     <div className="w-8 h-8 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -127,7 +130,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <div>
-                          <p className="text-[12.5px] font-bold text-lx-text-primary font-mono">{order.order_number}</p>
+                          <p className="text-[12.5px] font-bold text-lx-text-primary font-mono">{order.order_number}{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
                           <p className="text-[11px] text-lx-text-secondary">{formatDate(order.created_at)}</p>
                         </div>
                         <OrderStatusSelect orderId={order.id} currentStatus={order.status} />
@@ -135,7 +138,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                       <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{order.profile?.company ?? order.profile?.full_name ?? '—'}</p>
                       <div className="flex items-center justify-between mt-0.5">
                         <p className="text-[11px] text-lx-text-secondary truncate">{order.config?.name ?? '—'} · {order.quantity}×</p>
-                        <p className="text-[13px] font-bold text-lx-text-primary">€{Number(order.total_price).toLocaleString('nl-NL')}</p>
+                        <p className="text-[13px] font-bold text-lx-text-primary">{priceLabel}</p>
                       </div>
                     </div>
                   </div>
@@ -146,7 +149,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                       <ShapeIcon shape={shape} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[12.5px] font-bold text-lx-text-primary font-mono truncate">{order.order_number}</p>
+                      <p className="text-[12.5px] font-bold text-lx-text-primary font-mono truncate">{order.order_number}{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
                       <p className="text-[11px] text-lx-text-secondary mt-0.5">{formatDate(order.created_at)} · {order.config?.name ?? '—'}</p>
                     </div>
                     <div className="min-w-0">
@@ -157,8 +160,8 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                       <p className="text-[12.5px] font-medium text-lx-text-primary">{order.quantity}×</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[13px] font-bold text-lx-text-primary">€{Number(order.total_price).toLocaleString('nl-NL')}</p>
-                      {order.quantity > 1 && (
+                      <p className="text-[13px] font-bold text-lx-text-primary">{priceLabel}</p>
+                      {!isOpAanvraag && order.quantity > 1 && (
                         <p className="text-[10.5px] text-lx-text-secondary">€{Number(order.unit_price).toLocaleString('nl-NL')} p.st.</p>
                       )}
                     </div>

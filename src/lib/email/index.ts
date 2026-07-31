@@ -278,20 +278,27 @@ export async function sendOrderConfirmationEmail({
   order: OrderEmailDetails
   pdfBuffer?: Buffer
 }) {
+  const isOfferte = order.shape === 'op-aanvraag'
   await getResend().emails.send({
     from: FROM,
     to,
-    subject: `Bestelling ontvangen — ${order.orderNumber}`,
+    subject: isOfferte
+      ? `Offerteaanvraag ontvangen — ${order.orderNumber}`
+      : `Bestelling ontvangen — ${order.orderNumber}`,
     html: baseTemplate(`
-      ${h1('Bestelling ontvangen!')}
-      ${p(`Hoi ${esc(name)}, je bestelling is succesvol geplaatst. We gaan er zo snel mogelijk mee aan de slag.`)}
+      ${h1(isOfferte ? 'Offerteaanvraag ontvangen!' : 'Bestelling ontvangen!')}
+      ${p(isOfferte
+        ? `Hoi ${esc(name)}, je offerteaanvraag is succesvol ingediend. We stellen zo snel mogelijk een offerte op en nemen contact met je op.`
+        : `Hoi ${esc(name)}, je bestelling is succesvol geplaatst. We gaan er zo snel mogelijk mee aan de slag.`)}
       ${orderTable(buildOrderRows(order))}
-      ${btn(`${SITE_URL}/bestellingen`, 'Bestellingen bekijken')}
+      ${btn(`${SITE_URL}/${isOfferte ? 'configuraties' : 'bestellingen'}`, isOfferte ? 'Mijn configuraties' : 'Bestellingen bekijken')}
       ${divider()}
-      ${p('In de bijlage vind je de volledige orderbevestiging als PDF.', true)}
+      ${p(isOfferte
+        ? 'In de bijlage vind je je offerteaanvraag als PDF.'
+        : 'In de bijlage vind je de volledige orderbevestiging als PDF.', true)}
     `),
     attachments: pdfBuffer ? [{
-      filename: `LoooX-Order-${order.orderNumber}.pdf`,
+      filename: `LoooX-${isOfferte ? 'Offerteaanvraag' : 'Order'}-${order.orderNumber}.pdf`,
       content: pdfBuffer,
     }] : undefined,
   })
@@ -327,25 +334,30 @@ export async function sendInternalOrderEmail({
   ].join('')
 
   const orderRows = buildOrderRows(order)
+  const isOfferte = order.shape === 'op-aanvraag'
 
   await getResend().emails.send({
     from: FROM,
     to,
-    subject: `Nieuwe bestelling — ${order.orderNumber} (${customer.company ?? customer.name ?? customer.email})`,
+    subject: isOfferte
+      ? `Nieuwe offerteaanvraag — ${order.orderNumber} (${customer.company ?? customer.name ?? customer.email})`
+      : `Nieuwe bestelling — ${order.orderNumber} (${customer.company ?? customer.name ?? customer.email})`,
     html: baseTemplate(`
-      ${h1('Nieuwe bestelling!')}
-      ${p('Hoi Collega, er is zojuist een spiegel besteld via de configurator. In de bijlage vind je de bestelling en hieronder een kort overzicht:')}
+      ${h1(isOfferte ? 'Nieuwe offerteaanvraag!' : 'Nieuwe bestelling!')}
+      ${p(isOfferte
+        ? 'Hoi Collega, er is zojuist een offerteaanvraag binnengekomen via de configurator. <strong>Let op: dit is nog géén bestelling — de klant wacht op een prijsopgave.</strong> In de bijlage vind je de aanvraag en hieronder een kort overzicht:'
+        : 'Hoi Collega, er is zojuist een spiegel besteld via de configurator. In de bijlage vind je de bestelling en hieronder een kort overzicht:')}
       ${divider()}
       <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Klantgegevens</p>
       ${orderTable(customerRows)}
       ${divider()}
-      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Bestelling</p>
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">${isOfferte ? 'Aanvraag' : 'Bestelling'}</p>
       ${orderTable(orderRows)}
       ${divider()}
       ${p('Liefs, de configurator', true)}
     `),
     attachments: pdfBuffer ? [{
-      filename: `LoooX-Order-${order.orderNumber}.pdf`,
+      filename: `LoooX-${isOfferte ? 'Offerteaanvraag' : 'Order'}-${order.orderNumber}.pdf`,
       content: pdfBuffer,
     }] : undefined,
   })

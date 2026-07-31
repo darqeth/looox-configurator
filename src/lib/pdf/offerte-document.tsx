@@ -6,14 +6,9 @@ import {
   Text,
   Image,
   StyleSheet,
-  Svg,
-  Rect,
-  Path,
-  Circle,
-  Line,
-  G,
 } from '@react-pdf/renderer'
-import { LooxBathroomsLogo } from './looox-bathrooms-logo'
+import { PdfMirrorPreview } from './mirror-preview'
+import { PdfLogo } from './pdf-logo'
 import {
   ConfigOptions,
   formatShape,
@@ -25,284 +20,6 @@ import {
   formatPrice,
 } from './helpers'
 
-// ─── PDF Mirror Preview ───────────────────────────────────────────────────────
-
-const GLASS_FILL: Record<string, { fill: string; fillOpacity: number; stroke: string }> = {
-  'helder':      { fill: '#C8D4DC', fillOpacity: 0.55, stroke: '#A8B4BC' },
-  'smoke-grijs': { fill: '#5A6068', fillOpacity: 0.80, stroke: '#464C54' },
-  'smoke-zwart': { fill: '#5A6068', fillOpacity: 0.80, stroke: '#464C54' },
-  'smoke-brons': { fill: '#7A5C2A', fillOpacity: 0.82, stroke: '#604820' },
-}
-
-function PdfMirrorPreview({ opts, width: configWidth, height: configHeight }: {
-  opts: ConfigOptions
-  width: number | null
-  height: number | null
-}) {
-  const SIZE = 110
-  const PAD = 14
-  const available = SIZE - PAD * 2
-  const shape = opts.shape ?? 'rechthoek'
-  const glasKleur = (opts.glasKleur as string) ?? 'helder'
-  const glass = GLASS_FILL[glasKleur] ?? GLASS_FILL['helder']
-  const directPos = (opts.directLight as { position?: string } | null)?.position ?? 'geen'
-  const indirectPos = (opts.indirectLight as { position?: string } | null)?.position ?? 'geen'
-
-  const w0 = configWidth ?? 80
-  const h0 = configHeight ?? 60
-  const ratio = Math.min(available / w0, available / h0)
-  const w = Math.round(w0 * ratio)
-  const h = Math.round(h0 * ratio)
-  const x = (SIZE - w) / 2
-  const y = (SIZE - h) / 2
-
-  const hasDirect   = directPos !== 'geen'
-  const hasIndirect = indirectPos !== 'geen'
-  const GLOW = '#FEF3C7'
-  const GLOW_W = 5
-
-  // Position-specific direct light (white lines inside mirror)
-  function directLightIndicator(px: number, py: number, pw: number, ph: number, pos: string) {
-    const s = { stroke: 'white', strokeWidth: '3', opacity: 0.5, strokeLinecap: 'round' as const }
-    if (pos === 'rondom') return <Rect x={px+5} y={py+4} width={pw-10} height={ph-8} rx={1} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
-    if (pos === 'boven') return <Line x1={px+6} y1={py+4} x2={px+pw-6} y2={py+4} {...s} />
-    if (pos === 'onder') return <Line x1={px+6} y1={py+ph-4} x2={px+pw-6} y2={py+ph-4} {...s} />
-    if (pos === 'boven-beneden' || pos === 'boven-onder') return <>{[py+4, py+ph-4].map((ly, i) => <Line key={i} x1={px+6} y1={ly} x2={px+pw-6} y2={ly} {...s} />)}</>
-    if (pos === 'links-rechts') return <>{[px+4, px+pw-4].map((lx, i) => <Line key={i} x1={lx} y1={py+6} x2={lx} y2={py+ph-6} {...s} />)}</>
-    return <Rect x={px+5} y={py+4} width={pw-10} height={ph-8} rx={1} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
-  }
-
-  // Position-specific indirect light (yellow glow outside mirror)
-  function indirectLightGlow(px: number, py: number, pw: number, ph: number, pos: string) {
-    const g = { stroke: GLOW, strokeWidth: GLOW_W, opacity: 0.8, fill: 'none' as const }
-    if (pos === 'rondom') return <Rect x={px-4} y={py-4} width={pw+8} height={ph+8} rx={2} {...g} />
-    if (pos === 'boven') return <Line x1={px} y1={py-3} x2={px+pw} y2={py-3} {...g} />
-    if (pos === 'onder') return <Line x1={px} y1={py+ph+3} x2={px+pw} y2={py+ph+3} {...g} />
-    if (pos === 'boven-beneden' || pos === 'boven-onder') return <>{[py-3, py+ph+3].map((ly, i) => <Line key={i} x1={px} y1={ly} x2={px+pw} y2={ly} {...g} />)}</>
-    if (pos === 'links-rechts') return <>{[px-3, px+pw+3].map((lx, i) => <Line key={i} x1={lx} y1={py} x2={lx} y2={py+ph} {...g} />)}</>
-    return <Rect x={px-4} y={py-4} width={pw+8} height={ph+8} rx={2} {...g} />
-  }
-
-  if (shape === 'rond') {
-    const r = Math.min(available / 2, (opts.diameter as number ?? 60) * 0.95 * ratio)
-    const cx2 = SIZE / 2
-    const cy2 = SIZE / 2
-    return (
-      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && <Circle cx={cx2} cy={cy2} r={r + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />}
-        <Circle cx={cx2} cy={cy2} r={r} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-        <Circle cx={cx2} cy={cy2} r={r} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && <Circle cx={cx2} cy={cy2} r={r * 0.82} fill="none" stroke="white" strokeWidth="3" opacity={0.45} />}
-        <Line x1={cx2 - r*0.15} y1={cy2 - r*0.45} x2={cx2 + r*0.25} y2={cy2 + r*0.35} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
-      </Svg>
-    )
-  }
-
-  if (shape === 'ovaal') {
-    const rx = Math.round(Math.min(w, h) / 2)
-    const ry = rx
-    const og = { stroke: GLOW, strokeWidth: GLOW_W, opacity: 0.8, fill: 'none' as const }
-    const od = { stroke: 'white', strokeWidth: '3', opacity: 0.5, strokeLinecap: 'round' as const }
-    function ovaalIndirectGlow() {
-      if (indirectPos === 'rondom') return <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx+4} ry={ry+4} {...og} />
-      if (indirectPos === 'boven') return <Line x1={x} y1={y-3} x2={x+w} y2={y-3} {...og} />
-      if (indirectPos === 'onder') return <Line x1={x} y1={y+h+3} x2={x+w} y2={y+h+3} {...og} />
-      if (indirectPos === 'boven-beneden' || indirectPos === 'boven-onder') return <>{[y-3, y+h+3].map((ly, i) => <Line key={i} x1={x} y1={ly} x2={x+w} y2={ly} {...og} />)}</>
-      if (indirectPos === 'links-rechts') return <>{[x-3, x+w+3].map((lx, i) => <Line key={i} x1={lx} y1={y} x2={lx} y2={y+h} {...og} />)}</>
-      return <Rect x={x-4} y={y-4} width={w+8} height={h+8} rx={rx+4} ry={ry+4} {...og} />
-    }
-    function ovaalDirectIndicator() {
-      const irx = Math.round(Math.min(w-10, h-8) / 2)
-      if (directPos === 'rondom') return <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={irx} ry={irx} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
-      if (directPos === 'boven') return <Line x1={x+6} y1={y+4} x2={x+w-6} y2={y+4} {...od} />
-      if (directPos === 'onder') return <Line x1={x+6} y1={y+h-4} x2={x+w-6} y2={y+h-4} {...od} />
-      if (directPos === 'boven-beneden' || directPos === 'boven-onder') return <>{[y+4, y+h-4].map((ly, i) => <Line key={i} x1={x+6} y1={ly} x2={x+w-6} y2={ly} {...od} />)}</>
-      if (directPos === 'links-rechts') return <>{[x+4, x+w-4].map((lx, i) => <Line key={i} x1={lx} y1={y+6} x2={lx} y2={y+h-6} {...od} />)}</>
-      return <Rect x={x+5} y={y+4} width={w-10} height={h-8} rx={rx} ry={ry} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
-    }
-    return (
-      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && ovaalIndirectGlow()}
-        <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-        <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && ovaalDirectIndicator()}
-        <Line x1={x + w*0.2} y1={y + h*0.15} x2={x + w*0.55} y2={y + h*0.7} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
-      </Svg>
-    )
-  }
-
-  if (shape === 'arc') {
-    const arcR = w / 2
-    const mirrorPath = `M ${x},${y + arcR} A ${arcR},${arcR} 0 0 1 ${x + w},${y + arcR} L ${x + w},${y + h} L ${x},${y + h} Z`
-    const glowPath = `M ${x-4},${y + arcR} A ${arcR+4},${arcR+4} 0 0 1 ${x + w+4},${y + arcR} L ${x + w+4},${y + h+4} L ${x-4},${y + h+4} Z`
-    const innerPath = `M ${x+5},${y + arcR} A ${arcR-5},${arcR-5} 0 0 1 ${x + w-5},${y + arcR} L ${x + w-5},${y + h-5} L ${x+5},${y + h-5} Z`
-    const ag = { stroke: GLOW, strokeWidth: GLOW_W, opacity: 0.8, fill: 'none' as const }
-    const ad = { stroke: 'white', strokeWidth: '3', opacity: 0.5, strokeLinecap: 'round' as const }
-    function arcIndirectGlow() {
-      if (indirectPos === 'rondom') return <Path d={glowPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
-      if (indirectPos === 'boven') return <Line x1={x} y1={y-3} x2={x+w} y2={y-3} {...ag} />
-      if (indirectPos === 'onder') return <Line x1={x} y1={y+h+3} x2={x+w} y2={y+h+3} {...ag} />
-      if (indirectPos === 'boven-beneden' || indirectPos === 'boven-onder') return <>{[y-3, y+h+3].map((ly, i) => <Line key={i} x1={x} y1={ly} x2={x+w} y2={ly} {...ag} />)}</>
-      if (indirectPos === 'links-rechts') return <>{[x-3, x+w+3].map((lx, i) => <Line key={i} x1={lx} y1={y} x2={lx} y2={y+h} {...ag} />)}</>
-      return <Path d={glowPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
-    }
-    function arcDirectIndicator() {
-      if (directPos === 'rondom') return <Path d={innerPath} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
-      if (directPos === 'boven') return <Line x1={x+6} y1={y+4} x2={x+w-6} y2={y+4} {...ad} />
-      if (directPos === 'onder') return <Line x1={x+6} y1={y+h-4} x2={x+w-6} y2={y+h-4} {...ad} />
-      if (directPos === 'boven-beneden' || directPos === 'boven-onder') return <>{[y+4, y+h-4].map((ly, i) => <Line key={i} x1={x+6} y1={ly} x2={x+w-6} y2={ly} {...ad} />)}</>
-      if (directPos === 'links-rechts') return <>{[x+4, x+w-4].map((lx, i) => <Line key={i} x1={lx} y1={y+6} x2={lx} y2={y+h-6} {...ad} />)}</>
-      return <Path d={innerPath} fill="none" stroke="white" strokeWidth="2.5" opacity={0.45} />
-    }
-    return (
-      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && arcIndirectGlow()}
-        <Path d={mirrorPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-        <Path d={mirrorPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && arcDirectIndicator()}
-        <Line x1={x + w*0.25} y1={y + arcR*0.25} x2={x + w*0.5} y2={y + h*0.6} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
-      </Svg>
-    )
-  }
-
-  if (shape === 'rounded-rect') {
-    const rx = Math.round(Math.min(w, h) * 0.18)
-    const ry = rx
-    return (
-      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && indirectLightGlow(x, y, w, h, indirectPos)}
-        <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-        <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasDirect && directLightIndicator(x, y, w, h, directPos)}
-        <Line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
-      </Svg>
-    )
-  }
-
-  if (shape === 'organic') {
-    const organicPath = "M73.5,134c-1.1,0-2.3,0-3.4-.2-.4,0-.8,0-1.3-.2-.8-.1-1.7-.3-2.5-.5h0c-4.1-.9-8.2-2.7-12.1-5.4-20.7-14.2-36.5-33.7-48.4-59.5C.8,57.1-1.1,45.2.6,34.7,2.5,22.6,8.9,12.9,19.1,6.8,28,1.4,45.4-.6,58.1.2c20.8.7,78.6,13,98.7,39.4,6.3,8.3,8.3,17.2,6,26.4v.4c-10.5,29.2-39.2,53.3-79,66-3.4,1.1-6.9,1.7-10.4,1.7Z" // echte productvorm (organic_vorm.svg)
-    const scale = available / 200
-    return (
-      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        <G transform={`translate(${PAD + 18.15 * scale} ${PAD + 33 * scale}) scale(${scale})`}>
-          {hasIndirect && <Path d={organicPath} fill="none" stroke={GLOW} strokeWidth={GLOW_W / scale} opacity={0.7} />}
-          <Path d={organicPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-          <Path d={organicPath} fill="none" stroke={glass.stroke} strokeWidth={1.2 / scale} />
-          {hasDirect && <Path d={organicPath} fill="none" stroke="white" strokeWidth={10 / scale} opacity={0.45} />}
-          <Line x1={55} y1={55} x2={90} y2={120} stroke="white" strokeWidth={9 / scale} opacity={0.09} strokeLinecap="round" />
-        </G>
-      </Svg>
-    )
-  }
-
-  if (shape === 'sol' || shape === 'luna') {
-    const d = (opts.diameter as number) ?? 80
-    const r = Math.min(available / 2, available * 0.45)
-    const cx = SIZE / 2
-    const cy = SIZE / 2
-    const scale = r / (d / 2)
-
-    const meubelH    = shape === 'sol' ? ((opts.solMeubelHoogte as number) ?? 35) : ((opts.lunaMeubelHoogte as number) ?? 35)
-    const onderkantH = shape === 'sol' ? ((opts.solOnderkant as number) ?? 15)   : ((opts.lunaOnderkant as number) ?? 15)
-    const lunaAfstand = shape === 'luna' ? ((opts.lunaAfstand as number) ?? 20) : 0
-    const lunaMuurZijde = shape === 'luna' ? ((opts.lunaMuurZijde as string) ?? 'links') : 'links'
-    const afstandL = lunaMuurZijde === 'links' ? lunaAfstand : 0
-    const afstandR = lunaMuurZijde === 'rechts' ? lunaAfstand : 0
-
-    const svgBottomCut = cy + r - onderkantH * scale
-    const svgTopCut    = cy + r - (onderkantH + meubelH) * scale
-    const svgLeftCut   = cx - r + afstandL * scale
-    const svgRightCut  = cx + r - afstandR * scale
-
-    const halfChordTop = Math.sqrt(Math.max(0, r * r - (svgTopCut - cy) * (svgTopCut - cy)))
-    const lX = shape === 'luna' ? Math.max(svgLeftCut, cx - halfChordTop) : cx - halfChordTop
-    const rX = shape === 'luna' ? Math.min(svgRightCut, cx + halfChordTop) : cx + halfChordTop
-
-    const lTopY = (shape === 'luna' && svgLeftCut > cx - halfChordTop)
-      ? cy - Math.sqrt(Math.max(0, r * r - (svgLeftCut - cx) * (svgLeftCut - cx))) : svgTopCut
-    const rTopY = (shape === 'luna' && svgRightCut < cx + halfChordTop)
-      ? cy - Math.sqrt(Math.max(0, r * r - (svgRightCut - cx) * (svgRightCut - cx))) : svgTopCut
-
-    const solLargeArc = svgTopCut > cy ? 1 : 0
-    const mainPath = shape === 'luna'
-      ? `M ${svgLeftCut},${lTopY} A ${r},${r} 0 0 1 ${svgRightCut},${rTopY} L ${svgRightCut},${svgTopCut} L ${svgLeftCut},${svgTopCut} Z`
-      : `M ${lX},${svgTopCut} A ${r},${r} 0 ${solLargeArc} 1 ${rX},${svgTopCut} Z`
-
-    const hasExtraDeel = svgBottomCut < cy + r
-    const halfChordBottom = hasExtraDeel
-      ? Math.sqrt(Math.max(0, r * r - (svgBottomCut - cy) * (svgBottomCut - cy))) : 0
-    const lXb = shape === 'luna' ? Math.max(svgLeftCut, cx - halfChordBottom) : cx - halfChordBottom
-    const rXb = shape === 'luna' ? Math.min(svgRightCut, cx + halfChordBottom) : cx + halfChordBottom
-    const extraLargeArc = svgBottomCut < cy ? 1 : 0
-    const extraPath = hasExtraDeel
-      ? `M ${lXb},${svgBottomCut} A ${r},${r} 0 ${extraLargeArc} 0 ${rXb},${svgBottomCut} Z` : ''
-
-    const balkH = svgBottomCut - svgTopCut
-
-    return (
-      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        {hasIndirect && (
-          <Circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
-        )}
-        <Path d={mainPath} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-        <Path d={mainPath} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-        {hasExtraDeel && (
-          <Path d={extraPath} fill={glass.fill} fillOpacity={glass.fillOpacity * 0.5} />
-        )}
-        {hasExtraDeel && (
-          <Path d={extraPath} fill="none" stroke={glass.stroke} strokeWidth="1" opacity={0.5} />
-        )}
-        {balkH > 0 && (
-          <Path
-            d={(() => {
-              const bL = (shape === 'luna' && hasExtraDeel) ? Math.min(lX, lXb) : lX
-              const bR = (shape === 'luna' && hasExtraDeel) ? Math.max(rX, rXb) : rX
-              return `M ${bL},${svgTopCut} L ${bR},${svgTopCut} L ${bR},${svgBottomCut} L ${bL},${svgBottomCut} Z`
-            })()}
-            fill="#E8E4DF" fillOpacity={0.8} stroke="#B0ABA4" strokeWidth="0.7"
-          />
-        )}
-        {shape === 'luna' && afstandL > 0 && (
-          <Line x1={svgLeftCut} y1={cy - r} x2={svgLeftCut} y2={cy + r}
-            stroke="#B0ABA4" strokeWidth="0.8" opacity={0.5} />
-        )}
-        {shape === 'luna' && afstandR > 0 && (
-          <Line x1={svgRightCut} y1={cy - r} x2={svgRightCut} y2={cy + r}
-            stroke="#B0ABA4" strokeWidth="0.8" opacity={0.5} />
-        )}
-        <Line x1={cx - r * 0.15} y1={cy - r * 0.45} x2={cx + r * 0.25} y2={cy + r * 0.35}
-          stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
-      </Svg>
-    )
-  }
-
-  // op-aanvraag
-  if (shape === 'op-aanvraag') {
-    const cx = SIZE / 2
-    const cy = (y + y + h) / 2
-    return (
-      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        <Rect x={x} y={y} width={w} height={h} rx={2} fill="#F0F0F0" fillOpacity={0.6}
-          stroke="#AAAAAA" strokeWidth="1.2" strokeDasharray="4 3" />
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <Text {...{ x: cx, y: cy + 7, textAnchor: 'middle', fontSize: 22, fill: '#AAAAAA', fontFamily: 'Helvetica-Bold' } as any}>?</Text>
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <Text {...{ x: cx, y: y + h + 10, textAnchor: 'middle', fontSize: 6, fill: '#AAAAAA', fontFamily: 'Helvetica' } as any}>Op aanvraag</Text>
-      </Svg>
-    )
-  }
-
-  // rechthoek
-  return (
-    <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-      {hasIndirect && indirectLightGlow(x, y, w, h, indirectPos)}
-      <Rect x={x} y={y} width={w} height={h} rx={2} fill={glass.fill} fillOpacity={glass.fillOpacity} />
-      <Rect x={x} y={y} width={w} height={h} rx={2} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
-      {hasDirect && directLightIndicator(x, y, w, h, directPos)}
-      <Line x1={x+w*0.25} y1={y+h*0.1} x2={x+w*0.52} y2={y+h*0.58} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
-    </Svg>
-  )
-}
 
 const BRAND = '#3D6B4F'
 const BRAND_LIGHT = '#EAF0EC'
@@ -553,7 +270,7 @@ export default function OfferteDocument({
 
         {/* Logo gecentreerd bovenaan */}
         <View style={{ alignItems: 'center', marginBottom: 4 }}>
-          <LooxBathroomsLogo width={110} />
+          <PdfLogo />
         </View>
 
         {/* Header */}
@@ -570,12 +287,6 @@ export default function OfferteDocument({
           <View style={styles.headerRight}>
             <Text style={styles.docTitle}>Offerte</Text>
             <Text style={styles.headerMeta}>Datum: {today}</Text>
-            {opts.reference && (
-              <Text style={styles.headerMeta}>Referentie: {opts.reference}</Text>
-            )}
-            {articleNumber && (
-              <Text style={styles.headerMeta}>Artikelnummer: {articleNumber}</Text>
-            )}
           </View>
         </View>
 
@@ -583,10 +294,22 @@ export default function OfferteDocument({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Project</Text>
           <View style={styles.sectionBox}>
+            {articleNumber && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Artikelnummer</Text>
+                <Text style={styles.infoValue}>{articleNumber}</Text>
+              </View>
+            )}
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Projectnaam</Text>
               <Text style={styles.infoValue}>{configName ?? '—'}</Text>
             </View>
+            {opts.reference && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Referentie</Text>
+                <Text style={styles.infoValue}>{opts.reference}</Text>
+              </View>
+            )}
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Geconfigureerd op</Text>
               <Text style={styles.infoValue}>{formatDate(configDate)}</Text>

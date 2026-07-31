@@ -459,6 +459,9 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
 
                       {altShipping && (
                         <div className="mt-3 space-y-2.5">
+                          <p className="text-[11.5px] text-lx-text-secondary leading-snug">
+                            Let op: het afleveradres mag geen privéadres zijn, alleen een zakelijk of bedrijfsadres.
+                          </p>
                           <div className="grid grid-cols-[1fr_6rem] gap-2.5">
                             <div>
                               <label className={labelCls}>Straat</label>

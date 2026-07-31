@@ -153,6 +153,9 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       {hasShippingAddress && (
         <div>
           <p className="text-[12px] font-semibold text-lx-text-primary mb-2">Afleveradres</p>
+          <p className="text-[11.5px] text-lx-text-secondary mb-2 leading-snug">
+            Let op: het afleveradres mag geen privéadres zijn, alleen een zakelijk of bedrijfsadres.
+          </p>
           <AddressFields prefix="shipping" defaults={parsedShipping} />
         </div>
       )}

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { OrderApprovalButtons } from './order-approval-buttons'
 import { AdminPagination } from '@/components/admin-pagination'
 import { fetchOrders } from '@/lib/queries/fetch-orders'
-import { ProjectBadge } from '@/components/project-badge'
+import { ProjectBadge, OfferteBadge } from '@/components/project-badge'
 
 const STATUS_LABELS: Record<string, string> = {
   pending:          'In behandeling',
@@ -181,7 +181,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                         {STATUS_LABELS[order.status] ?? order.status}
                       </span>
                     </div>
-                    <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}</p>
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{shape === 'op-aanvraag' && <OfferteBadge className="ml-1.5" />}</p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[11px] text-lx-text-secondary">{dims} · {order.quantity}×</span>
                       <span className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op offerte' : `€${price.toLocaleString('nl-NL')}`}</span>
@@ -218,7 +218,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
 
                   {/* Col: Project name + dims */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}</p>
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{shape === 'op-aanvraag' && <OfferteBadge className="ml-1.5" />}</p>
                     <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">{dims}</p>
                   </div>
 

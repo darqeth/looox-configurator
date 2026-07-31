@@ -174,6 +174,7 @@ async function createOrderAtomic(
     notes: string
     discountCodeId: string | null
     discountUseType: 'single' | 'per_user'
+    isOfferte?: boolean
   },
 ): Promise<OrderTxResult> {
   const { data, error } = await supabase.rpc('create_order_atomic', {
@@ -186,6 +187,7 @@ async function createOrderAtomic(
     p_notes: params.notes,
     p_discount_code_id: params.discountCodeId,
     p_discount_use_type: params.discountUseType,
+    p_is_offerte: params.isOfferte ?? false,
   })
   if (error || !data) {
     throw new Error(error?.message ?? 'Bestelling plaatsen mislukt')
@@ -335,6 +337,7 @@ export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumb
     notes: input.description || '',
     discountCodeId: resolved ? input.discountCodeId ?? null : null,
     discountUseType: resolvedDiscountUseType,
+    isOfferte: input.shape === 'op-aanvraag',
   })
   const orderNumber = tx.order_number
 
@@ -480,6 +483,7 @@ export async function placeOrderFromConfig(
     notes: notes || '',
     discountCodeId: resolved ? discountCodeId ?? null : null,
     discountUseType: resolvedDiscountUseType,
+    isOfferte: isOpAanvraag,
   })
   const orderNumber = tx.order_number
 

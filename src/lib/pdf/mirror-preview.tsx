@@ -267,7 +267,7 @@ export function PdfMirrorPreview({ opts, width: configWidth, height: configHeigh
           const cW = (leftW + rightW) / 2
           const cM = (leftM + rightM) / 2
           const ext = { stroke: '#c9c6bf', strokeWidth: 0.5, strokeDasharray: '2 1.5' }
-          const dim = { stroke: '#6a6a6a', strokeWidth: 0.6, strokeDasharray: '3 1.5' }
+          const dim = { stroke: '#c9c6bf', strokeWidth: 0.5, strokeDasharray: '2 1.5' }
           const rightDim = SIZE + 12
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const T = (tx: number, ty: number, t: string) => (<Text {...{ x: tx, y: ty, textAnchor: 'middle', fontSize: 6.5, fill: '#222222', fontFamily: 'Helvetica-Bold' } as any}>{t}</Text>)

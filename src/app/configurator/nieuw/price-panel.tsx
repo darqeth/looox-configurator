@@ -588,7 +588,7 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
           const topY = cy - r
           const mw = Math.sqrt(Math.max(0, r * r - (svgTopCut - cy) * (svgTopCut - cy)))
           const ext = { stroke: '#c9c6bf', strokeWidth: 1, strokeDasharray: '3 2' }
-          const dim = { stroke: '#6a6a6a', strokeWidth: 1.1, strokeDasharray: '5 3' }
+          const dim = { stroke: '#c9c6bf', strokeWidth: 1, strokeDasharray: '3 2' }
           const rightDim = CANVAS + 30
           const rightLbl = CANVAS + 44
           return (
@@ -722,7 +722,7 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
           const cW = (leftW + rightW) / 2
           const cM = (leftM + rightM) / 2
           const ext = { stroke: '#c9c6bf', strokeWidth: 1, strokeDasharray: '3 2' }
-          const dim = { stroke: '#6a6a6a', strokeWidth: 1.1, strokeDasharray: '5 3' }
+          const dim = { stroke: '#c9c6bf', strokeWidth: 1, strokeDasharray: '3 2' }
           const rightDim = CANVAS + 30
           const rightLbl = CANVAS + 44
           return (

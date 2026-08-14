@@ -219,9 +219,8 @@ export function PdfMirrorPreview({ opts, width: configWidth, height: configHeigh
 
     const balkH = svgBottomCut - svgTopCut
 
-    const DIM_SIZE = 155
     return (
-      <Svg width={DIM_SIZE} height={DIM_SIZE} viewBox={`-6 -26 ${SIZE + 46} ${SIZE + 32}`}>
+      <Svg width={146} height={115} viewBox={`-6 -25 ${SIZE + 46} ${SIZE + 13}`}>
         {hasIndirect && (
           <Circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
         )}

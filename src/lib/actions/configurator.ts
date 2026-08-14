@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
-import { DEFAULT_PRODUCT_ID, buildSelectedOptionsJson } from '@/lib/actions/configurator-helpers'
+import { DEFAULT_PRODUCT_ID, buildSelectedOptionsJson, assertSolLunaMaat } from '@/lib/actions/configurator-helpers'
 import { z } from 'zod'
 import { parseOrThrow, configInputSchema } from '@/lib/validation'
 
@@ -80,6 +80,7 @@ async function assertConfiguratorAccess(
 
 export async function saveConfiguration(rawInput: SaveConfigInput) {
   const input = parseOrThrow(saveConfigSchema, rawInput) as SaveConfigInput
+  assertSolLunaMaat(input)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
@@ -174,6 +175,7 @@ type UpdateConfigInput = SaveConfigInput & { configId: string }
 
 export async function updateConfiguration(rawInput: UpdateConfigInput) {
   const input = parseOrThrow(updateConfigSchema, rawInput) as UpdateConfigInput
+  assertSolLunaMaat(input)
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

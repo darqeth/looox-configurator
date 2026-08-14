@@ -1,4 +1,4 @@
-import { ShapeSlug, GlasKleur, LightType } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax } from '@/lib/configurator-config'
 
 // Fixed product UUID for the default LoooX spiegel product
 // Run the seed SQL in Supabase to create this product
@@ -41,6 +41,28 @@ export function assertValidAttachmentUrl(url: string | null | undefined): string
     throw new Error('Ongeldige bijlage-URL')
   }
   return url
+}
+
+// Vangnet: de UI blokkeert "Volgende" al bij een te grote Sol/Luna, maar de
+// server is de echte poortwachter. Beide zijden van het bovendeel > 150 cm =
+// niet te produceren (zie configurator-config).
+export function assertSolLunaMaat(input: {
+  shape: ShapeSlug
+  diameter: number | null
+  solMeubelHoogte?: number
+  solOnderkant?: number
+  lunaMeubelHoogte?: number
+  lunaOnderkant?: number
+  lunaAfstand?: number
+}) {
+  if (input.diameter == null) return
+  if (input.shape === 'sol') {
+    if (solLunaExceedsMax(computeSolMainPiece(input.diameter, input.solMeubelHoogte ?? 0, input.solOnderkant ?? 0)))
+      throw new Error('Deze Sol-spiegel is te groot om te produceren: breedte en hoogte zijn beide groter dan 150 cm.')
+  } else if (input.shape === 'luna') {
+    if (solLunaExceedsMax(computeLunaMainPiece(input.diameter, input.lunaMeubelHoogte ?? 0, input.lunaOnderkant ?? 0, input.lunaAfstand ?? 0)))
+      throw new Error('Deze Luna-spiegel is te groot om te produceren: breedte en hoogte zijn beide groter dan 150 cm.')
+  }
 }
 
 export function buildSelectedOptionsJson(input: OptionsJsonBase) {

@@ -25,6 +25,7 @@ import {
   calcRechthoekFramePrice,
   ORGANIC_INDIRECT_LED_PRICES,
   RONDE_GLAS_SMOKE_M2,
+  computeSolMainPiece,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 
@@ -49,7 +50,7 @@ export type ConfigPreview = {
 }
 
 // Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen
-export const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstandLinks, lunaAfstandRechts, size = 220 }: {
+export const MirrorPreview = memo(function MirrorPreview({ shape, width, height, diameter, directPosition, indirectPosition, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstandLinks, lunaAfstandRechts, size = 220, showDimensions = false }: {
   shape: ShapeSlug
   width: number
   height: number
@@ -65,6 +66,7 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
   lunaAfstandLinks?: number
   lunaAfstandRechts?: number
   size?: number
+  showDimensions?: boolean
 }) {
   const glass = GLASS_APPEARANCE[glasKleur] ?? GLASS_APPEARANCE['helder']
   const CANVAS = 220
@@ -517,7 +519,7 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
     const extraClipId = 'sol-extra-clip'
 
     return (
-      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+      <svg width={size} height={size} viewBox={showDimensions ? `-14 -42 ${CANVAS + 78} ${CANVAS + 54}` : `0 0 ${CANVAS} ${CANVAS}`}>
         <defs>
           <filter id="wall-glow-sol" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="7" />
@@ -579,6 +581,41 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
         <line x1={cx - r * 0.2} y1={cy - r * 0.5} x2={cx + r * 0.28} y2={cy + r * 0.38}
           stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round"
           clipPath={`url(#${clipId})`} />
+
+        {/* Maatlijnen (overlay, wijzigt de vorm-opbouw niet) */}
+        {showDimensions && (() => {
+          const mp = computeSolMainPiece(d, meubelH, onderkantH)
+          const topY = cy - r
+          const mw = Math.sqrt(Math.max(0, r * r - (svgTopCut - cy) * (svgTopCut - cy)))
+          const ext = { stroke: '#c9c6bf', strokeWidth: 1, strokeDasharray: '3 2' }
+          const dim = { stroke: '#c9c6bf', strokeWidth: 1, strokeDasharray: '3 2' }
+          const rightDim = CANVAS + 30
+          const rightLbl = CANVAS + 44
+          return (
+            <g>
+              {/* Diametermaat (boven) — tot de breedste punten */}
+              <line x1={cx - r} y1={cy} x2={cx - r} y2={-34} {...ext} />
+              <line x1={cx + r} y1={cy} x2={cx + r} y2={-34} {...ext} />
+              <line x1={cx - r} y1={-30} x2={cx + r} y2={-30} {...dim} />
+              <rect x={cx - 31} y={-39} width={62} height={17} rx={3.5} fill="#fff" />
+              <text x={cx} y={-26.5} textAnchor="middle" fontSize={12} fill="#222" fontWeight={700}>⌀ {d} cm</text>
+              {/* Breedte op meubel — onder de diametermaat, tot de meubelrand */}
+              <line x1={cx - mw} y1={svgTopCut} x2={cx - mw} y2={-10} {...ext} />
+              <line x1={cx + mw} y1={svgTopCut} x2={cx + mw} y2={-10} {...ext} />
+              <line x1={cx - mw} y1={-6} x2={cx + mw} y2={-6} {...dim} />
+              <rect x={cx - 27} y={-15} width={54} height={17} rx={3.5} fill="#fff" />
+              <text x={cx} y={-2.5} textAnchor="middle" fontSize={12} fill="#222" fontWeight={700}>{mp.meubelBreedte} cm</text>
+              {/* Hoogte (rechts) — tot boven- en meubelrand */}
+              <line x1={cx} y1={topY} x2={rightLbl} y2={topY} {...ext} />
+              <line x1={cx + mw} y1={svgTopCut} x2={rightLbl} y2={svgTopCut} {...ext} />
+              <line x1={rightDim} y1={topY} x2={rightDim} y2={svgTopCut} {...dim} />
+              <g transform={`translate(${rightLbl + 6}, ${(topY + svgTopCut) / 2}) rotate(-90)`}>
+                <rect x={-27} y={-8.5} width={54} height={17} rx={3.5} fill="#fff" />
+                <text x={0} y={4} textAnchor="middle" fontSize={12} fill="#222" fontWeight={700}>{mp.hoogte} cm</text>
+              </g>
+            </g>
+          )
+        })()}
       </svg>
     )
   }
@@ -602,7 +639,7 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
     const extraClipId = 'luna-extra-clip'
 
     return (
-      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+      <svg width={size} height={size} viewBox={showDimensions ? `-14 -42 ${CANVAS + 78} ${CANVAS + 54}` : `0 0 ${CANVAS} ${CANVAS}`}>
         <defs>
           <filter id="wall-glow-luna" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="7" />
@@ -670,6 +707,49 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
         <line x1={cx - r * 0.2} y1={cy - r * 0.5} x2={cx + r * 0.28} y2={cy + r * 0.38}
           stroke="white" strokeWidth="9" opacity={glass.glansOpacity} strokeLinecap="round"
           clipPath={`url(#${clipId})`} />
+
+        {/* Maatlijnen (overlay, wijzigt de vorm-opbouw niet) */}
+        {showDimensions && (() => {
+          const topY = cy - r
+          const mw = Math.sqrt(Math.max(0, r * r - (svgTopCut - cy) * (svgTopCut - cy)))
+          const leftW = Math.max(cx - r, svgLeftCut)
+          const rightW = Math.min(cx + r, svgRightCut)
+          const leftM = Math.max(cx - mw, svgLeftCut)
+          const rightM = Math.min(cx + mw, svgRightCut)
+          const breedteCm = Math.round((rightW - leftW) / scale)
+          const meubelBreedteCm = Math.round((rightM - leftM) / scale)
+          const hoogteCm = Math.round((svgTopCut - topY) / scale)
+          const cW = (leftW + rightW) / 2
+          const cM = (leftM + rightM) / 2
+          const ext = { stroke: '#c9c6bf', strokeWidth: 1, strokeDasharray: '3 2' }
+          const dim = { stroke: '#c9c6bf', strokeWidth: 1, strokeDasharray: '3 2' }
+          const rightDim = CANVAS + 30
+          const rightLbl = CANVAS + 44
+          return (
+            <g>
+              {/* Breedte (boven) */}
+              <line x1={leftW} y1={cy} x2={leftW} y2={-34} {...ext} />
+              <line x1={rightW} y1={cy} x2={rightW} y2={-34} {...ext} />
+              <line x1={leftW} y1={-30} x2={rightW} y2={-30} {...dim} />
+              <rect x={cW - 27} y={-39} width={54} height={17} rx={3.5} fill="#fff" />
+              <text x={cW} y={-26.5} textAnchor="middle" fontSize={12} fill="#222" fontWeight={700}>{breedteCm} cm</text>
+              {/* Breedte op meubel */}
+              <line x1={leftM} y1={svgTopCut} x2={leftM} y2={-10} {...ext} />
+              <line x1={rightM} y1={svgTopCut} x2={rightM} y2={-10} {...ext} />
+              <line x1={leftM} y1={-6} x2={rightM} y2={-6} {...dim} />
+              <rect x={cM - 27} y={-15} width={54} height={17} rx={3.5} fill="#fff" />
+              <text x={cM} y={-2.5} textAnchor="middle" fontSize={12} fill="#222" fontWeight={700}>{meubelBreedteCm} cm</text>
+              {/* Hoogte (rechts) */}
+              <line x1={cx} y1={topY} x2={rightLbl} y2={topY} {...ext} />
+              <line x1={rightM} y1={svgTopCut} x2={rightLbl} y2={svgTopCut} {...ext} />
+              <line x1={rightDim} y1={topY} x2={rightDim} y2={svgTopCut} {...dim} />
+              <g transform={`translate(${rightLbl + 6}, ${(topY + svgTopCut) / 2}) rotate(-90)`}>
+                <rect x={-27} y={-8.5} width={54} height={17} rx={3.5} fill="#fff" />
+                <text x={0} y={4} textAnchor="middle" fontSize={12} fill="#222" fontWeight={700}>{hoogteCm} cm</text>
+              </g>
+            </g>
+          )
+        })()}
       </svg>
     )
   }
@@ -744,6 +824,10 @@ export default function PricePanel({
   lunaMeubelHoogte, lunaOnderkant, lunaAfstandLinks, lunaAfstandRechts,
 }: PricePanelProps) {
   const mult = isInternational ? 1.05 : 1
+  // Maatweergave-toggle: alleen live preview (Sol/Luna). Niet opgeslagen; de PDF
+  // toont de maten altijd. Standaard aan.
+  const [showDimensions, setShowDimensions] = useState(true)
+  const isSolLuna = shape === 'sol' || shape === 'luna'
   const netto = useMemo(() => calcTotalPrice({
     shape, width, height, diameter, organicSizeKey, glasKleur,
     lunaMeubelHoogte,
@@ -913,8 +997,24 @@ export default function PricePanel({
           lunaOnderkant={lunaOnderkant}
           lunaAfstandLinks={lunaAfstandLinks}
           lunaAfstandRechts={lunaAfstandRechts}
+          showDimensions={isSolLuna && showDimensions}
+          size={isSolLuna ? 244 : 220}
         />
       </div>
+
+      {/* Maatweergave-toggle onder de card (alleen Sol/Luna) */}
+      {isSolLuna && (
+        <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showDimensions}
+            onChange={(e) => setShowDimensions(e.target.checked)}
+            className="sr-only peer"
+          />
+          <span className="w-8 h-[18px] rounded-full bg-black/15 peer-checked:bg-lx-cta relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-[14px] after:h-[14px] after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-[14px]" />
+          <span className="text-[12px] text-lx-text-secondary font-medium">Afmetingen weergeven</span>
+        </label>
+      )}
 
       {/* Prijs kaart */}
       <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-5 space-y-4">

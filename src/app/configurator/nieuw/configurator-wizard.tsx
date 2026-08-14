@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS, LightType } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax } from '@/lib/configurator-config'
 import ShapePicker from './shape-picker'
 import { ModeSelector } from './mode-selector'
 import { AIIntake } from './ai-intake'
@@ -225,13 +225,17 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     }
     if (shape === 'rond') return diameter !== null
     if (shape === 'organic') return organicSizeKey !== null
-    if (shape === 'sol') return diameter !== null && solMeubelHoogte > 0 && solOnderkant >= 0
+    if (shape === 'sol') return (
+      diameter !== null && solMeubelHoogte > 0 && solOnderkant >= 0 &&
+      !solLunaExceedsMax(computeSolMainPiece(diameter, solMeubelHoogte, solOnderkant))
+    )
     if (shape === 'luna') return (
       diameter !== null &&
       lunaMeubelHoogte > 0 &&
       lunaOnderkant >= 0 &&
       lunaAfstand >= 0 &&
-      lunaAfstand < (diameter ?? 0) / 2
+      lunaAfstand < (diameter ?? 0) / 2 &&
+      !solLunaExceedsMax(computeLunaMainPiece(diameter, lunaMeubelHoogte, lunaOnderkant, lunaAfstand))
     )
     return false
   }
@@ -780,6 +784,21 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
 
                 {/* Navigation */}
                 {step < 4 && (
+                  <>
+                  {step === 1 && (() => {
+                    const m = shape === 'sol' && diameter != null
+                      ? computeSolMainPiece(diameter, solMeubelHoogte, solOnderkant)
+                      : shape === 'luna' && diameter != null
+                      ? computeLunaMainPiece(diameter, lunaMeubelHoogte, lunaOnderkant, lunaAfstand)
+                      : null
+                    return m && solLunaExceedsMax(m) ? (
+                      <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+                        <p className="text-[12.5px] text-amber-800 leading-relaxed">
+                          Deze spiegel is te groot om te produceren: zowel de breedte ({m.breedte} cm) als de hoogte ({m.hoogte} cm) is groter dan 150 cm. Plaats het meubel hoger of kies een kleinere maat, zodat de breedte óf de hoogte onder 150 cm komt.
+                        </p>
+                      </div>
+                    ) : null
+                  })()}
                   <div className="flex justify-between mt-8 pt-5 border-t border-lx-divider">
                     <button
                       onClick={() => step > 1 ? setStep(step - 1) : (setShape(null), setWizardMode('manual'))}
@@ -805,6 +824,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       </svg>
                     </button>
                   </div>
+                  </>
                 )}
               </div>
             </div>

@@ -228,6 +228,53 @@ export function computeLunaRestmaten(diameter: number, meubelHoogte: number, ond
   }
 }
 
+// ─── Sol/Luna: maat van het grootste glasdeel (restmaat / bovendeel) ──────────
+// De spiegel wordt uit een glasplaat gesneden die in één richting max 150 cm is;
+// het deel kan gedraaid worden, dus de KORTSTE zijde moet passen. Alleen het
+// grootste deel (het bovendeel) telt — losse delen worden apart geproduceerd.
+// Deze helpers geven de omhullende maat van dát bovendeel (cm), gebruikt door de
+// 150-check én de maatweergave. De vorm-opbouw zelf verandert hier niet.
+
+export const SOL_LUNA_MAX_ZIJDE = 150
+
+export type MainPieceMaten = { breedte: number; hoogte: number; meubelBreedte: number }
+
+export function computeSolMainPiece(diameter: number, meubelHoogte: number, onderkant: number): MainPieceMaten {
+  const r = diameter / 2
+  const meubelTop = onderkant + meubelHoogte
+  const hoogte = Math.max(0, diameter - meubelTop)
+  const halveKoorde = Math.sqrt(Math.max(0, r * r - (meubelTop - r) * (meubelTop - r)))
+  // Breedste koorde van het bovendeel: het midden (breedste punt) valt in het
+  // bovendeel zolang de meubellijn op/onder het midden ligt → dan = diameter.
+  const breedte = meubelTop <= r ? diameter : halveKoorde * 2
+  return {
+    breedte: Math.round(breedte),
+    hoogte: Math.round(hoogte),
+    meubelBreedte: Math.round(halveKoorde * 2),
+  }
+}
+
+export function computeLunaMainPiece(diameter: number, meubelHoogte: number, onderkant: number, afstand: number): MainPieceMaten {
+  const r = diameter / 2
+  const meubelTop = onderkant + meubelHoogte
+  const hoogte = Math.max(0, diameter - meubelTop)
+  const halveKoorde = Math.sqrt(Math.max(0, r * r - (meubelTop - r) * (meubelTop - r)))
+  // Halve breedte van het Sol-bovendeel, dan de wandafsnede aan één zijde eraf.
+  const halfSol = meubelTop <= r ? r : halveKoorde
+  const breedte = halfSol + Math.min(halfSol, r - afstand)
+  const meubelBreedte = Math.min(2 * halveKoorde, halveKoorde + r - afstand)
+  return {
+    breedte: Math.round(Math.max(0, breedte)),
+    hoogte: Math.round(hoogte),
+    meubelBreedte: Math.round(Math.max(0, meubelBreedte)),
+  }
+}
+
+// Beide zijden > 150 → niet te produceren (kortste zijde past niet op de plaat).
+export function solLunaExceedsMax(m: MainPieceMaten): boolean {
+  return m.breedte > SOL_LUNA_MAX_ZIJDE && m.hoogte > SOL_LUNA_MAX_ZIJDE
+}
+
 // ─── Sol/Luna catalogusprijzen ────────────────────────────────────────────────
 // Bron: LoooX prijslijst 2026
 

@@ -220,7 +220,7 @@ export function PdfMirrorPreview({ opts, width: configWidth, height: configHeigh
     const balkH = svgBottomCut - svgTopCut
 
     return (
-      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+      <Svg width={146} height={115} viewBox={`-6 -25 ${SIZE + 46} ${SIZE + 13}`}>
         {hasIndirect && (
           <Circle cx={cx} cy={cy} r={r + 4} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.7} />
         )}
@@ -252,6 +252,48 @@ export function PdfMirrorPreview({ opts, width: configWidth, height: configHeigh
         )}
         <Line x1={cx - r * 0.15} y1={cy - r * 0.45} x2={cx + r * 0.25} y2={cy + r * 0.35}
           stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+
+        {/* Maatlijnen — altijd in de PDF (overlay, wijzigt de vorm niet) */}
+        {(() => {
+          const mw = halfChordTop
+          const leftW = shape === 'luna' ? Math.max(cx - r, svgLeftCut) : cx - r
+          const rightW = shape === 'luna' ? Math.min(cx + r, svgRightCut) : cx + r
+          const leftM = shape === 'luna' ? Math.max(cx - mw, svgLeftCut) : cx - mw
+          const rightM = shape === 'luna' ? Math.min(cx + mw, svgRightCut) : cx + mw
+          const topY = cy - r
+          const breedteCm = shape === 'luna' ? Math.round((rightW - leftW) / scale) : d
+          const meubelBreedteCm = Math.round((rightM - leftM) / scale)
+          const hoogteCm = Math.round((svgTopCut - topY) / scale)
+          const cW = (leftW + rightW) / 2
+          const cM = (leftM + rightM) / 2
+          const ext = { stroke: '#c9c6bf', strokeWidth: 0.5, strokeDasharray: '2 1.5' }
+          const dim = { stroke: '#c9c6bf', strokeWidth: 0.5, strokeDasharray: '2 1.5' }
+          const rightDim = SIZE + 12
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const T = (tx: number, ty: number, t: string) => (<Text {...{ x: tx, y: ty, textAnchor: 'middle', fontSize: 6.5, fill: '#222222', fontFamily: 'Helvetica-Bold' } as any}>{t}</Text>)
+          return (
+            <>
+              {/* Breedte / diameter (boven) */}
+              <Line x1={leftW} y1={cy} x2={leftW} y2={-19} {...ext} />
+              <Line x1={rightW} y1={cy} x2={rightW} y2={-19} {...ext} />
+              <Line x1={leftW} y1={-17} x2={rightW} y2={-17} {...dim} />
+              <Rect x={cW - 14} y={-23.5} width={28} height={9} fill="#FFFFFF" />
+              {T(cW, -17, shape === 'luna' ? `${breedteCm} cm` : `⌀ ${breedteCm} cm`)}
+              {/* Breedte op meubel */}
+              <Line x1={leftM} y1={svgTopCut} x2={leftM} y2={-6} {...ext} />
+              <Line x1={rightM} y1={svgTopCut} x2={rightM} y2={-6} {...ext} />
+              <Line x1={leftM} y1={-4.5} x2={rightM} y2={-4.5} {...dim} />
+              <Rect x={cM - 11} y={-11} width={22} height={9} fill="#FFFFFF" />
+              {T(cM, -4.5, `${meubelBreedteCm} cm`)}
+              {/* Hoogte (rechts) */}
+              <Line x1={cx} y1={topY} x2={rightDim + 2} y2={topY} {...ext} />
+              <Line x1={rightM} y1={svgTopCut} x2={rightDim + 2} y2={svgTopCut} {...ext} />
+              <Line x1={rightDim} y1={topY} x2={rightDim} y2={svgTopCut} {...dim} />
+              <Rect x={rightDim + 3} y={(topY + svgTopCut) / 2 - 4.5} width={24} height={9} fill="#FFFFFF" />
+              {T(rightDim + 15, (topY + svgTopCut) / 2 + 1.7, `${hoogteCm} cm`)}
+            </>
+          )
+        })()}
       </Svg>
     )
   }

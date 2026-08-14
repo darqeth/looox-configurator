@@ -998,20 +998,23 @@ export default function PricePanel({
           lunaAfstandLinks={lunaAfstandLinks}
           lunaAfstandRechts={lunaAfstandRechts}
           showDimensions={isSolLuna && showDimensions}
+          size={isSolLuna ? 244 : 220}
         />
-        {isSolLuna && (
-          <label className="mt-3 flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showDimensions}
-              onChange={(e) => setShowDimensions(e.target.checked)}
-              className="sr-only peer"
-            />
-            <span className="w-8 h-[18px] rounded-full bg-black/15 peer-checked:bg-lx-cta relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-[14px] after:h-[14px] after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-[14px]" />
-            <span className="text-[12px] text-lx-text-secondary font-medium">Afmetingen weergeven</span>
-          </label>
-        )}
       </div>
+
+      {/* Maatweergave-toggle onder de card (alleen Sol/Luna) */}
+      {isSolLuna && (
+        <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showDimensions}
+            onChange={(e) => setShowDimensions(e.target.checked)}
+            className="sr-only peer"
+          />
+          <span className="w-8 h-[18px] rounded-full bg-black/15 peer-checked:bg-lx-cta relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-[14px] after:h-[14px] after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-[14px]" />
+          <span className="text-[12px] text-lx-text-secondary font-medium">Afmetingen weergeven</span>
+        </label>
+      )}
 
       {/* Prijs kaart */}
       <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-5 space-y-4">

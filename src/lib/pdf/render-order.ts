@@ -3,6 +3,7 @@ import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import OrderDocument from './order-document'
 import type { ConfigOptions } from './helpers'
+import { prepareAttachmentForPdf } from './prepare-attachment'
 
 export type OrderRenderInput = {
   orderNumber: string
@@ -34,7 +35,9 @@ export async function renderOrderPDF(input: OrderRenderInput): Promise<Buffer> {
   const staffelKortingPct = typeof (input.config.options as Record<string, unknown>)?.staffelKortingPct === 'number'
     ? (input.config.options as Record<string, unknown>).staffelKortingPct as number
     : undefined
+  // Bijlage normaliseren zodat react-pdf 'm kan insluiten (iPhone-JPEG-fix)
+  const attachmentUrl = await prepareAttachmentForPdf(input.attachmentUrl)
   return renderToBuffer(
-    React.createElement(OrderDocument, { ...input, staffelKortingPct }) as React.ReactElement<DocumentProps>
+    React.createElement(OrderDocument, { ...input, attachmentUrl, staffelKortingPct }) as React.ReactElement<DocumentProps>
   )
 }

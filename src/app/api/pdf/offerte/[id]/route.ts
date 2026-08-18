@@ -5,6 +5,7 @@ import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import OfferteDocument from '@/lib/pdf/offerte-document'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
+import { prepareAttachmentForPdf } from '@/lib/pdf/prepare-attachment'
 
 export async function GET(
   _req: NextRequest,
@@ -53,7 +54,7 @@ export async function GET(
   const unitPrice = isProjectspiegel && quantity > 1
     ? Math.round((totalPrice / quantity) * 100) / 100
     : totalPrice
-  const attachmentUrl = (opts.attachmentUrl as string | null) ?? null
+  const attachmentUrl = await prepareAttachmentForPdf(opts.attachmentUrl as string | null)
 
   const buffer = await renderToBuffer(React.createElement(OfferteDocument, {
     configName: config.name,

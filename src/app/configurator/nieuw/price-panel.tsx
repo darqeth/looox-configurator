@@ -1071,7 +1071,7 @@ export default function PricePanel({
             {shape === 'elips' && (
               <div className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5">
                 <p className="text-[11.5px] text-amber-800 leading-snug">
-                  Let op: dit is een <strong>voorlopige prijs</strong> (€20/m² placeholder). De definitieve glasprijs voor de Elips wordt nog aangeleverd.
+                  Let op: dit is een <strong>voorlopige prijs</strong> (€20/m² placeholder). De definitieve glasprijs voor de Ellips wordt nog aangeleverd.
                 </p>
               </div>
             )}

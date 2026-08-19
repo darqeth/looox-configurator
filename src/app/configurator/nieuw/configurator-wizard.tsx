@@ -750,6 +750,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     solOnderkant={solOnderkant}
                     lunaOnderkant={lunaOnderkant}
                     lunaMeubelHoogte={lunaMeubelHoogte}
+                    lightControl={directLight.control ?? indirectLight.control}
                   />
                 )}
 

@@ -176,7 +176,7 @@ export default function StepSamenvatting({
         </div>
         {shape === 'elips' && (
           <p className="text-[11px] text-amber-700 leading-snug pt-1">
-            Voorlopige prijs (€20/m² placeholder) — de definitieve glasprijs voor de Elips wordt nog aangeleverd.
+            Voorlopige prijs (€20/m² placeholder) — de definitieve glasprijs voor de Ellips wordt nog aangeleverd.
           </p>
         )}
       </div>

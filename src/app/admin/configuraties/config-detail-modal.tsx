@@ -44,7 +44,7 @@ const shapeLabel: Record<string, string> = {
   'op-aanvraag':   'Op aanvraag',
   'rounded-rect':  'Afgerond',
   ovaal:           'Ovaal',
-  elips: 'Elips',
+  elips: 'Ellips',
   arc:             'Boog',
   projectspiegel:  'Projectspiegel',
 }

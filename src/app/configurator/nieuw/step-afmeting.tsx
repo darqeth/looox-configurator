@@ -519,7 +519,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
           </div>
         </div>
         <DimInput
-          label={isLiggend ? 'Breedte (lange zijde)' : 'Hoogte (lange zijde)'}
+          label="Lange zijde"
           value={lange}
           onChange={setLange}
           minOverride={80}

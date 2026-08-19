@@ -65,7 +65,7 @@ export function assertSolLunaMaat(input: {
     const lo = Math.min(w, h)
     const hi = Math.max(w, h)
     if (!(lo >= 40 && hi <= 200 && lo > 0)) {
-      throw new Error('Elips-maat ongeldig: kortste zijde min. 40 cm, langste zijde max. 200 cm.')
+      throw new Error('Ellips-maat ongeldig: kortste zijde min. 40 cm, langste zijde max. 200 cm.')
     }
     return
   }

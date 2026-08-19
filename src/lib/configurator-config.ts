@@ -8,7 +8,7 @@ export const SHAPES = [
   { slug: 'organic'      as ShapeSlug, name: 'Organic',          description: 'Vrije organische vorm, vaste afmetingen',          fromPrice: 281 },
   { slug: 'rounded-rect' as ShapeSlug, name: 'Afgeronde hoeken', description: 'Rechthoek met zacht afgeronde hoeken, volledig maatwerk', fromPrice: 149 },
   { slug: 'ovaal'        as ShapeSlug, name: 'Ovaal',            description: 'Piltvorm — beide korte zijden volledig afgerond',      fromPrice: 149 },
-  { slug: 'elips'        as ShapeSlug, name: 'Elips',            description: 'Echte ellipsvorm, verhouding 1:2, liggend of staand',  fromPrice: null },
+  { slug: 'elips'        as ShapeSlug, name: 'Ellips',            description: 'Echte ellipsvorm, verhouding 1:2, liggend of staand',  fromPrice: null },
   { slug: 'arc'          as ShapeSlug, name: 'Arc',              description: 'Één korte zijde recht, de andere volledig afgerond',   fromPrice: 149 },
   { slug: 'sol'          as ShapeSlug, name: 'Sol',               description: 'Cirkelvormig, passend om badkamermeubel',             fromPrice: 999 },
   { slug: 'luna'         as ShapeSlug, name: 'Luna',              description: 'Cirkelvormig, passend tegen muur en badkamermeubel',   fromPrice: 829 },
@@ -122,23 +122,23 @@ export const ELIPS_CONSTRAINTS = { minShort: 40, maxLong: 200, ratio: 2 }
 // Elips-lichttypes: geen RGB.
 export const ELIPS_LIGHT_TYPES: LightType[] = ['3000k', '4000k', 'cct']
 
-// Elips-bediening per lichttype (geen motion-sensor, geen wip-schakelaar;
-// afstandsbediening alleen bij CCT).
+// Ellips-bediening per lichttype: 3000/4000K → Centraal, Touch, Motion sensor.
+// CCT → alleen Afstandsbediening. Geen wip-schakelaar; RGB niet beschikbaar.
 export const ELIPS_CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; auto?: boolean }[]> = {
   '3000k': [
     { id: 'externe-schakeling', name: 'Centraal' },
     { id: 'tip-touch',          name: 'Tip-Touch' },
+    { id: 'motion-sensor',      name: 'Motion sensor' },
   ],
   '4000k': [
     { id: 'externe-schakeling', name: 'Centraal' },
     { id: 'tip-touch',          name: 'Tip-Touch' },
+    { id: 'motion-sensor',      name: 'Motion sensor' },
   ],
   cct: [
-    { id: 'externe-schakeling', name: 'Centraal' },
-    { id: 'tip-touch',          name: 'Tip-Touch' },
     { id: 'afstandsbediening',  name: 'Afstandsbediening' },
   ],
-  rgbw: [], // n.v.t. voor Elips
+  rgbw: [], // n.v.t. voor Ellips
 }
 
 // Beschikbare bediening voor een vorm + lichttype (shape-bewust).

@@ -355,7 +355,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
     )
   }
 
-  const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', elips: 'Elips', arc: 'Boog', sol: 'Sol', luna: 'Luna', projectspiegel: 'Projectspiegel' }
+  const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', elips: 'Ellips', arc: 'Boog', sol: 'Sol', luna: 'Luna', projectspiegel: 'Projectspiegel' }
 
   return (
     <div className="divide-y divide-lx-divider">

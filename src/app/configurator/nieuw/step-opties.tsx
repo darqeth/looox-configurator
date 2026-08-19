@@ -246,11 +246,12 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                 )}
                 {isSelected && option.id === 'verwarming' && (
                   <p className="text-[11px] text-lx-text-secondary mt-1 leading-snug" onClick={e => e.stopPropagation()}>
+                    <span className="font-semibold text-lx-text-primary">Schakeling</span><br />
                     {verwarmingViaSchakelaar
-                      ? 'Schakeling: de verwarming schakelt automatisch mee met de gekozen schakelaar van de verlichting.'
+                      ? 'De verwarming schakelt automatisch mee met de gekozen schakelaar van de verlichting.'
                       : verwarmingViaAfstand
-                      ? 'Schakeling: de verwarming wordt geschakeld via de centrale wandschakelaar in de ruimte, niet via de afstandsbediening.'
-                      : 'Schakeling: de verwarming wordt geschakeld via de centrale wandschakelaar in de ruimte.'}
+                      ? 'De verwarming wordt geschakeld via de centrale wandschakelaar in de ruimte, niet via de afstandsbediening.'
+                      : 'De verwarming wordt geschakeld via de centrale wandschakelaar in de ruimte.'}
                   </p>
                 )}
                 <p className={`text-[11px] mt-0.5 ${isDisabled && incompatibleReason ? 'text-red-400' : 'invisible'}`}>

@@ -196,6 +196,11 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     if (s === 'sol' || s === 'luna') {
       initSolLunaDefaults(null)
     }
+    if (s === 'elips') {
+      // Geldige 1:2-startmaat (liggend)
+      setWidth(100)
+      setHeight(50)
+    }
   }, [initSolLunaDefaults])
 
   const handleAIConfirm = useCallback((s: AISuggestion, aiImageFile?: File | null) => {
@@ -222,6 +227,11 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     if (shape === 'rechthoek' || shape === 'op-aanvraag' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
       const { min, max } = RECHTHOEK_CONSTRAINTS
       return width >= min && width <= max && height >= min && height <= max
+    }
+    if (shape === 'elips') {
+      const lo = Math.min(width, height)
+      const hi = Math.max(width, height)
+      return lo >= 40 && hi <= 200 && lo > 0
     }
     if (shape === 'rond') return diameter !== null
     if (shape === 'organic') return organicSizeKey !== null

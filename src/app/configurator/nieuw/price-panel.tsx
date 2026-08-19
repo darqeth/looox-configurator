@@ -442,6 +442,40 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
     )
   }
 
+  if (shape === 'elips') {
+    // Echte ellips (verhouding 1:2). Alleen indirecte verlichting rondom.
+    const ratio = Math.min(available / width, available / height)
+    const w = Math.round(width * ratio)
+    const h = Math.round(height * ratio)
+    const cx2 = CANVAS / 2
+    const cy2 = CANVAS / 2
+    const erx = w / 2
+    const ery = h / 2
+    const hasIndirect = indirectPosition !== 'geen'
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${CANVAS} ${CANVAS}`}>
+        <defs>
+          <filter id="wall-glow-el" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <mask id="outside-mask-el">
+            <rect x="0" y="0" width={CANVAS} height={CANVAS} fill="white" />
+            <ellipse cx={cx2} cy={cy2} rx={erx} ry={ery} fill="black" />
+          </mask>
+        </defs>
+        {hasIndirect && (
+          <ellipse cx={cx2} cy={cy2} rx={erx} ry={ery} fill="none"
+            stroke="#FEF3C7" strokeWidth="14" opacity="0.85" filter="url(#wall-glow-el)"
+            mask="url(#outside-mask-el)" />
+        )}
+        <ellipse cx={cx2} cy={cy2} rx={erx} ry={ery} fill={glass.fill} opacity={glass.fillOpacity} />
+        <ellipse cx={cx2} cy={cy2} rx={erx} ry={ery} fill="none" stroke={glass.stroke} strokeWidth="1.5" />
+        <line x1={cx2 - erx * 0.5} y1={cy2 - ery * 0.5} x2={cx2 - erx * 0.1} y2={cy2 + ery * 0.4}
+          stroke="white" strokeWidth="8" opacity={glass.glansOpacity} strokeLinecap="round" />
+      </svg>
+    )
+  }
+
   if (shape === 'arc') {
     const ratio = Math.min(available / width, available / height)
     const w = Math.round(width * ratio)
@@ -1033,6 +1067,14 @@ export default function PricePanel({
               <AnimatedPrice price={Math.round(netto * mult)} />
               <p className="text-[11px] text-lx-text-secondary mt-0.5">Excl. btw</p>
             </div>
+
+            {shape === 'elips' && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5">
+                <p className="text-[11.5px] text-amber-800 leading-snug">
+                  Let op: dit is een <strong>voorlopige prijs</strong> (€20/m² placeholder). De definitieve glasprijs voor de Elips wordt nog aangeleverd.
+                </p>
+              </div>
+            )}
 
             {lineItems.length > 0 && (
               <div className="space-y-1.5 border-t border-lx-divider pt-3">

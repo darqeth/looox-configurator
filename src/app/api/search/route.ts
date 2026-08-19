@@ -7,6 +7,7 @@ const SHAPE_LABELS: Record<string, string> = {
   organic: 'Organic',
   'rounded-rect': 'Afgerond',
   ovaal: 'Ovaal',
+  elips: 'Elips',
   arc: 'Boog',
   'op-aanvraag': 'Op aanvraag',
 }

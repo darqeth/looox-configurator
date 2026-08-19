@@ -33,6 +33,7 @@ const SHAPE_LABELS: Record<string, string> = {
   'op-aanvraag': 'Op aanvraag',
   'rounded-rect': 'Rechthoek afgerond',
   ovaal: 'Ovaal',
+  elips: 'Elips',
   arc: 'Boog (Arc)',
   sol: 'Sol',
   luna: 'Luna',

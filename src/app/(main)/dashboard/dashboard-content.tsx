@@ -143,7 +143,7 @@ export function DashboardContent({ data }: { data: DashboardData }) {
                 if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
-                const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', arc: 'Boog' }
+                const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', elips: 'Elips', arc: 'Boog' }
                 const ShapeIcon = () => <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
                 return (
                   <div key={config.id} className="flex items-center gap-3 px-5 py-3 hover:bg-lx-panel-bg transition-colors group">

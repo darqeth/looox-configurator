@@ -10,7 +10,6 @@ import {
   EXTRA_OPTIONS,
   calcTotalPrice,
   calcBasePrice,
-  calcGlasKosten,
   calcDirectLEDMeters,
   calcIndirectLEDMeters,
   calcHeatingPrice,
@@ -26,6 +25,7 @@ import {
   ORGANIC_INDIRECT_LED_PRICES,
   RONDE_GLAS_SMOKE_M2,
   computeSolMainPiece,
+  glasKostenForShape,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 
@@ -884,11 +884,11 @@ export default function PricePanel({
 
   const lineItems: { label: string; price: number }[] = []
 
-  if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
-    // Glaskosten
-    const glasKosten = calcGlasKosten(width, height, glasKleur)
+  if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc' || shape === 'elips') {
+    // Glaskosten (Elips: eigen €/m² placeholder via glasKostenForShape)
+    const glasKosten = glasKostenForShape(shape, width, height, glasKleur)
     const glasNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? 'Helder'
-    const shapePrefix = shape === 'rounded-rect' ? 'Afgerond' : shape === 'ovaal' ? 'Ovaal' : shape === 'arc' ? 'Boog' : 'Glas'
+    const shapePrefix = shape === 'rounded-rect' ? 'Afgerond' : shape === 'ovaal' ? 'Ovaal' : shape === 'arc' ? 'Boog' : shape === 'elips' ? 'Ellips' : 'Glas'
     lineItems.push({ label: `${shapePrefix} ${width}×${height} cm · ${glasNaam}`, price: Math.round(glasKosten) + 105 })
 
     if (directLight.position !== 'geen' && directLight.type) {
@@ -1034,19 +1034,6 @@ export default function PricePanel({
           showDimensions={isSolLuna && showDimensions}
           size={isSolLuna ? 244 : 220}
         />
-        {(() => {
-          const dimLabel =
-            shape === 'rond' || shape === 'sol' || shape === 'luna'
-              ? (diameter ? `⌀ ${diameter} cm` : '')
-              : shape === 'organic'
-              ? (organicSizeKey ? `${organicSizeKey.replace('x', ' × ')} cm` : '')
-              : shape === 'projectspiegel' || shape === 'op-aanvraag'
-              ? ''
-              : (width && height ? `B ${width} × H ${height} cm` : '')
-          return dimLabel ? (
-            <p className="mt-2 text-[12.5px] font-semibold text-lx-text-primary">{dimLabel}</p>
-          ) : null
-        })()}
       </div>
 
       {/* Maatweergave-toggle onder de card (alleen Sol/Luna) */}

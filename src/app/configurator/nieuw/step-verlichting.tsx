@@ -155,7 +155,7 @@ const SharedLightSettings = memo(function SharedLightSettings({
                   <div key={ctrl.id} className="relative group/tooltip">
                     <button
                       onClick={() => onControlChange(ctrl.id)}
-                      className={`relative w-full flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                      className={`relative w-full h-full flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
                         isActive
                           ? 'bg-lx-panel-bg border-lx-cta text-lx-cta'
                           : 'bg-white border-black/10 text-lx-text-secondary hover:border-lx-cta/50 hover:text-lx-cta'

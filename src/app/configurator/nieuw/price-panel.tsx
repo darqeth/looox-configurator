@@ -1034,6 +1034,19 @@ export default function PricePanel({
           showDimensions={isSolLuna && showDimensions}
           size={isSolLuna ? 244 : 220}
         />
+        {(() => {
+          const dimLabel =
+            shape === 'rond' || shape === 'sol' || shape === 'luna'
+              ? (diameter ? `⌀ ${diameter} cm` : '')
+              : shape === 'organic'
+              ? (organicSizeKey ? `${organicSizeKey.replace('x', ' × ')} cm` : '')
+              : shape === 'projectspiegel' || shape === 'op-aanvraag'
+              ? ''
+              : (width && height ? `B ${width} × H ${height} cm` : '')
+          return dimLabel ? (
+            <p className="mt-2 text-[12.5px] font-semibold text-lx-text-primary">{dimLabel}</p>
+          ) : null
+        })()}
       </div>
 
       {/* Maatweergave-toggle onder de card (alleen Sol/Luna) */}

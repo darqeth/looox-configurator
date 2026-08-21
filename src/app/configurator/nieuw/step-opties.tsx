@@ -59,10 +59,15 @@ interface StepOptiesProps {
   solOnderkant?: number
   lunaOnderkant?: number
   lunaMeubelHoogte?: number
+  lightControl?: string | null
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition: _indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35 }: StepOptiesProps) {
+export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition: _indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35, lightControl }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
+  // Verwarming-schakeling: mee met de spiegelschakelaar, of (bij afstandsbediening
+  // / geen schakelaar) via de centrale wandschakelaar in de ruimte.
+  const verwarmingViaSchakelaar = !!lightControl && lightControl !== 'afstandsbediening'
+  const verwarmingViaAfstand = lightControl === 'afstandsbediening'
   const available = EXTRA_OPTIONS.filter((opt) => {
     if ((shape === 'sol' || shape === 'luna') && ['bluetooth-speaker', 'digitale-klok'].includes(opt.id)) return false
     return opt.shapes.includes(shape)
@@ -238,6 +243,16 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                 <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">{option.description}</p>
                 {isSelected && option.id === 'schuine-zijden' && (
                   <p className="text-[11px] text-lx-cta mt-1 font-medium">Tekening vereist — aanleveren in stap 5</p>
+                )}
+                {isSelected && option.id === 'verwarming' && (
+                  <p className="text-[11px] text-lx-text-secondary mt-1 leading-snug" onClick={e => e.stopPropagation()}>
+                    <span className="font-semibold text-lx-text-primary">Schakeling</span><br />
+                    {verwarmingViaSchakelaar
+                      ? 'De verwarming schakelt automatisch mee met de gekozen schakelaar van de verlichting.'
+                      : verwarmingViaAfstand
+                      ? 'De verwarming wordt geschakeld via de centrale wandschakelaar in de ruimte, niet via de afstandsbediening.'
+                      : 'De verwarming wordt geschakeld via de centrale wandschakelaar in de ruimte.'}
+                  </p>
                 )}
                 <p className={`text-[11px] mt-0.5 ${isDisabled && incompatibleReason ? 'text-red-400' : 'invisible'}`}>
                   Niet beschikbaar

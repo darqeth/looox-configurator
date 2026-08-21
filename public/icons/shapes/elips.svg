@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64">
+  <defs>
+    <style>
+      .st0 {
+        fill: none;
+        stroke: #9ca3af;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 3.7px;
+      }
+    </style>
+  </defs>
+  <path class="st0" d="M3 32 A29 14 0 1 0 61 32 A29 14 0 1 0 3 32 Z"/>
+</svg>

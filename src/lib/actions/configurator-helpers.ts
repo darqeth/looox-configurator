@@ -49,12 +49,26 @@ export function assertValidAttachmentUrl(url: string | null | undefined): string
 export function assertSolLunaMaat(input: {
   shape: ShapeSlug
   diameter: number | null
+  width?: number | null
+  height?: number | null
   solMeubelHoogte?: number
   solOnderkant?: number
   lunaMeubelHoogte?: number
   lunaOnderkant?: number
   lunaAfstand?: number
 }) {
+  // Elips: kortste zijde ≥ 40, langste ≤ 200 (verhouding 1:2 wordt in de UI
+  // afgedwongen; hier alleen de grenzen als vangnet).
+  if (input.shape === 'elips') {
+    const w = input.width ?? 0
+    const h = input.height ?? 0
+    const lo = Math.min(w, h)
+    const hi = Math.max(w, h)
+    if (!(lo >= 40 && hi <= 200 && lo > 0)) {
+      throw new Error('Ellips-maat ongeldig: kortste zijde min. 40 cm, langste zijde max. 200 cm.')
+    }
+    return
+  }
   if (input.diameter == null) return
   if (input.shape === 'sol') {
     if (solLunaExceedsMax(computeSolMainPiece(input.diameter, input.solMeubelHoogte ?? 0, input.solOnderkant ?? 0)))

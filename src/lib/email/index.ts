@@ -16,6 +16,7 @@ const SHAPE_LABELS: Record<string, string> = {
   rond: 'Rond',
   organic: 'Organic',
   'op-aanvraag': 'Op aanvraag',
+  elips: 'Ellips',
 }
 
 const GLAS_LABELS: Record<string, string> = {

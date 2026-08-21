@@ -1,5 +1,5 @@
 import React from 'react'
-import { Svg, Rect, Path, Circle, Line, G, Text } from '@react-pdf/renderer'
+import { Svg, Rect, Path, Circle, Ellipse, Line, G, Text } from '@react-pdf/renderer'
 import { ConfigOptions } from './helpers'
 
 // ─── Gedeelde PDF spiegel-preview ─────────────────────────────────────────────
@@ -106,6 +106,22 @@ export function PdfMirrorPreview({ opts, width: configWidth, height: configHeigh
         <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill={glass.fill} fillOpacity={glass.fillOpacity} />
         <Rect x={x} y={y} width={w} height={h} rx={rx} ry={ry} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
         {hasDirect && ovaalDirectIndicator()}
+        <Line x1={x + w*0.2} y1={y + h*0.15} x2={x + w*0.55} y2={y + h*0.7} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
+      </Svg>
+    )
+  }
+
+  if (shape === 'elips') {
+    // Echte ellips (1:2). Alleen indirecte verlichting rondom.
+    const ecx = x + w / 2
+    const ecy = y + h / 2
+    const erx = w / 2
+    const ery = h / 2
+    return (
+      <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        {hasIndirect && <Ellipse cx={ecx} cy={ecy} rx={erx + 3} ry={ery + 3} fill="none" stroke={GLOW} strokeWidth={GLOW_W} opacity={0.8} />}
+        <Ellipse cx={ecx} cy={ecy} rx={erx} ry={ery} fill={glass.fill} fillOpacity={glass.fillOpacity} />
+        <Ellipse cx={ecx} cy={ecy} rx={erx} ry={ery} fill="none" stroke={glass.stroke} strokeWidth="1.2" />
         <Line x1={x + w*0.2} y1={y + h*0.15} x2={x + w*0.55} y2={y + h*0.7} stroke="white" strokeWidth="5" opacity={0.09} strokeLinecap="round" />
       </Svg>
     )

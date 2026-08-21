@@ -1,4 +1,4 @@
-export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc' | 'projectspiegel' | 'sol' | 'luna'
+export type ShapeSlug = 'rechthoek' | 'rond' | 'organic' | 'op-aanvraag' | 'rounded-rect' | 'ovaal' | 'arc' | 'projectspiegel' | 'sol' | 'luna' | 'elips'
 export type LightType = '3000k' | '4000k' | 'rgbw' | 'cct'
 export type GlasKleur = 'helder' | 'smoke-zwart' | 'smoke-brons'
 
@@ -8,6 +8,7 @@ export const SHAPES = [
   { slug: 'organic'      as ShapeSlug, name: 'Organic',          description: 'Vrije organische vorm, vaste afmetingen',          fromPrice: 281 },
   { slug: 'rounded-rect' as ShapeSlug, name: 'Afgeronde hoeken', description: 'Rechthoek met zacht afgeronde hoeken, volledig maatwerk', fromPrice: 149 },
   { slug: 'ovaal'        as ShapeSlug, name: 'Ovaal',            description: 'Piltvorm — beide korte zijden volledig afgerond',      fromPrice: 149 },
+  { slug: 'elips'        as ShapeSlug, name: 'Ellips',            description: 'Echte ellipsvorm, verhouding 1:2, liggend of staand',  fromPrice: null },
   { slug: 'arc'          as ShapeSlug, name: 'Arc',              description: 'Één korte zijde recht, de andere volledig afgerond',   fromPrice: 149 },
   { slug: 'sol'          as ShapeSlug, name: 'Sol',               description: 'Cirkelvormig, passend om badkamermeubel',             fromPrice: 999 },
   { slug: 'luna'         as ShapeSlug, name: 'Luna',              description: 'Cirkelvormig, passend tegen muur en badkamermeubel',   fromPrice: 829 },
@@ -34,6 +35,7 @@ export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   arc:            ['geen', 'rondom'],
   sol:            [],
   luna:           [],
+  elips:          [], // Elips: geen directe verlichting
   // Op-aanvraag: zelfde direct/indirect keuzes als rechthoek (beide onafhankelijk)
   'op-aanvraag':  ['geen', 'boven', 'boven-beneden', 'links-rechts', 'rondom'],
   projectspiegel: [],
@@ -48,6 +50,7 @@ export const INDIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
   arc:            ['geen', 'rondom'],
   sol:            ['geen', 'rondom'],
   luna:           ['geen', 'rondom'],
+  elips:          ['geen', 'rondom'],
   'op-aanvraag':  ['geen', 'boven-beneden', 'onder', 'links-rechts', 'rondom'],
   projectspiegel: [],
 }
@@ -105,6 +108,55 @@ export const CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; au
     { id: 'tip-touch',         name: 'Tip-Touch' },
     { id: 'afstandsbediening', name: 'Afstandsbediening' },
   ],
+}
+
+// ─── Elips ────────────────────────────────────────────────────────────────────
+// Echte ellips, verhouding 1:2. Glasprijs per kleur op de omhullende rechthoek
+// (helder €325/m², brons/grijs €393/m²).
+// Ellips heeft een eigen, striktere optiematrix: alleen indirecte verlichting
+// rondom, geen RGB, en een eigen bedieningslijst.
+
+// €/m² op de omhullende rechthoek, per glaskleur.
+export const ELIPS_GLAS_PRIJS_M2: Record<GlasKleur, number> = {
+  'helder':      325,
+  'smoke-zwart': 393, // "Grijs"
+  'smoke-brons': 393, // "Brons"
+}
+export const ELIPS_CONSTRAINTS = { minShort: 40, maxLong: 200, ratio: 2 }
+
+// Elips-lichttypes: geen RGB.
+export const ELIPS_LIGHT_TYPES: LightType[] = ['3000k', '4000k', 'cct']
+
+// Ellips-bediening per lichttype: 3000/4000K → Centraal, Touch, Motion sensor.
+// CCT → alleen Afstandsbediening. Geen wip-schakelaar; RGB niet beschikbaar.
+export const ELIPS_CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; auto?: boolean }[]> = {
+  '3000k': [
+    { id: 'externe-schakeling', name: 'Centraal' },
+    { id: 'tip-touch',          name: 'Tip-Touch' },
+    { id: 'motion-sensor',      name: 'Motion sensor' },
+  ],
+  '4000k': [
+    { id: 'externe-schakeling', name: 'Centraal' },
+    { id: 'tip-touch',          name: 'Tip-Touch' },
+    { id: 'motion-sensor',      name: 'Motion sensor' },
+  ],
+  cct: [
+    { id: 'afstandsbediening',  name: 'Afstandsbediening' },
+  ],
+  rgbw: [], // n.v.t. voor Ellips
+}
+
+// Beschikbare bediening voor een vorm + lichttype (shape-bewust).
+export function controlsForShapeType(shape: ShapeSlug, type: LightType): { id: string; name: string; auto?: boolean }[] {
+  if (shape === 'elips') return ELIPS_CONTROLS_FOR_TYPE[type]
+  return CONTROLS_FOR_TYPE[type]
+}
+
+// Beschikbare lichttypes voor een vorm.
+export function lightTypesForShape(shape: ShapeSlug): LightType[] {
+  if (shape === 'sol' || shape === 'luna') return ['3000k', '4000k']
+  if (shape === 'elips') return ELIPS_LIGHT_TYPES
+  return ['3000k', '4000k', 'rgbw', 'cct']
 }
 
 // ─── Glaskleur ────────────────────────────────────────────────────────────────
@@ -349,6 +401,14 @@ export function calcGlasKosten(
   return areaM2 * (GLAS_PRIJS_M2[glasKleur] ?? 175)
 }
 
+// Glasprijs afhankelijk van de vorm. Ellips gebruikt een eigen €/m² per kleur
+// (helder €325, brons/grijs €393) op de omhullende rechthoek; overige
+// maatwerkvormen de reguliere prijs.
+export function glasKostenForShape(shape: ShapeSlug, widthCm: number, heightCm: number, glasKleur: GlasKleur): number {
+  if (shape === 'elips') return ((widthCm / 100) * (heightCm / 100)) * (ELIPS_GLAS_PRIJS_M2[glasKleur] ?? ELIPS_GLAS_PRIJS_M2.helder)
+  return calcGlasKosten(widthCm, heightCm, glasKleur)
+}
+
 // ─── Extra opties ─────────────────────────────────────────────────────────────
 
 export type ExtraOptionSubChoice = {
@@ -380,7 +440,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     description: 'Anti-condensverwarming achter de spiegel',
     price: 0,
     priceDisplay: 'v.a. €76',
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna', 'op-aanvraag'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna', 'op-aanvraag', 'elips'],
     incompatibleWith: [],
     shapeIncompatibleWith: { sol: ['digitale-klok', 'bluetooth-speaker'], luna: ['digitale-klok', 'bluetooth-speaker'] },
   },
@@ -405,7 +465,7 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     name: 'Bluetooth speaker',
     description: 'Verborgen speaker in het frame',
     price: 459,
-    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna', 'op-aanvraag'],
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna', 'op-aanvraag', 'elips'],
     incompatibleWith: [],
   },
   {
@@ -500,8 +560,8 @@ export function calcBasePrice(
   _directPosition: string = 'geen',
 ): number {
   if (shape === 'projectspiegel') return 0
-  if (shape === 'rechthoek' || shape === 'op-aanvraag' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
-    return Math.round(calcGlasKosten(width, height, glasKleur) + VASTE_TOESLAG)
+  if (shape === 'rechthoek' || shape === 'op-aanvraag' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc' || shape === 'elips') {
+    return Math.round(glasKostenForShape(shape, width, height, glasKleur) + VASTE_TOESLAG)
   }
   if (shape === 'rond' && diameter) {
     return (ROND_BASIS_GLAS[diameter] ?? 92) + VASTE_TOESLAG
@@ -569,8 +629,8 @@ export function calcTotalPrice(state: {
   }
 
   // ── Rechthoek / Afgeronde hoeken / Ovaal / Arc: zelfde glasprijs + LED ─────
-  if (state.shape === 'rechthoek' || state.shape === 'rounded-rect' || state.shape === 'ovaal' || state.shape === 'arc') {
-    const glasKosten = calcGlasKosten(state.width, state.height, glasKleur)
+  if (state.shape === 'rechthoek' || state.shape === 'rounded-rect' || state.shape === 'ovaal' || state.shape === 'arc' || state.shape === 'elips') {
+    const glasKosten = glasKostenForShape(state.shape, state.width, state.height, glasKleur)
     let price = glasKosten + VASTE_TOESLAG
 
     // Direct LED + zandstraalbaan (alleen als positie + type gekozen)

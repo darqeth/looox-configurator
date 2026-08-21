@@ -483,6 +483,62 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
     )
   }
 
+  if (shape === 'elips') {
+    // Verhouding altijd 1:2. Klant kiest oriëntatie + de lange zijde (80–200);
+    // korte zijde = helft (40–100). Oriëntatie leiden we af uit width vs height.
+    const isLiggend = width >= height
+    const lange = Math.min(200, Math.max(80, Math.max(width, height)))
+    const setLange = (L: number) => {
+      const clamped = Math.min(200, Math.max(80, L))
+      if (isLiggend) onChange({ width: clamped, height: Math.round(clamped / 2) })
+      else onChange({ height: clamped, width: Math.round(clamped / 2) })
+    }
+    const setOrientatie = (liggend: boolean) => {
+      if (liggend) onChange({ width: lange, height: Math.round(lange / 2) })
+      else onChange({ height: lange, width: Math.round(lange / 2) })
+    }
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Oriëntatie</p>
+          <div className="flex gap-2">
+            {[{ k: true, label: 'Liggend' }, { k: false, label: 'Staand' }].map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => setOrientatie(o.k)}
+                className={`flex-1 py-2 rounded-xl text-[13px] font-semibold border transition-all ${
+                  isLiggend === o.k
+                    ? 'bg-lx-cta text-white border-lx-cta'
+                    : 'bg-white text-lx-text-primary border-black/12 hover:border-lx-cta hover:text-lx-cta'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <DimInput
+          label={isLiggend ? 'Breedte (lange zijde)' : 'Hoogte (lange zijde)'}
+          value={lange}
+          onChange={setLange}
+          minOverride={80}
+          maxOverride={200}
+        />
+        <p className="text-[12px] text-lx-text-secondary">
+          Verhouding 1:2 —{' '}
+          {isLiggend
+            ? `breedte ${lange} × hoogte ${Math.round(lange / 2)} cm`
+            : `breedte ${Math.round(lange / 2)} × hoogte ${lange} cm`}
+          . Lange zijde 80–200 cm; de korte zijde is automatisch de helft.
+        </p>
+        <div className="border-t border-lx-divider pt-5">
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+        </div>
+      </div>
+    )
+  }
+
   // Op aanvraag
   return (
     <div className="space-y-6">

@@ -12,6 +12,8 @@ import {
   LIGHT_TYPE_DESCRIPTIONS,
   CONTROLS_FOR_TYPE,
   CONTROL_PRICES,
+  lightTypesForShape,
+  controlsForShapeType,
 } from '@/lib/configurator-config'
 
 type LightConfig = {
@@ -92,7 +94,7 @@ const SharedLightSettings = memo(function SharedLightSettings({
   isInternational?: boolean
 }) {
   const mult = isInternational ? 1.05 : 1
-  const lightTypes: LightType[] = (shape === 'sol' || shape === 'luna') ? ['3000k', '4000k'] : ['3000k', '4000k', 'rgbw', 'cct']
+  const lightTypes: LightType[] = lightTypesForShape(shape)
 
   return (
     <div className="pl-0.5 space-y-4 pt-4 border-t border-lx-divider">
@@ -127,12 +129,12 @@ const SharedLightSettings = memo(function SharedLightSettings({
         <div className="space-y-3 pt-1">
           <div className="flex items-center gap-1.5">
             <p className="text-[11.5px] font-semibold text-lx-text-secondary uppercase tracking-wide">Bediening</p>
-            {!control && !CONTROLS_FOR_TYPE[type][0]?.auto && (
+            {!control && !controlsForShapeType(shape, type)[0]?.auto && (
               <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Verplicht</span>
             )}
           </div>
 
-          {CONTROLS_FOR_TYPE[type][0]?.auto ? (
+          {controlsForShapeType(shape, type)[0]?.auto ? (
             <div className="relative flex items-center gap-3 p-3 bg-lx-panel-bg rounded-xl border border-black/8">
               <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-lx-icon-bg text-lx-cta">
                 {shape === 'op-aanvraag' ? 'Op offerte' : `+€${Math.round(CONTROL_PRICES['afstandsbediening'] * mult)}`}
@@ -145,7 +147,7 @@ const SharedLightSettings = memo(function SharedLightSettings({
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {CONTROLS_FOR_TYPE[type].filter(ctrl => (shape !== 'sol' && shape !== 'luna') || ['tip-touch', 'afstandsbediening'].includes(ctrl.id)).map((ctrl) => {
+              {controlsForShapeType(shape, type).filter(ctrl => (shape !== 'sol' && shape !== 'luna') || ['tip-touch', 'afstandsbediening'].includes(ctrl.id)).map((ctrl) => {
                 const price = Math.round((CONTROL_PRICES[ctrl.id] ?? 0) * mult)
                 const isActive = control === ctrl.id
                 const tooltip = controlTooltips?.[ctrl.id]
@@ -153,7 +155,7 @@ const SharedLightSettings = memo(function SharedLightSettings({
                   <div key={ctrl.id} className="relative group/tooltip">
                     <button
                       onClick={() => onControlChange(ctrl.id)}
-                      className={`relative w-full flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                      className={`relative w-full h-full flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
                         isActive
                           ? 'bg-lx-panel-bg border-lx-cta text-lx-cta'
                           : 'bg-white border-black/10 text-lx-text-secondary hover:border-lx-cta/50 hover:text-lx-cta'
@@ -287,12 +289,14 @@ export default function StepVerlichting({
 
   return (
     <div className="space-y-6">
-      <PositionPicker
-        title="Directe verlichting"
-        positions={directPositions}
-        selected={directLight.position}
-        onSelect={selectDirect}
-      />
+      {directPositions.length > 0 && (
+        <PositionPicker
+          title="Directe verlichting"
+          positions={directPositions}
+          selected={directLight.position}
+          onSelect={selectDirect}
+        />
+      )}
 
       <PositionPicker
         title="Indirecte verlichting"

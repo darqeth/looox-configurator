@@ -2,8 +2,7 @@
 
 **Datum:** 2026-08-19
 **Status:** goedgekeurd (matrix + aanpak akkoord door Mark)
-**Belangrijk:** glasprijs is een **placeholder (€20/m²)**. Gaat **NIET naar main**
-tot de echte prijs bekend is. Testen op preview.
+**Glasprijs:** €325/m² op de omhullende rechthoek (aangeleverd 2026-08-21).
 
 ## Doel
 Een nieuwe spiegelvorm **Elips** (echte ellips) toevoegen aan de configurator,

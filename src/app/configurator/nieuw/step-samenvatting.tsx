@@ -174,11 +174,6 @@ export default function StepSamenvatting({
             : <span className="text-[17px] font-bold text-lx-cta">€{unitPrice.toLocaleString('nl-NL')}</span>
           }
         </div>
-        {shape === 'elips' && (
-          <p className="text-[11px] text-amber-700 leading-snug pt-1">
-            Voorlopige prijs (€20/m² placeholder) — de definitieve glasprijs voor de Ellips wordt nog aangeleverd.
-          </p>
-        )}
       </div>
 
       {/* Project details */}

@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 export const shapeSchema = z.enum([
   'rechthoek', 'rond', 'organic', 'op-aanvraag', 'rounded-rect',
-  'ovaal', 'arc', 'projectspiegel', 'sol', 'luna',
+  'ovaal', 'arc', 'projectspiegel', 'sol', 'luna', 'elips',
 ])
 
 export const glasKleurSchema = z.enum(['helder', 'smoke-zwart', 'smoke-brons'])

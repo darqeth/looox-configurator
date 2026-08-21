@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-19
 **Status:** goedgekeurd (matrix + aanpak akkoord door Mark)
-**Glasprijs:** €325/m² op de omhullende rechthoek (aangeleverd 2026-08-21).
+**Glasprijs:** per kleur op de omhullende rechthoek — helder €325/m², brons+grijs €393/m² (aangeleverd 2026-08-21).
 
 ## Doel
 Een nieuwe spiegelvorm **Elips** (echte ellips) toevoegen aan de configurator,

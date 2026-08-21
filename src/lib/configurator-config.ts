@@ -111,11 +111,17 @@ export const CONTROLS_FOR_TYPE: Record<LightType, { id: string; name: string; au
 }
 
 // ─── Elips ────────────────────────────────────────────────────────────────────
-// Echte ellips, verhouding 1:2. Glasprijs €325/m² op de omhullende rechthoek.
+// Echte ellips, verhouding 1:2. Glasprijs per kleur op de omhullende rechthoek
+// (helder €325/m², brons/grijs €393/m²).
 // Ellips heeft een eigen, striktere optiematrix: alleen indirecte verlichting
 // rondom, geen RGB, en een eigen bedieningslijst.
 
-export const ELIPS_GLAS_PRIJS_M2 = 325 // €/m² op de omhullende rechthoek
+// €/m² op de omhullende rechthoek, per glaskleur.
+export const ELIPS_GLAS_PRIJS_M2: Record<GlasKleur, number> = {
+  'helder':      325,
+  'smoke-zwart': 393, // "Grijs"
+  'smoke-brons': 393, // "Brons"
+}
 export const ELIPS_CONSTRAINTS = { minShort: 40, maxLong: 200, ratio: 2 }
 
 // Elips-lichttypes: geen RGB.
@@ -395,10 +401,11 @@ export function calcGlasKosten(
   return areaM2 * (GLAS_PRIJS_M2[glasKleur] ?? 175)
 }
 
-// Glasprijs afhankelijk van de vorm. Ellips gebruikt een eigen €/m² (€325) op de
-// omhullende rechthoek; overige maatwerkvormen de reguliere prijs.
+// Glasprijs afhankelijk van de vorm. Ellips gebruikt een eigen €/m² per kleur
+// (helder €325, brons/grijs €393) op de omhullende rechthoek; overige
+// maatwerkvormen de reguliere prijs.
 export function glasKostenForShape(shape: ShapeSlug, widthCm: number, heightCm: number, glasKleur: GlasKleur): number {
-  if (shape === 'elips') return ((widthCm / 100) * (heightCm / 100)) * ELIPS_GLAS_PRIJS_M2
+  if (shape === 'elips') return ((widthCm / 100) * (heightCm / 100)) * (ELIPS_GLAS_PRIJS_M2[glasKleur] ?? ELIPS_GLAS_PRIJS_M2.helder)
   return calcGlasKosten(widthCm, heightCm, glasKleur)
 }
 

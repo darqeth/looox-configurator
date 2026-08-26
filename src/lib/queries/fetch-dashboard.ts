@@ -130,7 +130,8 @@ export async function fetchDashboard(): Promise<DashboardData> {
   const savedConfigCount = configStatusRows?.filter(c => c.status === 'saved').length ?? 0
   const orderedConfigCount = configStatusRows?.filter(c => c.status === 'ordered').length ?? 0
   const korting = profile?.korting ?? 50
-  const canOrder = !memberData || memberData.role === 'manager' || (memberData?.can_order ?? true)
+  // can_order is leidend, ook voor een manager; geen member-rij = mag bestellen
+  const canOrder = memberData ? (memberData.can_order ?? true) : true
   const revenueSum = (ownOrders ?? []).reduce((sum, o) => sum + Number(o.total_price), 0)
 
   // LoooX Circle berekeningen

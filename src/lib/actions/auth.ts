@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { sendWelcomeEmail, sendPasswordResetEmail, sendNewRegistrationEmail } from '@/lib/email'
 import { getNotificationEmails } from '@/lib/actions/settings'
+import { ensureCompanyMembership } from '@/lib/ensure-company'
 
 export async function signIn(email: string, password: string) {
   const supabase = await createClient()
@@ -33,54 +34,10 @@ export async function signIn(email: string, password: string) {
   if (profile.approval_status === 'rejected')
     redirect('/pending?rejected=true')
 
-  // Auto-manager: als goedgekeurde user een bedrijfsnaam heeft maar nog geen company_members-rij
+  // Auto-manager: zorg dat een goedgekeurde user met bedrijfsnaam een bedrijf +
+  // company_members-rij heeft (idempotent). Zelfde logica als bij goedkeuren.
   if (profile.company) {
-    const { data: existingMember } = await supabase
-      .from('company_members')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (!existingMember) {
-      const admin = createAdminClient()
-
-      // Prefer existing company_id on the profile to avoid duplicate companies
-      let companyId = profile.company_id ?? null
-
-      if (!companyId) {
-        // Lookup by name first (case-insensitive) to stay idempotent under retries
-        const { data: existingCompany } = await admin
-          .from('companies')
-          .select('id')
-          .ilike('name', profile.company)
-          .maybeSingle()
-
-        if (existingCompany) {
-          companyId = existingCompany.id
-        } else {
-          const { data: newCompany } = await admin
-            .from('companies')
-            .insert({ name: profile.company })
-            .select('id')
-            .single()
-          companyId = newCompany?.id ?? null
-        }
-      }
-
-      if (companyId) {
-        await Promise.all([
-          admin.from('profiles').update({ company_id: companyId }).eq('id', user.id),
-          admin.from('company_members').upsert({
-            company_id: companyId,
-            user_id: user.id,
-            role: 'manager',
-            can_order: true,
-            can_configure: true,
-            own_configs_only: false,
-          }, { onConflict: 'user_id' }),
-        ])
-      }
-    }
+    await ensureCompanyMembership(user.id)
   }
 
   redirect('/dashboard')

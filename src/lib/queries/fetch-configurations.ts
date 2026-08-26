@@ -61,7 +61,8 @@ export async function fetchConfigurations(params: {
 
   const korting = profileData?.korting ?? 50
   const isManager = !memberPerms || memberPerms.role === 'manager'
-  const canOrder = isManager || (memberPerms?.can_order ?? true)
+  // can_order is leidend, ook voor een manager; geen member-rij = mag bestellen
+  const canOrder = memberPerms ? (memberPerms.can_order ?? true) : true
   const canConfigure = isManager || (memberPerms?.can_configure ?? true)
 
   const loadTeamMembers = async (): Promise<TeamMember[]> => {

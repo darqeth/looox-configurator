@@ -242,7 +242,10 @@ async function assertCanOrder(
     .maybeSingle()
 
   const isManager = !member || member.role === 'manager'
-  if (!isManager && member?.can_order === false) {
+  // can_order is leidend, óók voor een manager (superadmin kan de eerste/enige
+  // persoon van een bedrijf zo het bestellen ontzeggen). Geen member-rij = solo
+  // gebruiker zonder bedrijf → mag bestellen.
+  if (member?.can_order === false) {
     throw new Error('Je hebt geen rechten om te bestellen')
   }
 

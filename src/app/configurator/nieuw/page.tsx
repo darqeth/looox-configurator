@@ -31,8 +31,8 @@ export default async function NieuweConfiguratiePage() {
   if (user) {
     const profile = profileResult.data
     const memberData = memberResult.data
-    const isManager = !memberData || memberData.role === 'manager'
-    canOrder = isManager || (memberData?.can_order ?? true)
+    // can_order is leidend, ook voor een manager; geen member-rij = mag bestellen
+    canOrder = memberData ? (memberData.can_order ?? true) : true
     isInternational = profile?.is_international ?? false
     access = parseConfiguratorAccess((profile as { configurator_access?: string | null } | null)?.configurator_access)
     korting = profile?.korting ?? 50

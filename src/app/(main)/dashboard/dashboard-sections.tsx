@@ -34,7 +34,7 @@ const getProfile = cache(async (userId: string) => {
     // 'project'-stand = geen Circle/milestones; 'beide' ziet alles (besluit B4)
     isGroothandel: (profile as { configurator_access?: string | null } | null)?.configurator_access === 'project',
     korting: profile?.korting ?? 50,
-    canOrder: !member || member.role === 'manager' || (member?.can_order ?? true),
+    canOrder: member ? (member.can_order ?? true) : true,
     companyId: member?.company_id ?? null,
     firstName: profile?.full_name?.split(' ')[0] ?? 'daar',
     company: profile?.company ?? '',

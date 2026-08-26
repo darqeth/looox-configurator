@@ -51,8 +51,8 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     attachmentUrl: (opts.attachmentUrl as string | null) ?? null,
   }
 
-  const isManager = !memberData || memberData.role === 'manager'
-  const canOrder = isManager || (memberData?.can_order ?? true)
+  // can_order is leidend, ook voor een manager; geen member-rij = mag bestellen
+  const canOrder = memberData ? (memberData.can_order ?? true) : true
   const korting = profile?.korting ?? 50
   const isInternational = profile?.is_international ?? false
   // Routeren op het TYPE van de configuratie, niet op de accountstand —

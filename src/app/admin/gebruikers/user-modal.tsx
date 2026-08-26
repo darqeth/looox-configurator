@@ -9,6 +9,7 @@ import {
   toggleInternational,
   setConfiguratorAccess,
   linkUserToCompany,
+  createCompanyForUser,
   updateMemberPermissions,
   generatePasswordResetLink,
   deleteUser,
@@ -117,6 +118,20 @@ export function UserEditModal({
         setConfiguratorAccessState(prev)
         toast('Stand wijzigen mislukt. Probeer het opnieuw.')
       })
+  }
+
+  function handleCreateCompany() {
+    startTransition(async () => {
+      setError(null)
+      const result = await createCompanyForUser(profile.id)
+      if (result.success && result.companyId) {
+        setSelectedCompanyId(result.companyId)
+        showSuccess('Bedrijf aangemaakt en gekoppeld')
+        router.refresh()
+      } else {
+        setError(result.error ?? 'Bedrijf aanmaken mislukt')
+      }
+    })
   }
 
   function handleSaveCompany() {
@@ -396,6 +411,22 @@ export function UserEditModal({
                   ))}
                 </select>
               </div>
+
+              {!selectedCompanyId && profile.company && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-[12px] text-amber-800 leading-snug mb-2">
+                    Deze gebruiker heeft bedrijfsnaam <strong>{profile.company}</strong>, maar er is nog geen bedrijf-entiteit. Maak het bedrijf aan om rechten te kunnen instellen.
+                  </p>
+                  <button
+                    onClick={handleCreateCompany}
+                    disabled={isPending}
+                    className="w-full flex items-center justify-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[12.5px] font-semibold py-2 rounded-xl transition-colors disabled:opacity-60 cursor-pointer"
+                  >
+                    {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    Bedrijf &ldquo;{profile.company}&rdquo; aanmaken &amp; koppelen
+                  </button>
+                </div>
+              )}
 
               {selectedCompanyId && (
                 <>

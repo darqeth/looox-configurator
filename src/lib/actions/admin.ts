@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isAdmin, isAdminOrSubAdmin } from '@/lib/company-utils'
+import { ensureCompanyMembership } from '@/lib/ensure-company'
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { headers } from 'next/headers'
 import { sendApprovalEmail, sendOrderStatusEmail, sendControleVereistEmail } from '@/lib/email'
@@ -55,14 +56,35 @@ export async function updateApprovalStatus(userId: string, status: 'approved' | 
     .update({ approval_status: status })
     .eq('id', userId)
 
-  if (status === 'approved' && profile?.email) {
-    sendApprovalEmail({
-      to: profile.email,
-      name: profile.full_name ?? 'Gebruiker',
-    }).catch(() => {})
+  if (status === 'approved') {
+    // Maak meteen het bedrijf + manager-lidmaatschap aan zodat de eerste/enige
+    // persoon direct koppelbaar is en er rechten ingesteld kunnen worden
+    // (voorheen gebeurde dit pas bij de eerste login).
+    await ensureCompanyMembership(userId)
+    if (profile?.email) {
+      sendApprovalEmail({
+        to: profile.email,
+        name: profile.full_name ?? 'Gebruiker',
+      }).catch(() => {})
+    }
   }
 
   revalidatePath('/admin/gebruikers')
+}
+
+// Maakt handmatig het bedrijf + manager-lidmaatschap aan voor een reeds
+// goedgekeurde gebruiker die wel een bedrijfsnaam heeft maar nog geen
+// bedrijfskoppeling (bv. nog niet ingelogd). Geeft het company_id terug.
+export async function createCompanyForUser(userId: string): Promise<{ success: boolean; companyId?: string; error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdmin(supabase, user.id)) return { success: false, error: 'Geen toegang' }
+
+  const companyId = await ensureCompanyMembership(userId)
+  if (!companyId) return { success: false, error: 'Geen bedrijfsnaam op dit account om een bedrijf van te maken.' }
+
+  revalidatePath('/admin/gebruikers')
+  return { success: true, companyId }
 }
 
 export async function linkUserToCompany(

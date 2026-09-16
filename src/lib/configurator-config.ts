@@ -20,8 +20,8 @@ export const ROND_DIAMETERS = [30, 40, 50, 60, 70, 80, 100, 120]
 export const ORGANIC_SIZES = [
   { label: '60 × 40 cm', width: 60,  height: 40, key: '60x40' },
   { label: '80 × 60 cm', width: 80,  height: 60, key: '80x60' },
-  { label: '100 × 70 cm', width: 100, height: 70, key: '100x70' },
-  { label: '120 × 80 cm', width: 120, height: 80, key: '120x80' },
+  { label: '100 × 80 cm', width: 100, height: 80, key: '100x80' },
+  { label: '120 × 100 cm', width: 120, height: 100, key: '120x100' },
 ]
 
 export const RECHTHOEK_CONSTRAINTS = { min: 40, max: 300 }
@@ -541,11 +541,11 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
 // ─── Organic basisprijs per maat ─────────────────────────────────────────────
 
 export const ORGANIC_BASE_PRICES: Record<string, number> = {
-  '60x40': 281, '80x60': 345, '100x70': 420, '120x80': 510,
+  '60x40': 281, '80x60': 345, '100x80': 420, '120x100': 510,
 }
 
 export const ORGANIC_INDIRECT_LED_PRICES: Record<string, number> = {
-  '60x40': 275, '80x60': 330, '100x70': 359, '120x80': 369,
+  '60x40': 275, '80x60': 330, '100x80': 359, '120x100': 369,
 }
 
 // ─── Prijsberekening ─────────────────────────────────────────────────────────

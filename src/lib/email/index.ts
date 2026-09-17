@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { formatOrganicSize } from '@/lib/configurator-config'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -34,7 +35,7 @@ export function formatDimensions(
   organicSizeKey: string | null,
 ) {
   if (shape === 'rond' && diameter) return `⌀${diameter} cm`
-  if (shape === 'organic' && organicSizeKey) return organicSizeKey
+  if (shape === 'organic' && organicSizeKey) return formatOrganicSize(organicSizeKey)
   if (shape === 'op-aanvraag') return width && height ? `B ${width} × H ${height} cm` : 'Op aanvraag'
   if (width && height) return `B ${width} × H ${height} cm`
   return '—'

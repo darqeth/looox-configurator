@@ -14,6 +14,7 @@ import CopyButton from '@/components/copy-button'
 import { ProjectBadge } from '@/components/project-badge'
 import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
+import { formatOrganicSize } from '@/lib/configurator-config'
 
 // ─── Shared cached profile per request ───────────────────────────────────────
 
@@ -364,7 +365,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
         const opts = config.selected_options as Record<string, unknown> | null
         const shape = (opts?.shape as string) ?? 'rechthoek'
         const diameter = opts?.diameter as number | null
-        const organicKey = opts?.organicSize as string | null
+        const organicKey = opts?.organicSizeKey as string | null
         const extras = (opts?.extras as string[]) ?? []
         const direct = opts?.directLight as { position: string; type?: string | null } | null
         const indirect = opts?.indirectLight as { position: string; type?: string | null } | null
@@ -381,7 +382,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
         } : undefined
         let dimensionLabel = ''
         if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
-        else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
+        else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
         else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
 
         return (

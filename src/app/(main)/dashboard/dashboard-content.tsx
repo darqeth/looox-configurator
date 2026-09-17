@@ -9,6 +9,7 @@ import OrderButton from '@/app/(main)/configuraties/order-button'
 import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import type { ShapeSlug } from '@/lib/configurator-config'
 import type { GlasKleur } from '@/lib/configurator-config'
+import { formatOrganicSize } from '@/lib/configurator-config'
 import type { DashboardData } from '@/lib/queries/fetch-dashboard'
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -124,7 +125,7 @@ export function DashboardContent({ data }: { data: DashboardData }) {
                 const opts = config.selected_options as Record<string, unknown> | null
                 const shape = (opts?.shape as string) ?? 'rechthoek'
                 const diameter = opts?.diameter as number | null
-                const organicKey = opts?.organicSize as string | null
+                const organicKey = opts?.organicSizeKey as string | null
                 const extras = (opts?.extras as string[]) ?? []
                 const direct = opts?.directLight as { position: string; type?: string | null } | null
                 const indirect = opts?.indirectLight as { position: string; type?: string | null } | null
@@ -141,7 +142,7 @@ export function DashboardContent({ data }: { data: DashboardData }) {
                 } : undefined
                 let dimensionLabel = ''
                 if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
-                else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
+                else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
                 const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', elips: 'Ellips', arc: 'Boog' }
                 const ShapeIcon = () => <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />

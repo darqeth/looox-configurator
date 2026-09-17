@@ -179,7 +179,7 @@ export function ConfiguratiesContent({
                   width: config.width ?? null,
                   height: config.height ?? null,
                   diameter: opts?.diameter as number | null ?? null,
-                  organicSizeKey: opts?.organicSize as string | null ?? null,
+                  organicSizeKey: organicKey ?? null,
                   glasKleur: opts?.glasKleur as GlasKleur | null ?? null,
                   directLight: direct ? { position: direct.position, type: (direct as { position: string; type?: string | null }).type ?? null } : undefined,
                   indirectLight: indirect ? { position: indirect.position, type: (indirect as { position: string; type?: string | null }).type ?? null } : undefined,

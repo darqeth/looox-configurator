@@ -8,6 +8,7 @@ import ConfiguratiesTabs from './configuraties-tabs'
 import ConfigActionsMenu from './config-actions-menu'
 import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
+import { formatOrganicSize } from '@/lib/configurator-config'
 import { fetchConfigurations } from '@/lib/queries/fetch-configurations'
 import { ProjectBadge } from '@/components/project-badge'
 import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
@@ -124,14 +125,14 @@ export function ConfiguratiesContent({
                 const opts = config.selected_options as Record<string, unknown> | null
                 const shape = (opts?.shape as string) ?? 'rechthoek'
                 const diameter = opts?.diameter as number | null
-                const organicKey = opts?.organicSize as string | null
+                const organicKey = opts?.organicSizeKey as string | null
                 const extras = (opts?.extras as string[]) ?? []
                 const direct = opts?.directLight as { position: string; control?: string | null } | null
                 const indirect = opts?.indirectLight as { position: string; control?: string | null } | null
 
                 let dimensionLabel = ''
                 if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
-                else if (shape === 'organic' && organicKey) dimensionLabel = organicKey.replace('x', ' × ') + ' cm'
+                else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
 
                 const lightParts = []
@@ -155,8 +156,10 @@ export function ConfiguratiesContent({
                   (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic' || shape === 'ovaal' || shape === 'arc')
                     ? {
                         shape: shape as VisualisationConfig['shape'],
-                        width: shape === 'rond' ? (diameter ?? 80) : (config.width ?? 80),
-                        height: shape === 'rond' ? (diameter ?? 80) : (config.height ?? 60),
+                        // Organic-maat komt uit de key (kolommen width/height staan bij
+                        // organic altijd op de default 80/60 en zijn dus onbruikbaar)
+                        width: shape === 'rond' ? (diameter ?? 80) : shape === 'organic' ? (Number(organicKey?.split('x')[0]) || 80) : (config.width ?? 80),
+                        height: shape === 'rond' ? (diameter ?? 80) : shape === 'organic' ? (Number(organicKey?.split('x')[1]) || 60) : (config.height ?? 60),
                         glasKleur: ((opts?.glasKleur as string) ?? 'helder') as VisualisationConfig['glasKleur'],
                         directPositions: direct?.position && direct.position !== 'geen' ? [direct.position] : [],
                         indirectPositions: indirect?.position && indirect.position !== 'geen' ? [indirect.position] : [],

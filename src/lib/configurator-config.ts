@@ -24,6 +24,16 @@ export const ORGANIC_SIZES = [
   { label: '120 × 100 cm', width: 120, height: 100, key: '120x100' },
 ]
 
+// Toont een organic-maat als leesbaar label. Valt voor onbekende/legacy keys
+// (bv. het oude '100x70') terug op de maat uit de key zelf zodat er nooit een
+// ruwe "100x70" zonder "cm" in beeld of PDF komt.
+export function formatOrganicSize(key: string | null | undefined): string {
+  if (!key) return ''
+  const found = ORGANIC_SIZES.find(s => s.key === key)
+  if (found) return found.label
+  return /^\d+x\d+$/.test(key) ? key.replace('x', ' × ') + ' cm' : key
+}
+
 export const RECHTHOEK_CONSTRAINTS = { min: 40, max: 300 }
 
 export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {

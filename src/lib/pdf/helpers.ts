@@ -1,4 +1,5 @@
 // Shared formatting helpers for PDF documents
+import { formatOrganicSize } from '@/lib/configurator-config'
 
 export type ConfigOptions = {
   shape: string
@@ -97,13 +98,6 @@ const FRAME_LABELS: Record<string, string> = {
   'brushed-copper': 'Brushed Copper',
 }
 
-const ORGANIC_LABELS: Record<string, string> = {
-  'S': 'Small (±50×70 cm)',
-  'M': 'Medium (±60×90 cm)',
-  'L': 'Large (±80×120 cm)',
-  'XL': 'Extra Large (±100×150 cm)',
-}
-
 export function formatShape(shape: string): string {
   return SHAPE_LABELS[shape] ?? shape
 }
@@ -115,7 +109,7 @@ export function formatDimensions(
   opts: ConfigOptions
 ): string {
   if (shape === 'rond') return opts.diameter ? `O ${opts.diameter} cm` : '—'
-  if (shape === 'organic') return opts.organicSizeKey ? (ORGANIC_LABELS[opts.organicSizeKey] ?? opts.organicSizeKey) : '—'
+  if (shape === 'organic') return opts.organicSizeKey ? formatOrganicSize(opts.organicSizeKey) : '—'
   if (shape === 'op-aanvraag') return width && height ? `B ${width} × H ${height} cm` : 'Op aanvraag'
   if (shape === 'sol') return opts.diameter
     ? `⌀ ${opts.diameter} cm · meubel ${opts.solMeubelHoogte ?? '?'} cm · uitsteek ${opts.solOnderkant ?? '?'} cm` : '—'

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
   SHAPES,
-  ORGANIC_SIZES,
+  formatOrganicSize,
   POSITION_LABELS,
   LIGHT_TYPE_LABELS,
   CONTROLS_FOR_TYPE,
@@ -16,7 +16,7 @@ interface SelectedOptions {
   width?: number
   height?: number
   diameter?: number
-  organicSize?: string
+  organicSizeKey?: string
   quantity?: number
   glasdikte?: string
   directLight?: { position?: string; type?: string; control?: string }
@@ -83,7 +83,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
   const opts = (config.selected_options ?? {}) as SelectedOptions
   const shape = opts.shape ?? 'rechthoek'
   const diameter = opts.diameter as number | undefined
-  const organicKey = opts.organicSize
+  const organicKey = opts.organicSizeKey
   const extras = (opts.extras ?? [])
     .map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name)
     .filter(Boolean)
@@ -91,10 +91,8 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
 
   let dimensionLabel = ''
   if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
-  else if (shape === 'organic' && organicKey) {
-    const size = ORGANIC_SIZES.find(s => s.key === organicKey)
-    dimensionLabel = size?.label ?? organicKey.replace('x', ' × ') + ' cm'
-  } else if (config.width && config.height) dimensionLabel = `B ${config.width} × H ${config.height} cm`
+  else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
+  else if (config.width && config.height) dimensionLabel = `B ${config.width} × H ${config.height} cm`
 
   const metaParts = [
     shapeLabel[shape] ?? shape,

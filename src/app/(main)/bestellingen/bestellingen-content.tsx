@@ -7,6 +7,7 @@ import { AdminPagination } from '@/components/admin-pagination'
 import { fetchOrders } from '@/lib/queries/fetch-orders'
 import { ProjectBadge, OfferteBadge } from '@/components/project-badge'
 import { formatEuro } from '@/lib/mms'
+import { BestellingenContentSkeleton } from './bestellingen-skeleton'
 
 const STATUS_LABELS: Record<string, string> = {
   pending:          'In behandeling',
@@ -320,62 +321,5 @@ export function BestellingenContent({ page, view }: { page: string; view: string
         </Link>
       </div>
     </>
-  )
-}
-
-export function BestellingenContentSkeleton() {
-  return (
-    <div className="animate-pulse">
-      {/* Member tabs placeholder */}
-      <div className="flex gap-1 mb-3 bg-white rounded-xl p-1 border border-black/6 shadow-sm w-fit">
-        <div className="h-7 w-32 rounded-lg bg-lx-divider" />
-        <div className="h-7 w-20 rounded-lg bg-lx-divider" />
-      </div>
-
-      {/* Tabel */}
-      <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
-        <div className="hidden sm:grid grid-cols-[36px_140px_1fr_92px_124px_60px] gap-4 items-center px-5 py-2.5 border-b border-lx-divider bg-lx-panel-bg/60">
-          <div />
-          <div className="h-2.5 bg-lx-divider rounded" />
-          <div className="h-2.5 bg-lx-divider rounded" />
-          <div className="h-2.5 bg-lx-divider rounded" />
-          <div className="h-2.5 bg-lx-divider rounded" />
-          <div />
-        </div>
-        <div className="divide-y divide-lx-divider">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-5 py-4">
-              <div className="w-9 h-9 rounded-xl bg-lx-divider flex-shrink-0" />
-              <div className="hidden sm:block w-[140px] flex-shrink-0 space-y-1.5">
-                <div className="h-3.5 w-24 bg-lx-divider rounded" />
-                <div className="h-3 w-16 bg-lx-divider rounded" />
-              </div>
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3.5 w-40 bg-lx-divider rounded" />
-                <div className="h-3 w-24 bg-lx-divider rounded" />
-              </div>
-              <div className="hidden sm:block w-[92px] flex-shrink-0 space-y-1 text-right">
-                <div className="h-3.5 w-full bg-lx-divider rounded" />
-                <div className="h-3 w-16 bg-lx-divider rounded ml-auto" />
-              </div>
-              <div className="hidden sm:flex w-[124px] flex-shrink-0 justify-center">
-                <div className="h-6 w-24 bg-lx-divider rounded-lg" />
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <div className="w-8 h-8 rounded-lg bg-lx-divider" />
-                <div className="w-8 h-8 rounded-lg bg-lx-divider" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-5 flex items-center justify-between gap-4">
-        <div />
-        <div className="h-9 w-36 rounded-xl bg-lx-divider" />
-      </div>
-      <p className="mt-5 text-center text-[12px] text-lx-text-muted">Jouw data aan het ophalen…</p>
-    </div>
   )
 }

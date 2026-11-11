@@ -37,7 +37,7 @@ export async function signIn(email: string, password: string) {
   // Auto-manager: zorg dat een goedgekeurde user met bedrijfsnaam een bedrijf +
   // company_members-rij heeft (idempotent). Zelfde logica als bij goedkeuren.
   if (profile.company) {
-    await ensureCompanyMembership(user.id)
+    await ensureCompanyMembership(user.id, { company: profile.company, company_id: profile.company_id })
   }
 
   redirect('/dashboard')

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import confetti from 'canvas-confetti'
 
 type Milestone = {
   id: string
@@ -48,10 +47,13 @@ export default function MilestoneCelebration({ milestones, onDone, skipStorage }
 
     // Confetti burst
     let cancelled = false
-    const end = Date.now() + 900
+    let end = 0
 
+    // Confetti pas laden als er echt iets te vieren valt (scheelt in elke
+    // paginabundel waar dit component in zit)
+    let confetti: typeof import('canvas-confetti') | null = null
     const frame = () => {
-      if (cancelled) return
+      if (cancelled || !confetti) return
       confetti({
         particleCount: 6,
         angle: 60,
@@ -69,7 +71,12 @@ export default function MilestoneCelebration({ milestones, onDone, skipStorage }
 
       if (Date.now() < end) requestAnimationFrame(frame)
     }
-    requestAnimationFrame(frame)
+    import('canvas-confetti').then(mod => {
+      if (cancelled) return
+      confetti = mod.default
+      end = Date.now() + 900
+      requestAnimationFrame(frame)
+    }).catch(() => { /* zonder confetti blijft de melding gewoon werken */ })
 
     return () => { cancelled = true }
   }, [celebrating])

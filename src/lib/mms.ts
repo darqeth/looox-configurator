@@ -12,7 +12,9 @@ export const MMS = {
   code: 'MMS',
   ean: '8720791347550',
   name: 'Mirror Maintenance Set',
-  description: 'Onderhoudsset voor de spiegel.',
+  description: 'Glasreiniger voor spiegels (spray, 600 ml) met microvezeldoek.',
+  /** Vrijstaande productfoto (public/images), 331 × 448 px */
+  image: '/images/mirror-maintenance-set.webp',
   /** Bruto adviesprijs per stuk, excl. btw */
   price: 18.95,
   max: 10,

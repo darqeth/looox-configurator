@@ -16,6 +16,7 @@ import {
   calcTotalPrice,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
+import Image from 'next/image'
 import { Loader2 } from 'lucide-react'
 import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, formatEuro, isMmsAllowed } from '@/lib/mms'
 import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
@@ -196,11 +197,22 @@ export default function StepSamenvatting({
       {mmsToegestaan && (
         <div className={`rounded-2xl border-2 p-4 transition-colors ${mmsAantal > 0 ? 'border-lx-cta bg-lx-panel-bg/50' : 'border-black/10 bg-white'}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className={`text-[13.5px] font-semibold ${mmsAantal > 0 ? 'text-lx-cta' : 'text-lx-text-primary'}`}>{MMS.name}</p>
-              <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">
-                {MMS.description} {formatEuro(MMS.price)} per stuk, bruto ex. BTW.
-              </p>
+            <div className="flex items-center gap-3.5 min-w-0 flex-1 basis-[260px]">
+              <div className="w-[52px] h-[70px] rounded-xl bg-white border border-black/6 overflow-hidden flex-shrink-0">
+                <Image
+                  src={MMS.image}
+                  alt="Mirror Maintenance Set: spuitbus glasreiniger met oranje microvezeldoek"
+                  width={331}
+                  height={448}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="min-w-0">
+                <p className={`text-[13.5px] font-semibold ${mmsAantal > 0 ? 'text-lx-cta' : 'text-lx-text-primary'}`}>{MMS.name}</p>
+                <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">
+                  {MMS.description} {formatEuro(MMS.price)} per stuk, bruto ex. BTW.
+                </p>
+              </div>
             </div>
             {mmsAantal === 0 ? (
               <button

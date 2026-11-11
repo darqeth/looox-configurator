@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
-import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID, assertSolLunaMaat, assertKraangat } from '@/lib/actions/configurator-helpers'
+import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
 import { computeOrderTotals, type OrderDiscount } from '@/lib/order-pricing'
 import { runAfterResponse } from '@/lib/after-response'
 import { parseOrThrow, placeOrderInputSchema, orderFromConfigSchema } from '@/lib/validation'
@@ -330,8 +330,7 @@ export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumb
     newConfig: {
       product_id: DEFAULT_PRODUCT_ID,
       name: input.projectName,
-      width: input.width,
-      height: input.height,
+      ...resolveStoredDims(input),
       selected_options: selectedOptionsJson,
       total_price: basePrice,
     },

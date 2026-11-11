@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER, SOL_CATALOGUS, LUNA_CATALOGUS, calcKraangatPrijsPerGat, isValidKraangatDiameter, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER, SOL_CATALOGUS, LUNA_CATALOGUS, calcKraangatPrijsPerGat, isValidKraangatDiameter, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, getOrganicDims } from '@/lib/configurator-config'
 
 function OptionIcon({ id, active }: { id: string; active: boolean }) {
   const imgIds: Record<string, string> = {
@@ -53,6 +53,7 @@ interface StepOptiesProps {
   width: number
   height: number
   diameter?: number | null
+  organicSizeKey?: string | null
   glasKleur: GlasKleur
   selectedOptions: string[]
   onChange: (options: string[]) => void
@@ -67,8 +68,10 @@ interface StepOptiesProps {
   lightControl?: string | null
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition: _indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35, lightControl }: StepOptiesProps) {
+export default function StepOpties({ shape, width: wizardWidth, height: wizardHeight, diameter, organicSizeKey, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition: _indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35, lightControl }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
+  // Organic: maat komt uit de maat-key, niet uit de rechthoek-invoer van de wizard
+  const { width, height } = shape === 'organic' ? getOrganicDims(organicSizeKey) : { width: wizardWidth, height: wizardHeight }
   // Verwarming-schakeling: mee met de spiegelschakelaar, of (bij afstandsbediening
   // / geen schakelaar) via de centrale wandschakelaar in de ruimte.
   const verwarmingViaSchakelaar = !!lightControl && lightControl !== 'afstandsbediening'

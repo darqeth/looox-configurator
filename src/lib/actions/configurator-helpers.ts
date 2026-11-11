@@ -1,4 +1,4 @@
-import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, KRAANGAT_MAX_GATEN, isValidKraangatDiameter } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, KRAANGAT_MAX_GATEN, isValidKraangatDiameter, getOrganicDims } from '@/lib/configurator-config'
 
 // Fixed product UUID for the default LoooX spiegel product
 // Run the seed SQL in Supabase to create this product
@@ -77,6 +77,15 @@ export function assertSolLunaMaat(input: {
     if (solLunaExceedsMax(computeLunaMainPiece(input.diameter, input.lunaMeubelHoogte ?? 0, input.lunaOnderkant ?? 0, input.lunaAfstand ?? 0)))
       throw new Error('Deze Luna-spiegel is te groot om te produceren: breedte en hoogte zijn beide groter dan 150 cm.')
   }
+}
+
+// Kolommen width/height: bij organic de echte maat uit de maat-key opslaan.
+// De wizard stuurt daar de (irrelevante) rechthoek-invoer mee, waardoor organic
+// voorheen altijd als 80 × 60 in de database stond.
+export function resolveStoredDims(input: { shape: ShapeSlug; width: number; height: number; organicSizeKey: string | null }) {
+  return input.shape === 'organic'
+    ? getOrganicDims(input.organicSizeKey)
+    : { width: input.width, height: input.height }
 }
 
 // Vangnet voor de kraangat-optie: de UI dwingt aantal, gatdiameter en tekening

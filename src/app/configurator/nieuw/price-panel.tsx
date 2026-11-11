@@ -10,6 +10,7 @@ import {
   EXTRA_OPTIONS,
   calcTotalPrice,
   calcKraangatPrice,
+  getOrganicDims,
   getKraangatAantal,
   calcBasePrice,
   calcDirectLEDMeters,
@@ -983,7 +984,8 @@ export default function PricePanel({
     if (basePrice > 0) lineItems.push({ label: `${shapeName}${dimLabel ? ' · ' + dimLabel : ''}`, price: basePrice })
     if (shape === 'organic' && glasKleur !== 'helder') {
       const glasNaamO = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? ''
-      const smokeMeerprijs = Math.round((width * height / 10000) * RONDE_GLAS_SMOKE_M2)
+      const organicMaat = getOrganicDims(organicSizeKey)
+      const smokeMeerprijs = Math.round((organicMaat.width * organicMaat.height / 10000) * RONDE_GLAS_SMOKE_M2)
       lineItems.push({ label: `Smoke glas · ${glasNaamO}`, price: smokeMeerprijs })
     }
 
@@ -1000,6 +1002,11 @@ export default function PricePanel({
       }
     }
     for (const optId of selectedOptions) {
+      if (optId === 'verwarming' && shape === 'organic') {
+        const organicMaat = getOrganicDims(organicSizeKey)
+        lineItems.push({ label: 'Verwarming', price: calcHeatingPrice(organicMaat.width, organicMaat.height) })
+        continue
+      }
       const opt = EXTRA_OPTIONS.find(o => o.id === optId)
       if (opt && opt.price > 0) lineItems.push({ label: opt.name, price: opt.price })
     }

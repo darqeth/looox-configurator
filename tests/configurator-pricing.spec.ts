@@ -171,3 +171,37 @@ test.describe('Kraangat boring (sprint 2026-11, S3)', () => {
     expect(isValidKraangatDiameter('abc')).toBe(false)
   })
 })
+
+test.describe('Organic toeslagen op de echte maat (sprint 2026-11, S5)', () => {
+  // De wizard stuurt bij organic de rechthoek-invoer mee (standaard 80 × 60 of
+  // een eerder ingevulde maat). Die mag de prijs niet beïnvloeden.
+  const organic = (key: string, over: Partial<Parameters<typeof calcTotalPrice>[0]> = {}) => calcTotalPrice({
+    shape: 'organic', width: 80, height: 60, diameter: null, organicSizeKey: key,
+    glasKleur: 'helder', selectedOptions: [], ...baseLight, ...over,
+  })
+
+  const verwacht: Record<string, { smoke: number; verwarming: number }> = {
+    '60x40':   { smoke: 15, verwarming: 76 },
+    '80x60':   { smoke: 29, verwarming: 76 },
+    '100x80':  { smoke: 49, verwarming: 76 },
+    '120x100': { smoke: 73, verwarming: 304 },
+  }
+
+  for (const [key, v] of Object.entries(verwacht)) {
+    test(`${key}: smoke +€${v.smoke}, verwarming +€${v.verwarming}`, () => {
+      expect(organic(key, { glasKleur: 'smoke-zwart' }) - organic(key)).toBe(v.smoke)
+      expect(organic(key, { selectedOptions: ['verwarming'] }) - organic(key)).toBe(v.verwarming)
+    })
+  }
+
+  test('eerder ingevulde rechthoekmaat lekt niet door in de organic-prijs', () => {
+    const metRestmaat = organic('120x100', { width: 250, height: 150, glasKleur: 'smoke-brons', selectedOptions: ['verwarming'] })
+    const standaard = organic('120x100', { glasKleur: 'smoke-brons', selectedOptions: ['verwarming'] })
+    expect(metRestmaat).toBe(standaard)
+  })
+
+  test('helder glas zonder opties blijft de basisprijs per maat', async () => {
+    const { ORGANIC_BASE_PRICES } = await import('../src/lib/configurator-config')
+    for (const key of Object.keys(verwacht)) expect(organic(key)).toBe(ORGANIC_BASE_PRICES[key])
+  })
+})

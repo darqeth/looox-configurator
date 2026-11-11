@@ -35,6 +35,18 @@ export function formatOrganicSize(key: string | null | undefined): string {
   return maat ? `B ${maat[1]} × H ${maat[2]} cm` : key
 }
 
+// Echte maat van een organic-spiegel in cm. Bij organic kiest de dealer alleen
+// een maat-key; de width/height uit de wizard horen bij de rechthoek-invoer en
+// zeggen niets over de organic. Alles wat met de afmeting rekent (smoke-glas,
+// verwarming) moet dus via deze functie.
+export function getOrganicDims(key: string | null | undefined): { width: number; height: number } {
+  const k = key ?? '60x40'
+  const found = ORGANIC_SIZES.find(s => s.key === k)
+  if (found) return { width: found.width, height: found.height }
+  const maat = /^(\d+)x(\d+)$/.exec(k)
+  return maat ? { width: Number(maat[1]), height: Number(maat[2]) } : { width: 60, height: 40 }
+}
+
 export const RECHTHOEK_CONSTRAINTS = { min: 40, max: 300 }
 
 export const DIRECT_LIGHT_POSITIONS: Record<ShapeSlug, string[]> = {
@@ -799,8 +811,12 @@ export function calcTotalPrice(state: {
     state.diameter ?? undefined, state.organicSizeKey ?? undefined,
     glasKleur, state.directPosition,
   )
+  // Organic rekent met de maat uit de key, niet met de (rechthoek-)invoer van de wizard
+  const maat = state.shape === 'organic'
+    ? getOrganicDims(state.organicSizeKey)
+    : { width: state.width, height: state.height }
   if (glasKleur !== 'helder') {
-    price += Math.round((state.width * state.height / 10000) * RONDE_GLAS_SMOKE_M2)
+    price += Math.round((maat.width * maat.height / 10000) * RONDE_GLAS_SMOKE_M2)
   }
 
   if (state.indirectPosition !== 'geen' && state.indirectType) {
@@ -810,7 +826,7 @@ export function calcTotalPrice(state: {
 
   for (const optId of state.selectedOptions) {
     if (optId === 'verwarming') {
-      price += calcHeatingPrice(state.width, state.height)
+      price += calcHeatingPrice(maat.width, maat.height)
     } else {
       const opt = EXTRA_OPTIONS.find(o => o.id === optId)
       if (opt) price += opt.price

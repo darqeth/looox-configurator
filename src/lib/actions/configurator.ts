@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
-import { DEFAULT_PRODUCT_ID, buildSelectedOptionsJson, assertSolLunaMaat, assertKraangat } from '@/lib/actions/configurator-helpers'
+import { DEFAULT_PRODUCT_ID, buildSelectedOptionsJson, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
 import { z } from 'zod'
 import { parseOrThrow, configInputSchema } from '@/lib/validation'
 
@@ -122,8 +122,7 @@ export async function saveConfiguration(rawInput: SaveConfigInput) {
     user_id: user.id,
     product_id: DEFAULT_PRODUCT_ID,
     name: input.projectName,
-    width: input.width,
-    height: input.height,
+    ...resolveStoredDims(input),
     selected_options: selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: input.status,
@@ -219,8 +218,7 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
   // .select() zet een geblokkeerde/niet-bestaande rij om in een fout i.p.v. stil falen.
   const { data, error } = await supabase.from('configurations').update({
     name: input.projectName,
-    width: input.width,
-    height: input.height,
+    ...resolveStoredDims(input),
     selected_options: selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: input.status,

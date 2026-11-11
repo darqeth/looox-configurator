@@ -740,6 +740,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     width={width}
                     height={height}
                     diameter={diameter}
+                    organicSizeKey={organicSizeKey}
                     glasKleur={glasKleur}
                     selectedOptions={selectedOptions}
                     onChange={setSelectedOptions}

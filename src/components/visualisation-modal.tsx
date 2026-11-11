@@ -223,7 +223,11 @@ function VisualisationModal({ config, configurationId, onClose }: {
             <div className="rounded-xl border border-dashed border-black/15 bg-lx-panel-bg/50 px-6 py-12 text-center">
               <p className="text-[13px] text-lx-text-secondary">
                 Kies een stijl en klik op genereren. Het beeld toont jouw{' '}
-                {config.shape === 'rond' ? `ronde spiegel ∅ ${config.width} cm` : `spiegel van ${config.width} × ${config.height} cm`} op ware grootte.
+                {config.shape === 'rond'
+                  ? `ronde spiegel ∅ ${config.width} cm`
+                  : config.shape === 'organic'
+                  ? `spiegel van B ${config.width} × H ${config.height} cm`
+                  : `spiegel van ${config.width} × ${config.height} cm`} op ware grootte.
               </p>
             </div>
           )}

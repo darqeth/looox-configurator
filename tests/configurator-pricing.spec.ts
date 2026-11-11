@@ -106,3 +106,22 @@ test.describe('computeLunaRestmaten', () => {
     expect(computeLunaRestmaten(60, 70, 10, 20).valid).toBe(false)
   })
 })
+
+test.describe('Organic maatnotatie (sprint 2026-11, S1)', () => {
+  test('bekende maat toont breedte en hoogte', async () => {
+    const { formatOrganicSize } = await import('../src/lib/configurator-config')
+    expect(formatOrganicSize('120x100')).toBe('B 120 × H 100 cm')
+    expect(formatOrganicSize('60x40')).toBe('B 60 × H 40 cm')
+  })
+
+  test('legacy key krijgt dezelfde notatie', async () => {
+    const { formatOrganicSize } = await import('../src/lib/configurator-config')
+    expect(formatOrganicSize('100x70')).toBe('B 100 × H 70 cm')
+  })
+
+  test('lege of onbekende key geeft geen kapotte tekst', async () => {
+    const { formatOrganicSize } = await import('../src/lib/configurator-config')
+    expect(formatOrganicSize(null)).toBe('')
+    expect(formatOrganicSize('XL')).toBe('XL')
+  })
+})

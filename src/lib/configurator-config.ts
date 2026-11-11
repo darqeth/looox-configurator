@@ -18,20 +18,21 @@ export const SHAPES = [
 export const ROND_DIAMETERS = [30, 40, 50, 60, 70, 80, 100, 120]
 
 export const ORGANIC_SIZES = [
-  { label: '60 × 40 cm', width: 60,  height: 40, key: '60x40' },
-  { label: '80 × 60 cm', width: 80,  height: 60, key: '80x60' },
-  { label: '100 × 80 cm', width: 100, height: 80, key: '100x80' },
-  { label: '120 × 100 cm', width: 120, height: 100, key: '120x100' },
+  { label: 'B 60 × H 40 cm', width: 60,  height: 40, key: '60x40' },
+  { label: 'B 80 × H 60 cm', width: 80,  height: 60, key: '80x60' },
+  { label: 'B 100 × H 80 cm', width: 100, height: 80, key: '100x80' },
+  { label: 'B 120 × H 100 cm', width: 120, height: 100, key: '120x100' },
 ]
 
-// Toont een organic-maat als leesbaar label. Valt voor onbekende/legacy keys
-// (bv. het oude '100x70') terug op de maat uit de key zelf zodat er nooit een
-// ruwe "100x70" zonder "cm" in beeld of PDF komt.
+// Toont een organic-maat als leesbaar label (breedte × hoogte). Valt voor
+// onbekende/legacy keys (bv. het oude '100x70') terug op de maat uit de key
+// zelf zodat er nooit een ruwe "100x70" zonder "cm" in beeld of PDF komt.
 export function formatOrganicSize(key: string | null | undefined): string {
   if (!key) return ''
   const found = ORGANIC_SIZES.find(s => s.key === key)
   if (found) return found.label
-  return /^\d+x\d+$/.test(key) ? key.replace('x', ' × ') + ' cm' : key
+  const maat = /^(\d+)x(\d+)$/.exec(key)
+  return maat ? `B ${maat[1]} × H ${maat[2]} cm` : key
 }
 
 export const RECHTHOEK_CONSTRAINTS = { min: 40, max: 300 }

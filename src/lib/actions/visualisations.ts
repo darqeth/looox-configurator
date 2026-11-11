@@ -2,8 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { composeVisualisationWithLayers, type VisualisationInput } from '@/lib/visualisation/compose'
-import { applyAiPass } from '@/lib/visualisation/ai-pass'
+import type { VisualisationInput } from '@/lib/visualisation/compose'
 import { getScene, SCENES } from '@/lib/visualisation/scenes'
 import { z } from 'zod'
 import { parseOrThrow } from '@/lib/validation'
@@ -82,6 +81,9 @@ export async function generateVisualisation(rawInput: unknown): Promise<Generate
     if (!scene) return { ok: false, error: 'Onbekende stijl' }
 
     // Eerst componeren (kost niets) — pas daarna het tegoed claimen
+    // Beeldbewerking (sharp) pas laden bij het genereren zelf, niet bij elke
+    // koude start van de pagina's waar de knop op staat
+    const { composeVisualisationWithLayers } = await import('@/lib/visualisation/compose')
     const composed = await composeVisualisationWithLayers(scene, input.config as VisualisationInput)
 
     // AI-fotorealisme-pas (fase 2): uitgeschakeld na evaluatie 2026-06-11 —
@@ -92,6 +94,7 @@ export async function generateVisualisation(rawInput: unknown): Promise<Generate
     let aiApplied = false
     if (process.env.OPENAI_API_KEY && process.env.VISUALISATION_AI_PASS === '1') {
       try {
+        const { applyAiPass } = await import('@/lib/visualisation/ai-pass')
         buffer = await applyAiPass(composed)
         aiApplied = true
       } catch (e) {

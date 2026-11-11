@@ -51,17 +51,36 @@ export async function ensureCompanyMembership(
   }
 
   if (companyId) {
-    await Promise.all([
+    // Heeft het bedrijf al een manager, dan komt deze gebruiker er als gewone
+    // collega bij; anders wordt hij de (eerste) manager.
+    const { data: bestaandeManager } = await admin
+      .from('company_members')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .eq('role', 'manager')
+      .limit(1)
+      .maybeSingle()
+
+    // Alleen aanmaken, nooit overschrijven: hierboven is al vastgesteld dat er
+    // geen lidmaatschap bestaat, en ingestelde rechten mogen niet veranderen.
+    // (De eerdere upsert met onConflict 'user_id' mislukte altijd met HTTP 400,
+    // omdat de unieke sleutel (company_id, user_id) is.)
+    // De rechten zijn gelijk aan wat een account zonder lidmaatschap al mag.
+    const [, { error: insertError }] = await Promise.all([
       admin.from('profiles').update({ company_id: companyId }).eq('id', userId),
-      admin.from('company_members').upsert({
+      admin.from('company_members').insert({
         company_id: companyId,
         user_id: userId,
-        role: 'manager',
+        role: bestaandeManager ? 'member' : 'manager',
         can_order: true,
         can_configure: true,
         own_configs_only: false,
-      }, { onConflict: 'user_id' }),
+      }),
     ])
+    // 23505 = bestaat al (gelijktijdige login): prima, niets aan veranderen
+    if (insertError && insertError.code !== '23505') {
+      console.error('[ensure-company] lidmaatschap aanmaken mislukt', insertError.message)
+    }
   }
 
   return companyId

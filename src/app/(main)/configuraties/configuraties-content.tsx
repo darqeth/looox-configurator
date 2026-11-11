@@ -139,18 +139,32 @@ export function ConfiguratiesContent({
                 if (direct?.position && direct.position !== 'geen') lightParts.push('Direct licht')
                 if (indirect?.position && indirect.position !== 'geen') lightParts.push('Indirect licht')
 
+                // Aantal uit de offertefase (maatwerk). Bij projectspiegels is het
+                // aantal al in de totaalprijs verwerkt en loopt het via projectspiegelStuks.
+                const savedQuantity = shape === 'projectspiegel' ? 1 : Math.max(1, Math.floor(Number(opts?.quantity) || 1))
+                const quantityLabel = savedQuantity > 1 ? `${savedQuantity}×` : ''
+
+                const extrasLabel = extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : ''
                 const metaParts = [
                   shapeLabel[shape] ?? shape,
                   dimensionLabel,
                   ...lightParts,
-                  extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : '',
+                  extrasLabel,
                 ].filter(Boolean)
+                // Lijstweergave toont ook het aantal; de bestelmodal niet, daar is het aanpasbaar
+                const listMeta = [
+                  shapeLabel[shape] ?? shape,
+                  dimensionLabel,
+                  quantityLabel,
+                  ...lightParts,
+                  extrasLabel,
+                ].filter(Boolean).join(' · ')
 
                 const canDelete = config.user_id === currentUserId || permissions.isManager
                 const isProjectspiegel = shape === 'projectspiegel'
                 const projectspiegelStuks = isProjectspiegel ? (opts?.quantity as number | undefined) : undefined
                 const displayPrice = Number(config.total_price)
-                const priceLabel = isProjectspiegel ? 'Netto ex. BTW' : 'Bruto ex. BTW'
+                const priceLabel = isProjectspiegel ? 'Netto ex. BTW' : savedQuantity > 1 ? 'Per stuk ex. BTW' : 'Bruto ex. BTW'
 
                 const visualisationConfig: VisualisationConfig | null =
                   (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'rond' || shape === 'organic' || shape === 'ovaal' || shape === 'arc')
@@ -206,7 +220,7 @@ export function ConfiguratiesContent({
                         </div>
                         <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
                           {config.article_number && <span className="font-mono">{config.article_number} · </span>}
-                          {metaParts.join(' · ')}
+                          {listMeta}
                           <span className="text-lx-placeholder"> · {date}</span>
                         </p>
                         <div className="flex items-center justify-end gap-2 mt-2.5">
@@ -214,7 +228,7 @@ export function ConfiguratiesContent({
                             <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
                           )}
                           {permissions.canOrder && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
@@ -242,7 +256,7 @@ export function ConfiguratiesContent({
                         </p>
                         <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
                           {config.article_number && <span className="font-mono">{config.article_number} · </span>}
-                          <span className="lg:hidden">{metaParts.join(' · ')} · </span>
+                          <span className="lg:hidden">{listMeta} · </span>
                           {date}
                         </p>
                       </div>
@@ -250,7 +264,7 @@ export function ConfiguratiesContent({
                       {/* Col: Vorm + afmeting — desktop only */}
                       <div className="hidden lg:block w-[152px] flex-shrink-0">
                         <p className="text-[12px] font-medium text-lx-text-primary">{shapeLabel[shape] ?? shape}</p>
-                        <p className="text-[11px] text-lx-text-secondary mt-0.5">{dimensionLabel || '—'}</p>
+                        <p className="text-[11px] text-lx-text-secondary mt-0.5">{dimensionLabel || '—'}{quantityLabel && ` · ${quantityLabel}`}</p>
                       </div>
 
                       {/* Col: Price */}
@@ -264,7 +278,7 @@ export function ConfiguratiesContent({
                       {/* Col: Bestellen / Aanvragen CTA */}
                       {permissions.canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
-                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} />
+                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} />
                         </div>
                       )}
 

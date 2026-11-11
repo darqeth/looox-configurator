@@ -770,6 +770,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       selectedOptions={selectedOptions}
                       optionSubChoices={optionSubChoices}
                       projectName={projectName} reference={reference}
+                      quantity={quantity}
                       saving={saving}
                       schunineZijdenFile={schunineZijdenFile}
                       opAanvraagFile={opAanvraagFile}
@@ -778,6 +779,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       korting={korting}
                       onProjectNameChange={setProjectName}
                       onReferenceChange={setReference}
+                      onQuantityChange={setQuantity}
                       onSchunineZijdenFileChange={(f) => { schunineZijdenFileRef.current = f; setSchunineZijdenFile(f) }}
                       onOpAanvraagFileChange={(f) => { opAanvraagFileRef.current = f; setOpAanvraagFile(f) }}
                       onGoToStep={goToStep}

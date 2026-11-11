@@ -144,6 +144,8 @@ export function DashboardContent({ data }: { data: DashboardData }) {
                 if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
+                // Aantal uit de offertefase (alleen maatwerk; projectspiegels rekenen anders)
+                const savedQuantity = shape === 'projectspiegel' ? 1 : Math.max(1, Math.floor(Number(opts?.quantity) || 1))
                 const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', elips: 'Ellips', arc: 'Boog' }
                 const ShapeIcon = () => <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
                 return (
@@ -155,7 +157,7 @@ export function DashboardContent({ data }: { data: DashboardData }) {
                         {config.article_number && <span className="text-[10.5px] font-mono text-lx-text-muted flex-shrink-0">{config.article_number}</span>}
                       </div>
                       <p className="text-[11.5px] text-lx-text-secondary">
-                        {shapeLabelMap[shape] ?? shape}{dimensionLabel ? ` · ${dimensionLabel}` : ''}{extras.length > 0 ? ` · ${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : ''} · {date}
+                        {shapeLabelMap[shape] ?? shape}{dimensionLabel ? ` · ${dimensionLabel}` : ''}{savedQuantity > 1 ? ` · ${savedQuantity}×` : ''}{extras.length > 0 ? ` · ${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : ''} · {date}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -170,7 +172,7 @@ export function DashboardContent({ data }: { data: DashboardData }) {
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
                           </Link>
                           {shape !== 'op-aanvraag' && canOrder && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={`${shapeLabelMap[shape] ?? shape}${dimensionLabel ? ` · ${dimensionLabel}` : ''}`} price={Number(config.total_price)} korting={korting} configPreview={configPreview} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={`${shapeLabelMap[shape] ?? shape}${dimensionLabel ? ` · ${dimensionLabel}` : ''}`} price={Number(config.total_price)} korting={korting} configPreview={configPreview} initialQuantity={savedQuantity} />
                           )}
                         </>
                       )}

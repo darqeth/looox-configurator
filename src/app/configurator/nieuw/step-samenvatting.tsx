@@ -36,6 +36,7 @@ interface StepSamenvattingProps {
   optionSubChoices: Record<string, string>
   projectName: string
   reference: string
+  quantity: number
   saving: boolean
   schunineZijdenFile: File | null
   opAanvraagFile: File | null
@@ -44,6 +45,7 @@ interface StepSamenvattingProps {
   korting?: number
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
+  onQuantityChange: (n: number) => void
   onSchunineZijdenFileChange: (f: File | null) => void
   onOpAanvraagFileChange: (f: File | null) => void
   onGoToStep: (step: number) => void
@@ -55,6 +57,10 @@ interface StepSamenvattingProps {
   }) => void
   canOrder?: boolean
 }
+
+// Zelfde grenzen als quantitySchema in lib/validation.ts
+const MIN_AANTAL = 1
+const MAX_AANTAL = 9999
 
 function Row({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
   return (
@@ -98,9 +104,9 @@ export default function StepSamenvatting({
   solMeubelHoogte, solOnderkant,
   lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
   directLight, indirectLight, selectedOptions, optionSubChoices,
-  projectName, reference,
+  projectName, reference, quantity,
   saving, schunineZijdenFile, opAanvraagFile, existingAttachmentUrl, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange,
-  onSchunineZijdenFileChange, onOpAanvraagFileChange,
+  onQuantityChange, onSchunineZijdenFileChange, onOpAanvraagFileChange,
   onGoToStep, onSave, onOrder: _onOrder, canOrder: _canOrder = true,
 }: StepSamenvattingProps) {
   const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
@@ -174,6 +180,12 @@ export default function StepSamenvatting({
             : <span className="text-[17px] font-bold text-lx-cta">€{unitPrice.toLocaleString('nl-NL')}</span>
           }
         </div>
+        {shape !== 'op-aanvraag' && quantity > 1 && (
+          <div className="flex items-center justify-between pt-1.5 border-t border-lx-divider">
+            <span className="text-[12.5px] text-lx-text-secondary">Totaal {quantity}× Bruto ex. BTW</span>
+            <span className="text-[14px] font-bold text-lx-text-primary">€{(unitPrice * quantity).toLocaleString('nl-NL')}</span>
+          </div>
+        )}
       </div>
 
       {/* Project details */}
@@ -202,6 +214,40 @@ export default function StepSamenvatting({
             placeholder="Bijv. PO-2026-0042"
             className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
           />
+        </div>
+
+        <div>
+          <label htmlFor="offerte-aantal" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Aantal</label>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Aantal verlagen"
+              onClick={() => onQuantityChange(Math.max(MIN_AANTAL, quantity - 1))}
+              disabled={quantity <= MIN_AANTAL}
+              className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+            >−</button>
+            <input
+              id="offerte-aantal"
+              type="number"
+              inputMode="numeric"
+              min={MIN_AANTAL}
+              max={MAX_AANTAL}
+              step={1}
+              value={quantity}
+              onChange={(e) => onQuantityChange(Math.min(MAX_AANTAL, Math.max(MIN_AANTAL, parseInt(e.target.value) || MIN_AANTAL)))}
+              className="w-16 h-11 rounded-xl border border-black/12 text-center text-[14px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white"
+            />
+            <button
+              type="button"
+              aria-label="Aantal verhogen"
+              onClick={() => onQuantityChange(Math.min(MAX_AANTAL, quantity + 1))}
+              disabled={quantity >= MAX_AANTAL}
+              className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+            >+</button>
+          </div>
+          <p className="text-[11.5px] text-lx-text-secondary mt-1.5 leading-snug">
+            Dit aantal komt op de offerte. Bij het bestellen kun je het nog aanpassen.
+          </p>
         </div>
 
         {/* Upload schets — verplicht bij spiegel op aanvraag */}

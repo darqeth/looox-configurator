@@ -21,6 +21,8 @@ interface OrderButtonProps {
   projectspiegelStuks?: number
   configPreview?: ConfigPreview
   isOpAanvraag?: boolean
+  /** Aantal dat bij de offerte is opgeslagen; de modal start hierop */
+  initialQuantity?: number
 }
 
 function lightSummary(light: { position: string; type: string | null } | undefined): string {
@@ -100,12 +102,13 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
   )
 }
 
-export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag }: OrderButtonProps) {
+export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag, initialQuantity }: OrderButtonProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const startQuantity = Math.max(1, Math.floor(initialQuantity ?? 1))
   const [open, setOpen] = useState(false)
   const [modalStep, setModalStep] = useState<1 | 2>(1)
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState(startQuantity)
   const [notes, setNotes] = useState('')
   const [checked, setChecked] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -177,7 +180,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
   function handleClose() {
     setOpen(false)
     setModalStep(1)
-    setQuantity(1)
+    setQuantity(startQuantity)
     setNotes('')
     setChecked(false)
     setLoading(false)
@@ -194,7 +197,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setQuantity(startQuantity); setOpen(true) }}
         className="px-3 py-2.5 rounded-lg bg-lx-cta text-white text-[12.5px] font-semibold hover:bg-lx-cta-hover transition-colors whitespace-nowrap"
       >
         {isOpAanvraag ? 'Aanvragen →' : 'Bestellen →'}

@@ -9,7 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import { PdfMirrorPreview } from './mirror-preview'
 import { PdfLogo } from './pdf-logo'
-import { MMS, addEuro, calcMmsNetto, clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
+import { MMS, addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
 
 function formatAddress(str: string | null | undefined): string {
   if (!str) return ''
@@ -279,7 +279,12 @@ export default function OrderDocument({
   const discountAmount = (opts.discountAmount as number | null) ?? 0
   // Mirror Maintenance Set: aparte regel, alleen dealerkorting (zie lib/mms.ts)
   const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
+  const mmsBruto = calcMmsBruto(mmsQuantity)
   const mmsNetto = calcMmsNetto(mmsQuantity, korting)
+  // Eén kortingsregel: korting op de spiegel (per stuk) plus die op de set, opgeteld
+  const dealerKortingBedrag = addEuro(Math.round(unitPrice * korting / 100), mmsQuantity > 0 ? addEuro(mmsBruto, -mmsNetto) : 0)
+  // Met een set erbij benoemen we expliciet welke regels over de spiegel gaan
+  const spiegelSuffix = mmsQuantity > 0 ? ' (spiegel)' : ''
   const nettoTotal = mmsQuantity > 0 ? addEuro(nettoSubtotal - discountAmount, mmsNetto) : nettoSubtotal - discountAmount
 
   return (
@@ -439,12 +444,19 @@ export default function OrderDocument({
             <Text style={styles.sectionTitle}>Prijsoverzicht (excl. BTW)</Text>
             <View style={styles.pricingBox}>
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>Bruto ex. BTW</Text>
+                <Text style={styles.pricingLabel}>Bruto ex. BTW{spiegelSuffix}</Text>
                 <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
               </View>
+              {/* De set staat boven de dealerkorting, zodat zichtbaar is dat de korting daar ook op geldt */}
+              {mmsQuantity > 0 && (
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(MMS.price)} bruto</Text>
+                  <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(mmsBruto)}</Text>
+                </View>
+              )}
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
-                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(Math.round(unitPrice * korting / 100))}</Text>
+                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(dealerKortingBedrag)}</Text>
               </View>
               {staffelAmountPerStuk > 0 && (
                 <View style={styles.pricingRow}>
@@ -455,11 +467,11 @@ export default function OrderDocument({
                 </View>
               )}
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>Netto ex. BTW</Text>
+                <Text style={styles.pricingLabel}>Netto ex. BTW{spiegelSuffix}</Text>
                 <Text style={styles.pricingValue}>{formatPrice(finalNettoUnitPrice)}</Text>
               </View>
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>Aantal</Text>
+                <Text style={styles.pricingLabel}>{mmsQuantity > 0 ? 'Aantal spiegels' : 'Aantal'}</Text>
                 <Text style={styles.pricingValue}>{quantity}×</Text>
               </View>
               {opts.discountType && opts.discountAmount ? (
@@ -478,14 +490,6 @@ export default function OrderDocument({
                   </View>
                 </>
               ) : null}
-              {mmsQuantity > 0 && (
-                <View style={styles.pricingRow}>
-                  <Text style={styles.pricingLabel}>
-                    {MMS.name}, {mmsQuantity}× {formatPrice(MMS.price)} bruto, netto na {korting}% dealer korting
-                  </Text>
-                  <Text style={styles.pricingValue}>{formatPrice(mmsNetto)}</Text>
-                </View>
-              )}
               <View style={styles.pricingDivider} />
               <View style={styles.pricingRow}>
                 <Text style={styles.totalLabel}>Totaal</Text>

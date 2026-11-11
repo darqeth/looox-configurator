@@ -15,6 +15,8 @@ export const MMS = {
   description: 'Glasreiniger voor spiegels (spray, 600 ml) met microvezeldoek.',
   /** Vrijstaande productfoto (public/images), 331 × 448 px */
   image: '/images/mirror-maintenance-set.webp',
+  /** Grote versie voor de vergrote weergave, 968 × 1320 px */
+  imageLarge: '/images/mirror-maintenance-set-groot.webp',
   /** Bruto adviesprijs per stuk, excl. btw */
   price: 18.95,
   max: 10,

@@ -16,8 +16,10 @@ import {
   calcTotalPrice,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, formatEuro, isMmsAllowed } from '@/lib/mms'
 import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
 
@@ -147,6 +149,14 @@ export default function StepSamenvatting({
   const mmsToegestaan = isMmsAllowed(shape)
   const mmsAantal = mmsToegestaan ? clampMmsQuantity(mmsQuantity) : 0
   const mmsBruto = calcMmsBruto(mmsAantal)
+  // Vergrote productfoto van de set (klik op het plaatje)
+  const [mmsFotoOpen, setMmsFotoOpen] = useState(false)
+  useEffect(() => {
+    if (!mmsFotoOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMmsFotoOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [mmsFotoOpen])
 
   const selectedOptionNames = selectedOptions
     .map(id => id === KRAANGAT_OPTIE_ID ? formatKraangat(optionSubChoices) : EXTRA_OPTIONS.find(o => o.id === id)?.name)
@@ -198,7 +208,13 @@ export default function StepSamenvatting({
         <div className={`rounded-2xl border-2 p-4 transition-colors ${mmsAantal > 0 ? 'border-lx-cta bg-lx-panel-bg/50' : 'border-black/10 bg-white'}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3.5 min-w-0 flex-1 basis-[260px]">
-              <div className="w-[52px] h-[70px] rounded-xl bg-white border border-black/6 overflow-hidden flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setMmsFotoOpen(true)}
+                aria-label="Bekijk een grotere foto van de Mirror Maintenance Set"
+                title="Klik voor een grotere foto"
+                className="w-[52px] h-[70px] rounded-xl bg-white border border-black/6 overflow-hidden flex-shrink-0 cursor-zoom-in hover:border-lx-cta/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lx-cta/40 transition-colors"
+              >
                 <Image
                   src={MMS.image}
                   alt="Mirror Maintenance Set: spuitbus glasreiniger met oranje microvezeldoek"
@@ -206,7 +222,7 @@ export default function StepSamenvatting({
                   height={448}
                   className="w-full h-full object-contain"
                 />
-              </div>
+              </button>
               <div className="min-w-0">
                 <p className={`text-[13.5px] font-semibold ${mmsAantal > 0 ? 'text-lx-cta' : 'text-lx-text-primary'}`}>{MMS.name}</p>
                 <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">
@@ -257,6 +273,44 @@ export default function StepSamenvatting({
             </p>
           )}
         </div>
+      )}
+
+      {/* Vergrote productfoto van de set */}
+      {mmsFotoOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={() => setMmsFotoOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={MMS.name}
+            className="relative bg-white rounded-2xl shadow-xl overflow-hidden max-w-[min(92vw,520px)]"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setMmsFotoOpen(false)}
+              aria-label="Sluiten"
+              autoFocus
+              className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white/90 flex items-center justify-center text-lx-text-secondary hover:bg-lx-panel-bg transition-colors"
+            >
+              <X size={17} />
+            </button>
+            <Image
+              src={MMS.imageLarge}
+              alt="Mirror Maintenance Set: spuitbus glasreiniger met oranje microvezeldoek"
+              width={968}
+              height={1320}
+              className="block w-auto h-auto max-h-[78vh] max-w-full"
+            />
+            <div className="px-5 py-3.5 border-t border-lx-divider">
+              <p className="text-[13.5px] font-semibold text-lx-text-primary">{MMS.name}</p>
+              <p className="text-[12px] text-lx-text-secondary mt-0.5">{MMS.description}</p>
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
 
       {/* Prijs */}

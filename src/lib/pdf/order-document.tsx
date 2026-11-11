@@ -422,7 +422,7 @@ export default function OrderDocument({
             {mmsQuantity > 0 && (
               <View style={styles.tableRowLast}>
                 <Text style={styles.tableLabel}>Accessoire</Text>
-                <Text style={styles.tableValue}>{MMS.name} ({MMS.code}), {mmsQuantity}×, EAN {MMS.ean}</Text>
+                <Text style={styles.tableValue}>{MMS.name}, {mmsQuantity}×, EAN {MMS.ean}</Text>
               </View>
             )}
           </View>

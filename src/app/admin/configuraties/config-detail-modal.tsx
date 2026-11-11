@@ -254,7 +254,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
               <ModalRow label="Vorm" value={shapeName} />
               <ModalRow label="Afmeting" value={dimensionLabel || '—'} />
               {opts.quantity != null && <ModalRow label="Aantal" value={`${opts.quantity}×`} />}
-              {!!opts.mmsQuantity && <ModalRow label="Mirror Maintenance Set" value={`${opts.mmsQuantity}×`} />}
+              {!!opts.mmsQuantity && <ModalRow label="LoooX Glass Cleaner set" value={`${opts.mmsQuantity}×`} />}
               {isProjectspiegel ? (
                 <ModalRow label="Glasdikte" value={opts.glasdikte ? `${opts.glasdikte} mm` : '—'} />
               ) : (

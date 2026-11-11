@@ -171,7 +171,7 @@ function buildOrderRows(d: OrderEmailDetails) {
           d.nettoUnitPrice != null && d.quantity > 1 ? row('Netto p/st', fmt(d.nettoUnitPrice)) : '',
           d.nettoUnitPrice == null && d.quantity > 1 ? row('Stukprijs', fmt(d.unitPrice)) : '',
           d.discountAmount ? row('Kortingscode', `−${fmt(d.discountAmount)}`) : '',
-          d.mmsQuantity ? row('Mirror Maintenance Set (na dealerkorting)', `${d.mmsQuantity}× · ${fmt(d.mmsNetto ?? 0)}`) : '',
+          d.mmsQuantity ? row('LoooX Glass Cleaner set (na dealerkorting)', `${d.mmsQuantity}× · ${fmt(d.mmsNetto ?? 0)}`) : '',
           `<tr style="border-top:1px solid #ececec;">
             <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">Totaal</td>
             <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${fmt(d.totalPrice)}</td>

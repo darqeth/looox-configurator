@@ -212,13 +212,13 @@ export default function StepSamenvatting({
               <button
                 type="button"
                 onClick={() => setMmsFotoOpen(true)}
-                aria-label="Bekijk een grotere foto van de Mirror Maintenance Set"
+                aria-label={`Bekijk een grotere foto van de ${MMS.name}`}
                 title="Klik voor een grotere foto"
                 className="w-[52px] h-[70px] rounded-xl bg-white border border-black/6 overflow-hidden flex-shrink-0 cursor-zoom-in hover:border-lx-cta/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lx-cta/40 transition-colors"
               >
                 <Image
                   src={MMS.image}
-                  alt="Mirror Maintenance Set: spuitbus glasreiniger met oranje microvezeldoek"
+                  alt={`${MMS.name}: spuitbus glasreiniger met oranje microvezeldoek`}
                   width={331}
                   height={448}
                   className="w-full h-full object-contain"
@@ -300,7 +300,7 @@ export default function StepSamenvatting({
             </button>
             <Image
               src={MMS.imageLarge}
-              alt="Mirror Maintenance Set: spuitbus glasreiniger met oranje microvezeldoek"
+              alt={`${MMS.name}: spuitbus glasreiniger met oranje microvezeldoek`}
               width={968}
               height={1320}
               className="block w-auto h-auto max-h-[78vh] max-w-full"

@@ -1,4 +1,4 @@
-// Mirror Maintenance Set (MMS): los accessoire dat de dealer aan het eind van een
+// LoooX Glass Cleaner set (intern: Mirror Maintenance Set, MMS): los accessoire dat de dealer aan het eind van een
 // maatwerk-configuratie kan toevoegen (sprint 2026-11, S4).
 //
 // Het is een aparte orderregel en geen onderdeel van de stuksprijs van de spiegel:
@@ -10,9 +10,11 @@
 // euro's rekent. Daarom rekenen we hier in centen en ronden we per regel af.
 
 export const MMS = {
+  /** Interne artikelcode; wordt niet getoond, de EAN staat op de order */
   code: 'MMS',
   ean: '8720791347550',
-  name: 'Mirror Maintenance Set',
+  /** Naam zoals de dealer hem ziet, ook op offerte, order en in de mail */
+  name: 'LoooX Glass Cleaner set',
   description: 'Glasreiniger voor spiegels (spray, 600 ml) met microvezeldoek.',
   /** Vrijstaande productfoto (public/images), 331 × 448 px */
   image: '/images/mirror-maintenance-set.webp',

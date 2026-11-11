@@ -144,7 +144,7 @@ export function ConfiguratiesContent({
                 const savedQuantity = shape === 'projectspiegel' ? 1 : Math.max(1, Math.floor(Number(opts?.quantity) || 1))
                 const quantityLabel = savedQuantity > 1 ? `${savedQuantity}×` : ''
                 const savedMms = Number(opts?.mmsQuantity) || 0
-                const mmsLabel = savedMms > 0 ? `MMS ${savedMms}×` : ''
+                const mmsLabel = savedMms > 0 ? `Glass Cleaner set ${savedMms}×` : ''
 
                 const extrasLabel = extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : ''
                 const metaParts = [

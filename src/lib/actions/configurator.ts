@@ -48,6 +48,7 @@ type SaveConfigInput = {
   reference: string
   description: string
   quantity: number
+  mmsQuantity?: number
   status: 'draft' | 'saved'
   attachmentUrl?: string | null
   solMeubelHoogte?: number

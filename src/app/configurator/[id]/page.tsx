@@ -40,6 +40,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     reference: (opts.reference as string) ?? '',
     description: (opts.description as string) ?? '',
     quantity: (opts.quantity as number) ?? 1,
+    mmsQuantity: (opts.mmsQuantity as number | undefined) ?? 0,
     // Sol/Luna-velden: zonder deze vallen ze bij bewerken stil terug op
     // defaults en klopt de prijs na heropslaan niet meer (audit U2)
     solMeubelHoogte: (opts.solMeubelHoogte as number | undefined) ?? undefined,

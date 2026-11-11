@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from '@react-pdf/renderer'
 import { PdfMirrorPreview } from './mirror-preview'
+import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
 import { PdfLogo } from './pdf-logo'
 import {
   ConfigOptions,
@@ -254,9 +255,14 @@ export default function OfferteDocument({
   attachmentUrl, visualisationUrl,
 }: OfferteDocumentProps) {
   const opts = config.options
-  const subtotalExclBtw = unitPrice * quantity
-  const btwBedrag = Math.round(subtotalExclBtw * 0.21)
-  const totalInclBtw = subtotalExclBtw + btwBedrag
+  // Mirror Maintenance Set: eigen regel naast de spiegels. De spiegels blijven
+  // rekenen zoals altijd (btw op hele euro's), de set telt exact in centen mee.
+  const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
+  const mmsBruto = calcMmsBruto(mmsQuantity)
+  const spiegelSubtotaal = unitPrice * quantity
+  const subtotalExclBtw = addEuro(spiegelSubtotaal, mmsBruto)
+  const btwBedrag = addEuro(Math.round(spiegelSubtotaal * 0.21), Math.round(mmsBruto * 21) / 100)
+  const totalInclBtw = addEuro(subtotalExclBtw, btwBedrag)
 
   const today = formatDate(new Date().toISOString())
 
@@ -352,12 +358,18 @@ export default function OfferteDocument({
               <Text style={styles.tableLabel}>Indirecte verlichting</Text>
               <Text style={styles.tableValue}>{formatLight(opts.indirectLight, opts)}</Text>
             </View>
-            <View style={styles.tableRowLast}>
+            <View style={mmsQuantity > 0 ? styles.tableRow : styles.tableRowLast}>
               <Text style={styles.tableLabel}>Extra opties</Text>
               <Text style={styles.tableValue}>
                 {formatExtras(opts.extras, opts.optionSubChoices)}
               </Text>
             </View>
+            {mmsQuantity > 0 && (
+              <View style={styles.tableRowLast}>
+                <Text style={styles.tableLabel}>Accessoire</Text>
+                <Text style={styles.tableValue}>{MMS.name}, {mmsQuantity}×</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -385,6 +397,12 @@ export default function OfferteDocument({
                 <Text style={styles.pricingLabel}>Aantal</Text>
                 <Text style={styles.pricingValue}>{quantity}×</Text>
               </View>
+              {mmsQuantity > 0 && (
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(MMS.price)}</Text>
+                  <Text style={styles.pricingValue}>{formatPrice(mmsBruto)}</Text>
+                </View>
+              )}
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Subtotaal excl. btw</Text>
                 <Text style={styles.pricingValue}>{formatPrice(subtotalExclBtw)}</Text>

@@ -18,6 +18,8 @@ const lightConfigSchema = z.object({
 })
 
 export const quantitySchema = z.number().int().min(1).max(9999)
+// Mirror Maintenance Set: 0 = geen, maximaal 10 per configuratie (zie lib/mms.ts)
+export const mmsQuantitySchema = z.number().int().min(0).max(10)
 
 // Afmetingen ruim gevalideerd (RECHTHOEK_CONSTRAINTS = 40-300; rond/organic
 // kleiner mogelijk) — dit vangt negatief/0/absurd, de UI doet de fijne grenzen
@@ -38,6 +40,7 @@ export const configInputSchema = z.object({
   reference: z.string().max(200),
   description: z.string().max(5000),
   quantity: quantitySchema,
+  mmsQuantity: mmsQuantitySchema.optional(),
   attachmentUrl: z.string().max(1000).nullish(),
   solMeubelHoogte: z.number().min(0).max(200).optional(),
   solOnderkant: z.number().min(0).max(200).optional(),
@@ -57,6 +60,7 @@ export const placeOrderInputSchema = configInputSchema.extend({
 export const orderFromConfigSchema = z.object({
   configId: z.string().uuid(),
   quantity: quantitySchema,
+  mmsQuantity: mmsQuantitySchema.nullish(),
   notes: z.string().max(5000),
   discountCodeId: z.string().uuid().nullish(),
   altShippingAddress: z.string().max(500).nullish(),

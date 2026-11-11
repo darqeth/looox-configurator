@@ -37,6 +37,7 @@ interface InitialConfig {
   reference: string
   description: string
   quantity: number
+  mmsQuantity?: number
   solMeubelHoogte?: number
   solOnderkant?: number
   lunaMeubelHoogte?: number
@@ -153,6 +154,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
   const [reference, setReference] = useState(initialConfig?.reference ?? '')
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
+  const [mmsQuantity, setMmsQuantity] = useState(initialConfig?.mmsQuantity ?? 0)
   const [schunineZijdenFile, setSchunineZijdenFile] = useState<File | null>(null)
   const [opAanvraagFile, setOpAanvraagFile] = useState<File | null>(null)
   const opAanvraagFileRef = useRef<File | null>(null)
@@ -309,13 +311,13 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       saveDraft('maatwerk', {
         shape, step, width, height, diameter, organicSizeKey, glasKleur,
         solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
-        directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity,
+        directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity, mmsQuantity,
       })
     }, 800)
     return () => clearTimeout(t)
   }, [isEditing, wizardMode, shape, step, width, height, diameter, organicSizeKey, glasKleur,
       solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
-      directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity])
+      directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity, mmsQuantity])
 
   const clearDraft = () => {
     clearSharedDraft()
@@ -338,6 +340,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       setDirectLight(d.directLight ?? DEFAULT_LIGHT); setIndirectLight(d.indirectLight ?? DEFAULT_LIGHT)
       setSelectedOptions(d.selectedOptions ?? []); setOptionSubChoices(d.optionSubChoices ?? {})
       setProjectName(d.projectName ?? ''); setReference(d.reference ?? ''); setQuantity(d.quantity ?? 1)
+      setMmsQuantity(d.mmsQuantity ?? 0)
       setWizardMode('configuring')
       setDraftAvailable(false)
     } catch {
@@ -379,6 +382,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         reference: reference.trim(),
         description: '',
         quantity,
+        mmsQuantity,
         status: 'saved' as const,
         attachmentUrl,
         solMeubelHoogte,
@@ -409,7 +413,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       setSaving(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity, isEditing, initialConfig, isInternational, router])
+  }, [shape, width, height, diameter, organicSizeKey, glasKleur, directLight, indirectLight, selectedOptions, optionSubChoices, projectName, reference, quantity, mmsQuantity, isEditing, initialConfig, isInternational, router])
 
   const handleOrder = useCallback(async ({ quantity: qty, notes, discount }: {
     quantity: number
@@ -547,7 +551,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                 setWidth(80); setHeight(60); setDiameter(60); setOrganicSizeKey('60x40'); setGlasKleur('helder')
                 setDirectLight(DEFAULT_LIGHT); setIndirectLight(DEFAULT_LIGHT)
                 setSelectedOptions([]); setOptionSubChoices({})
-                setProjectName(''); setReference(''); setQuantity(1)
+                setProjectName(''); setReference(''); setQuantity(1); setMmsQuantity(0)
                 setSaving(false); setSaved(false)
               }}
               className="flex-1 h-11 rounded-xl border border-black/12 text-lx-text-secondary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors cursor-pointer"
@@ -773,6 +777,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       optionSubChoices={optionSubChoices}
                       projectName={projectName} reference={reference}
                       quantity={quantity}
+                      mmsQuantity={mmsQuantity}
                       saving={saving}
                       schunineZijdenFile={schunineZijdenFile}
                       opAanvraagFile={opAanvraagFile}
@@ -782,6 +787,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       onProjectNameChange={setProjectName}
                       onReferenceChange={setReference}
                       onQuantityChange={setQuantity}
+                      onMmsQuantityChange={setMmsQuantity}
                       onSchunineZijdenFileChange={(f) => { schunineZijdenFileRef.current = f; setSchunineZijdenFile(f) }}
                       onOpAanvraagFileChange={(f) => { opAanvraagFileRef.current = f; setOpAanvraagFile(f) }}
                       onGoToStep={goToStep}

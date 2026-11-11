@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { OrderStatusSelect } from './order-status-row'
 import { AdminPagination } from '@/components/admin-pagination'
 import { OfferteBadge } from '@/components/project-badge'
+import { formatEuro } from '@/lib/mms'
 
 const PAGE_SIZE = 20
 
@@ -119,7 +120,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
               const shape = (order.config?.selected_options as { shape?: string })?.shape ?? 'rechthoek'
               const isProjectspiegel = shape === 'projectspiegel'
               const isOpAanvraag = shape === 'op-aanvraag'
-              const priceLabel = isOpAanvraag ? 'Op offerte' : `€${Number(order.total_price).toLocaleString('nl-NL')}`
+              const priceLabel = isOpAanvraag ? 'Op offerte' : formatEuro(Number(order.total_price))
               return (
                 <div key={order.id} className={`transition-colors ${isProjectspiegel ? 'border-l-[3px] border-l-violet-500 bg-violet-50/30 hover:bg-violet-50/50' : isOpAanvraag ? 'border-l-[3px] border-l-amber-400 bg-amber-50/30 hover:bg-amber-50/50' : 'hover:bg-lx-panel-bg/40'}`}>
                   {/* Mobile */}

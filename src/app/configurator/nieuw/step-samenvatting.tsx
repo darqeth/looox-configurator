@@ -17,6 +17,7 @@ import {
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 import { Loader2 } from 'lucide-react'
+import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, formatEuro, isMmsAllowed } from '@/lib/mms'
 import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
 
 interface StepSamenvattingProps {
@@ -39,6 +40,7 @@ interface StepSamenvattingProps {
   projectName: string
   reference: string
   quantity: number
+  mmsQuantity: number
   saving: boolean
   schunineZijdenFile: File | null
   opAanvraagFile: File | null
@@ -48,6 +50,7 @@ interface StepSamenvattingProps {
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
   onQuantityChange: (n: number) => void
+  onMmsQuantityChange: (n: number) => void
   onSchunineZijdenFileChange: (f: File | null) => void
   onOpAanvraagFileChange: (f: File | null) => void
   onGoToStep: (step: number) => void
@@ -106,9 +109,9 @@ export default function StepSamenvatting({
   solMeubelHoogte, solOnderkant,
   lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
   directLight, indirectLight, selectedOptions, optionSubChoices,
-  projectName, reference, quantity,
+  projectName, reference, quantity, mmsQuantity,
   saving, schunineZijdenFile, opAanvraagFile, existingAttachmentUrl, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange,
-  onQuantityChange, onSchunineZijdenFileChange, onOpAanvraagFileChange,
+  onQuantityChange, onMmsQuantityChange, onSchunineZijdenFileChange, onOpAanvraagFileChange,
   onGoToStep, onSave, onOrder: _onOrder, canOrder: _canOrder = true,
 }: StepSamenvattingProps) {
   const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
@@ -138,6 +141,11 @@ export default function StepSamenvatting({
   })
   const internationalSurcharge = isInternational ? Math.round(basePrice * 0.05) : 0
   const unitPrice = basePrice + internationalSurcharge
+
+  // Mirror Maintenance Set: aparte regel naast de spiegels (eigen aantal, max. 10)
+  const mmsToegestaan = isMmsAllowed(shape)
+  const mmsAantal = mmsToegestaan ? clampMmsQuantity(mmsQuantity) : 0
+  const mmsBruto = calcMmsBruto(mmsAantal)
 
   const selectedOptionNames = selectedOptions
     .map(id => id === KRAANGAT_OPTIE_ID ? formatKraangat(optionSubChoices) : EXTRA_OPTIONS.find(o => o.id === id)?.name)
@@ -184,6 +192,61 @@ export default function StepSamenvatting({
         <Row label="Extra opties" value={selectedOptionNames || 'Geen'} onEdit={() => onGoToStep(3)} />
       </div>
 
+      {/* Mirror Maintenance Set: optioneel accessoire, eigen aantal */}
+      {mmsToegestaan && (
+        <div className={`rounded-2xl border-2 p-4 transition-colors ${mmsAantal > 0 ? 'border-lx-cta bg-lx-panel-bg/50' : 'border-black/10 bg-white'}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className={`text-[13.5px] font-semibold ${mmsAantal > 0 ? 'text-lx-cta' : 'text-lx-text-primary'}`}>{MMS.name}</p>
+              <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">
+                {MMS.description} {formatEuro(MMS.price)} per stuk, bruto ex. BTW.
+              </p>
+            </div>
+            {mmsAantal === 0 ? (
+              <button
+                type="button"
+                onClick={() => onMmsQuantityChange(1)}
+                className="px-4 h-10 rounded-xl border border-lx-cta text-lx-cta text-[13px] font-semibold hover:bg-lx-icon-bg transition-colors flex-shrink-0"
+              >
+                Toevoegen
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  aria-label="Aantal sets verlagen"
+                  onClick={() => onMmsQuantityChange(Math.max(1, mmsAantal - 1))}
+                  disabled={mmsAantal <= 1}
+                  className="w-10 h-10 rounded-xl bg-white border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+                >−</button>
+                <span id="mms-aantal" aria-live="polite" className="w-10 h-10 rounded-xl border border-black/12 bg-white flex items-center justify-center text-[14px] font-semibold text-lx-text-primary">
+                  {mmsAantal}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Aantal sets verhogen"
+                  onClick={() => onMmsQuantityChange(Math.min(MMS.max, mmsAantal + 1))}
+                  disabled={mmsAantal >= MMS.max}
+                  className="w-10 h-10 rounded-xl bg-white border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+                >+</button>
+                <button
+                  type="button"
+                  onClick={() => onMmsQuantityChange(0)}
+                  className="ml-1 text-[12px] font-semibold text-lx-text-secondary hover:text-red-400 transition-colors"
+                >
+                  Verwijderen
+                </button>
+              </div>
+            )}
+          </div>
+          {mmsAantal > 0 && (
+            <p className="text-[11px] text-lx-text-secondary mt-2">
+              Maximaal {MMS.max} per configuratie. Het aantal staat los van het aantal spiegels.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Prijs */}
       <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
         <div className="flex items-center justify-between">
@@ -198,6 +261,18 @@ export default function StepSamenvatting({
             <span className="text-[12.5px] text-lx-text-secondary">Totaal {quantity}× Bruto ex. BTW</span>
             <span className="text-[14px] font-bold text-lx-text-primary">€{(unitPrice * quantity).toLocaleString('nl-NL')}</span>
           </div>
+        )}
+        {mmsAantal > 0 && (
+          <>
+            <div className="flex items-center justify-between pt-1.5 border-t border-lx-divider">
+              <span className="text-[12.5px] text-lx-text-secondary">{MMS.name} {mmsAantal}×</span>
+              <span className="text-[13px] font-medium text-lx-text-primary">{formatEuro(mmsBruto)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-1.5 border-t border-lx-divider">
+              <span className="text-[12.5px] text-lx-text-secondary">Totaal Bruto ex. BTW</span>
+              <span className="text-[14px] font-bold text-lx-text-primary">{formatEuro(addEuro(unitPrice * quantity, mmsBruto))}</span>
+            </div>
+          </>
         )}
       </div>
 

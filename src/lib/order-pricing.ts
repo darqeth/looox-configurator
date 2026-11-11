@@ -1,4 +1,5 @@
 import { getMaatwerkStaffelKorting } from './maatwerk-staffel'
+import { addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity } from './mms'
 
 // Eén bron van waarheid voor order-totalen. Wordt gebruikt door de bestelmodal
 // (client), placeOrder/placeOrderFromConfig (server), de PDF en de e-mail —
@@ -7,6 +8,9 @@ import { getMaatwerkStaffelKorting } from './maatwerk-staffel'
 // Semantiek (alles in hele euro's, zoals de bestelmodal aan de dealer toont):
 //   bruto catalogusprijs → dealerkorting → staffelkorting → kortingscode
 // Kortingscodes werken dus op het NETTO subtotaal, niet op bruto.
+//
+// Mirror Maintenance Set (MMS) is een aparte regel bovenop de spiegels: alleen
+// dealerkorting, geen staffel en geen kortingscode. Die regel heeft centen.
 
 export type OrderDiscount = { type: 'pct' | 'fixed'; value: number } | null
 
@@ -22,7 +26,13 @@ export type OrderTotals = {
   /** nettoUnitPrice × quantity */
   subtotal: number
   discountAmount: number
-  /** subtotal − discountAmount — wat de dealer betaalt */
+  /** Aantal Mirror Maintenance Sets (0 = geen) */
+  mmsQuantity: number
+  /** MMS regeltotaal bruto ex. btw */
+  mmsBruto: number
+  /** MMS regeltotaal na dealerkorting */
+  mmsNetto: number
+  /** subtotal − discountAmount + mmsNetto — wat de dealer betaalt */
   total: number
 }
 
@@ -33,8 +43,13 @@ export function computeOrderTotals(input: {
   /** Projectspiegels: prijs is al netto en staffel is niet van toepassing */
   isProjectspiegel?: boolean
   discount?: OrderDiscount
+  /** Mirror Maintenance Sets; niet van toepassing op projectspiegels */
+  mmsQuantity?: number
 }): OrderTotals {
   const { brutoUnitPrice, dealerKortingPct, quantity, isProjectspiegel = false, discount } = input
+  const mmsQuantity = isProjectspiegel ? 0 : clampMmsQuantity(input.mmsQuantity)
+  const mmsBruto = calcMmsBruto(mmsQuantity)
+  const mmsNetto = calcMmsNetto(mmsQuantity, dealerKortingPct)
 
   const nettoNaDealer = isProjectspiegel
     ? brutoUnitPrice
@@ -58,6 +73,9 @@ export function computeOrderTotals(input: {
     nettoUnitPrice,
     subtotal,
     discountAmount,
-    total: subtotal - discountAmount,
+    mmsQuantity,
+    mmsBruto,
+    mmsNetto,
+    total: mmsQuantity > 0 ? addEuro(subtotal - discountAmount, mmsNetto) : subtotal - discountAmount,
   }
 }

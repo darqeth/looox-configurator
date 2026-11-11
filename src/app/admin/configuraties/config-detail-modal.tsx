@@ -25,6 +25,7 @@ interface SelectedOptions {
   indirectLight?: { position?: string; type?: string; control?: string }
   extras?: string[]
   optionSubChoices?: Record<string, string>
+  mmsQuantity?: number
 }
 
 export interface ConfigRow {
@@ -253,6 +254,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
               <ModalRow label="Vorm" value={shapeName} />
               <ModalRow label="Afmeting" value={dimensionLabel || '—'} />
               {opts.quantity != null && <ModalRow label="Aantal" value={`${opts.quantity}×`} />}
+              {!!opts.mmsQuantity && <ModalRow label="Mirror Maintenance Set" value={`${opts.mmsQuantity}×`} />}
               {isProjectspiegel ? (
                 <ModalRow label="Glasdikte" value={opts.glasdikte ? `${opts.glasdikte} mm` : '—'} />
               ) : (

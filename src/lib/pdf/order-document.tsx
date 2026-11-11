@@ -9,6 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import { PdfMirrorPreview } from './mirror-preview'
 import { PdfLogo } from './pdf-logo'
+import { MMS, addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
 
 function formatAddress(str: string | null | undefined): string {
   if (!str) return ''
@@ -276,7 +277,10 @@ export default function OrderDocument({
   const finalNettoUnitPrice = nettoUnitPrice - staffelAmountPerStuk
   const nettoSubtotal = finalNettoUnitPrice * quantity
   const discountAmount = (opts.discountAmount as number | null) ?? 0
-  const nettoTotal = nettoSubtotal - discountAmount
+  // Mirror Maintenance Set: aparte regel, alleen dealerkorting (zie lib/mms.ts)
+  const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
+  const mmsNetto = calcMmsNetto(mmsQuantity, korting)
+  const nettoTotal = mmsQuantity > 0 ? addEuro(nettoSubtotal - discountAmount, mmsNetto) : nettoSubtotal - discountAmount
 
   return (
     <Document
@@ -403,12 +407,18 @@ export default function OrderDocument({
               <Text style={styles.tableLabel}>Indirecte verlichting</Text>
               <Text style={styles.tableValue}>{formatLight(opts.indirectLight, opts)}</Text>
             </View>
-            <View style={styles.tableRowLast}>
+            <View style={mmsQuantity > 0 ? styles.tableRow : styles.tableRowLast}>
               <Text style={styles.tableLabel}>Extra opties</Text>
               <Text style={styles.tableValue}>
                 {formatExtras(opts.extras, opts.optionSubChoices)}
               </Text>
             </View>
+            {mmsQuantity > 0 && (
+              <View style={styles.tableRowLast}>
+                <Text style={styles.tableLabel}>Accessoire</Text>
+                <Text style={styles.tableValue}>{MMS.name} ({MMS.code}), {mmsQuantity}×, EAN {MMS.ean}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -468,6 +478,18 @@ export default function OrderDocument({
                   </View>
                 </>
               ) : null}
+              {mmsQuantity > 0 && (
+                <>
+                  <View style={styles.pricingRow}>
+                    <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(MMS.price)} bruto</Text>
+                    <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(calcMmsBruto(mmsQuantity))}</Text>
+                  </View>
+                  <View style={styles.pricingRow}>
+                    <Text style={styles.pricingLabel}>{MMS.name} netto (dealer korting {korting}%)</Text>
+                    <Text style={styles.pricingValue}>{formatPrice(mmsNetto)}</Text>
+                  </View>
+                </>
+              )}
               <View style={styles.pricingDivider} />
               <View style={styles.pricingRow}>
                 <Text style={styles.totalLabel}>Totaal</Text>

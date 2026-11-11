@@ -15,6 +15,8 @@ export type ConfigOptions = {
   reference?: string
   description?: string
   quantity?: number
+  /** Aantal Mirror Maintenance Sets (0 of afwezig = geen) */
+  mmsQuantity?: number | null
   attachmentUrl?: string | null
   discountType?: 'pct' | 'fixed' | null
   discountValue?: number | null
@@ -169,6 +171,8 @@ export function formatDate(iso: string): string {
   })
 }
 
+// Hele bedragen zonder decimalen (zoals altijd), bedragen met centen op twee decimalen
 export function formatPrice(amount: number): string {
-  return `€ ${new Intl.NumberFormat('nl-NL').format(amount)}`
+  const heel = Math.abs(amount - Math.round(amount)) < 0.005
+  return `€ ${new Intl.NumberFormat('nl-NL', { minimumFractionDigits: heel ? 0 : 2, maximumFractionDigits: 2 }).format(amount)}`
 }

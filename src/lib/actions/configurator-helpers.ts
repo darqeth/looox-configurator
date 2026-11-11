@@ -1,3 +1,4 @@
+import { clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
 import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, KRAANGAT_MAX_GATEN, isValidKraangatDiameter, getOrganicDims } from '@/lib/configurator-config'
 
 // Fixed product UUID for the default LoooX spiegel product
@@ -22,6 +23,7 @@ export type OptionsJsonBase = {
   reference: string
   description: string
   quantity: number
+  mmsQuantity?: number
   attachmentUrl?: string | null
   solMeubelHoogte?: number
   solOnderkant?: number
@@ -125,6 +127,8 @@ export function buildSelectedOptionsJson(input: OptionsJsonBase) {
     reference: input.reference,
     description: input.description,
     quantity: input.quantity,
+    // Mirror Maintenance Set: aparte regel, niet in total_price (zie lib/mms.ts)
+    mmsQuantity: isMmsAllowed(input.shape) ? clampMmsQuantity(input.mmsQuantity) : 0,
     attachmentUrl: assertValidAttachmentUrl(input.attachmentUrl),
     solMeubelHoogte: input.solMeubelHoogte,
     solOnderkant: input.solOnderkant,

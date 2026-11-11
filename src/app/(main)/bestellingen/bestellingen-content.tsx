@@ -6,6 +6,7 @@ import { OrderApprovalButtons } from './order-approval-buttons'
 import { AdminPagination } from '@/components/admin-pagination'
 import { fetchOrders } from '@/lib/queries/fetch-orders'
 import { ProjectBadge, OfferteBadge } from '@/components/project-badge'
+import { formatEuro } from '@/lib/mms'
 
 const STATUS_LABELS: Record<string, string> = {
   pending:          'In behandeling',
@@ -184,7 +185,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                     <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{shape === 'op-aanvraag' && <OfferteBadge className="ml-1.5" />}</p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[11px] text-lx-text-secondary">{dims} · {order.quantity}×</span>
-                      <span className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op offerte' : `€${price.toLocaleString('nl-NL')}`}</span>
+                      <span className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op offerte' : formatEuro(price)}</span>
                     </div>
                     <div className="flex items-center justify-end gap-1 mt-2.5">
                       {config && (
@@ -229,7 +230,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
 
                   {/* Col: Price */}
                   <div className="w-[92px] flex-shrink-0 text-right">
-                    <p className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op offerte' : `€${price.toLocaleString('nl-NL')}`}</p>
+                    <p className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op offerte' : formatEuro(price)}</p>
                     {shape !== 'op-aanvraag' && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceSubLabel}</p>}
                   </div>
 

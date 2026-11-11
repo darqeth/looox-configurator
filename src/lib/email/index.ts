@@ -137,6 +137,9 @@ export type OrderEmailDetails = {
   nettoUnitPrice?: number
   staffelPct?: number
   discountAmount?: number
+  /** Mirror Maintenance Set: aantal en netto regeltotaal (na dealerkorting) */
+  mmsQuantity?: number
+  mmsNetto?: number
 }
 
 function buildOrderRows(d: OrderEmailDetails) {
@@ -168,6 +171,7 @@ function buildOrderRows(d: OrderEmailDetails) {
           d.nettoUnitPrice != null && d.quantity > 1 ? row('Netto p/st', fmt(d.nettoUnitPrice)) : '',
           d.nettoUnitPrice == null && d.quantity > 1 ? row('Stukprijs', fmt(d.unitPrice)) : '',
           d.discountAmount ? row('Kortingscode', `−${fmt(d.discountAmount)}`) : '',
+          d.mmsQuantity ? row('Mirror Maintenance Set', `${d.mmsQuantity}× · ${fmt(d.mmsNetto ?? 0)}`) : '',
           `<tr style="border-top:1px solid #ececec;">
             <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">Totaal</td>
             <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${fmt(d.totalPrice)}</td>

@@ -143,6 +143,8 @@ export function ConfiguratiesContent({
                 // aantal al in de totaalprijs verwerkt en loopt het via projectspiegelStuks.
                 const savedQuantity = shape === 'projectspiegel' ? 1 : Math.max(1, Math.floor(Number(opts?.quantity) || 1))
                 const quantityLabel = savedQuantity > 1 ? `${savedQuantity}×` : ''
+                const savedMms = Number(opts?.mmsQuantity) || 0
+                const mmsLabel = savedMms > 0 ? `MMS ${savedMms}×` : ''
 
                 const extrasLabel = extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : ''
                 const metaParts = [
@@ -158,6 +160,7 @@ export function ConfiguratiesContent({
                   quantityLabel,
                   ...lightParts,
                   extrasLabel,
+                  mmsLabel,
                 ].filter(Boolean).join(' · ')
 
                 const canDelete = config.user_id === currentUserId || permissions.isManager
@@ -229,7 +232,7 @@ export function ConfiguratiesContent({
                             <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
                           )}
                           {permissions.canOrder && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} />
+                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
@@ -259,6 +262,7 @@ export function ConfiguratiesContent({
                           {config.article_number && <span className="font-mono">{config.article_number} · </span>}
                           <span className="lg:hidden">{listMeta} · </span>
                           {date}
+                          {mmsLabel && <span className="hidden lg:inline"> · {mmsLabel}</span>}
                         </p>
                       </div>
 
@@ -279,7 +283,7 @@ export function ConfiguratiesContent({
                       {/* Col: Bestellen / Aanvragen CTA */}
                       {permissions.canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
-                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} />
+                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} />
                         </div>
                       )}
 

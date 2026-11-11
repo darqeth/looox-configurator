@@ -11,6 +11,8 @@ import {
   LIGHT_TYPE_LABELS,
   CONTROLS_FOR_TYPE,
   EXTRA_OPTIONS,
+  KRAANGAT_OPTIE_ID,
+  formatKraangat,
   calcTotalPrice,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
@@ -110,6 +112,17 @@ export default function StepSamenvatting({
   onGoToStep, onSave, onOrder: _onOrder, canOrder: _canOrder = true,
 }: StepSamenvattingProps) {
   const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
+  const hasKraangat = selectedOptions.includes(KRAANGAT_OPTIE_ID)
+  // Schuine zijden en kraangat delen één tekening (één bijlage per configuratie)
+  const needsTekening = shape !== 'op-aanvraag' && (hasSchunineZijden || hasKraangat)
+  const tekeningLabel = hasSchunineZijden && hasKraangat
+    ? 'Maattekening schuine zijden en kraangat'
+    : hasKraangat ? 'Tekening kraangat' : 'Maattekening schuine zijden'
+  const tekeningUitleg = hasSchunineZijden && hasKraangat
+    ? 'Upload één tekening met de gewenste hoeken en zijden én de positie van elk kraangat (PNG, JPG of PDF, max. 10 MB).'
+    : hasKraangat
+    ? 'Upload een tekening of schets met de positie van elk kraangat, gemeten vanaf de randen van de spiegel (PNG, JPG of PDF, max. 10 MB).'
+    : 'Upload een tekening of schets met de gewenste hoeken en zijden (PNG, JPG of PDF, max. 10 MB).'
   const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? shape
   const glasKleurNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? glasKleur
 
@@ -127,7 +140,7 @@ export default function StepSamenvatting({
   const unitPrice = basePrice + internationalSurcharge
 
   const selectedOptionNames = selectedOptions
-    .map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name)
+    .map(id => id === KRAANGAT_OPTIE_ID ? formatKraangat(optionSubChoices) : EXTRA_OPTIONS.find(o => o.id === id)?.name)
     .filter(Boolean)
     .join(', ')
 
@@ -310,14 +323,14 @@ export default function StepSamenvatting({
           </div>
         )}
 
-        {/* Upload maattekening — alleen bij schuine zijden */}
-        {hasSchunineZijden && (
+        {/* Upload tekening, verplicht bij schuine zijden en bij kraangat */}
+        {needsTekening && (
           <div>
             <label className="text-[12px] font-semibold text-lx-text-secondary mb-1 block">
-              Maattekening schuine zijden <span className="text-red-400">*</span>
+              {tekeningLabel} <span className="text-red-400">*</span>
             </label>
             <p className="text-[11.5px] text-lx-text-secondary mb-2 leading-snug">
-              Upload een tekening of schets met de gewenste hoeken en zijden (PNG, JPG of PDF, max. 10 MB).
+              {tekeningUitleg}
             </p>
             {schunineZijdenFile ? (
               <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-lx-panel-bg border border-lx-cta/20">
@@ -385,7 +398,7 @@ export default function StepSamenvatting({
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={() => onSave(false)}
-          disabled={!projectName.trim() || saving || (shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl) || (hasSchunineZijden && !schunineZijdenFile && !existingAttachmentUrl)}
+          disabled={!projectName.trim() || saving || (shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl) || (needsTekening && !schunineZijdenFile && !existingAttachmentUrl)}
           className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {saving ? (
@@ -402,8 +415,10 @@ export default function StepSamenvatting({
       {shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl && projectName.trim() && (
         <p className="text-[11px] text-lx-text-secondary text-center">Upload een schets of tekening om op te slaan</p>
       )}
-      {hasSchunineZijden && !schunineZijdenFile && !existingAttachmentUrl && projectName.trim() && (
-        <p className="text-[11px] text-lx-text-secondary text-center">Upload een maattekening voor de schuine zijden om op te slaan</p>
+      {needsTekening && !schunineZijdenFile && !existingAttachmentUrl && projectName.trim() && (
+        <p className="text-[11px] text-lx-text-secondary text-center">
+          {hasKraangat && !hasSchunineZijden ? 'Upload een tekening voor het kraangat om op te slaan' : 'Upload een maattekening om op te slaan'}
+        </p>
       )}
     </div>
   )

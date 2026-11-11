@@ -1,4 +1,4 @@
-import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, KRAANGAT_MAX_GATEN, isValidKraangatDiameter } from '@/lib/configurator-config'
 
 // Fixed product UUID for the default LoooX spiegel product
 // Run the seed SQL in Supabase to create this product
@@ -76,6 +76,27 @@ export function assertSolLunaMaat(input: {
   } else if (input.shape === 'luna') {
     if (solLunaExceedsMax(computeLunaMainPiece(input.diameter, input.lunaMeubelHoogte ?? 0, input.lunaOnderkant ?? 0, input.lunaAfstand ?? 0)))
       throw new Error('Deze Luna-spiegel is te groot om te produceren: breedte en hoogte zijn beide groter dan 150 cm.')
+  }
+}
+
+// Vangnet voor de kraangat-optie: de UI dwingt aantal, gatdiameter en tekening
+// al af, maar de server is de echte poortwachter (prijs hangt af van het aantal).
+export function assertKraangat(input: {
+  selectedOptions: string[]
+  optionSubChoices?: Record<string, string>
+  attachmentUrl?: string | null
+  status?: 'draft' | 'saved'
+}) {
+  if (!input.selectedOptions.includes(KRAANGAT_OPTIE_ID)) return
+  const aantal = input.optionSubChoices?.[KRAANGAT_OPTIE_ID]
+  if (!aantal || !/^\d$/.test(aantal) || Number(aantal) < 1 || Number(aantal) > KRAANGAT_MAX_GATEN) {
+    throw new Error(`Kies het aantal kraangaten (1 t/m ${KRAANGAT_MAX_GATEN}).`)
+  }
+  if (!isValidKraangatDiameter(input.optionSubChoices?.[KRAANGAT_DIAMETER_KEY])) {
+    throw new Error(`Vul de gatdiameter van het kraangat in (${KRAANGAT_DIAMETER_MM.min} t/m ${KRAANGAT_DIAMETER_MM.max} mm).`)
+  }
+  if (input.status !== 'draft' && !input.attachmentUrl) {
+    throw new Error('Upload een tekening met de positie van het kraangat.')
   }
 }
 

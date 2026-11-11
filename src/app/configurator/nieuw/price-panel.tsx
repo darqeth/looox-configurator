@@ -9,6 +9,8 @@ import {
   GLAS_KLEUREN,
   EXTRA_OPTIONS,
   calcTotalPrice,
+  calcKraangatPrice,
+  getKraangatAantal,
   calcBasePrice,
   calcDirectLEDMeters,
   calcIndirectLEDMeters,
@@ -47,6 +49,7 @@ export type ConfigPreview = {
   directLight?: { position: string; type: string | null }
   indirectLight?: { position: string; type: string | null }
   extras?: string[]
+  optionSubChoices?: Record<string, string>
 }
 
 // Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen
@@ -1000,6 +1003,11 @@ export default function PricePanel({
       const opt = EXTRA_OPTIONS.find(o => o.id === optId)
       if (opt && opt.price > 0) lineItems.push({ label: opt.name, price: opt.price })
     }
+  }
+
+  const kraangatPrice = calcKraangatPrice({ shape, width, height, diameter, selectedOptions, optionSubChoices })
+  if (kraangatPrice > 0 && shape !== 'op-aanvraag') {
+    lineItems.push({ label: `Kraangat boring · ${getKraangatAantal(optionSubChoices)}×`, price: kraangatPrice })
   }
 
   // Eén bediening voor beide verlichtingen: direct- én indirect-blok pushen elk

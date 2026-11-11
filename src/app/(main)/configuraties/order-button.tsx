@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react'
 import { placeOrderFromConfig } from '@/lib/actions/orders'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
 import { MirrorPreview, type ConfigPreview } from '@/app/configurator/nieuw/price-panel'
-import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, type GlasKleur } from '@/lib/configurator-config'
+import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, KRAANGAT_OPTIE_ID, formatKraangat, type GlasKleur } from '@/lib/configurator-config'
 import { getMaatwerkStaffelTip, type MaatwerkStaffelTip } from '@/lib/maatwerk-staffel'
 import { computeOrderTotals } from '@/lib/order-pricing'
 
@@ -46,7 +46,7 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
 
   const directPos = preview.directLight?.position
   const indirectPos = preview.indirectLight?.position
-  const extraNames = preview.extras?.map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name ?? id) ?? []
+  const extraNames = preview.extras?.map(id => id === KRAANGAT_OPTIE_ID ? formatKraangat(preview.optionSubChoices) : EXTRA_OPTIONS.find(o => o.id === id)?.name ?? id) ?? []
 
   return (
     <div className="bg-lx-panel-bg rounded-xl overflow-hidden">

@@ -1,5 +1,5 @@
 // Shared formatting helpers for PDF documents
-import { formatOrganicSize } from '@/lib/configurator-config'
+import { formatOrganicSize, formatKraangat, KRAANGAT_OPTIE_ID } from '@/lib/configurator-config'
 
 export type ConfigOptions = {
   shape: string
@@ -155,6 +155,7 @@ export function formatExtras(extras?: string[], optionSubChoices?: Record<string
       const pos = optionSubChoices?.['makeup-spiegel']
       return pos ? `Make-up spiegel (${POSITION_CHOICE_LABELS[pos] ?? pos})` : 'Make-up spiegel'
     }
+    if (id === KRAANGAT_OPTIE_ID) return formatKraangat(optionSubChoices)
     return EXTRA_LABELS[id] ?? id
   })
   return parts.join(', ')

@@ -379,6 +379,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
           directLight: direct ? { position: direct.position, type: direct.type ?? null } : undefined,
           indirectLight: indirect ? { position: indirect.position, type: indirect.type ?? null } : undefined,
           extras: extras.length > 0 ? extras : undefined,
+                  optionSubChoices: opts?.optionSubChoices as Record<string, string> | undefined,
         } : undefined
         let dimensionLabel = ''
         if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`

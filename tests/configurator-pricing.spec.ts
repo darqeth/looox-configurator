@@ -125,3 +125,49 @@ test.describe('Organic maatnotatie (sprint 2026-11, S1)', () => {
     expect(formatOrganicSize('XL')).toBe('XL')
   })
 })
+
+test.describe('Kraangat boring (sprint 2026-11, S3)', () => {
+  const basis = { organicSizeKey: null, glasKleur: 'helder' as const, ...baseLight }
+  const meerprijs = (state: Omit<Parameters<typeof calcTotalPrice>[0], 'selectedOptions' | 'optionSubChoices'>, gaten: string) =>
+    calcTotalPrice({ ...state, selectedOptions: ['kraangat'], optionSubChoices: { kraangat: gaten, 'kraangat-diameter': '35' } })
+    - calcTotalPrice({ ...state, selectedOptions: [] })
+
+  test('rechthoek t/m 200 cm = €12 per gat', () => {
+    expect(meerprijs({ ...basis, shape: 'rechthoek', width: 200, height: 80, diameter: null }, '1')).toBe(12)
+    expect(meerprijs({ ...basis, shape: 'rechthoek', width: 100, height: 70, diameter: null }, '3')).toBe(36)
+    expect(meerprijs({ ...basis, shape: 'rounded-rect', width: 120, height: 80, diameter: null }, '1')).toBe(12)
+  })
+
+  test('langste zijde boven 200 cm = €24 per gat, ook als dat de hoogte is', () => {
+    expect(meerprijs({ ...basis, shape: 'rechthoek', width: 201, height: 80, diameter: null }, '1')).toBe(24)
+    expect(meerprijs({ ...basis, shape: 'rechthoek', width: 80, height: 210, diameter: null }, '1')).toBe(24)
+  })
+
+  test('rond: t/m Ø100 = €12, daarboven €24', () => {
+    expect(meerprijs({ ...basis, shape: 'rond', width: 0, height: 0, diameter: 100 }, '1')).toBe(12)
+    expect(meerprijs({ ...basis, shape: 'rond', width: 0, height: 0, diameter: 120 }, '2')).toBe(48)
+  })
+
+  test('bijzondere vormen altijd €24 per gat', () => {
+    expect(meerprijs({ ...basis, shape: 'organic', width: 80, height: 60, diameter: null, organicSizeKey: '100x80' }, '1')).toBe(24)
+    for (const shape of ['ovaal', 'arc'] as const) {
+      expect(meerprijs({ ...basis, shape, width: 100, height: 60, diameter: null }, '1')).toBe(24)
+    }
+    expect(meerprijs({ ...basis, shape: 'elips', width: 100, height: 50, diameter: null }, '1')).toBe(24)
+    expect(meerprijs({ ...basis, shape: 'sol', width: 0, height: 0, diameter: 80 }, '1')).toBe(24)
+    expect(meerprijs({ ...basis, shape: 'luna', width: 0, height: 0, diameter: 90 }, '2')).toBe(48)
+  })
+
+  test('aantal wordt begrensd op 1 t/m 3 en zonder optie kost het niets', async () => {
+    const { calcKraangatPrice, formatKraangat, isValidKraangatDiameter } = await import('../src/lib/configurator-config')
+    const state = { shape: 'rechthoek' as const, width: 100, height: 70, diameter: null }
+    expect(calcKraangatPrice({ ...state, selectedOptions: ['kraangat'], optionSubChoices: { kraangat: '9' } })).toBe(36)
+    expect(calcKraangatPrice({ ...state, selectedOptions: ['kraangat'], optionSubChoices: {} })).toBe(12)
+    expect(calcKraangatPrice({ ...state, selectedOptions: [], optionSubChoices: { kraangat: '2' } })).toBe(0)
+    expect(formatKraangat({ kraangat: '2', 'kraangat-diameter': '35' })).toBe('Kraangat boring (2 gaten, Ø 35 mm)')
+    expect(formatKraangat({ kraangat: '1' })).toBe('Kraangat boring (1 gat)')
+    expect(isValidKraangatDiameter('35')).toBe(true)
+    expect(isValidKraangatDiameter('5')).toBe(false)
+    expect(isValidKraangatDiameter('abc')).toBe(false)
+  })
+})

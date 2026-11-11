@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, isValidKraangatDiameter } from '@/lib/configurator-config'
 import ShapePicker from './shape-picker'
 import { ModeSelector } from './mode-selector'
 import { AIIntake } from './ai-intake'
@@ -261,6 +261,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   function isStep3Valid(): boolean {
     return selectedOptions.every((id) => {
       const opt = EXTRA_OPTIONS.find((o) => o.id === id)
+      if (id === KRAANGAT_OPTIE_ID && !isValidKraangatDiameter(optionSubChoices[KRAANGAT_DIAMETER_KEY])) return false
       if (!opt?.subChoices) return true
       return !!optionSubChoices[id]
     })

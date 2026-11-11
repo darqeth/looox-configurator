@@ -8,7 +8,9 @@ import { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 export default async function EditConfiguratorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Leespad: lokale JWT-verificatie (middleware bewaakt de sessie, RLS de data)
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub } : null
   if (!user) redirect('/login')
 
   const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([

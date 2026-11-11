@@ -12,7 +12,7 @@ import ChangelogModal from '@/components/dashboard/changelog-modal'
 import OrderButton from '@/app/(main)/configuraties/order-button'
 import CopyButton from '@/components/copy-button'
 import { ProjectBadge } from '@/components/project-badge'
-import type { ConfigPreview } from '@/app/configurator/nieuw/price-panel'
+import type { ConfigPreview } from '@/app/(main)/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 import { formatOrganicSize } from '@/lib/configurator-config'
 
@@ -252,11 +252,17 @@ export async function DashboardHeader({ userId }: { userId: string }) {
   )
 }
 
+// Eigen orderbedragen: KPI-rij en Circle-sectie hebben dezelfde lijst nodig,
+// dus één keer per request ophalen.
+const getOwnOrderTotals = cache(async (userId: string) => {
+  const supabase = await createClient()
+  return supabase.from('orders').select('total_price').eq('user_id', userId)
+})
+
 // ─── KPI row ──────────────────────────────────────────────────────────────────
 
 export async function KpiRow({ userId }: { userId: string }) {
   const supabase = await createClient()
-  const { korting: _korting, canOrder: _canOrder } = await getProfile(userId)
 
   const [
     { count: totalCount },
@@ -267,7 +273,7 @@ export async function KpiRow({ userId }: { userId: string }) {
     supabase.from('configurations').select('id', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('configurations').select('status').eq('user_id', userId).in('status', ['saved', 'ordered']).limit(500),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', userId).in('status', ['pending', 'confirmed']),
-    supabase.from('orders').select('total_price').eq('user_id', userId),
+    getOwnOrderTotals(userId),
   ])
 
   const total = totalCount ?? 0
@@ -575,8 +581,6 @@ export async function CircleSection({ userId }: { userId: string }) {
   const { isInternational, isGroothandel, companyId, korting: _korting } = await getProfile(userId)
   if (isInternational || isGroothandel) return null
 
-  const companyUserIds = await getCompanyUserIds(supabase, userId, companyId)
-
   const [
     { data: circleMilestones },
     { data: userMilestonesData },
@@ -589,12 +593,13 @@ export async function CircleSection({ userId }: { userId: string }) {
   ] = await Promise.all([
     supabase.from('milestones').select('id, title, goal_type, goal_value, benefit_type, benefit_value, benefit_description').eq('is_active', true).order('sort_order'),
     supabase.from('user_milestones').select('id, milestone_id, achieved_at, claimed_at, discount_code').eq('user_id', userId),
-    supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
+    // Alleen deze query heeft de collega-id's nodig; de rest start meteen
+    getCompanyUserIds(supabase, userId, companyId).then(ids => supabase.from('user_milestones').select('milestone_id').in('user_id', ids)),
     supabase.rpc('count_company_configs', { p_user_id: userId }),
     supabase.rpc('count_company_orders', { p_user_id: userId }),
     supabase.from('login_streaks').select('current_streak').eq('user_id', userId).single(),
     supabase.from('discount_codes').select('code').eq('user_id', userId).not('used_at', 'is', null).limit(50),
-    supabase.from('orders').select('total_price').eq('user_id', userId),
+    getOwnOrderTotals(userId),
   ])
 
   if (!circleMilestones?.length) return null

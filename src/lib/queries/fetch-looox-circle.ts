@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getCompanyUserIds } from '@/lib/company-utils'
+import { getCircleProfile } from '@/lib/queries/circle-profile'
 
 export type LoooxCircleMilestone = {
   id: string
@@ -31,17 +32,16 @@ export type LoooxCircleData = {
 
 export async function fetchLoooxCircle(): Promise<LoooxCircleData> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  // Leespad: lokale JWT-verificatie volstaat (RLS bewaakt de data); scheelt een
+  // netwerkronde naar de Auth-server.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
+  if (!userId) throw new Error('Not authenticated')
+  const user = { id: userId }
 
-  const { data: profileFull } = await supabase
-    .from('profiles')
-    .select('full_name, company, created_at, company_id')
-    .eq('id', user.id)
-    .single()
+  const profileFull = await getCircleProfile(user.id)
 
   const companyId = profileFull?.company_id ?? null
-  const companyUserIds = await getCompanyUserIds(supabase, user.id, companyId)
 
   const [
     { data: milestones },
@@ -55,7 +55,8 @@ export async function fetchLoooxCircle(): Promise<LoooxCircleData> {
     { data: usedDiscountCodes },
   ] = await Promise.all([
     supabase.from('milestones').select('id, title, description, goal_type, goal_value, goal_shape, benefit_type, benefit_value, benefit_description, is_active, sort_order').eq('is_active', true).order('sort_order').order('created_at'),
-    supabase.from('user_milestones').select('milestone_id').in('user_id', companyUserIds),
+    // Alleen deze query heeft de collega-id's nodig; de rest start meteen
+    getCompanyUserIds(supabase, user.id, companyId).then(ids => supabase.from('user_milestones').select('milestone_id').in('user_id', ids)),
     supabase.from('user_milestones').select('id, milestone_id, discount_code, claimed_at').eq('user_id', user.id),
     supabase.rpc('count_company_configs', { p_user_id: user.id }),
     supabase.rpc('count_company_orders', { p_user_id: user.id }),

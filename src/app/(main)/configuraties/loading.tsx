@@ -1,4 +1,4 @@
-import { ConfiguratiesContentSkeleton } from './configuraties-content'
+import { ConfiguratiesContentSkeleton } from './configuraties-skeleton'
 
 // Zelfde skeleton als de content-component zelf gebruikt — voorkomt het
 // "dubbele skeleton"-effect waarbij een generieke kaarten-grid werd

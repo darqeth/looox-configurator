@@ -9,7 +9,9 @@ export const metadata = { title: 'Nieuwe spiegel — LoooX Configurator' }
 
 export default async function NieuweConfiguratiePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Leespad: lokale JWT-verificatie (middleware bewaakt de sessie, RLS de data)
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub } : null
 
   let korting = 50
   let canOrder = true

@@ -7,14 +7,18 @@ import { createAdminClient } from '@/lib/supabase/admin'
 // bedrijf direct koppelbaar is en er rechten ingesteld kunnen worden.
 // Gebruikt de admin-client (bypass RLS) — alleen server-side aanroepen vanuit
 // vertrouwde flows.
-export async function ensureCompanyMembership(userId: string): Promise<string | null> {
+export async function ensureCompanyMembership(
+  userId: string,
+  // Net gelezen profiel van de aanroeper (inloggen); scheelt een extra query
+  knownProfile?: { company: string | null; company_id: string | null },
+): Promise<string | null> {
   const admin = createAdminClient()
 
-  const { data: profile } = await admin
+  const profile = knownProfile ?? (await admin
     .from('profiles')
     .select('company, company_id')
     .eq('id', userId)
-    .single()
+    .single()).data
 
   if (!profile?.company) return profile?.company_id ?? null
 

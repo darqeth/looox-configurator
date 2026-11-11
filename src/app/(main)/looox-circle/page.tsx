@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { fetchLoooxCircle } from '@/lib/queries/fetch-looox-circle'
+import { getCircleProfile } from '@/lib/queries/circle-profile'
 import { LoooxCircleContent, LoooxCircleContentSkeleton } from './looox-circle-content'
 
 async function LoooxCircleData() {
@@ -19,11 +20,7 @@ export default async function LoooxCirclePage() {
 
   // Circle is verborgen voor 'alleen project' en internationale accounts —
   // dat moet ook gelden als iemand de URL direct intypt (besluit B4)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('configurator_access, is_international')
-    .eq('id', userId)
-    .single()
+  const profile = await getCircleProfile(userId)
   if (profile?.configurator_access === 'project' || profile?.is_international) {
     redirect('/dashboard')
   }

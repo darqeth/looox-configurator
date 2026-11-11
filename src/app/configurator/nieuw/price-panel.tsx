@@ -292,10 +292,15 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
           </mask>
         </defs>
 
-        {/* Indirecte verlichting: warme gloed rondom organic shape op muur */}
+        {/* Indirecte verlichting: warme gloed rondom organic shape op muur.
+            Masker op een groep zonder transform: staat het op het pad zelf, dan
+            wordt het masker met het pad mee verschoven en geschaald (dubbele
+            transform) en krijg je een afgekapte gloed met een verschoven binnenvorm. */}
         {hasIndirect && (
-          <path d={organicPath} transform={tf} fill="#FEF3C7" stroke="#FEF3C7" strokeWidth="16" opacity="0.5"
-            filter="url(#wall-glow-o)" mask="url(#outside-mask-o)" />
+          <g mask="url(#outside-mask-o)">
+            <path d={organicPath} transform={tf} fill="#FEF3C7" stroke="#FEF3C7" strokeWidth="16" opacity="0.5"
+              filter="url(#wall-glow-o)" />
+          </g>
         )}
 
         {/* Spiegelglas */}
@@ -304,10 +309,11 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
 
         {/* Directe verlichting: gezandstraald rondom binnenin */}
         {hasDirect && (
-          <>
-            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.45" clipPath="url(#organic-clip)" />
-            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.18" filter="url(#band-glow-o)" clipPath="url(#organic-clip)" />
-          </>
+          // Uitsnede op de groep, om dezelfde reden als het masker hierboven
+          <g clipPath="url(#organic-clip)">
+            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.45" />
+            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.18" filter="url(#band-glow-o)" />
+          </g>
         )}
 
         {/* Spiegelglans */}

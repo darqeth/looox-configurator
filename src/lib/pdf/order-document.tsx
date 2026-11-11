@@ -9,7 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import { PdfMirrorPreview } from './mirror-preview'
 import { PdfLogo } from './pdf-logo'
-import { MMS, addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
+import { MMS, addEuro, calcMmsNetto, clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
 
 function formatAddress(str: string | null | undefined): string {
   if (!str) return ''
@@ -479,16 +479,12 @@ export default function OrderDocument({
                 </>
               ) : null}
               {mmsQuantity > 0 && (
-                <>
-                  <View style={styles.pricingRow}>
-                    <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(MMS.price)} bruto</Text>
-                    <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(calcMmsBruto(mmsQuantity))}</Text>
-                  </View>
-                  <View style={styles.pricingRow}>
-                    <Text style={styles.pricingLabel}>{MMS.name} netto (dealer korting {korting}%)</Text>
-                    <Text style={styles.pricingValue}>{formatPrice(mmsNetto)}</Text>
-                  </View>
-                </>
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>
+                    {MMS.name}, {mmsQuantity}× {formatPrice(MMS.price)} bruto, netto na {korting}% dealer korting
+                  </Text>
+                  <Text style={styles.pricingValue}>{formatPrice(mmsNetto)}</Text>
+                </View>
               )}
               <View style={styles.pricingDivider} />
               <View style={styles.pricingRow}>
@@ -502,7 +498,7 @@ export default function OrderDocument({
 
         {/* Bijzonderheden */}
         {(notes || opts.description) && (
-          <View style={styles.section}>
+          <View style={styles.section} wrap={(notes ?? opts.description ?? '').length > 1500}>
             <Text style={styles.sectionTitle}>Bijzonderheden</Text>
             <View style={styles.notesBox}>
               <Text style={styles.notesText}>{notes ?? opts.description}</Text>

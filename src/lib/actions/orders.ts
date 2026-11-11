@@ -10,7 +10,6 @@ import { runAfterResponse } from '@/lib/after-response'
 import { parseOrThrow, placeOrderInputSchema, orderFromConfigSchema } from '@/lib/validation'
 import { sendOrderConfirmationEmail, sendInternalOrderEmail, type OrderEmailDetails } from '@/lib/email'
 import { getNotificationEmails } from '@/lib/actions/settings'
-import { renderOrderPDF } from '@/lib/pdf/render-order'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
 
 type LightConfig = {
@@ -110,6 +109,10 @@ async function sendOrderEmails(
     shippingAddress: altShippingAddress ?? profileData?.shipping_address ?? null,
   }
 
+  // PDF-renderer (react-pdf + sharp) pas laden als er echt een order-PDF gemaakt
+  // wordt: dit bestand hangt via de bestelknop aan dashboard en lijsten, en zou
+  // anders bij elke koude start van die pagina's meegeladen worden.
+  const { renderOrderPDF } = await import('@/lib/pdf/render-order')
   const pdfBuffer = await renderOrderPDF({
     orderNumber,
     orderDate,

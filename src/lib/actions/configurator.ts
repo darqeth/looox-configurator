@@ -117,7 +117,7 @@ export async function saveConfiguration(rawInput: SaveConfigInput) {
     ? 0
     : isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
-  const selectedOptionsJson = buildSelectedOptionsJson(input)
+  const selectedOptionsJson = buildSelectedOptionsJson(input, { isInternational })
 
   const { error } = await supabase.from('configurations').insert({
     user_id: user.id,
@@ -213,7 +213,7 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
     ? 0
     : isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
-  const selectedOptionsJson = buildSelectedOptionsJson(input)
+  const selectedOptionsJson = buildSelectedOptionsJson(input, { isInternational })
 
   // Geen .eq('user_id') filter: RLS staat eigenaar én manager-binnen-bedrijf toe.
   // .select() zet een geblokkeerde/niet-bestaande rij om in een fout i.p.v. stil falen.

@@ -166,3 +166,34 @@ test.describe('Mirror Maintenance Set (sprint 2026-11, S4)', () => {
     expect(formatEuro(3118.95)).toBe('€3.118,95')
   })
 })
+
+test.describe('Mirror Maintenance Set: buitenlandtoeslag 5% (sprint 2026-11, S4)', () => {
+  test('stuksprijs: €18,95 standaard, €19,90 voor internationale dealers', async () => {
+    const { getMmsUnitPrice, resolveMmsUnitPrice } = await import('../src/lib/mms')
+    expect(getMmsUnitPrice(false)).toBe(18.95)
+    expect(getMmsUnitPrice(true)).toBe(19.9) // 18,95 × 1,05 = 19,8975 → 19,90
+    // vastgelegde prijs: alleen de twee bekende prijzen worden geaccepteerd
+    expect(resolveMmsUnitPrice(19.9)).toBe(19.9)
+    expect(resolveMmsUnitPrice(18.95)).toBe(18.95)
+    expect(resolveMmsUnitPrice(undefined)).toBe(18.95)
+    expect(resolveMmsUnitPrice(1)).toBe(18.95)
+  })
+
+  test('ordertotaal voor een internationale dealer rekent met €19,90 per set', () => {
+    const basis = { brutoUnitPrice: 510, dealerKortingPct: 50, quantity: 1, mmsUnitPrice: 19.9 }
+    const een = computeOrderTotals({ ...basis, mmsQuantity: 1 })
+    expect(een.mmsBruto).toBe(19.9)
+    expect(een.mmsNetto).toBe(9.95)
+    expect(een.total).toBe(264.95)
+    const drie = computeOrderTotals({ ...basis, mmsQuantity: 3 })
+    expect(drie.mmsBruto).toBe(59.7)
+    expect(drie.mmsNetto).toBe(29.85)
+    expect(drie.total).toBe(284.85)
+  })
+
+  test('zonder opgegeven stuksprijs geldt de standaardprijs', () => {
+    const t = computeOrderTotals({ brutoUnitPrice: 510, dealerKortingPct: 50, quantity: 1, mmsQuantity: 2 })
+    expect(t.mmsUnitPrice).toBe(18.95)
+    expect(t.mmsNetto).toBe(18.95)
+  })
+})

@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
-import { clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
+import { clampMmsQuantity, getMmsUnitPrice, isMmsAllowed, resolveMmsUnitPrice } from '@/lib/mms'
 import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
 import { computeOrderTotals, type OrderDiscount } from '@/lib/order-pricing'
 import { runAfterResponse } from '@/lib/after-response'
@@ -316,11 +316,12 @@ export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumb
     quantity: input.quantity,
     discount: resolved?.discount ?? null,
     mmsQuantity: isMmsAllowed(input.shape) ? clampMmsQuantity(input.mmsQuantity) : 0,
+    mmsUnitPrice: getMmsUnitPrice(isInternational),
   })
   const resolvedDiscountUseType = resolved?.useType ?? 'single'
 
   const selectedOptionsJson = {
-    ...buildSelectedOptionsJson(input),
+    ...buildSelectedOptionsJson(input, { isInternational }),
     ...(totals.staffelPct > 0 && { staffelKortingPct: totals.staffelPct }),
     discountType: resolved?.discount?.type ?? null,
     discountValue: resolved?.discount?.value ?? null,
@@ -467,6 +468,8 @@ export async function placeOrderFromConfig(
   const mmsQuantity = isProjectspiegel || !isMmsAllowed(opts.shape as string | undefined)
     ? 0
     : clampMmsQuantity(requestedMms ?? savedMms)
+  // Stuksprijs van de set is bij het opslaan vastgelegd (incl. buitenlandtoeslag)
+  const mmsUnitPrice = resolveMmsUnitPrice(opts.mmsUnitPrice)
 
   const totals = computeOrderTotals({
     brutoUnitPrice: unitPrice,
@@ -475,16 +478,17 @@ export async function placeOrderFromConfig(
     isProjectspiegel,
     discount: resolved?.discount ?? null,
     mmsQuantity,
+    mmsUnitPrice,
   })
   const staffelKortingPct = totals.staffelPct
   const discountAmount = totals.discountAmount
   const resolvedDiscountUseType = resolved?.useType ?? 'single'
   // Het bestelde aantal sets vastleggen bij de configuratie: PDF en e-mail lezen het daar
-  const mmsGewijzigd = mmsQuantity !== savedMms
+  const mmsGewijzigd = mmsQuantity !== savedMms || (mmsQuantity > 0 && opts.mmsUnitPrice == null)
 
   const configPatch = (discountAmount > 0 || staffelKortingPct > 0 || altShippingAddress || mmsGewijzigd)
     ? {
-        ...(mmsGewijzigd && { mmsQuantity }),
+        ...(mmsGewijzigd && { mmsQuantity, mmsUnitPrice }),
         ...(staffelKortingPct > 0 && { staffelKortingPct }),
         ...(discountAmount > 0 && resolved?.discount && {
           discountType: resolved.discount.type,

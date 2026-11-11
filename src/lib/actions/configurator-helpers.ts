@@ -1,4 +1,4 @@
-import { clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
+import { clampMmsQuantity, getMmsUnitPrice, isMmsAllowed } from '@/lib/mms'
 import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, KRAANGAT_MAX_GATEN, isValidKraangatDiameter, getOrganicDims } from '@/lib/configurator-config'
 
 // Fixed product UUID for the default LoooX spiegel product
@@ -111,7 +111,7 @@ export function assertKraangat(input: {
   }
 }
 
-export function buildSelectedOptionsJson(input: OptionsJsonBase) {
+export function buildSelectedOptionsJson(input: OptionsJsonBase, ctx: { isInternational: boolean }) {
   return {
     shape: input.shape,
     diameter: input.diameter,
@@ -129,6 +129,9 @@ export function buildSelectedOptionsJson(input: OptionsJsonBase) {
     quantity: input.quantity,
     // Mirror Maintenance Set: aparte regel, niet in total_price (zie lib/mms.ts)
     mmsQuantity: isMmsAllowed(input.shape) ? clampMmsQuantity(input.mmsQuantity) : 0,
+    // Stuksprijs vastleggen op het moment van opslaan (incl. eventuele buitenlandtoeslag),
+    // net als total_price. Ook bij 0 sets: de dealer kan er in de bestelmodal nog bij kiezen.
+    ...(isMmsAllowed(input.shape) && { mmsUnitPrice: getMmsUnitPrice(ctx.isInternational) }),
     attachmentUrl: assertValidAttachmentUrl(input.attachmentUrl),
     solMeubelHoogte: input.solMeubelHoogte,
     solOnderkant: input.solOnderkant,

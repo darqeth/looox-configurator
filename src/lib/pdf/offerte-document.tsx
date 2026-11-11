@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from '@react-pdf/renderer'
 import { PdfMirrorPreview } from './mirror-preview'
-import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
+import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, isMmsAllowed, resolveMmsUnitPrice } from '@/lib/mms'
 import { PdfLogo } from './pdf-logo'
 import {
   ConfigOptions,
@@ -258,7 +258,8 @@ export default function OfferteDocument({
   // Mirror Maintenance Set: eigen regel naast de spiegels. De spiegels blijven
   // rekenen zoals altijd (btw op hele euro's), de set telt exact in centen mee.
   const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
-  const mmsBruto = calcMmsBruto(mmsQuantity)
+  const mmsUnitPrice = resolveMmsUnitPrice(opts.mmsUnitPrice)
+  const mmsBruto = calcMmsBruto(mmsQuantity, mmsUnitPrice)
   const spiegelSubtotaal = unitPrice * quantity
   const subtotalExclBtw = addEuro(spiegelSubtotaal, mmsBruto)
   const btwBedrag = addEuro(Math.round(spiegelSubtotaal * 0.21), Math.round(mmsBruto * 21) / 100)
@@ -399,7 +400,7 @@ export default function OfferteDocument({
               </View>
               {mmsQuantity > 0 && (
                 <View style={styles.pricingRow}>
-                  <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(MMS.price)}</Text>
+                  <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(mmsUnitPrice)}</Text>
                   <Text style={styles.pricingValue}>{formatPrice(mmsBruto)}</Text>
                 </View>
               )}

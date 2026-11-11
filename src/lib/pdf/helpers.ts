@@ -17,6 +17,8 @@ export type ConfigOptions = {
   quantity?: number
   /** Aantal Mirror Maintenance Sets (0 of afwezig = geen) */
   mmsQuantity?: number | null
+  /** Bruto stuksprijs van de set zoals vastgelegd bij opslaan */
+  mmsUnitPrice?: number | null
   attachmentUrl?: string | null
   discountType?: 'pct' | 'fixed' | null
   discountValue?: number | null

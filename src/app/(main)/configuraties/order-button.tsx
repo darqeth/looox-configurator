@@ -10,7 +10,7 @@ import { MirrorPreview, type ConfigPreview } from '@/app/configurator/nieuw/pric
 import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, KRAANGAT_OPTIE_ID, formatKraangat, type GlasKleur } from '@/lib/configurator-config'
 import { getMaatwerkStaffelTip, type MaatwerkStaffelTip } from '@/lib/maatwerk-staffel'
 import { computeOrderTotals } from '@/lib/order-pricing'
-import { MMS, clampMmsQuantity, formatEuro } from '@/lib/mms'
+import { MMS, clampMmsQuantity, formatEuro, resolveMmsUnitPrice } from '@/lib/mms'
 
 interface OrderButtonProps {
   configId: string
@@ -26,6 +26,8 @@ interface OrderButtonProps {
   initialQuantity?: number
   /** Aantal Mirror Maintenance Sets uit de offerte; in de modal nog aanpasbaar */
   initialMmsQuantity?: number
+  /** Bruto stuksprijs van de set zoals vastgelegd bij de configuratie (incl. buitenlandtoeslag) */
+  mmsUnitPrice?: number
 }
 
 function lightSummary(light: { position: string; type: string | null } | undefined): string {
@@ -105,7 +107,7 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
   )
 }
 
-export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag, initialQuantity, initialMmsQuantity }: OrderButtonProps) {
+export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag, initialQuantity, initialMmsQuantity, mmsUnitPrice: storedMmsUnitPrice }: OrderButtonProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const startQuantity = Math.max(1, Math.floor(initialQuantity ?? 1))
@@ -116,6 +118,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
   const mmsToegestaan = !isProjectspiegel && !isOpAanvraag
   const startMms = mmsToegestaan ? clampMmsQuantity(initialMmsQuantity) : 0
   const [mmsQuantity, setMmsQuantity] = useState(startMms)
+  const mmsUnitPrice = resolveMmsUnitPrice(storedMmsUnitPrice)
   const [notes, setNotes] = useState('')
   const [checked, setChecked] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -151,6 +154,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
     isProjectspiegel,
     discount: appliedDiscount ? { type: appliedDiscount.type, value: appliedDiscount.value } : null,
     mmsQuantity: mmsToegestaan ? mmsQuantity : 0,
+    mmsUnitPrice,
   })
   const discountAmount = totals.discountAmount
   const finalTotal = totals.total
@@ -402,7 +406,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                         {mmsToegestaan && (
                           <div>
                             <label className={labelCls}>
-                              {MMS.name} <span className="font-normal">({formatEuro(MMS.price)} per stuk bruto, max. {MMS.max})</span>
+                              {MMS.name} <span className="font-normal">({formatEuro(mmsUnitPrice)} per stuk bruto, max. {MMS.max})</span>
                             </label>
                             <div className="flex items-center gap-2">
                               <button

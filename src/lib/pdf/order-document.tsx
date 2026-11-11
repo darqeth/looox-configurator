@@ -9,7 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import { PdfMirrorPreview } from './mirror-preview'
 import { PdfLogo } from './pdf-logo'
-import { MMS, addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity, isMmsAllowed } from '@/lib/mms'
+import { MMS, addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity, isMmsAllowed, resolveMmsUnitPrice } from '@/lib/mms'
 
 function formatAddress(str: string | null | undefined): string {
   if (!str) return ''
@@ -279,8 +279,9 @@ export default function OrderDocument({
   const discountAmount = (opts.discountAmount as number | null) ?? 0
   // Mirror Maintenance Set: aparte regel, alleen dealerkorting (zie lib/mms.ts)
   const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
-  const mmsBruto = calcMmsBruto(mmsQuantity)
-  const mmsNetto = calcMmsNetto(mmsQuantity, korting)
+  const mmsUnitPrice = resolveMmsUnitPrice(opts.mmsUnitPrice)
+  const mmsBruto = calcMmsBruto(mmsQuantity, mmsUnitPrice)
+  const mmsNetto = calcMmsNetto(mmsQuantity, korting, mmsUnitPrice)
   // Eén kortingsregel: korting op de spiegel (per stuk) plus die op de set, opgeteld
   const dealerKortingBedrag = addEuro(Math.round(unitPrice * korting / 100), mmsQuantity > 0 ? addEuro(mmsBruto, -mmsNetto) : 0)
   // Met een set erbij benoemen we expliciet welke regels over de spiegel gaan
@@ -450,7 +451,7 @@ export default function OrderDocument({
               {/* De set staat boven de dealerkorting, zodat zichtbaar is dat de korting daar ook op geldt */}
               {mmsQuantity > 0 && (
                 <View style={styles.pricingRow}>
-                  <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(MMS.price)} bruto</Text>
+                  <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(mmsUnitPrice)} bruto</Text>
                   <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(mmsBruto)}</Text>
                 </View>
               )}

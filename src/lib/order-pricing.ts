@@ -1,5 +1,5 @@
 import { getMaatwerkStaffelKorting } from './maatwerk-staffel'
-import { addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity } from './mms'
+import { MMS, addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity } from './mms'
 
 // Eén bron van waarheid voor order-totalen. Wordt gebruikt door de bestelmodal
 // (client), placeOrder/placeOrderFromConfig (server), de PDF en de e-mail —
@@ -28,6 +28,8 @@ export type OrderTotals = {
   discountAmount: number
   /** Aantal Mirror Maintenance Sets (0 = geen) */
   mmsQuantity: number
+  /** Bruto stuksprijs van de set (met of zonder buitenlandtoeslag) */
+  mmsUnitPrice: number
   /** MMS regeltotaal bruto ex. btw */
   mmsBruto: number
   /** MMS regeltotaal na dealerkorting */
@@ -45,11 +47,14 @@ export function computeOrderTotals(input: {
   discount?: OrderDiscount
   /** Mirror Maintenance Sets; niet van toepassing op projectspiegels */
   mmsQuantity?: number
+  /** Bruto stuksprijs van de set; standaard de prijs zonder buitenlandtoeslag */
+  mmsUnitPrice?: number
 }): OrderTotals {
   const { brutoUnitPrice, dealerKortingPct, quantity, isProjectspiegel = false, discount } = input
   const mmsQuantity = isProjectspiegel ? 0 : clampMmsQuantity(input.mmsQuantity)
-  const mmsBruto = calcMmsBruto(mmsQuantity)
-  const mmsNetto = calcMmsNetto(mmsQuantity, dealerKortingPct)
+  const mmsUnitPrice = input.mmsUnitPrice ?? MMS.price
+  const mmsBruto = calcMmsBruto(mmsQuantity, mmsUnitPrice)
+  const mmsNetto = calcMmsNetto(mmsQuantity, dealerKortingPct, mmsUnitPrice)
 
   const nettoNaDealer = isProjectspiegel
     ? brutoUnitPrice
@@ -74,6 +79,7 @@ export function computeOrderTotals(input: {
     subtotal,
     discountAmount,
     mmsQuantity,
+    mmsUnitPrice,
     mmsBruto,
     mmsNetto,
     total: mmsQuantity > 0 ? addEuro(subtotal - discountAmount, mmsNetto) : subtotal - discountAmount,

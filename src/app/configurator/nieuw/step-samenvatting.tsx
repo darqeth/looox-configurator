@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { Loader2, X } from 'lucide-react'
-import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, formatEuro, isMmsAllowed } from '@/lib/mms'
+import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, formatEuro, getMmsUnitPrice, isMmsAllowed } from '@/lib/mms'
 import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
 
 interface StepSamenvattingProps {
@@ -148,7 +148,8 @@ export default function StepSamenvatting({
   // Mirror Maintenance Set: aparte regel naast de spiegels (eigen aantal, max. 10)
   const mmsToegestaan = isMmsAllowed(shape)
   const mmsAantal = mmsToegestaan ? clampMmsQuantity(mmsQuantity) : 0
-  const mmsBruto = calcMmsBruto(mmsAantal)
+  const mmsStuksprijs = getMmsUnitPrice(isInternational)
+  const mmsBruto = calcMmsBruto(mmsAantal, mmsStuksprijs)
   // Vergrote productfoto van de set (klik op het plaatje)
   const [mmsFotoOpen, setMmsFotoOpen] = useState(false)
   useEffect(() => {
@@ -226,7 +227,7 @@ export default function StepSamenvatting({
               <div className="min-w-0">
                 <p className={`text-[13.5px] font-semibold ${mmsAantal > 0 ? 'text-lx-cta' : 'text-lx-text-primary'}`}>{MMS.name}</p>
                 <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">
-                  {MMS.description} {formatEuro(MMS.price)} per stuk, bruto ex. BTW.
+                  {MMS.description} {formatEuro(mmsStuksprijs)} per stuk, bruto ex. BTW.
                 </p>
               </div>
             </div>

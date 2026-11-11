@@ -11,10 +11,16 @@ import {
   LIGHT_TYPE_LABELS,
   CONTROLS_FOR_TYPE,
   EXTRA_OPTIONS,
+  KRAANGAT_OPTIE_ID,
+  formatKraangat,
   calcTotalPrice,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
-import { Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import Image from 'next/image'
+import { Loader2, X } from 'lucide-react'
+import { MMS, addEuro, calcMmsBruto, clampMmsQuantity, formatEuro, getMmsUnitPrice, isMmsAllowed } from '@/lib/mms'
 import { VisualisationButton, type VisualisationConfig } from '@/components/visualisation-modal'
 
 interface StepSamenvattingProps {
@@ -36,6 +42,8 @@ interface StepSamenvattingProps {
   optionSubChoices: Record<string, string>
   projectName: string
   reference: string
+  quantity: number
+  mmsQuantity: number
   saving: boolean
   schunineZijdenFile: File | null
   opAanvraagFile: File | null
@@ -44,6 +52,8 @@ interface StepSamenvattingProps {
   korting?: number
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
+  onQuantityChange: (n: number) => void
+  onMmsQuantityChange: (n: number) => void
   onSchunineZijdenFileChange: (f: File | null) => void
   onOpAanvraagFileChange: (f: File | null) => void
   onGoToStep: (step: number) => void
@@ -55,6 +65,10 @@ interface StepSamenvattingProps {
   }) => void
   canOrder?: boolean
 }
+
+// Zelfde grenzen als quantitySchema in lib/validation.ts
+const MIN_AANTAL = 1
+const MAX_AANTAL = 9999
 
 function Row({ label, value, onEdit }: { label: string; value: string; onEdit: () => void }) {
   return (
@@ -98,12 +112,23 @@ export default function StepSamenvatting({
   solMeubelHoogte, solOnderkant,
   lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
   directLight, indirectLight, selectedOptions, optionSubChoices,
-  projectName, reference,
+  projectName, reference, quantity, mmsQuantity,
   saving, schunineZijdenFile, opAanvraagFile, existingAttachmentUrl, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange,
-  onSchunineZijdenFileChange, onOpAanvraagFileChange,
+  onQuantityChange, onMmsQuantityChange, onSchunineZijdenFileChange, onOpAanvraagFileChange,
   onGoToStep, onSave, onOrder: _onOrder, canOrder: _canOrder = true,
 }: StepSamenvattingProps) {
   const hasSchunineZijden = selectedOptions.includes('schuine-zijden')
+  const hasKraangat = selectedOptions.includes(KRAANGAT_OPTIE_ID)
+  // Schuine zijden en kraangat delen één tekening (één bijlage per configuratie)
+  const needsTekening = shape !== 'op-aanvraag' && (hasSchunineZijden || hasKraangat)
+  const tekeningLabel = hasSchunineZijden && hasKraangat
+    ? 'Maattekening schuine zijden en kraangat'
+    : hasKraangat ? 'Tekening kraangat' : 'Maattekening schuine zijden'
+  const tekeningUitleg = hasSchunineZijden && hasKraangat
+    ? 'Upload één tekening met de gewenste hoeken en zijden én de positie van elk kraangat (PNG, JPG of PDF, max. 10 MB).'
+    : hasKraangat
+    ? 'Upload een tekening of schets met de positie van elk kraangat, gemeten vanaf de randen van de spiegel (PNG, JPG of PDF, max. 10 MB).'
+    : 'Upload een tekening of schets met de gewenste hoeken en zijden (PNG, JPG of PDF, max. 10 MB).'
   const shapeName = SHAPES.find(s => s.slug === shape)?.name ?? shape
   const glasKleurNaam = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? glasKleur
 
@@ -120,8 +145,22 @@ export default function StepSamenvatting({
   const internationalSurcharge = isInternational ? Math.round(basePrice * 0.05) : 0
   const unitPrice = basePrice + internationalSurcharge
 
+  // Mirror Maintenance Set: aparte regel naast de spiegels (eigen aantal, max. 10)
+  const mmsToegestaan = isMmsAllowed(shape)
+  const mmsAantal = mmsToegestaan ? clampMmsQuantity(mmsQuantity) : 0
+  const mmsStuksprijs = getMmsUnitPrice(isInternational)
+  const mmsBruto = calcMmsBruto(mmsAantal, mmsStuksprijs)
+  // Vergrote productfoto van de set (klik op het plaatje)
+  const [mmsFotoOpen, setMmsFotoOpen] = useState(false)
+  useEffect(() => {
+    if (!mmsFotoOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMmsFotoOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [mmsFotoOpen])
+
   const selectedOptionNames = selectedOptions
-    .map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name)
+    .map(id => id === KRAANGAT_OPTIE_ID ? formatKraangat(optionSubChoices) : EXTRA_OPTIONS.find(o => o.id === id)?.name)
     .filter(Boolean)
     .join(', ')
 
@@ -165,6 +204,116 @@ export default function StepSamenvatting({
         <Row label="Extra opties" value={selectedOptionNames || 'Geen'} onEdit={() => onGoToStep(3)} />
       </div>
 
+      {/* Mirror Maintenance Set: optioneel accessoire, eigen aantal */}
+      {mmsToegestaan && (
+        <div className={`rounded-2xl border-2 p-4 transition-colors ${mmsAantal > 0 ? 'border-lx-cta bg-lx-panel-bg/50' : 'border-black/10 bg-white'}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5 min-w-0 flex-1 basis-[260px]">
+              <button
+                type="button"
+                onClick={() => setMmsFotoOpen(true)}
+                aria-label="Bekijk een grotere foto van de Mirror Maintenance Set"
+                title="Klik voor een grotere foto"
+                className="w-[52px] h-[70px] rounded-xl bg-white border border-black/6 overflow-hidden flex-shrink-0 cursor-zoom-in hover:border-lx-cta/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lx-cta/40 transition-colors"
+              >
+                <Image
+                  src={MMS.image}
+                  alt="Mirror Maintenance Set: spuitbus glasreiniger met oranje microvezeldoek"
+                  width={331}
+                  height={448}
+                  className="w-full h-full object-contain"
+                />
+              </button>
+              <div className="min-w-0">
+                <p className={`text-[13.5px] font-semibold ${mmsAantal > 0 ? 'text-lx-cta' : 'text-lx-text-primary'}`}>{MMS.name}</p>
+                <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">
+                  {MMS.description} {formatEuro(mmsStuksprijs)} per stuk, bruto ex. BTW.
+                </p>
+              </div>
+            </div>
+            {mmsAantal === 0 ? (
+              <button
+                type="button"
+                onClick={() => onMmsQuantityChange(1)}
+                className="px-4 h-10 rounded-xl border border-lx-cta text-lx-cta text-[13px] font-semibold hover:bg-lx-icon-bg transition-colors flex-shrink-0"
+              >
+                Toevoegen
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  aria-label="Aantal sets verlagen"
+                  onClick={() => onMmsQuantityChange(Math.max(1, mmsAantal - 1))}
+                  disabled={mmsAantal <= 1}
+                  className="w-10 h-10 rounded-xl bg-white border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+                >−</button>
+                <span id="mms-aantal" aria-live="polite" className="w-10 h-10 rounded-xl border border-black/12 bg-white flex items-center justify-center text-[14px] font-semibold text-lx-text-primary">
+                  {mmsAantal}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Aantal sets verhogen"
+                  onClick={() => onMmsQuantityChange(Math.min(MMS.max, mmsAantal + 1))}
+                  disabled={mmsAantal >= MMS.max}
+                  className="w-10 h-10 rounded-xl bg-white border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+                >+</button>
+                <button
+                  type="button"
+                  onClick={() => onMmsQuantityChange(0)}
+                  className="ml-1 text-[12px] font-semibold text-lx-text-secondary hover:text-red-400 transition-colors"
+                >
+                  Verwijderen
+                </button>
+              </div>
+            )}
+          </div>
+          {mmsAantal > 0 && (
+            <p className="text-[11px] text-lx-text-secondary mt-2">
+              Maximaal {MMS.max} per configuratie. Het aantal staat los van het aantal spiegels.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Vergrote productfoto van de set */}
+      {mmsFotoOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={() => setMmsFotoOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={MMS.name}
+            className="relative bg-white rounded-2xl shadow-xl overflow-hidden max-w-[min(92vw,520px)]"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setMmsFotoOpen(false)}
+              aria-label="Sluiten"
+              autoFocus
+              className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white/90 flex items-center justify-center text-lx-text-secondary hover:bg-lx-panel-bg transition-colors"
+            >
+              <X size={17} />
+            </button>
+            <Image
+              src={MMS.imageLarge}
+              alt="Mirror Maintenance Set: spuitbus glasreiniger met oranje microvezeldoek"
+              width={968}
+              height={1320}
+              className="block w-auto h-auto max-h-[78vh] max-w-full"
+            />
+            <div className="px-5 py-3.5 border-t border-lx-divider">
+              <p className="text-[13.5px] font-semibold text-lx-text-primary">{MMS.name}</p>
+              <p className="text-[12px] text-lx-text-secondary mt-0.5">{MMS.description}</p>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+
       {/* Prijs */}
       <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
         <div className="flex items-center justify-between">
@@ -174,6 +323,24 @@ export default function StepSamenvatting({
             : <span className="text-[17px] font-bold text-lx-cta">€{unitPrice.toLocaleString('nl-NL')}</span>
           }
         </div>
+        {shape !== 'op-aanvraag' && quantity > 1 && (
+          <div className="flex items-center justify-between pt-1.5 border-t border-lx-divider">
+            <span className="text-[12.5px] text-lx-text-secondary">Totaal {quantity}× Bruto ex. BTW</span>
+            <span className="text-[14px] font-bold text-lx-text-primary">€{(unitPrice * quantity).toLocaleString('nl-NL')}</span>
+          </div>
+        )}
+        {mmsAantal > 0 && (
+          <>
+            <div className="flex items-center justify-between pt-1.5 border-t border-lx-divider">
+              <span className="text-[12.5px] text-lx-text-secondary">{MMS.name} {mmsAantal}×</span>
+              <span className="text-[13px] font-medium text-lx-text-primary">{formatEuro(mmsBruto)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-1.5 border-t border-lx-divider">
+              <span className="text-[12.5px] text-lx-text-secondary">Totaal Bruto ex. BTW</span>
+              <span className="text-[14px] font-bold text-lx-text-primary">{formatEuro(addEuro(unitPrice * quantity, mmsBruto))}</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Project details */}
@@ -202,6 +369,40 @@ export default function StepSamenvatting({
             placeholder="Bijv. PO-2026-0042"
             className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
           />
+        </div>
+
+        <div>
+          <label htmlFor="offerte-aantal" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Aantal</label>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Aantal verlagen"
+              onClick={() => onQuantityChange(Math.max(MIN_AANTAL, quantity - 1))}
+              disabled={quantity <= MIN_AANTAL}
+              className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+            >−</button>
+            <input
+              id="offerte-aantal"
+              type="number"
+              inputMode="numeric"
+              min={MIN_AANTAL}
+              max={MAX_AANTAL}
+              step={1}
+              value={quantity}
+              onChange={(e) => onQuantityChange(Math.min(MAX_AANTAL, Math.max(MIN_AANTAL, parseInt(e.target.value) || MIN_AANTAL)))}
+              className="w-16 h-11 rounded-xl border border-black/12 text-center text-[14px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white"
+            />
+            <button
+              type="button"
+              aria-label="Aantal verhogen"
+              onClick={() => onQuantityChange(Math.min(MAX_AANTAL, quantity + 1))}
+              disabled={quantity >= MAX_AANTAL}
+              className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+            >+</button>
+          </div>
+          <p className="text-[11.5px] text-lx-text-secondary mt-1.5 leading-snug">
+            Dit aantal komt op de offerte. Bij het bestellen kun je het nog aanpassen.
+          </p>
         </div>
 
         {/* Upload schets — verplicht bij spiegel op aanvraag */}
@@ -264,14 +465,14 @@ export default function StepSamenvatting({
           </div>
         )}
 
-        {/* Upload maattekening — alleen bij schuine zijden */}
-        {hasSchunineZijden && (
+        {/* Upload tekening, verplicht bij schuine zijden en bij kraangat */}
+        {needsTekening && (
           <div>
             <label className="text-[12px] font-semibold text-lx-text-secondary mb-1 block">
-              Maattekening schuine zijden <span className="text-red-400">*</span>
+              {tekeningLabel} <span className="text-red-400">*</span>
             </label>
             <p className="text-[11.5px] text-lx-text-secondary mb-2 leading-snug">
-              Upload een tekening of schets met de gewenste hoeken en zijden (PNG, JPG of PDF, max. 10 MB).
+              {tekeningUitleg}
             </p>
             {schunineZijdenFile ? (
               <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-lx-panel-bg border border-lx-cta/20">
@@ -339,7 +540,7 @@ export default function StepSamenvatting({
       <div className="flex flex-col sm:flex-row gap-3">
         <button
           onClick={() => onSave(false)}
-          disabled={!projectName.trim() || saving || (shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl) || (hasSchunineZijden && !schunineZijdenFile && !existingAttachmentUrl)}
+          disabled={!projectName.trim() || saving || (shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl) || (needsTekening && !schunineZijdenFile && !existingAttachmentUrl)}
           className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {saving ? (
@@ -356,8 +557,10 @@ export default function StepSamenvatting({
       {shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl && projectName.trim() && (
         <p className="text-[11px] text-lx-text-secondary text-center">Upload een schets of tekening om op te slaan</p>
       )}
-      {hasSchunineZijden && !schunineZijdenFile && !existingAttachmentUrl && projectName.trim() && (
-        <p className="text-[11px] text-lx-text-secondary text-center">Upload een maattekening voor de schuine zijden om op te slaan</p>
+      {needsTekening && !schunineZijdenFile && !existingAttachmentUrl && projectName.trim() && (
+        <p className="text-[11px] text-lx-text-secondary text-center">
+          {hasKraangat && !hasSchunineZijden ? 'Upload een tekening voor het kraangat om op te slaan' : 'Upload een maattekening om op te slaan'}
+        </p>
       )}
     </div>
   )

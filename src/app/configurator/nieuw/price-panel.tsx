@@ -9,6 +9,9 @@ import {
   GLAS_KLEUREN,
   EXTRA_OPTIONS,
   calcTotalPrice,
+  calcKraangatPrice,
+  getOrganicDims,
+  getKraangatAantal,
   calcBasePrice,
   calcDirectLEDMeters,
   calcIndirectLEDMeters,
@@ -47,6 +50,7 @@ export type ConfigPreview = {
   directLight?: { position: string; type: string | null }
   indirectLight?: { position: string; type: string | null }
   extras?: string[]
+  optionSubChoices?: Record<string, string>
 }
 
 // Mirror preview SVG — memo: alleen rerenderen als props daadwerkelijk veranderen
@@ -288,10 +292,15 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
           </mask>
         </defs>
 
-        {/* Indirecte verlichting: warme gloed rondom organic shape op muur */}
+        {/* Indirecte verlichting: warme gloed rondom organic shape op muur.
+            Masker op een groep zonder transform: staat het op het pad zelf, dan
+            wordt het masker met het pad mee verschoven en geschaald (dubbele
+            transform) en krijg je een afgekapte gloed met een verschoven binnenvorm. */}
         {hasIndirect && (
-          <path d={organicPath} transform={tf} fill="#FEF3C7" stroke="#FEF3C7" strokeWidth="16" opacity="0.5"
-            filter="url(#wall-glow-o)" mask="url(#outside-mask-o)" />
+          <g mask="url(#outside-mask-o)">
+            <path d={organicPath} transform={tf} fill="#FEF3C7" stroke="#FEF3C7" strokeWidth="16" opacity="0.5"
+              filter="url(#wall-glow-o)" />
+          </g>
         )}
 
         {/* Spiegelglas */}
@@ -300,10 +309,11 @@ export const MirrorPreview = memo(function MirrorPreview({ shape, width, height,
 
         {/* Directe verlichting: gezandstraald rondom binnenin */}
         {hasDirect && (
-          <>
-            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.45" clipPath="url(#organic-clip)" />
-            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.18" filter="url(#band-glow-o)" clipPath="url(#organic-clip)" />
-          </>
+          // Uitsnede op de groep, om dezelfde reden als het masker hierboven
+          <g clipPath="url(#organic-clip)">
+            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.45" />
+            <path d={organicPath} transform={tf} fill="none" stroke="white" strokeWidth="10" opacity="0.18" filter="url(#band-glow-o)" />
+          </g>
         )}
 
         {/* Spiegelglans */}
@@ -980,7 +990,8 @@ export default function PricePanel({
     if (basePrice > 0) lineItems.push({ label: `${shapeName}${dimLabel ? ' · ' + dimLabel : ''}`, price: basePrice })
     if (shape === 'organic' && glasKleur !== 'helder') {
       const glasNaamO = GLAS_KLEUREN.find(g => g.id === glasKleur)?.name ?? ''
-      const smokeMeerprijs = Math.round((width * height / 10000) * RONDE_GLAS_SMOKE_M2)
+      const organicMaat = getOrganicDims(organicSizeKey)
+      const smokeMeerprijs = Math.round((organicMaat.width * organicMaat.height / 10000) * RONDE_GLAS_SMOKE_M2)
       lineItems.push({ label: `Smoke glas · ${glasNaamO}`, price: smokeMeerprijs })
     }
 
@@ -997,9 +1008,19 @@ export default function PricePanel({
       }
     }
     for (const optId of selectedOptions) {
+      if (optId === 'verwarming' && shape === 'organic') {
+        const organicMaat = getOrganicDims(organicSizeKey)
+        lineItems.push({ label: 'Verwarming', price: calcHeatingPrice(organicMaat.width, organicMaat.height) })
+        continue
+      }
       const opt = EXTRA_OPTIONS.find(o => o.id === optId)
       if (opt && opt.price > 0) lineItems.push({ label: opt.name, price: opt.price })
     }
+  }
+
+  const kraangatPrice = calcKraangatPrice({ shape, width, height, diameter, selectedOptions, optionSubChoices })
+  if (kraangatPrice > 0 && shape !== 'op-aanvraag') {
+    lineItems.push({ label: `Kraangat boring · ${getKraangatAantal(optionSubChoices)}×`, price: kraangatPrice })
   }
 
   // Eén bediening voor beide verlichtingen: direct- én indirect-blok pushen elk

@@ -1,4 +1,5 @@
-import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax } from '@/lib/configurator-config'
+import { clampMmsQuantity, getMmsUnitPrice, isMmsAllowed } from '@/lib/mms'
+import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, KRAANGAT_MAX_GATEN, isValidKraangatDiameter, getOrganicDims } from '@/lib/configurator-config'
 
 // Fixed product UUID for the default LoooX spiegel product
 // Run the seed SQL in Supabase to create this product
@@ -22,6 +23,7 @@ export type OptionsJsonBase = {
   reference: string
   description: string
   quantity: number
+  mmsQuantity?: number
   attachmentUrl?: string | null
   solMeubelHoogte?: number
   solOnderkant?: number
@@ -79,7 +81,37 @@ export function assertSolLunaMaat(input: {
   }
 }
 
-export function buildSelectedOptionsJson(input: OptionsJsonBase) {
+// Kolommen width/height: bij organic de echte maat uit de maat-key opslaan.
+// De wizard stuurt daar de (irrelevante) rechthoek-invoer mee, waardoor organic
+// voorheen altijd als 80 × 60 in de database stond.
+export function resolveStoredDims(input: { shape: ShapeSlug; width: number; height: number; organicSizeKey: string | null }) {
+  return input.shape === 'organic'
+    ? getOrganicDims(input.organicSizeKey)
+    : { width: input.width, height: input.height }
+}
+
+// Vangnet voor de kraangat-optie: de UI dwingt aantal, gatdiameter en tekening
+// al af, maar de server is de echte poortwachter (prijs hangt af van het aantal).
+export function assertKraangat(input: {
+  selectedOptions: string[]
+  optionSubChoices?: Record<string, string>
+  attachmentUrl?: string | null
+  status?: 'draft' | 'saved'
+}) {
+  if (!input.selectedOptions.includes(KRAANGAT_OPTIE_ID)) return
+  const aantal = input.optionSubChoices?.[KRAANGAT_OPTIE_ID]
+  if (!aantal || !/^\d$/.test(aantal) || Number(aantal) < 1 || Number(aantal) > KRAANGAT_MAX_GATEN) {
+    throw new Error(`Kies het aantal kraangaten (1 t/m ${KRAANGAT_MAX_GATEN}).`)
+  }
+  if (!isValidKraangatDiameter(input.optionSubChoices?.[KRAANGAT_DIAMETER_KEY])) {
+    throw new Error(`Vul de gatdiameter van het kraangat in (${KRAANGAT_DIAMETER_MM.min} t/m ${KRAANGAT_DIAMETER_MM.max} mm).`)
+  }
+  if (input.status !== 'draft' && !input.attachmentUrl) {
+    throw new Error('Upload een tekening met de positie van het kraangat.')
+  }
+}
+
+export function buildSelectedOptionsJson(input: OptionsJsonBase, ctx: { isInternational: boolean }) {
   return {
     shape: input.shape,
     diameter: input.diameter,
@@ -95,6 +127,11 @@ export function buildSelectedOptionsJson(input: OptionsJsonBase) {
     reference: input.reference,
     description: input.description,
     quantity: input.quantity,
+    // Mirror Maintenance Set: aparte regel, niet in total_price (zie lib/mms.ts)
+    mmsQuantity: isMmsAllowed(input.shape) ? clampMmsQuantity(input.mmsQuantity) : 0,
+    // Stuksprijs vastleggen op het moment van opslaan (incl. eventuele buitenlandtoeslag),
+    // net als total_price. Ook bij 0 sets: de dealer kan er in de bestelmodal nog bij kiezen.
+    ...(isMmsAllowed(input.shape) && { mmsUnitPrice: getMmsUnitPrice(ctx.isInternational) }),
     attachmentUrl: assertValidAttachmentUrl(input.attachmentUrl),
     solMeubelHoogte: input.solMeubelHoogte,
     solOnderkant: input.solOnderkant,

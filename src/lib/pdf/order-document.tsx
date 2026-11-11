@@ -9,6 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import { PdfMirrorPreview } from './mirror-preview'
 import { PdfLogo } from './pdf-logo'
+import { MMS, addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity, isMmsAllowed, resolveMmsUnitPrice } from '@/lib/mms'
 
 function formatAddress(str: string | null | undefined): string {
   if (!str) return ''
@@ -276,7 +277,16 @@ export default function OrderDocument({
   const finalNettoUnitPrice = nettoUnitPrice - staffelAmountPerStuk
   const nettoSubtotal = finalNettoUnitPrice * quantity
   const discountAmount = (opts.discountAmount as number | null) ?? 0
-  const nettoTotal = nettoSubtotal - discountAmount
+  // Mirror Maintenance Set: aparte regel, alleen dealerkorting (zie lib/mms.ts)
+  const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
+  const mmsUnitPrice = resolveMmsUnitPrice(opts.mmsUnitPrice)
+  const mmsBruto = calcMmsBruto(mmsQuantity, mmsUnitPrice)
+  const mmsNetto = calcMmsNetto(mmsQuantity, korting, mmsUnitPrice)
+  // Eén kortingsregel: korting op de spiegel (per stuk) plus die op de set, opgeteld
+  const dealerKortingBedrag = addEuro(Math.round(unitPrice * korting / 100), mmsQuantity > 0 ? addEuro(mmsBruto, -mmsNetto) : 0)
+  // Met een set erbij benoemen we expliciet welke regels over de spiegel gaan
+  const spiegelSuffix = mmsQuantity > 0 ? ' (spiegel)' : ''
+  const nettoTotal = mmsQuantity > 0 ? addEuro(nettoSubtotal - discountAmount, mmsNetto) : nettoSubtotal - discountAmount
 
   return (
     <Document
@@ -403,12 +413,18 @@ export default function OrderDocument({
               <Text style={styles.tableLabel}>Indirecte verlichting</Text>
               <Text style={styles.tableValue}>{formatLight(opts.indirectLight, opts)}</Text>
             </View>
-            <View style={styles.tableRowLast}>
+            <View style={mmsQuantity > 0 ? styles.tableRow : styles.tableRowLast}>
               <Text style={styles.tableLabel}>Extra opties</Text>
               <Text style={styles.tableValue}>
                 {formatExtras(opts.extras, opts.optionSubChoices)}
               </Text>
             </View>
+            {mmsQuantity > 0 && (
+              <View style={styles.tableRowLast}>
+                <Text style={styles.tableLabel}>Accessoire</Text>
+                <Text style={styles.tableValue}>{MMS.name} ({MMS.code}), {mmsQuantity}×, EAN {MMS.ean}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -429,12 +445,19 @@ export default function OrderDocument({
             <Text style={styles.sectionTitle}>Prijsoverzicht (excl. BTW)</Text>
             <View style={styles.pricingBox}>
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>Bruto ex. BTW</Text>
+                <Text style={styles.pricingLabel}>Bruto ex. BTW{spiegelSuffix}</Text>
                 <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
               </View>
+              {/* De set staat boven de dealerkorting, zodat zichtbaar is dat de korting daar ook op geldt */}
+              {mmsQuantity > 0 && (
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(mmsUnitPrice)} bruto</Text>
+                  <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(mmsBruto)}</Text>
+                </View>
+              )}
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
-                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(Math.round(unitPrice * korting / 100))}</Text>
+                <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(dealerKortingBedrag)}</Text>
               </View>
               {staffelAmountPerStuk > 0 && (
                 <View style={styles.pricingRow}>
@@ -445,11 +468,11 @@ export default function OrderDocument({
                 </View>
               )}
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>Netto ex. BTW</Text>
+                <Text style={styles.pricingLabel}>Netto ex. BTW{spiegelSuffix}</Text>
                 <Text style={styles.pricingValue}>{formatPrice(finalNettoUnitPrice)}</Text>
               </View>
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>Aantal</Text>
+                <Text style={styles.pricingLabel}>{mmsQuantity > 0 ? 'Aantal spiegels' : 'Aantal'}</Text>
                 <Text style={styles.pricingValue}>{quantity}×</Text>
               </View>
               {opts.discountType && opts.discountAmount ? (
@@ -480,7 +503,7 @@ export default function OrderDocument({
 
         {/* Bijzonderheden */}
         {(notes || opts.description) && (
-          <View style={styles.section}>
+          <View style={styles.section} wrap={(notes ?? opts.description ?? '').length > 1500}>
             <Text style={styles.sectionTitle}>Bijzonderheden</Text>
             <View style={styles.notesBox}>
               <Text style={styles.notesText}>{notes ?? opts.description}</Text>

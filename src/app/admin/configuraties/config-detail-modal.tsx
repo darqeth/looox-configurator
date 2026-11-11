@@ -5,6 +5,8 @@ import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
   SHAPES,
   formatOrganicSize,
+  formatKraangat,
+  KRAANGAT_OPTIE_ID,
   POSITION_LABELS,
   LIGHT_TYPE_LABELS,
   CONTROLS_FOR_TYPE,
@@ -22,6 +24,8 @@ interface SelectedOptions {
   directLight?: { position?: string; type?: string; control?: string }
   indirectLight?: { position?: string; type?: string; control?: string }
   extras?: string[]
+  optionSubChoices?: Record<string, string>
+  mmsQuantity?: number
 }
 
 export interface ConfigRow {
@@ -85,7 +89,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
   const diameter = opts.diameter as number | undefined
   const organicKey = opts.organicSizeKey
   const extras = (opts.extras ?? [])
-    .map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name)
+    .map(id => id === KRAANGAT_OPTIE_ID ? formatKraangat(opts.optionSubChoices) : EXTRA_OPTIONS.find(o => o.id === id)?.name)
     .filter(Boolean)
     .join(', ')
 
@@ -250,6 +254,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
               <ModalRow label="Vorm" value={shapeName} />
               <ModalRow label="Afmeting" value={dimensionLabel || '—'} />
               {opts.quantity != null && <ModalRow label="Aantal" value={`${opts.quantity}×`} />}
+              {!!opts.mmsQuantity && <ModalRow label="Mirror Maintenance Set" value={`${opts.mmsQuantity}×`} />}
               {isProjectspiegel ? (
                 <ModalRow label="Glasdikte" value={opts.glasdikte ? `${opts.glasdikte} mm` : '—'} />
               ) : (

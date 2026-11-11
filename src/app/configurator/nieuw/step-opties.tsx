@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER, SOL_CATALOGUS, LUNA_CATALOGUS } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, EXTRA_OPTIONS, ROND_FRAME_PRIJZEN, calcHeatingPrice, calcRondHeatingPrice, calcGlasKosten, calcRechthoekFramePrice, RECHTHOEK_FRAME_PRIJS_PER_METER, SOL_CATALOGUS, LUNA_CATALOGUS, calcKraangatPrijsPerGat, isValidKraangatDiameter, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, getOrganicDims } from '@/lib/configurator-config'
 
 function OptionIcon({ id, active }: { id: string; active: boolean }) {
   const imgIds: Record<string, string> = {
@@ -40,6 +40,11 @@ function OptionIcon({ id, active }: { id: string; active: boolean }) {
       <polygon points="5,3 19,3 21,21 3,21"/>
     </svg>
   )
+  if (id === 'kraangat') return (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className={svgClass}>
+      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="15" r="2.5"/>
+    </svg>
+  )
   return <div className="w-8 h-8 rounded-lg bg-lx-panel-bg" />
 }
 
@@ -48,6 +53,7 @@ interface StepOptiesProps {
   width: number
   height: number
   diameter?: number | null
+  organicSizeKey?: string | null
   glasKleur: GlasKleur
   selectedOptions: string[]
   onChange: (options: string[]) => void
@@ -62,8 +68,10 @@ interface StepOptiesProps {
   lightControl?: string | null
 }
 
-export default function StepOpties({ shape, width, height, diameter, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition: _indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35, lightControl }: StepOptiesProps) {
+export default function StepOpties({ shape, width: wizardWidth, height: wizardHeight, diameter, organicSizeKey, glasKleur, selectedOptions, onChange, optionSubChoices, onSubChoiceChange, optionTooltips, isInternational = false, indirectPosition: _indirectPosition, solOnderkant, lunaOnderkant, lunaMeubelHoogte = 35, lightControl }: StepOptiesProps) {
   const mult = isInternational ? 1.05 : 1
+  // Organic: maat komt uit de maat-key, niet uit de rechthoek-invoer van de wizard
+  const { width, height } = shape === 'organic' ? getOrganicDims(organicSizeKey) : { width: wizardWidth, height: wizardHeight }
   // Verwarming-schakeling: mee met de spiegelschakelaar, of (bij afstandsbediening
   // / geen schakelaar) via de centrale wandschakelaar in de ruimte.
   const verwarmingViaSchakelaar = !!lightControl && lightControl !== 'afstandsbediening'
@@ -137,6 +145,8 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
       onChange(selectedOptions.filter((id) => id !== optionId))
     } else {
       onChange([...selectedOptions, optionId])
+      // Kraangat start op 1 gat; de dealer kan dat daarna ophogen
+      if (optionId === KRAANGAT_OPTIE_ID && !optionSubChoices[KRAANGAT_OPTIE_ID]) onSubChoiceChange(KRAANGAT_OPTIE_ID, '1')
     }
   }
 
@@ -209,6 +219,8 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                       const minPrice = Math.round(calcRechthoekFramePrice(Object.keys(RECHTHOEK_FRAME_PRIJS_PER_METER).reduce((a, b) => RECHTHOEK_FRAME_PRIJS_PER_METER[a] <= RECHTHOEK_FRAME_PRIJS_PER_METER[b] ? a : b), width, height) * mult)
                       return `v.a. €${minPrice}`
                     })()
+                  : option.id === KRAANGAT_OPTIE_ID
+                  ? `+€${Math.round(calcKraangatPrijsPerGat(shape, width, height, diameter) * mult)} per gat`
                   : option.id === 'sol-extra-deel'
                   ? `+€${Math.round((SOL_CATALOGUS.metExtraDeel - SOL_CATALOGUS.basis) * mult)}`
                   : option.id === 'luna-extra-deel'
@@ -243,6 +255,9 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                 <p className="text-[11.5px] text-lx-text-secondary mt-0.5 leading-snug">{option.description}</p>
                 {isSelected && option.id === 'schuine-zijden' && (
                   <p className="text-[11px] text-lx-cta mt-1 font-medium">Tekening vereist — aanleveren in stap 5</p>
+                )}
+                {isSelected && option.id === KRAANGAT_OPTIE_ID && (
+                  <p className="text-[11px] text-lx-cta mt-1 font-medium">Tekening met de positie vereist, aanleveren in de laatste stap</p>
                 )}
                 {isSelected && option.id === 'verwarming' && (
                   <p className="text-[11px] text-lx-text-secondary mt-1 leading-snug" onClick={e => e.stopPropagation()}>
@@ -334,6 +349,45 @@ export default function StepOpties({ shape, width, height, diameter, glasKleur, 
                     ))}
                   </div>
                 )}
+
+                {option.id === KRAANGAT_OPTIE_ID && (() => {
+                  const diameterWaarde = optionSubChoices[KRAANGAT_DIAMETER_KEY] ?? ''
+                  const diameterOk = isValidKraangatDiameter(diameterWaarde)
+                  return (
+                    <div className="mt-3">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <label htmlFor="kraangat-diameter" className="text-[10.5px] font-semibold text-lx-text-muted uppercase tracking-wide">
+                          Gatdiameter
+                        </label>
+                        {!diameterOk && (
+                          <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">Verplicht</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="kraangat-diameter"
+                          type="number"
+                          inputMode="numeric"
+                          min={KRAANGAT_DIAMETER_MM.min}
+                          max={KRAANGAT_DIAMETER_MM.max}
+                          step={1}
+                          value={diameterWaarde}
+                          onClick={e => e.stopPropagation()}
+                          onKeyDown={e => e.stopPropagation()}
+                          onChange={e => onSubChoiceChange(KRAANGAT_DIAMETER_KEY, e.target.value.replace(/\D/g, '').slice(0, 3))}
+                          placeholder="Bijv. 35"
+                          className="w-24 h-9 rounded-xl border border-black/12 px-3 text-[13px] font-semibold text-lx-text-primary placeholder-lx-placeholder placeholder:font-normal outline-none focus:border-lx-cta bg-white"
+                        />
+                        <span className="text-[12px] text-lx-text-secondary">mm</span>
+                      </div>
+                      <p className="text-[11px] text-lx-text-secondary mt-1.5 leading-snug">
+                        {diameterWaarde && !diameterOk
+                          ? `Vul een diameter in tussen ${KRAANGAT_DIAMETER_MM.min} en ${KRAANGAT_DIAMETER_MM.max} mm.`
+                          : 'Eén diameter voor alle gaten. Afwijkende maten zet je op de tekening.'}
+                      </p>
+                    </div>
+                  )
+                })()}
               </div>
             )}
           </div>

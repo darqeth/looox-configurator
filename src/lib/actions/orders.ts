@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
-import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID, assertSolLunaMaat } from '@/lib/actions/configurator-helpers'
+import { clampMmsQuantity, getMmsUnitPrice, isMmsAllowed, resolveMmsUnitPrice } from '@/lib/mms'
+import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
 import { computeOrderTotals, type OrderDiscount } from '@/lib/order-pricing'
 import { runAfterResponse } from '@/lib/after-response'
 import { parseOrThrow, placeOrderInputSchema, orderFromConfigSchema } from '@/lib/validation'
@@ -33,6 +34,7 @@ type PlaceOrderInput = {
   reference: string
   description: string
   quantity: number
+  mmsQuantity?: number
   attachmentUrl?: string | null
   discountCodeId?: string | null
   discountType?: 'pct' | 'fixed' | null
@@ -269,6 +271,7 @@ async function assertCanOrder(
 export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumber: string; orderId: string }> {
   const input = parseOrThrow(placeOrderInputSchema, rawInput) as PlaceOrderInput
   assertSolLunaMaat(input)
+  assertKraangat(input)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
@@ -312,11 +315,13 @@ export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumb
     dealerKortingPct,
     quantity: input.quantity,
     discount: resolved?.discount ?? null,
+    mmsQuantity: isMmsAllowed(input.shape) ? clampMmsQuantity(input.mmsQuantity) : 0,
+    mmsUnitPrice: getMmsUnitPrice(isInternational),
   })
   const resolvedDiscountUseType = resolved?.useType ?? 'single'
 
   const selectedOptionsJson = {
-    ...buildSelectedOptionsJson(input),
+    ...buildSelectedOptionsJson(input, { isInternational }),
     ...(totals.staffelPct > 0 && { staffelKortingPct: totals.staffelPct }),
     discountType: resolved?.discount?.type ?? null,
     discountValue: resolved?.discount?.value ?? null,
@@ -329,8 +334,7 @@ export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumb
     newConfig: {
       product_id: DEFAULT_PRODUCT_ID,
       name: input.projectName,
-      width: input.width,
-      height: input.height,
+      ...resolveStoredDims(input),
       selected_options: selectedOptionsJson,
       total_price: basePrice,
     },
@@ -373,6 +377,8 @@ export async function placeOrder(rawInput: PlaceOrderInput): Promise<{ orderNumb
     nettoUnitPrice: totals.nettoUnitPrice,
     staffelPct: totals.staffelPct,
     discountAmount: totals.discountAmount,
+    mmsQuantity: totals.mmsQuantity,
+    mmsNetto: totals.mmsNetto,
   }
 
   const configOptions: ConfigOptions = selectedOptionsJson as ConfigOptions
@@ -401,13 +407,16 @@ export async function placeOrderFromConfig(
   discountValue?: number | null,
   discountUseType?: 'single' | 'per_user' | null,
   rawAltShippingAddress?: string | null,
+  /** Aantal Mirror Maintenance Sets uit de bestelmodal; leeg = het aantal van de offerte */
+  rawMmsQuantity?: number | null,
 ): Promise<{ orderNumber: string; orderId: string }> {
-  const { configId, quantity, notes, discountCodeId, altShippingAddress } = parseOrThrow(orderFromConfigSchema, {
+  const { configId, quantity, notes, discountCodeId, altShippingAddress, mmsQuantity: requestedMms } = parseOrThrow(orderFromConfigSchema, {
     configId: rawConfigId,
     quantity: rawQuantity,
     notes: rawNotes,
     discountCodeId: rawDiscountCodeId,
     altShippingAddress: rawAltShippingAddress,
+    mmsQuantity: rawMmsQuantity,
   })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -453,19 +462,33 @@ export async function placeOrderFromConfig(
     ? await resolveDiscountCode(supabase, discountCodeId, user.id)
     : null
 
+  // Mirror Maintenance Set: het aantal uit de bestelmodal is leidend, anders dat
+  // van de offerte. Nooit bij projectspiegels en spiegel op aanvraag.
+  const savedMms = clampMmsQuantity(opts.mmsQuantity)
+  const mmsQuantity = isProjectspiegel || !isMmsAllowed(opts.shape as string | undefined)
+    ? 0
+    : clampMmsQuantity(requestedMms ?? savedMms)
+  // Stuksprijs van de set is bij het opslaan vastgelegd (incl. buitenlandtoeslag)
+  const mmsUnitPrice = resolveMmsUnitPrice(opts.mmsUnitPrice)
+
   const totals = computeOrderTotals({
     brutoUnitPrice: unitPrice,
     dealerKortingPct,
     quantity: effectiveQuantity,
     isProjectspiegel,
     discount: resolved?.discount ?? null,
+    mmsQuantity,
+    mmsUnitPrice,
   })
   const staffelKortingPct = totals.staffelPct
   const discountAmount = totals.discountAmount
   const resolvedDiscountUseType = resolved?.useType ?? 'single'
+  // Het bestelde aantal sets vastleggen bij de configuratie: PDF en e-mail lezen het daar
+  const mmsGewijzigd = mmsQuantity !== savedMms || (mmsQuantity > 0 && opts.mmsUnitPrice == null)
 
-  const configPatch = (discountAmount > 0 || staffelKortingPct > 0 || altShippingAddress)
+  const configPatch = (discountAmount > 0 || staffelKortingPct > 0 || altShippingAddress || mmsGewijzigd)
     ? {
+        ...(mmsGewijzigd && { mmsQuantity, mmsUnitPrice }),
         ...(staffelKortingPct > 0 && { staffelKortingPct }),
         ...(discountAmount > 0 && resolved?.discount && {
           discountType: resolved.discount.type,
@@ -519,7 +542,13 @@ export async function placeOrderFromConfig(
     nettoUnitPrice: totals.nettoUnitPrice,
     staffelPct: totals.staffelPct,
     discountAmount: totals.discountAmount,
+    mmsQuantity: totals.mmsQuantity,
+    mmsNetto: totals.mmsNetto,
   }
+
+  // De PDF in de mail moet dezelfde opties zien als de opgeslagen bestelling:
+  // inclusief staffel, kortingscode en het bestelde aantal sets uit de patch.
+  const orderOpts = { ...opts, ...(configPatch ?? {}) } as ConfigOptions
 
   runAfterResponse('order-emails', sendOrderEmails(
     supabase, user.id, user.email ?? '',
@@ -528,7 +557,7 @@ export async function placeOrderFromConfig(
     emailDetails,
     notes || null,
     (opts.attachmentUrl as string | null) ?? null,
-    opts,
+    orderOpts,
     config.width ?? null,
     config.height ?? null,
     altShippingAddress ?? null,

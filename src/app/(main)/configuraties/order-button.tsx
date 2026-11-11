@@ -7,9 +7,10 @@ import { Loader2 } from 'lucide-react'
 import { placeOrderFromConfig } from '@/lib/actions/orders'
 import { useDiscountCode } from '@/hooks/useDiscountCode'
 import { MirrorPreview, type ConfigPreview } from '@/app/configurator/nieuw/price-panel'
-import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, type GlasKleur } from '@/lib/configurator-config'
+import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, KRAANGAT_OPTIE_ID, formatKraangat, type GlasKleur } from '@/lib/configurator-config'
 import { getMaatwerkStaffelTip, type MaatwerkStaffelTip } from '@/lib/maatwerk-staffel'
 import { computeOrderTotals } from '@/lib/order-pricing'
+import { MMS, clampMmsQuantity, formatEuro, resolveMmsUnitPrice } from '@/lib/mms'
 
 interface OrderButtonProps {
   configId: string
@@ -21,6 +22,12 @@ interface OrderButtonProps {
   projectspiegelStuks?: number
   configPreview?: ConfigPreview
   isOpAanvraag?: boolean
+  /** Aantal dat bij de offerte is opgeslagen; de modal start hierop */
+  initialQuantity?: number
+  /** Aantal Mirror Maintenance Sets uit de offerte; in de modal nog aanpasbaar */
+  initialMmsQuantity?: number
+  /** Bruto stuksprijs van de set zoals vastgelegd bij de configuratie (incl. buitenlandtoeslag) */
+  mmsUnitPrice?: number
 }
 
 function lightSummary(light: { position: string; type: string | null } | undefined): string {
@@ -44,7 +51,7 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
 
   const directPos = preview.directLight?.position
   const indirectPos = preview.indirectLight?.position
-  const extraNames = preview.extras?.map(id => EXTRA_OPTIONS.find(o => o.id === id)?.name ?? id) ?? []
+  const extraNames = preview.extras?.map(id => id === KRAANGAT_OPTIE_ID ? formatKraangat(preview.optionSubChoices) : EXTRA_OPTIONS.find(o => o.id === id)?.name ?? id) ?? []
 
   return (
     <div className="bg-lx-panel-bg rounded-xl overflow-hidden">
@@ -100,12 +107,18 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
   )
 }
 
-export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag }: OrderButtonProps) {
+export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag, initialQuantity, initialMmsQuantity, mmsUnitPrice: storedMmsUnitPrice }: OrderButtonProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const startQuantity = Math.max(1, Math.floor(initialQuantity ?? 1))
   const [open, setOpen] = useState(false)
   const [modalStep, setModalStep] = useState<1 | 2>(1)
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState(startQuantity)
+  // Mirror Maintenance Set: niet bij projectspiegels en spiegel op aanvraag
+  const mmsToegestaan = !isProjectspiegel && !isOpAanvraag
+  const startMms = mmsToegestaan ? clampMmsQuantity(initialMmsQuantity) : 0
+  const [mmsQuantity, setMmsQuantity] = useState(startMms)
+  const mmsUnitPrice = resolveMmsUnitPrice(storedMmsUnitPrice)
   const [notes, setNotes] = useState('')
   const [checked, setChecked] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -140,6 +153,8 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
     quantity: effectiveQuantity,
     isProjectspiegel,
     discount: appliedDiscount ? { type: appliedDiscount.type, value: appliedDiscount.value } : null,
+    mmsQuantity: mmsToegestaan ? mmsQuantity : 0,
+    mmsUnitPrice,
   })
   const discountAmount = totals.discountAmount
   const finalTotal = totals.total
@@ -159,6 +174,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
         appliedDiscount?.value ?? null,
         appliedDiscount?.useType ?? null,
         altShippingAddress,
+        mmsToegestaan ? mmsQuantity : 0,
       )
       setResult(orderNumber)
       queryClient.invalidateQueries({ queryKey: ['orders'] })
@@ -177,7 +193,8 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
   function handleClose() {
     setOpen(false)
     setModalStep(1)
-    setQuantity(1)
+    setQuantity(startQuantity)
+    setMmsQuantity(startMms)
     setNotes('')
     setChecked(false)
     setLoading(false)
@@ -194,7 +211,7 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setQuantity(startQuantity); setMmsQuantity(startMms); setOpen(true) }}
         className="px-3 py-2.5 rounded-lg bg-lx-cta text-white text-[12.5px] font-semibold hover:bg-lx-cta-hover transition-colors whitespace-nowrap"
       >
         {isOpAanvraag ? 'Aanvragen →' : 'Bestellen →'}
@@ -338,10 +355,20 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                                   </span>
                                 </div>
                               )}
-                              {(appliedDiscount || quantity > 1) && (
+                              {totals.mmsQuantity > 0 && (
                                 <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
-                                  <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal {quantity}×</span>
-                                  <span className="text-[15px] font-bold text-lx-text-primary">€{finalTotal.toLocaleString('nl-NL')}</span>
+                                  <span className="text-[12.5px] text-lx-text-secondary">
+                                    {MMS.name} {totals.mmsQuantity}× <span className="text-lx-text-muted">(na {korting}% korting)</span>
+                                  </span>
+                                  <span className="text-[13px] font-medium text-lx-text-primary">{formatEuro(totals.mmsNetto)}</span>
+                                </div>
+                              )}
+                              {(appliedDiscount || quantity > 1 || totals.mmsQuantity > 0) && (
+                                <div className="flex items-center justify-between pt-1 border-t border-lx-divider">
+                                  <span className="text-[12.5px] text-lx-text-secondary font-medium">
+                                    Totaal {quantity}×{totals.mmsQuantity > 0 ? ` + ${totals.mmsQuantity} ${totals.mmsQuantity === 1 ? 'set' : 'sets'}` : ''}
+                                  </span>
+                                  <span className="text-[15px] font-bold text-lx-text-primary">{formatEuro(finalTotal)}</span>
                                 </div>
                               )}
                             </>
@@ -370,6 +397,35 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
                                 type="button"
                                 onClick={() => setQuantity(quantity + 1)}
                                 className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light"
+                                tabIndex={-1}
+                              >+</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {mmsToegestaan && (
+                          <div>
+                            <label className={labelCls}>
+                              {MMS.name} <span className="font-normal">({formatEuro(mmsUnitPrice)} per stuk bruto, max. {MMS.max})</span>
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                aria-label="Aantal sets verlagen"
+                                onClick={() => setMmsQuantity(Math.max(0, mmsQuantity - 1))}
+                                disabled={mmsQuantity <= 0}
+                                className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
+                                tabIndex={-1}
+                              >−</button>
+                              <span data-testid="mms-aantal" aria-live="polite" className="w-16 h-11 rounded-xl border border-black/12 bg-white flex items-center justify-center text-[14px] font-semibold text-lx-text-primary">
+                                {mmsQuantity}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label="Aantal sets verhogen"
+                                onClick={() => setMmsQuantity(Math.min(MMS.max, mmsQuantity + 1))}
+                                disabled={mmsQuantity >= MMS.max}
+                                className="w-11 h-11 rounded-xl bg-lx-panel-bg border border-black/8 hover:bg-lx-border transition-colors flex items-center justify-center text-lg font-light disabled:opacity-40 disabled:cursor-not-allowed"
                                 tabIndex={-1}
                               >+</button>
                             </div>

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
-import { DEFAULT_PRODUCT_ID, buildSelectedOptionsJson, assertSolLunaMaat } from '@/lib/actions/configurator-helpers'
+import { DEFAULT_PRODUCT_ID, buildSelectedOptionsJson, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
 import { z } from 'zod'
 import { parseOrThrow, configInputSchema } from '@/lib/validation'
 
@@ -48,6 +48,7 @@ type SaveConfigInput = {
   reference: string
   description: string
   quantity: number
+  mmsQuantity?: number
   status: 'draft' | 'saved'
   attachmentUrl?: string | null
   solMeubelHoogte?: number
@@ -81,6 +82,7 @@ async function assertConfiguratorAccess(
 export async function saveConfiguration(rawInput: SaveConfigInput) {
   const input = parseOrThrow(saveConfigSchema, rawInput) as SaveConfigInput
   assertSolLunaMaat(input)
+  assertKraangat(input)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
@@ -115,14 +117,13 @@ export async function saveConfiguration(rawInput: SaveConfigInput) {
     ? 0
     : isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
-  const selectedOptionsJson = buildSelectedOptionsJson(input)
+  const selectedOptionsJson = buildSelectedOptionsJson(input, { isInternational })
 
   const { error } = await supabase.from('configurations').insert({
     user_id: user.id,
     product_id: DEFAULT_PRODUCT_ID,
     name: input.projectName,
-    width: input.width,
-    height: input.height,
+    ...resolveStoredDims(input),
     selected_options: selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: input.status,
@@ -176,6 +177,7 @@ type UpdateConfigInput = SaveConfigInput & { configId: string }
 export async function updateConfiguration(rawInput: UpdateConfigInput) {
   const input = parseOrThrow(updateConfigSchema, rawInput) as UpdateConfigInput
   assertSolLunaMaat(input)
+  assertKraangat(input)
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -211,14 +213,13 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
     ? 0
     : isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
-  const selectedOptionsJson = buildSelectedOptionsJson(input)
+  const selectedOptionsJson = buildSelectedOptionsJson(input, { isInternational })
 
   // Geen .eq('user_id') filter: RLS staat eigenaar én manager-binnen-bedrijf toe.
   // .select() zet een geblokkeerde/niet-bestaande rij om in een fout i.p.v. stil falen.
   const { data, error } = await supabase.from('configurations').update({
     name: input.projectName,
-    width: input.width,
-    height: input.height,
+    ...resolveStoredDims(input),
     selected_options: selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: input.status,

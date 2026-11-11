@@ -1,5 +1,5 @@
 // Shared formatting helpers for PDF documents
-import { formatOrganicSize } from '@/lib/configurator-config'
+import { formatOrganicSize, formatKraangat, KRAANGAT_OPTIE_ID } from '@/lib/configurator-config'
 
 export type ConfigOptions = {
   shape: string
@@ -15,6 +15,10 @@ export type ConfigOptions = {
   reference?: string
   description?: string
   quantity?: number
+  /** Aantal Mirror Maintenance Sets (0 of afwezig = geen) */
+  mmsQuantity?: number | null
+  /** Bruto stuksprijs van de set zoals vastgelegd bij opslaan */
+  mmsUnitPrice?: number | null
   attachmentUrl?: string | null
   discountType?: 'pct' | 'fixed' | null
   discountValue?: number | null
@@ -155,6 +159,7 @@ export function formatExtras(extras?: string[], optionSubChoices?: Record<string
       const pos = optionSubChoices?.['makeup-spiegel']
       return pos ? `Make-up spiegel (${POSITION_CHOICE_LABELS[pos] ?? pos})` : 'Make-up spiegel'
     }
+    if (id === KRAANGAT_OPTIE_ID) return formatKraangat(optionSubChoices)
     return EXTRA_LABELS[id] ?? id
   })
   return parts.join(', ')
@@ -168,6 +173,8 @@ export function formatDate(iso: string): string {
   })
 }
 
+// Hele bedragen zonder decimalen (zoals altijd), bedragen met centen op twee decimalen
 export function formatPrice(amount: number): string {
-  return `€ ${new Intl.NumberFormat('nl-NL').format(amount)}`
+  const heel = Math.abs(amount - Math.round(amount)) < 0.005
+  return `€ ${new Intl.NumberFormat('nl-NL', { minimumFractionDigits: heel ? 0 : 2, maximumFractionDigits: 2 }).format(amount)}`
 }

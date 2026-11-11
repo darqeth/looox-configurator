@@ -97,3 +97,103 @@ test.describe('computeOrderTotals', () => {
     expect(t.total).toBe(subtotal - discountAmount)
   })
 })
+
+test.describe('Mirror Maintenance Set (sprint 2026-11, S4)', () => {
+  test('zonder MMS verandert er niets aan het totaal', () => {
+    const t = computeOrderTotals({ brutoUnitPrice: 640, dealerKortingPct: 50, quantity: 1 })
+    expect(t.mmsQuantity).toBe(0)
+    expect(t.mmsNetto).toBe(0)
+    expect(t.total).toBe(320)
+  })
+
+  test('rekenvoorbeeld bij 50% dealerkorting: 1, 2 en 10 sets', () => {
+    const basis = { brutoUnitPrice: 510, dealerKortingPct: 50, quantity: 1 }
+    const een = computeOrderTotals({ ...basis, mmsQuantity: 1 })
+    expect(een.mmsBruto).toBe(18.95)
+    expect(een.mmsNetto).toBe(9.48)
+    expect(een.total).toBe(264.48)
+    const twee = computeOrderTotals({ ...basis, mmsQuantity: 2 })
+    expect(twee.mmsBruto).toBe(37.9)
+    expect(twee.mmsNetto).toBe(18.95)
+    expect(twee.total).toBe(273.95)
+    const tien = computeOrderTotals({ ...basis, mmsQuantity: 10 })
+    expect(tien.mmsBruto).toBe(189.5)
+    expect(tien.mmsNetto).toBe(94.75)
+    expect(tien.total).toBe(349.75)
+  })
+
+  test('MMS-aantal staat los van het aantal spiegels en krijgt geen staffelkorting', () => {
+    const t = computeOrderTotals({ brutoUnitPrice: 640, dealerKortingPct: 50, quantity: 10, mmsQuantity: 2 })
+    expect(t.staffelPct).toBe(0.03)
+    expect(t.subtotal).toBe(3100)
+    expect(t.mmsNetto).toBe(18.95)
+    expect(t.total).toBe(3118.95)
+  })
+
+  test('kortingscode geldt alleen voor de spiegels', () => {
+    const pct = computeOrderTotals({ brutoUnitPrice: 640, dealerKortingPct: 50, quantity: 1, mmsQuantity: 2, discount: { type: 'pct', value: 10 } })
+    expect(pct.discountAmount).toBe(32)
+    expect(pct.total).toBe(306.95) // 320 − 32 + 18,95
+    const fixed = computeOrderTotals({ brutoUnitPrice: 640, dealerKortingPct: 50, quantity: 1, mmsQuantity: 1, discount: { type: 'fixed', value: 5000 } })
+    expect(fixed.discountAmount).toBe(320) // geclamped op het spiegel-subtotaal
+    expect(fixed.total).toBe(9.48)         // de set blijft betaald
+  })
+
+  test('aantal wordt begrensd op 0 t/m 10 en afgerond naar beneden', () => {
+    const basis = { brutoUnitPrice: 100, dealerKortingPct: 50, quantity: 1 }
+    expect(computeOrderTotals({ ...basis, mmsQuantity: 25 }).mmsQuantity).toBe(10)
+    expect(computeOrderTotals({ ...basis, mmsQuantity: -3 }).mmsQuantity).toBe(0)
+    expect(computeOrderTotals({ ...basis, mmsQuantity: 2.9 }).mmsQuantity).toBe(2)
+  })
+
+  test('andere dealerkorting: 40% en 47,5%', () => {
+    expect(computeOrderTotals({ brutoUnitPrice: 100, dealerKortingPct: 40, quantity: 1, mmsQuantity: 3 }).mmsNetto).toBe(34.11) // 56,85 × 0,6
+    expect(computeOrderTotals({ brutoUnitPrice: 100, dealerKortingPct: 47.5, quantity: 1, mmsQuantity: 1 }).mmsNetto).toBe(9.95) // 18,95 × 0,525 = 9,94875
+  })
+
+  test('projectspiegel krijgt nooit een MMS-regel', () => {
+    const t = computeOrderTotals({ brutoUnitPrice: 52.6, dealerKortingPct: 50, quantity: 10, isProjectspiegel: true, mmsQuantity: 4 })
+    expect(t.mmsQuantity).toBe(0)
+    expect(t.total).toBe(526)
+  })
+
+  test('formatEuro: hele bedragen zonder centen, anders twee decimalen', async () => {
+    const { formatEuro } = await import('../src/lib/mms')
+    expect(formatEuro(510)).toBe('€510')
+    expect(formatEuro(1530)).toBe('€1.530')
+    expect(formatEuro(37.9)).toBe('€37,90')
+    expect(formatEuro(9.48)).toBe('€9,48')
+    expect(formatEuro(3118.95)).toBe('€3.118,95')
+  })
+})
+
+test.describe('Mirror Maintenance Set: buitenlandtoeslag 5% (sprint 2026-11, S4)', () => {
+  test('stuksprijs: €18,95 standaard, €19,90 voor internationale dealers', async () => {
+    const { getMmsUnitPrice, resolveMmsUnitPrice } = await import('../src/lib/mms')
+    expect(getMmsUnitPrice(false)).toBe(18.95)
+    expect(getMmsUnitPrice(true)).toBe(19.9) // 18,95 × 1,05 = 19,8975 → 19,90
+    // vastgelegde prijs: alleen de twee bekende prijzen worden geaccepteerd
+    expect(resolveMmsUnitPrice(19.9)).toBe(19.9)
+    expect(resolveMmsUnitPrice(18.95)).toBe(18.95)
+    expect(resolveMmsUnitPrice(undefined)).toBe(18.95)
+    expect(resolveMmsUnitPrice(1)).toBe(18.95)
+  })
+
+  test('ordertotaal voor een internationale dealer rekent met €19,90 per set', () => {
+    const basis = { brutoUnitPrice: 510, dealerKortingPct: 50, quantity: 1, mmsUnitPrice: 19.9 }
+    const een = computeOrderTotals({ ...basis, mmsQuantity: 1 })
+    expect(een.mmsBruto).toBe(19.9)
+    expect(een.mmsNetto).toBe(9.95)
+    expect(een.total).toBe(264.95)
+    const drie = computeOrderTotals({ ...basis, mmsQuantity: 3 })
+    expect(drie.mmsBruto).toBe(59.7)
+    expect(drie.mmsNetto).toBe(29.85)
+    expect(drie.total).toBe(284.85)
+  })
+
+  test('zonder opgegeven stuksprijs geldt de standaardprijs', () => {
+    const t = computeOrderTotals({ brutoUnitPrice: 510, dealerKortingPct: 50, quantity: 1, mmsQuantity: 2 })
+    expect(t.mmsUnitPrice).toBe(18.95)
+    expect(t.mmsNetto).toBe(18.95)
+  })
+})

@@ -18,20 +18,33 @@ export const SHAPES = [
 export const ROND_DIAMETERS = [30, 40, 50, 60, 70, 80, 100, 120]
 
 export const ORGANIC_SIZES = [
-  { label: '60 × 40 cm', width: 60,  height: 40, key: '60x40' },
-  { label: '80 × 60 cm', width: 80,  height: 60, key: '80x60' },
-  { label: '100 × 80 cm', width: 100, height: 80, key: '100x80' },
-  { label: '120 × 100 cm', width: 120, height: 100, key: '120x100' },
+  { label: 'B 60 × H 40 cm', width: 60,  height: 40, key: '60x40' },
+  { label: 'B 80 × H 60 cm', width: 80,  height: 60, key: '80x60' },
+  { label: 'B 100 × H 80 cm', width: 100, height: 80, key: '100x80' },
+  { label: 'B 120 × H 100 cm', width: 120, height: 100, key: '120x100' },
 ]
 
-// Toont een organic-maat als leesbaar label. Valt voor onbekende/legacy keys
-// (bv. het oude '100x70') terug op de maat uit de key zelf zodat er nooit een
-// ruwe "100x70" zonder "cm" in beeld of PDF komt.
+// Toont een organic-maat als leesbaar label (breedte × hoogte). Valt voor
+// onbekende/legacy keys (bv. het oude '100x70') terug op de maat uit de key
+// zelf zodat er nooit een ruwe "100x70" zonder "cm" in beeld of PDF komt.
 export function formatOrganicSize(key: string | null | undefined): string {
   if (!key) return ''
   const found = ORGANIC_SIZES.find(s => s.key === key)
   if (found) return found.label
-  return /^\d+x\d+$/.test(key) ? key.replace('x', ' × ') + ' cm' : key
+  const maat = /^(\d+)x(\d+)$/.exec(key)
+  return maat ? `B ${maat[1]} × H ${maat[2]} cm` : key
+}
+
+// Echte maat van een organic-spiegel in cm. Bij organic kiest de dealer alleen
+// een maat-key; de width/height uit de wizard horen bij de rechthoek-invoer en
+// zeggen niets over de organic. Alles wat met de afmeting rekent (smoke-glas,
+// verwarming) moet dus via deze functie.
+export function getOrganicDims(key: string | null | undefined): { width: number; height: number } {
+  const k = key ?? '60x40'
+  const found = ORGANIC_SIZES.find(s => s.key === k)
+  if (found) return { width: found.width, height: found.height }
+  const maat = /^(\d+)x(\d+)$/.exec(k)
+  return maat ? { width: Number(maat[1]), height: Number(maat[2]) } : { width: 60, height: 40 }
 }
 
 export const RECHTHOEK_CONSTRAINTS = { min: 40, max: 300 }
@@ -531,6 +544,23 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     incompatibleWith: ['afgeronde-hoeken', 'frame-in-kleur'],
   },
   {
+    id: 'kraangat',
+    name: 'Kraangat boring',
+    description: 'Boring in het glas voor een wandkraan. De positie geef je aan op een tekening.',
+    price: 0,
+    priceDisplay: '€12 of €24 per gat',
+    shapes: ['rechthoek', 'rond', 'organic', 'rounded-rect', 'ovaal', 'arc', 'sol', 'luna', 'op-aanvraag', 'elips'],
+    incompatibleWith: [],
+    subChoices: {
+      label: 'Aantal gaten',
+      options: [
+        { id: '1', name: '1' },
+        { id: '2', name: '2' },
+        { id: '3', name: '3' },
+      ],
+    },
+  },
+  {
     id: 'sol-extra-deel',
     name: 'Sol extra deel',
     description: 'Optioneel onderste boogdeel dat onder het meubel uitsteekt',
@@ -547,6 +577,61 @@ export const EXTRA_OPTIONS: ExtraOption[] = [
     incompatibleWith: [],
   },
 ]
+
+// ─── Kraangat boring ─────────────────────────────────────────────────────────
+// Prijs per gat. Laag tarief voor rechte spiegels t/m 200 cm (langste zijde) en
+// ronde spiegels t/m Ø100. Alles groter en alle bijzondere vormen (organic,
+// ovaal, ellips, boog, Sol, Luna) vallen in het hoge tarief.
+
+export const KRAANGAT_OPTIE_ID = 'kraangat'
+/** Sleutel in optionSubChoices voor de gatdiameter in mm (het aantal staat onder KRAANGAT_OPTIE_ID) */
+export const KRAANGAT_DIAMETER_KEY = 'kraangat-diameter'
+export const KRAANGAT_PRIJS = { standaard: 12, groot: 24 }
+export const KRAANGAT_MAX_GATEN = 3
+export const KRAANGAT_DIAMETER_MM = { min: 10, max: 100 }
+
+export function calcKraangatPrijsPerGat(
+  shape: ShapeSlug,
+  width: number,
+  height: number,
+  diameter: number | null | undefined,
+): number {
+  if ((shape === 'rechthoek' || shape === 'rounded-rect') && Math.max(width, height) <= 200) return KRAANGAT_PRIJS.standaard
+  if (shape === 'rond' && diameter != null && diameter <= 100) return KRAANGAT_PRIJS.standaard
+  return KRAANGAT_PRIJS.groot
+}
+
+export function getKraangatAantal(optionSubChoices?: Record<string, string>): number {
+  const n = parseInt(optionSubChoices?.[KRAANGAT_OPTIE_ID] ?? '', 10)
+  return Number.isFinite(n) ? Math.min(KRAANGAT_MAX_GATEN, Math.max(1, n)) : 1
+}
+
+export function isValidKraangatDiameter(value: string | null | undefined): boolean {
+  if (!value || !/^\d{1,3}$/.test(value)) return false
+  const mm = parseInt(value, 10)
+  return mm >= KRAANGAT_DIAMETER_MM.min && mm <= KRAANGAT_DIAMETER_MM.max
+}
+
+export function calcKraangatPrice(state: {
+  shape: ShapeSlug
+  width: number
+  height: number
+  diameter: number | null
+  selectedOptions: string[]
+  optionSubChoices?: Record<string, string>
+}): number {
+  if (!state.selectedOptions.includes(KRAANGAT_OPTIE_ID)) return 0
+  return calcKraangatPrijsPerGat(state.shape, state.width, state.height, state.diameter) * getKraangatAantal(state.optionSubChoices)
+}
+
+/** Bv. "Kraangat boring (2 gaten, Ø 35 mm)" voor samenvatting, PDF en admin */
+export function formatKraangat(optionSubChoices?: Record<string, string>): string {
+  const aantal = getKraangatAantal(optionSubChoices)
+  const diameter = optionSubChoices?.[KRAANGAT_DIAMETER_KEY]
+  const delen = [`${aantal} ${aantal === 1 ? 'gat' : 'gaten'}`]
+  if (isValidKraangatDiameter(diameter)) delen.push(`Ø ${diameter} mm`)
+  return `Kraangat boring (${delen.join(', ')})`
+}
 
 // ─── Organic basisprijs per maat ─────────────────────────────────────────────
 
@@ -611,6 +696,10 @@ export function calcTotalPrice(state: {
   // ── Projectspiegel: prijs apart berekend ─────────────────────────────────
   if (state.shape === 'projectspiegel') return 0
 
+  // Kraangat boring: per gat, tarief hangt af van vorm en maat. Geldt voor alle
+  // vormen, dus ook voor Sol en Luna die verder met een catalogusprijs rekenen.
+  const kraangatPrice = calcKraangatPrice(state)
+
   // ── Sol: catalogusprijs + glaskleur meerprijs per m² ─────────────────────
   if (state.shape === 'sol') {
     const diameter = state.diameter ?? 80
@@ -619,7 +708,7 @@ export function calcTotalPrice(state: {
     const glasMeerprijs = state.glasKleur === 'helder' ? 0 : Math.round(areaM2 * RONDE_GLAS_SMOKE_M2)
     const heeftExtraDeel = state.selectedOptions.includes('sol-extra-deel')
     const catalogBase = heeftExtraDeel ? SOL_CATALOGUS.metExtraDeel : SOL_CATALOGUS.basis
-    return catalogBase + glasMeerprijs
+    return catalogBase + glasMeerprijs + kraangatPrice
   }
 
   // ── Luna: catalogusprijs + glaskleur meerprijs per m² ────────────────────
@@ -635,7 +724,7 @@ export function calcTotalPrice(state: {
       const useExpensiveTier = diameter > 160 || meubelHoogte <= 30
       catalogBase += useExpensiveTier ? LUNA_CATALOGUS.extraDeel30 : LUNA_CATALOGUS.extraDeel35
     }
-    return catalogBase + glasMeerprijs
+    return catalogBase + glasMeerprijs + kraangatPrice
   }
 
   // ── Rechthoek / Afgeronde hoeken / Ovaal / Arc: zelfde glasprijs + LED ─────
@@ -674,7 +763,7 @@ export function calcTotalPrice(state: {
       }
     }
 
-    return Math.round(price)
+    return Math.round(price + kraangatPrice)
   }
 
   // ── Rond: diameter-gebaseerde prijsberekening ─────────────────────────────
@@ -713,7 +802,7 @@ export function calcTotalPrice(state: {
       }
     }
 
-    return Math.round(price)
+    return Math.round(price + kraangatPrice)
   }
 
   // ── Organic: vaste-prijs systeem ──────────────────────────────────────────
@@ -722,8 +811,12 @@ export function calcTotalPrice(state: {
     state.diameter ?? undefined, state.organicSizeKey ?? undefined,
     glasKleur, state.directPosition,
   )
+  // Organic rekent met de maat uit de key, niet met de (rechthoek-)invoer van de wizard
+  const maat = state.shape === 'organic'
+    ? getOrganicDims(state.organicSizeKey)
+    : { width: state.width, height: state.height }
   if (glasKleur !== 'helder') {
-    price += Math.round((state.width * state.height / 10000) * RONDE_GLAS_SMOKE_M2)
+    price += Math.round((maat.width * maat.height / 10000) * RONDE_GLAS_SMOKE_M2)
   }
 
   if (state.indirectPosition !== 'geen' && state.indirectType) {
@@ -733,12 +826,12 @@ export function calcTotalPrice(state: {
 
   for (const optId of state.selectedOptions) {
     if (optId === 'verwarming') {
-      price += calcHeatingPrice(state.width, state.height)
+      price += calcHeatingPrice(maat.width, maat.height)
     } else {
       const opt = EXTRA_OPTIONS.find(o => o.id === optId)
       if (opt) price += opt.price
     }
   }
 
-  return Math.round(price)
+  return Math.round(price + kraangatPrice)
 }

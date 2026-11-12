@@ -1,5 +1,7 @@
 'use client'
 
+import { leesMeubel } from '@/lib/meubel-opslag'
+import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
 import { useState } from 'react'
 import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
@@ -87,6 +89,13 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
 
   const opts = (config.selected_options ?? {}) as SelectedOptions
   const shape = opts.shape ?? 'rechthoek'
+  // Tailor-Made meubel: eigen regels in lijst en detail
+  const meubel = leesMeubel(config.selected_options)
+  const meubelNetto = meubel && !meubel.opAanvraag
+    ? calcMeubelNettoCents({ modelId: meubel.model.id, lengte: meubel.lengte, lades: meubel.lades, houtkleur: meubel.houtkleur })
+    : null
+  // Geen prijs: spiegel op aanvraag of meubel groter dan standaard
+  const geenPrijs = shape === 'op-aanvraag' || meubel?.opAanvraag === true
   const diameter = opts.diameter as number | undefined
   const organicKey = opts.organicSizeKey
   const extras = (opts.extras ?? [])
@@ -95,12 +104,13 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
     .join(', ')
 
   let dimensionLabel = ''
-  if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
+  if (meubel) dimensionLabel = `${meubel.lengte} mm · ${ladeLabel(meubel.model, meubel.lades)}`
+  else if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
   else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
   else if (config.width && config.height) dimensionLabel = `B ${config.width} × H ${config.height} cm`
 
   const metaParts = [
-    shapeLabel[shape] ?? shape,
+    meubel ? meubel.model.naam : (shapeLabel[shape] ?? shape),
     dimensionLabel,
     opts.extras?.length ? `${opts.extras.length} extra${opts.extras.length !== 1 ? "'s" : ''}` : '',
   ].filter(Boolean)
@@ -137,7 +147,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
             </p>
             <div className="flex items-center justify-between mt-1">
               <span className="text-[11px] text-lx-text-secondary">{metaParts.join(' · ')} · {date}</span>
-              <span className="text-[12.5px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}</span>
+              <span className="text-[12.5px] font-bold text-lx-text-primary">{geenPrijs ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}</span>
             </div>
           </div>
         </div>
@@ -167,7 +177,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
 
           {/* Col: Vorm + afmeting — desktop only */}
           <div className="hidden lg:block w-[148px] flex-shrink-0">
-            <p className="text-[12px] font-medium text-lx-text-primary">{shapeLabel[shape] ?? shape}</p>
+            <p className="text-[12px] font-medium text-lx-text-primary">{meubel ? meubel.model.naam : (shapeLabel[shape] ?? shape)}</p>
             <p className="text-[11px] text-lx-text-secondary mt-0.5">{dimensionLabel || '—'}</p>
           </div>
 
@@ -182,9 +192,9 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
           {/* Col: Prijs */}
           <div className="w-[88px] flex-shrink-0 text-right">
             <p className="text-[13px] font-bold text-lx-text-primary">
-              {shape === 'op-aanvraag' ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
+              {geenPrijs ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
             </p>
-            {shape !== 'op-aanvraag' && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">excl. btw</p>}
+            {!geenPrijs && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">excl. btw</p>}
           </div>
 
           {/* Col: Status */}
@@ -252,17 +262,38 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
             <div className="px-6 py-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-lx-text-muted mb-2">Configuratie</p>
               {config.article_number && <ModalRow label="Artikelnummer" value={config.article_number} />}
-              <ModalRow label="Vorm" value={shapeName} />
-              <ModalRow label="Afmeting" value={dimensionLabel || '—'} />
-              {opts.quantity != null && <ModalRow label="Aantal" value={`${opts.quantity}×`} />}
-              {!!opts.mmsQuantity && <ModalRow label="LoooX Glass Cleaner set" value={`${opts.mmsQuantity}×`} />}
-              {isProjectspiegel ? (
-                <ModalRow label="Glasdikte" value={opts.glasdikte ? `${opts.glasdikte} mm` : '—'} />
+              {meubel ? (
+                <>
+                  <ModalRow label="Model" value={meubel.model.naam} />
+                  <ModalRow label="Afmeting" value={`${meubel.lengte} mm lang · ${meubel.model.hoogte} mm hoog · ${meubel.model.diepte} mm diep`} />
+                  <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.lengte, meubel.lades)}`} />
+                  <ModalRow label="Houtkleur" value={meubel.houtkleurNaam} />
+                  <ModalRow label="Aantal" value={`${meubel.quantity}×`} />
+                  {meubel.reference && <ModalRow label="Referentie" value={meubel.reference} />}
+                  {meubel.opAanvraag ? (
+                    <ModalRow label="Prijs" value="Op aanvraag, groter dan standaard" />
+                  ) : (
+                    <>
+                      <ModalRow label="Factor dealer" value={meubel.factor.toLocaleString('nl-NL', { minimumFractionDigits: 1 })} />
+                      <ModalRow label="Netto per stuk" value={meubelNetto !== null ? formatCents(meubelNetto) : 'Niet meer in de prijslijst'} />
+                    </>
+                  )}
+                </>
               ) : (
                 <>
-                  <ModalRow label="Directe verlichting" value={getLightSummary(opts.directLight)} />
-                  <ModalRow label="Indirecte verlichting" value={getLightSummary(opts.indirectLight)} />
-                  <ModalRow label="Extra opties" value={extras || 'Geen'} />
+                  <ModalRow label="Vorm" value={shapeName} />
+                  <ModalRow label="Afmeting" value={dimensionLabel || '—'} />
+                  {opts.quantity != null && <ModalRow label="Aantal" value={`${opts.quantity}×`} />}
+                  {!!opts.mmsQuantity && <ModalRow label="LoooX Glass Cleaner set" value={`${opts.mmsQuantity}×`} />}
+                  {isProjectspiegel ? (
+                    <ModalRow label="Glasdikte" value={opts.glasdikte ? `${opts.glasdikte} mm` : '—'} />
+                  ) : (
+                    <>
+                      <ModalRow label="Directe verlichting" value={getLightSummary(opts.directLight)} />
+                      <ModalRow label="Indirecte verlichting" value={getLightSummary(opts.indirectLight)} />
+                      <ModalRow label="Extra opties" value={extras || 'Geen'} />
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -303,9 +334,9 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                 />
                 <div className="text-right">
                   <span className="text-[16px] font-bold text-lx-cta">
-                    {shape === 'op-aanvraag' ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
+                    {geenPrijs ? 'Op aanvraag' : `€${Number(config.total_price).toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
                   </span>
-                  {shape !== 'op-aanvraag' && <span className="text-[11px] text-lx-text-muted ml-1.5">excl. btw</span>}
+                  {!geenPrijs && <span className="text-[11px] text-lx-text-muted ml-1.5">{meubel ? 'bruto excl. btw' : 'excl. btw'}</span>}
                 </div>
               </div>
             </div>

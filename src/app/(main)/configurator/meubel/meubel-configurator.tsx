@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -10,6 +11,7 @@ import {
   MEUBEL_MODELLEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_MM, LADE_MAX_MM, MEUBEL_AANTAL_MAX,
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
+  UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, BROWN_GREY_MELDING,
   type MeubelModel, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
@@ -29,6 +31,9 @@ export interface MeubelInitialConfig {
   houtkleur: string
   opAanvraag?: boolean
   hoogte?: number
+  logo?: boolean
+  uitsparingen?: number
+  attachmentUrl?: string | null
   quantity: number
   projectName: string
   reference: string
@@ -57,6 +62,12 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   // Groter dan de standaardmaten: geen prijs, het meubel is dan altijd op aanvraag
   const [opAanvraag, setOpAanvraag] = useState(initialConfig?.opAanvraag === true)
   const [tekeningGroot, setTekeningGroot] = useState(false)
+  // Opties uit de tabel "Opties meubels": logo is gratis, een uitsparing kost per stuk
+  const [logo, setLogo] = useState(initialConfig?.logo === true)
+  const [uitsparingen, setUitsparingen] = useState(initialConfig?.uitsparingen ?? 0)
+  // Maattekening voor de uitsparingen: nieuw gekozen bestand, of de al opgeslagen bijlage
+  const [tekeningBestand, setTekeningBestand] = useState<File | null>(null)
+  const bestaandeTekening = initialConfig?.attachmentUrl ?? null
   // Alleen weergave, wordt niet opgeslagen
   const [toonHout, setToonHout] = useState(true)
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
@@ -79,15 +90,15 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                   onClick={() => {
                     // Ander model: lengte en indeling die daar niet bestaan vervallen
                     if (m.id !== model?.id) {
-                      const l = Math.min(Math.max(laatsteLengte, b.min), b.max)
+                      const l = m.vasteLengtes ? (m.vasteLengtes.includes(laatsteLengte) ? laatsteLengte : m.vasteLengtes[0]) : Math.min(Math.max(laatsteLengte, b.min), b.max)
                       setLengteTekst(String(l)); setLaatsteLengte(l); setEigenBreedtes(null); setOpAanvraag(false); setHoogteKeuze(null)
                     }
                     setModel(m); setStep(1)
                   }}
                   aria-pressed={model?.id === m.id}
-                  className={`text-left bg-white rounded-[18px] border shadow-sm overflow-hidden hover:border-lx-cta transition-colors cursor-pointer ${model?.id === m.id ? 'border-lx-cta' : 'border-black/6'}`}
+                  className={`flex flex-col items-stretch justify-start text-left bg-white rounded-[18px] border shadow-sm overflow-hidden hover:border-lx-cta transition-colors cursor-pointer ${model?.id === m.id ? 'border-lx-cta' : 'border-black/6'}`}
                 >
-                  <div className="relative aspect-[4/3] bg-lx-panel-bg">
+                  <div className="relative aspect-[4/3] w-full flex-shrink-0 bg-lx-panel-bg">
                     <Image src={m.afbeelding} alt={m.naam} fill sizes="(min-width: 1024px) 320px, (min-width: 640px) 480px, 100vw" className="object-contain p-5" />
                   </div>
                   <div className="px-5 py-4">
@@ -109,7 +120,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   const standaardBereik = getLengteBereik(model)
   const bereik = opAanvraag ? getAanvraagBereik(model) : standaardBereik
   const lengte = /^\d+$/.test(lengteTekst) ? Number(lengteTekst) : NaN
-  const lengteOk = lengte >= bereik.min && lengte <= bereik.max
+  const lengteOk = lengte >= bereik.min && lengte <= bereik.max && (opAanvraag || !model.vasteLengtes || model.vasteLengtes.includes(lengte))
   if (lengteOk && lengte !== laatsteLengte) {
     setLaatsteLengte(lengte)
     setEigenBreedtes(null) // een eigen indeling hoort bij één lengte
@@ -128,8 +139,24 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   const kleuren = getHoutkleuren(model)
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
-  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur }, factor) : null
-  const geldig = lengteOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
+  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen }, factor) : null
+  // Uitsparingen worden volgens een maattekening gemaakt: zonder tekening niet verder
+  const tekeningOntbreekt = uitsparingen > 0 && !tekeningBestand && !bestaandeTekening
+  const geldig = lengteOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null) && !tekeningOntbreekt
+
+  async function uploadTekening(): Promise<string | null> {
+    if (uitsparingen === 0) return null
+    if (!tekeningBestand) return bestaandeTekening
+    const supabase = createClient()
+    const ext = tekeningBestand.name.split('.').pop() ?? 'bin'
+    const pad = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage.from('attachments').upload(pad, tekeningBestand, { upsert: false })
+    if (error) {
+      console.error('[upload] maattekening', error)
+      throw new Error('Uploaden van de maattekening is mislukt. Probeer het opnieuw.')
+    }
+    return supabase.storage.from('attachments').getPublicUrl(pad).data.publicUrl
+  }
 
   function wisselAanvraag(aan: boolean) {
     // Lengte meteen binnen het nieuwe bereik zetten, zodat er nooit een ongeldige tussenstand is
@@ -154,12 +181,14 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
 
   function handleSave() {
     if (!geldig || !projectName.trim() || !model) return
-    const payload = {
+    const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
+      logo, uitsparingen,
       quantity, projectName: projectName.trim(), reference, description,
     }
     startTransition(async () => {
       try {
+        const payload = { ...basis, attachmentUrl: await uploadTekening() }
         if (initialConfig) await updateMeubelConfiguration(initialConfig.id, payload)
         else await saveMeubelConfiguration(payload)
         router.push('/configuraties')
@@ -191,22 +220,51 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
               </div>
 
               <div>
-                <label htmlFor="meubel-lengte" className="block text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="meubel-lengte"
-                    inputMode="numeric"
-                    value={lengteTekst}
-                    onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    aria-invalid={!lengteOk}
-                    aria-describedby="meubel-lengte-hulp"
-                    className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
-                  />
-                  <span className="text-[13px] text-lx-text-secondary">mm</span>
-                </div>
-                <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
-                  Hele millimeters, van {bereik.min} tot {bereik.max} mm.
-                </p>
+                {model.vasteLengtes ? (
+                  <>
+                    <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</p>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Lengte">
+                      {model.vasteLengtes.map((l) => (
+                        <button
+                          key={l}
+                          type="button"
+                          role="radio"
+                          aria-checked={lengte === l}
+                          onClick={() => setLengteTekst(String(l))}
+                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                            lengte === l
+                              ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                              : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                          }`}
+                        >
+                          {l} mm
+                        </button>
+                      ))}
+                    </div>
+                    <p className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                      Dit model is alleen in deze standaardmaten te bestellen.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <label htmlFor="meubel-lengte" className="block text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="meubel-lengte"
+                        inputMode="numeric"
+                        value={lengteTekst}
+                        onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        aria-invalid={!lengteOk}
+                        aria-describedby="meubel-lengte-hulp"
+                        className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
+                      />
+                      <span className="text-[13px] text-lx-text-secondary">mm</span>
+                    </div>
+                    <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                      Hele millimeters, van {bereik.min} tot {bereik.max} mm.
+                    </p>
+                  </>
+                )}
 
                 {!model.geenAanvraag && (
                   <label className="mt-3 flex items-center justify-between gap-4 bg-lx-panel-bg rounded-xl p-4 cursor-pointer select-none">
@@ -361,6 +419,68 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                 </div>
               </div>
 
+              <div>
+                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Opties</p>
+                <div className="bg-lx-panel-bg rounded-xl p-4 space-y-4">
+                  <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
+                    <span>
+                      <span className="block text-[13px] font-medium text-lx-text-primary">Met logo</span>
+                      <span className="block text-[11.5px] text-lx-text-secondary">LoooX-logo op het front. Zonder meerprijs.</span>
+                    </span>
+                    <input type="checkbox" checked={logo} onChange={(e) => setLogo(e.target.checked)} className="sr-only peer" />
+                    <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
+                  </label>
+
+                  <div className="pt-4 border-t border-lx-divider">
+                    <div className="flex items-center justify-between gap-4">
+                      <span>
+                        <span id="meubel-uitsparingen-label" className="block text-[13px] font-medium text-lx-text-primary">Uitsparingen of boorgaten</span>
+                        <span className="block text-[11.5px] text-lx-text-secondary">
+                          {opAanvraag ? 'Per stuk, volgens je maattekening.' : `${formatCents(Math.round(UITSPARING_NETTO_CENTS * parseMeubelFactor(factor)))} per stuk, volgens je maattekening.`}
+                        </span>
+                      </span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => setUitsparingen((u) => Math.max(0, u - 1))}
+                          aria-label="Eén uitsparing minder"
+                          className="w-9 h-9 rounded-xl bg-white border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer"
+                        >−</button>
+                        <span aria-labelledby="meubel-uitsparingen-label" aria-live="polite" className="w-8 text-center text-[14px] font-bold text-lx-text-primary tabular-nums">{uitsparingen}</span>
+                        <button
+                          onClick={() => setUitsparingen((u) => Math.min(UITSPARING_MAX, u + 1))}
+                          aria-label="Eén uitsparing meer"
+                          className="w-9 h-9 rounded-xl bg-white border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer"
+                        >+</button>
+                      </div>
+                    </div>
+
+                    {uitsparingen > 0 && (
+                      <div className="mt-3">
+                        <label className="block cursor-pointer">
+                          <input
+                            id="meubel-tekening"
+                            type="file"
+                            accept="image/*,.pdf"
+                            className="sr-only peer"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) setTekeningBestand(f) }}
+                          />
+                          <span className={`block border-2 border-dashed rounded-xl px-4 py-3 text-center text-[12.5px] transition-colors peer-focus-visible:border-lx-cta ${tekeningOntbreekt ? 'border-red-300 text-red-600' : 'border-lx-cta/25 hover:border-lx-cta/50 text-lx-text-secondary'}`}>
+                            {tekeningBestand
+                              ? <>Gekozen: <span className="font-semibold text-lx-text-primary">{tekeningBestand.name}</span> · <span className="text-lx-cta font-semibold">ander bestand</span></>
+                              : bestaandeTekening
+                                ? <>Maattekening al toegevoegd · <span className="text-lx-cta font-semibold">vervangen</span></>
+                                : <><span className="text-lx-cta font-semibold">Maattekening toevoegen</span> (verplicht, afbeelding of PDF)</>}
+                          </span>
+                        </label>
+                        {tekeningOntbreekt && (
+                          <p className="text-[12px] text-red-600 mt-1.5" role="alert">Voeg een maattekening toe met de plaats en maat van elke uitsparing.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {houtkleur === 'brown-grey' && (
                 <p className="text-[12px] text-lx-text-secondary bg-lx-panel-bg rounded-xl px-4 py-3 leading-relaxed" role="note">{BROWN_GREY_MELDING}</p>
               )}
@@ -389,6 +509,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                 <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(1)} />
                 <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte), gekozen)}`} onEdit={() => setStep(1)} />
                 <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(1)} />
+                <Rij label="Opties" waarde={meubelOptiesTekst({ logo, uitsparingen })} onEdit={() => setStep(1)} />
               </div>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">

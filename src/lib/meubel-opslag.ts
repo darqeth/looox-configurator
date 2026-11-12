@@ -1,6 +1,6 @@
 import {
-  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, getMeubelHoogte, getMeubelModel, ladeLabel, parseMeubelFactor,
-  type LadeBreedtes, type MeubelModel,
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelModel, ladeLabel, parseMeubelFactor,
+  type LadeBreedtes, type MeubelInput, type MeubelModel,
 } from '@/lib/meubel-config'
 
 // Een meubel staat in dezelfde tabel als de spiegels (configurations), herkenbaar
@@ -19,6 +19,11 @@ export interface OpgeslagenMeubel {
   factor: number
   /** Groter dan standaard: geen prijs, altijd op aanvraag */
   opAanvraag: boolean
+  /** Met LoooX-logo (gratis optie) */
+  logo: boolean
+  /** Aantal uitsparingen of boorgaten; maattekening staat in attachmentUrl */
+  uitsparingen: number
+  attachmentUrl: string | null
   quantity: number
   reference: string
   description: string
@@ -48,6 +53,9 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     houtkleurNaam: kleur?.naam ?? '',
     factor: m.factor === undefined ? MEUBEL_FACTOR_DEFAULT : parseMeubelFactor(m.factor),
     opAanvraag: m.opAanvraag === true,
+    logo: m.logo === true,
+    uitsparingen: Math.min(UITSPARING_MAX, Math.max(0, Math.floor(Number(m.uitsparingen) || 0))),
+    attachmentUrl: typeof opts.attachmentUrl === 'string' && opts.attachmentUrl ? opts.attachmentUrl : null,
     quantity: Math.max(1, Math.floor(Number(opts.quantity) || 1)),
     reference: typeof opts.reference === 'string' ? opts.reference : '',
     description: typeof opts.description === 'string' ? opts.description : '',
@@ -57,4 +65,9 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
 /** Korte omschrijving voor lijsten: "Facet Double · 2000 mm · 3 × 2 lades · White". */
 export function meubelSamenvatting(m: OpgeslagenMeubel): string {
   return [m.model.naam, `${m.lengte} mm`, ladeLabel(m.model, m.lades), m.houtkleurNaam].filter(Boolean).join(' · ')
+}
+
+/** Invoer voor de prijsmotor uit een opgeslagen meubel: één plek, zodat geen optie wordt vergeten. */
+export function meubelPrijsInput(m: OpgeslagenMeubel): MeubelInput {
+  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, houtkleur: m.houtkleur, uitsparingen: m.uitsparingen }
 }

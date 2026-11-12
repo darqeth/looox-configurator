@@ -53,6 +53,7 @@ export async function GET(
       meubel,
       unitPrice: Number(config.total_price),
       quantity: meubel.quantity,
+      attachmentUrl: await prepareAttachmentForPdf(meubel.attachmentUrl),
     }) as React.ReactElement<DocumentProps>)
     const meubelNaam = `LoooX-Offerte-${(config.name ?? 'meubel').replace(/[^a-z0-9\-_]/gi, '-')}.pdf`
     return new NextResponse(new Uint8Array(meubelBuffer), {

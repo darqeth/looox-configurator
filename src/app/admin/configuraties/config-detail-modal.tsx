@@ -1,7 +1,7 @@
 'use client'
 
-import { leesMeubel } from '@/lib/meubel-opslag'
-import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
+import { leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
+import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst } from '@/lib/meubel-config'
 import { useState } from 'react'
 import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
@@ -92,7 +92,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
   // Tailor-Made meubel: eigen regels in lijst en detail
   const meubel = leesMeubel(config.selected_options)
   const meubelNetto = meubel && !meubel.opAanvraag
-    ? calcMeubelNettoCents({ modelId: meubel.model.id, lengte: meubel.lengte, lades: meubel.lades, houtkleur: meubel.houtkleur })
+    ? calcMeubelNettoCents(meubelPrijsInput(meubel))
     : null
   // Geen prijs: spiegel op aanvraag of meubel groter dan standaard
   const geenPrijs = shape === 'op-aanvraag' || meubel?.opAanvraag === true
@@ -268,6 +268,10 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                   <ModalRow label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
                   <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}`} />
                   <ModalRow label="Houtkleur" value={meubel.houtkleurNaam} />
+                  <ModalRow label="Opties" value={meubelOptiesTekst(meubel)} />
+                  {meubel.attachmentUrl && (
+                    <a href={meubel.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block py-2.5 text-[12.5px] font-semibold text-lx-cta hover:underline border-b border-lx-divider">Maattekening uitsparingen openen</a>
+                  )}
                   <ModalRow label="Aantal" value={`${meubel.quantity}×`} />
                   {meubel.reference && <ModalRow label="Referentie" value={meubel.reference} />}
                   {meubel.opAanvraag ? (

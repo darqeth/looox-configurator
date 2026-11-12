@@ -41,7 +41,12 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   // De lades beginnen na de rand van het frame (U-Floor, U-Frame, Full-Frame)
   const rand = (model.rand ?? 0) * schaal
   const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x + rand])
-  const rijH = h / model.rijen
+  // Het vlak met de lades: binnen het frame, dat boven en soms ook onder doorloopt
+  const boven = y + (model.randBoven ? rand : 0)
+  const onder = y + h - (model.randOnder ? rand : 0)
+  const links = grenzen[0]
+  const rechts = grenzen[grenzen.length - 1]
+  const rijH = (onder - boven) / model.rijen
   // Uniek per tekening: in de popup staat dezelfde tekening een tweede keer op de pagina
   const patroon = `hout-${houtkleur}-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   // Maat per lade alleen tonen als de tekst in de lade past
@@ -70,11 +75,14 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
 
       {/* Ladefronten */}
       {(rand > 0 ? grenzen : grenzen.slice(1, -1)).map((gx, i) => (
-        <line key={`k${i}`} x1={gx} y1={y} x2={gx} y2={y + h} stroke={LIJN} strokeWidth="1.3" />
+        <line key={`k${i}`} x1={gx} y1={boven} x2={gx} y2={onder} stroke={LIJN} strokeWidth="1.3" />
       ))}
       {Array.from({ length: model.rijen - 1 }, (_, i) => (
-        <line key={`r${i}`} x1={grenzen[0]} y1={y + rijH * (i + 1)} x2={grenzen[grenzen.length - 1]} y2={y + rijH * (i + 1)} stroke={LIJN} strokeWidth="1.3" />
+        <line key={`r${i}`} x1={links} y1={boven + rijH * (i + 1)} x2={rechts} y2={boven + rijH * (i + 1)} stroke={LIJN} strokeWidth="1.3" />
       ))}
+
+      {model.randBoven && rand > 0 && <line x1={links} y1={boven} x2={rechts} y2={boven} stroke={LIJN} strokeWidth="1.3" />}
+      {model.randOnder && rand > 0 && <line x1={links} y1={onder} x2={rechts} y2={onder} stroke={LIJN} strokeWidth="1.3" />}
 
       {/* Maatlijn lengte (boven) */}
       <g stroke={MAAT} strokeWidth="0.8" fill="none">

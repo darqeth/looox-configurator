@@ -1,8 +1,8 @@
 import React from 'react'
-import { Document, Page, View, Text, StyleSheet, Svg, Rect, Line, Text as SvgText } from '@react-pdf/renderer'
+import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
-import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
+import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
@@ -104,7 +104,12 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   const y = PAD_TOP
   // De lades beginnen na de rand van het frame
   const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x + rand * schaal])
-  const rijH = h / model.rijen
+  // Het vlak met de lades: binnen het frame, dat boven en soms ook onder doorloopt
+  const boven = y + (model.randBoven ? rand * schaal : 0)
+  const onder = y + h - (model.randOnder ? rand * schaal : 0)
+  const links = grenzen[0]
+  const rechts = grenzen[grenzen.length - 1]
+  const rijH = (onder - boven) / model.rijen
   const toonLadeMaat = Math.min(...breedtes) * schaal > 26
   const lijn = { stroke: '#26282B', strokeWidth: 1 }
   const maat = { stroke: GRAY, strokeWidth: 0.6 }
@@ -113,10 +118,13 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   return (
     <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       <Rect x={x} y={y} width={w} height={h} fill="#F6F4EF" stroke="#26282B" strokeWidth={1.2} />
-      {(rand > 0 ? grenzen : grenzen.slice(1, -1)).map((gx, i) => <Line key={`k${i}`} x1={gx} y1={y} x2={gx} y2={y + h} {...lijn} />)}
+      {(rand > 0 ? grenzen : grenzen.slice(1, -1)).map((gx, i) => <Line key={`k${i}`} x1={gx} y1={boven} x2={gx} y2={onder} {...lijn} />)}
       {Array.from({ length: model.rijen - 1 }, (_, i) => (
-        <Line key={`r${i}`} x1={grenzen[0]} y1={y + rijH * (i + 1)} x2={grenzen[grenzen.length - 1]} y2={y + rijH * (i + 1)} {...lijn} />
+        <Line key={`r${i}`} x1={links} y1={boven + rijH * (i + 1)} x2={rechts} y2={boven + rijH * (i + 1)} {...lijn} />
       ))}
+
+      {model.randBoven && rand > 0 && <Line x1={links} y1={boven} x2={rechts} y2={boven} {...lijn} />}
+      {model.randOnder && rand > 0 && <Line x1={links} y1={onder} x2={rechts} y2={onder} {...lijn} />}
 
       {/* Lengte */}
       <Line x1={x} y1={y - 12} x2={x + w} y2={y - 12} {...maat} />
@@ -161,10 +169,12 @@ export type MeubelDocumentProps = {
   unitPrice: number
   quantity: number
   notes?: string | null
+  /** Maattekening voor de uitsparingen, al omgezet voor de PDF (data-URL) */
+  attachmentUrl?: string | null
 }
 
 export default function MeubelDocument({
-  variant, projectName, date, articleNumber, orderNumber, status, dealer, meubel, unitPrice, quantity, notes,
+  variant, projectName, date, articleNumber, orderNumber, status, dealer, meubel, unitPrice, quantity, notes, attachmentUrl,
 }: MeubelDocumentProps) {
   const isOrder = variant === 'order'
   const { model } = meubel
@@ -183,8 +193,9 @@ export default function MeubelDocument({
     ['Model', model.naam],
     ['Afmeting', meubelAfmeting(model, meubel.lengte)],
     ['Lades', `${ladeLabel(model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(model, meubel.lengte), meubel.lades)}`],
-    ...(model.rand ? [['Rand', `${model.rand} mm aan beide zijden`] as [string, string]] : []),
+    ...(model.rand ? [['Rand', `${model.rand} mm ${model.randOnder ? 'rondom' : model.randBoven ? 'links, rechts en boven' : 'links en rechts'}`] as [string, string]] : []),
     ['Houtkleur', meubel.houtkleurNaam || '—'],
+    ['Opties', meubelOptiesTekst(meubel)],
     ...(opAanvraag ? [['Bijzonderheid', 'Groter dan de standaardmaten, op aanvraag'] as [string, string]] : []),
   ]
 
@@ -355,6 +366,22 @@ export default function MeubelDocument({
           <Text style={styles.footerText}>{footerRechts}</Text>
         </View>
       </Page>
+
+      {/* Bijlage: maattekening voor de uitsparingen */}
+      {attachmentUrl && (
+        <Page size="A4" style={styles.page}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: DARK }}>Bijlage - Maattekening uitsparingen</Text>
+            <Text style={{ fontSize: 8, color: GRAY }}>{projectName ?? ''}</Text>
+          </View>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
+          <Image src={attachmentUrl} style={{ width: 515, height: 690, objectFit: 'contain' }} />
+          <View style={styles.footer} fixed>
+            <Text style={styles.footerText}>{footerLinks}</Text>
+            <Text style={styles.footerText}>{footerRechts} - Bijlage</Text>
+          </View>
+        </Page>
+      )}
     </Document>
   )
 }

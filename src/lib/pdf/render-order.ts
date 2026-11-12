@@ -50,6 +50,7 @@ export async function renderOrderPDF(input: OrderRenderInput): Promise<Buffer> {
       unitPrice: input.unitPrice,
       quantity: input.quantity,
       notes: input.notes,
+      attachmentUrl: await prepareAttachmentForPdf(meubel.attachmentUrl),
     }) as React.ReactElement<DocumentProps>)
   }
   const staffelKortingPct = typeof (input.config.options as Record<string, unknown>)?.staffelKortingPct === 'number'

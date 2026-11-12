@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
 import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
-import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
+import { meubelPrijsInput, type OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
 // Bestelmodal voor een Tailor-Made meubel. Dit is de enige plek waar de dealer
 // de nettoprijs ziet: de tabelprijs, zonder dealerkorting, staffel of kortingscode.
@@ -34,9 +34,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   const [altShipping, setAltShipping] = useState(false)
   const [alt, setAlt] = useState({ straat: '', huisnummer: '', woonplaats: '', provincie: '', land: 'NL' })
 
-  const nettoCents = opAanvraag ? null : calcMeubelNettoCents({
-    modelId: meubel.model.id, lengte: meubel.lengte, lades: meubel.lades, houtkleur: meubel.houtkleur,
-  })
+  const nettoCents = opAanvraag ? null : calcMeubelNettoCents(meubelPrijsInput(meubel))
   const opbouw = nettoCents !== null ? getMeubelOrderOpbouw(nettoCents, meubel.factor) : null
   // Staat het meubel niet meer in de prijslijst, dan kan het niet besteld worden
   const bestelbaar = opAanvraag || nettoCents !== null

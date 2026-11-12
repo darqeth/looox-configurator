@@ -34,16 +34,22 @@ export interface MeubelModel {
   /** Aantal laderijen boven elkaar */
   rijen: number
   /**
-   * Rand van het frame in mm aan beide zijden (U-Floor 40, U-Frame en Full-Frame 50).
+   * Rand van het frame in mm, altijd links en rechts (U-Floor 40, U-Frame en Full-Frame 50).
    * De lades verdelen de lengte min twee keer de rand.
    */
   rand?: number
+  /** De rand loopt ook boven langs (U-Frame, U-Floor, Full-Frame) */
+  randBoven?: boolean
+  /** De rand loopt ook onder langs: frame rondom (Full-Frame) */
+  randOnder?: boolean
   /** Meerdere hoogtes zonder prijsverschil (Full-Frame, U-Frame); `hoogte` is de standaard */
   hoogtes?: number[]
   /** Houtkleuren die bij dit model niet kunnen (Stripes: geen White) */
   geenKleuren?: string[]
   /** Alleen in de standaardmaten te bestellen: geen "groter dan" op aanvraag */
   geenAanvraag?: boolean
+  /** Alleen deze lengtes in mm zijn te bestellen (Basic Drawer); de dealer kiest uit de lijst */
+  vasteLengtes?: number[]
   /** Bijzonderheid uit de prijslijst, getoond bij het samenstellen */
   opmerking?: string
   staffels: Staffel[]
@@ -159,6 +165,8 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     rijen: 1,
     hoogtes: [300, 350, 400],
     rand: 50,
+    randBoven: true,
+    randOnder: true,
     staffels: [
       { min: 50, max: 120, prijzen: { 1: 140296, 2: 154856 } },
       { min: 121, max: 175, prijzen: { 2: 170456, 3: 192296 } },
@@ -176,6 +184,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     rijen: 1,
     hoogtes: [300, 350, 400],
     rand: 50,
+    randBoven: true,
     staffels: [
       { min: 50, max: 120, prijzen: { 1: 114296, 2: 145496 } },
       { min: 121, max: 175, prijzen: { 2: 161096, 3: 189176 } },
@@ -192,6 +201,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     hoogte: 780,
     rijen: 2,
     rand: 40,
+    randBoven: true,
     staffels: [
       { min: 50, max: 100, prijzen: { 1: 211016 } },
       { min: 101, max: 120, prijzen: { 1: 214136 } },
@@ -210,6 +220,8 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     hoogte: 380,
     rijen: 1,
     geenAanvraag: true,
+    // Voorlopige lijst, afgeleid van de renders; definitieve standaardmaten navragen bij Mark
+    vasteLengtes: [600, 700, 800, 1000, 1200],
     opmerking: 'De Basic Drawer kan alleen besteld worden in de standaardmaten.',
     staffels: [
       { min: 50, max: 80, prijzen: { 1: 103896 } },
@@ -317,6 +329,7 @@ export function getLengteBereik(model: MeubelModel): { min: number; max: number 
 function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
   const bereik = getLengteBereik(model)
   if (!Number.isInteger(lengte) || lengte < bereik.min || lengte > bereik.max) return null
+  if (model.vasteLengtes && !model.vasteLengtes.includes(lengte)) return null
   // Staffels staan oplopend: de eerste waarvan de bovengrens niet wordt overschreden
   return model.staffels.find((s) => lengte <= s.max * 10) ?? null
 }
@@ -484,6 +497,8 @@ export const MEUBEL_AANTAL_MAX = 99
 export interface MeubelConfig extends MeubelInput {
   ladeBreedtes: LadeBreedtes
   quantity: number
+  /** Met LoooX-logo op het front; kost niets extra */
+  logo?: boolean
 }
 
 /** Volledige controle van een configuratie (server en client). Foutmelding of null. */
@@ -501,6 +516,8 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
   const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, ladeRuimte(model, c.lengte), c.lades)
   if (ladeFout) return ladeFout
   if (c.hoogte != null && getMeubelHoogte(model, c.hoogte) !== c.hoogte) return 'Deze hoogte bestaat niet bij dit model.'
+  const uitsparingen = c.uitsparingen ?? 0
+  if (!Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX) return `Uitsparingen: 0 tot ${UITSPARING_MAX}.`
   if (!Number.isInteger(c.quantity) || c.quantity < 1 || c.quantity > MEUBEL_AANTAL_MAX) return `Aantal moet tussen 1 en ${MEUBEL_AANTAL_MAX} liggen.`
   return null
 }
@@ -555,4 +572,13 @@ export function formatPct(pct: number): string {
 /** Afmeting in één regel, zelfde notatie als bij spiegels: "L 2000 × H 600 × D 460 mm". */
 export function meubelAfmeting(model: MeubelModel, lengte: number): string {
   return `L ${lengte} × H ${model.hoogte} × D ${model.diepte} mm`
+}
+
+/** Opties uit de tabel "Opties meubels" in één regel, of een streepje als er geen zijn. */
+export function meubelOptiesTekst(o: { logo?: boolean; uitsparingen?: number }): string {
+  const delen = [
+    o.logo ? 'Met logo' : '',
+    o.uitsparingen ? `${o.uitsparingen} ${o.uitsparingen === 1 ? 'uitsparing' : 'uitsparingen'} (volgens maattekening)` : '',
+  ].filter(Boolean)
+  return delen.length > 0 ? delen.join(' · ') : 'Geen'
 }

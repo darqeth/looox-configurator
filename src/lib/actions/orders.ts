@@ -13,8 +13,8 @@ import { getNotificationEmails } from '@/lib/actions/settings'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { z } from 'zod'
 import { hasMeubelAccess } from '@/lib/meubel-access'
-import { leesMeubel } from '@/lib/meubel-opslag'
-import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
+import { leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
+import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst } from '@/lib/meubel-config'
 
 type LightConfig = {
   position: string
@@ -620,12 +620,7 @@ export async function placeMeubelOrder(
   if (!meubel) throw new Error('Dit is geen meubelconfiguratie')
 
   const isOfferte = meubel.opAanvraag
-  const nettoCents = isOfferte ? 0 : calcMeubelNettoCents({
-    modelId: meubel.model.id,
-    lengte: meubel.lengte,
-    lades: meubel.lades,
-    houtkleur: meubel.houtkleur,
-  })
+  const nettoCents = isOfferte ? 0 : calcMeubelNettoCents(meubelPrijsInput(meubel))
   if (nettoCents === null) throw new Error('Dit meubel is met de huidige prijslijst niet meer te bestellen. Open de configuratie en sla hem opnieuw op.')
   const unitPrice = nettoCents / 100
   const totalPrice = (nettoCents * quantity) / 100
@@ -674,6 +669,7 @@ export async function placeMeubelOrder(
         ['Afmeting', meubelAfmeting(meubel.model, meubel.lengte)],
         ['Lades', `${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}`],
         ['Houtkleur', meubel.houtkleurNaam],
+        ['Opties', meubelOptiesTekst(meubel)],
       ],
     },
   }
@@ -684,7 +680,7 @@ export async function placeMeubelOrder(
     (config as { article_number?: string | null }).article_number ?? null,
     emailDetails,
     notes || null,
-    null,
+    meubel.attachmentUrl,
     { ...opts, ...configPatch } as ConfigOptions,
     config.width ?? null,
     config.height ?? null,

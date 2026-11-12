@@ -3,7 +3,7 @@
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { leesMeubel } from '@/lib/meubel-opslag'
-import { formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
+import { formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst } from '@/lib/meubel-config'
 import { formatOrganicSize } from '@/lib/configurator-config'
 import { formatEuro } from '@/lib/mms'
 import type { AdminOrder } from './admin-bestellingen-list'
@@ -102,6 +102,10 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
                 <Rij label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
                 <Rij label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}`} />
                 <Rij label="Houtkleur" value={meubel.houtkleurNaam} />
+                <Rij label="Opties" value={meubelOptiesTekst(meubel)} />
+                {meubel.attachmentUrl && (
+                  <a href={meubel.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block py-2.5 text-[12.5px] font-semibold text-lx-cta hover:underline border-b border-lx-divider">Maattekening uitsparingen openen</a>
+                )}
               </>
             ) : (
               <>

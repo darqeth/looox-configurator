@@ -4,10 +4,10 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { parseOrThrow } from '@/lib/validation'
-import { DEFAULT_PRODUCT_ID, generateArticleNumber } from '@/lib/actions/configurator-helpers'
+import { DEFAULT_PRODUCT_ID, generateArticleNumber, assertValidAttachmentUrl } from '@/lib/actions/configurator-helpers'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import {
-  MEUBEL_AANTAL_MAX, calcMeubelBrutoCents, getMeubelHoogte, getMeubelModel, valideerMeubelConfig,
+  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, getMeubelHoogte, getMeubelModel, valideerMeubelConfig,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
 
@@ -19,6 +19,9 @@ const meubelInputSchema = z.object({
   houtkleur: z.string().max(40),
   opAanvraag: z.boolean().optional(),
   hoogte: z.number().int().min(1).max(3000).optional(),
+  logo: z.boolean().optional(),
+  uitsparingen: z.number().int().min(0).max(UITSPARING_MAX).optional(),
+  attachmentUrl: z.string().max(1000).nullish(),
   quantity: z.number().int().min(1).max(MEUBEL_AANTAL_MAX),
   projectName: z.string().trim().min(1, 'Projectnaam is verplicht').max(200),
   reference: z.string().max(200),
@@ -38,6 +41,11 @@ async function bouwRij(rawInput: SaveMeubelInput) {
   const fout = valideerMeubelConfig(input)
   if (fout) throw new Error(fout)
   const model = getMeubelModel(input.modelId)!
+
+  // Uitsparingen worden volgens de maattekening gemaakt: zonder tekening geen uitsparing
+  const uitsparingen = input.uitsparingen ?? 0
+  const attachmentUrl = uitsparingen > 0 ? assertValidAttachmentUrl(input.attachmentUrl) : null
+  if (uitsparingen > 0 && !attachmentUrl) throw new Error('Voeg een maattekening toe voor de uitsparingen.')
 
   const factor = await getMeubelFactor(supabase, user.id)
   // Op aanvraag heeft geen prijs vanuit de configurator: 0 opslaan, net als bij een spiegel op aanvraag
@@ -68,6 +76,8 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           houtkleur: input.houtkleur,
           factor,
           opAanvraag,
+          logo: input.logo === true,
+          uitsparingen,
         },
         quantity: input.quantity,
         reference: input.reference,
@@ -80,7 +90,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
         indirectLight: { position: 'geen', type: null, control: null },
         extras: [],
         optionSubChoices: {},
-        attachmentUrl: null,
+        attachmentUrl,
       },
     },
   }

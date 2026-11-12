@@ -396,6 +396,96 @@ export async function sendInternalOrderEmail({
   })
 }
 
+// ─── Email: projectorder (meerdere regels onder één ordernummer) ─────────────
+
+export type ProjectOrderEmail = {
+  orderNumber: string
+  projectName: string
+  reference: string
+  /** Alle regels op aanvraag: dan is het een offerteaanvraag */
+  isOfferte: boolean
+  regels: { titel: string; omschrijving: string; quantity: number; totaal: number; opAanvraag: boolean }[]
+  /** Netto totaal excl. btw over de regels met een prijs */
+  totaal: number
+}
+
+function buildProjectRows(o: ProjectOrderEmail) {
+  const fmt = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
+  return [
+    row(o.isOfferte ? 'Offertenummer' : 'Ordernummer', o.orderNumber),
+    row('Project', esc(o.projectName) || '—'),
+    o.reference ? row('Referentie', esc(o.reference)) : '',
+    ...o.regels.map((r, i) => row(
+      `${i + 1}. ${esc(r.titel)}<br><span style="font-size:12px;color:#999;white-space:normal;">${esc(r.omschrijving)}</span>`,
+      `${r.quantity}× · ${r.opAanvraag ? 'Op aanvraag' : fmt(r.totaal)}`,
+    )),
+    `<tr style="border-top:1px solid #ececec;">
+      <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">Totaal netto excl. btw</td>
+      <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${fmt(o.totaal)}</td>
+    </tr>`,
+  ].join('')
+}
+
+export async function sendProjectOrderConfirmationEmail({ to, name, order, pdfBuffer }: {
+  to: string
+  name: string
+  order: ProjectOrderEmail
+  pdfBuffer?: Buffer
+}) {
+  const soort = order.isOfferte ? 'Offerteaanvraag' : 'Bestelling'
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `${soort} ontvangen — ${order.orderNumber}`,
+    html: baseTemplate(`
+      ${h1(`${soort} ontvangen!`)}
+      ${p(order.isOfferte
+        ? `Hoi ${esc(name)}, je offerteaanvraag is succesvol ingediend. We stellen zo snel mogelijk een offerte op en nemen contact met je op.`
+        : `Hoi ${esc(name)}, je bestelling is succesvol geplaatst. We gaan er zo snel mogelijk mee aan de slag.`)}
+      ${orderTable(buildProjectRows(order))}
+      ${btn(`${SITE_URL}/bestellingen`, 'Bestellingen bekijken')}
+      ${divider()}
+      ${p('In de bijlage vind je het overzicht en de specificatie per product als PDF.', true)}
+    `),
+    attachments: pdfBuffer ? [{ filename: `LoooX-${order.isOfferte ? 'Offerteaanvraag' : 'Order'}-${order.orderNumber}.pdf`, content: pdfBuffer }] : undefined,
+  })
+}
+
+export async function sendInternalProjectOrderEmail({ to, order, customer, pdfBuffer }: {
+  to: string[]
+  order: ProjectOrderEmail
+  customer: { name: string | null; company: string | null; email: string; phone: string | null; address: string | null; shippingAddress?: string | null }
+  pdfBuffer?: Buffer
+}) {
+  const customerRows = [
+    customer.name ? row('Naam', esc(customer.name)) : '',
+    customer.company ? row('Bedrijf', esc(customer.company)) : '',
+    row('E-mail', `<a href="mailto:${esc(customer.email)}" style="color:#3d6b54;">${esc(customer.email)}</a>`),
+    customer.phone ? row('Telefoon', esc(customer.phone)) : '',
+    customer.address ? row('Adres', esc(customer.address)) : '',
+    customer.shippingAddress ? row('Afleveradres', esc(customer.shippingAddress)) : '',
+  ].join('')
+  const soort = order.isOfferte ? 'offerteaanvraag' : 'bestelling'
+  await getResend().emails.send({
+    from: FROM,
+    to,
+    subject: `Nieuwe ${soort} — ${order.orderNumber} (${customer.company ?? customer.name ?? customer.email})`,
+    html: baseTemplate(`
+      ${h1(`Nieuwe ${soort}!`)}
+      ${p(`Hoi Collega, er is zojuist een ${soort} met ${order.regels.length} ${order.regels.length === 1 ? 'regel' : 'regels'} binnengekomen via de configurator. In de bijlage vind je het overzicht en de specificatie per product.${order.isOfferte ? ' <strong>Let op: dit is nog géén bestelling, de klant wacht op een prijsopgave.</strong>' : ''}`)}
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Klantgegevens</p>
+      ${orderTable(customerRows)}
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">${order.isOfferte ? 'Aanvraag' : 'Bestelling'}</p>
+      ${orderTable(buildProjectRows(order))}
+      ${divider()}
+      ${p('Liefs, de configurator', true)}
+    `),
+    attachments: pdfBuffer ? [{ filename: `LoooX-${order.isOfferte ? 'Offerteaanvraag' : 'Order'}-${order.orderNumber}.pdf`, content: pdfBuffer }] : undefined,
+  })
+}
+
 // ─── Email: Account goedgekeurd ──────────────────────────────────────────────
 
 export async function sendApprovalEmail({

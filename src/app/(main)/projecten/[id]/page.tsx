@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft, Download, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { hasMeubelAccess } from '@/lib/meubel-access'
 import { isUuid, projectKop, projectRegel, projectTotaal } from '@/lib/project'
 import { formatCents } from '@/lib/meubel-config'
 import ProjectNaam from './project-naam'
 import RegelActies from './regel-acties'
+import ProjectBestellen from './project-bestellen'
+import { berekenProjectOrderRegel, projectOrderTotaalCents } from '@/lib/project-order'
 
 export const metadata = { title: 'Project | LoooX Configurator' }
 
@@ -21,7 +23,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   if (!userId) redirect('/login')
 
   // RLS bepaalt welke regels de aanroeper mag zien (eigen, of als manager die van collega's)
-  const [{ data: configs }, meubelToegang] = await Promise.all([
+  const [{ data: configs }, meubelToegang, { data: profiel }, { data: lid }] = await Promise.all([
     supabase
       .from('configurations')
       .select('id, name, article_number, total_price, status, width, height, selected_options, project_id')
@@ -29,6 +31,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       .in('status', ['saved', 'ordered'])
       .order('created_at'),
     hasMeubelAccess(supabase, userId),
+    supabase.from('profiles').select('korting').eq('id', userId).single(),
+    supabase.from('company_members').select('can_order').eq('user_id', userId).maybeSingle(),
   ])
   if (!configs || configs.length === 0) notFound()
 
@@ -38,6 +42,20 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const besteld = regels.some((r) => r.besteld)
   const heeftNetto = regels.some((r) => r.netto)
   const heeftBruto = regels.some((r) => !r.netto && !r.opAanvraag)
+
+  // Voorvertoning van de bestelling: zelfde berekening als placeProjectOrder op de server
+  const orderRegels = configs.map((c) => berekenProjectOrderRegel(c, profiel?.korting ?? 50))
+  // can_order is leidend; geen member-rij = mag bestellen
+  const magBestellen = lid ? (lid.can_order ?? true) : true
+  const heeftMeubel = regels.some((r) => r.soort === 'meubel')
+  const blokkade = orderRegels.find((r) => r.fout)?.fout
+    ?? (heeftMeubel && !meubelToegang ? 'Dit account heeft geen toegang tot Tailor-Made.' : null)
+
+  // Besteld project: het gezamenlijke ordernummer erbij
+  const { data: orders } = besteld
+    ? await supabase.from('orders').select('order_number, order_group').in('configuration_id', configs.map((c) => c.id)).limit(1)
+    : { data: null }
+  const orderNummer = orders?.[0]?.order_group ?? orders?.[0]?.order_number ?? null
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 w-full max-w-4xl">
@@ -50,19 +68,40 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">Project</p>
           <ProjectNaam projectId={id} naam={kop.naam} referentie={kop.referentie} bewerkbaar={!besteld} />
         </div>
-        {!besteld && meubelToegang && (
-          <Link
-            href={`/configurator/meubel?project=${id}`}
-            className="inline-flex items-center gap-1.5 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors"
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`/api/pdf/project/${id}`}
+            download
+            className="inline-flex items-center gap-1.5 border border-black/10 bg-white hover:bg-lx-panel-bg text-lx-text-primary text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors"
           >
-            <Plus size={15} /> Product toevoegen
-          </Link>
-        )}
+            <Download size={15} /> Offerte
+          </a>
+          {!besteld && meubelToegang && (
+            <Link
+              href={`/configurator/meubel?project=${id}`}
+              className="inline-flex items-center gap-1.5 border border-black/10 bg-white hover:bg-lx-panel-bg text-lx-text-primary text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors"
+            >
+              <Plus size={15} /> Product toevoegen
+            </Link>
+          )}
+          {!besteld && magBestellen && (
+            <ProjectBestellen
+              projectId={id}
+              naam={kop.naam}
+              totaalCents={projectOrderTotaalCents(orderRegels)}
+              fout={blokkade}
+              regels={orderRegels.map((r) => ({
+                id: r.configId, titel: r.regel.titel, omschrijving: r.regel.omschrijving,
+                quantity: r.quantity, totaalCents: Math.round(r.totalPrice * 100), opAanvraag: r.regel.opAanvraag,
+              }))}
+            />
+          )}
+        </div>
       </div>
 
       {besteld && (
         <p className="text-[12.5px] text-lx-text-secondary bg-white rounded-xl border border-black/6 px-4 py-3 mb-4">
-          Dit project is besteld en kan niet meer worden aangepast.
+          Dit project is besteld{orderNummer ? ` onder ${orderNummer}` : ''} en kan niet meer worden aangepast.
         </p>
       )}
 
@@ -109,7 +148,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       {!besteld && (
         <p className="text-[12px] text-lx-text-muted mt-4 leading-relaxed">
-          Testversie. Eén offerte en één bestelling voor het hele project volgen in de volgende stap.
+          De bedragen hierboven staan zoals op de offerte. Bij bestellen zie je het netto totaal.
         </p>
       )}
     </div>

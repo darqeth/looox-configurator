@@ -61,3 +61,44 @@ test.describe('Project: totaal en kop', () => {
     expect(isUuid(null)).toBe(false)
   })
 })
+
+import { berekenProjectOrderRegel, projectOrderTotaalCents } from '../src/lib/project-order'
+import { computeOrderTotals } from '../src/lib/order-pricing'
+
+test.describe('Project: prijs bij bestellen', () => {
+  test('meubel: netto tabelprijs, geen dealerkorting', () => {
+    const r = berekenProjectOrderRegel({ ...basis, total_price: '5801.12', selected_options: meubelOpts() }, 50)
+    // Facet Double 2000 mm, 3 × 2 lades (2858,96) + White (41,60) = 2900,56 netto, 2 stuks
+    expect(r).toMatchObject({ quantity: 2, unitPrice: 2900.56, totalPrice: 5801.12, korting: 0, fout: null })
+  })
+
+  test('meubel op aanvraag: geen prijs', () => {
+    const r = berekenProjectOrderRegel({ ...basis, total_price: 0, selected_options: meubelOpts({ modelId: 'facet', lengte: 3300, lades: 4, opAanvraag: true }) }, 50)
+    expect(r).toMatchObject({ unitPrice: 0, totalPrice: 0, fout: null })
+    expect(r.regel.opAanvraag).toBe(true)
+  })
+
+  test('meubel dat niet meer in de prijslijst staat geeft een fout', () => {
+    const r = berekenProjectOrderRegel({ ...basis, total_price: 100, selected_options: meubelOpts({ lades: 9 }) }, 50)
+    expect(r.fout).toContain('prijslijst')
+  })
+
+  test('maatwerk spiegel rekent precies als een losse bestelling', () => {
+    const r = berekenProjectOrderRegel({ ...basis, width: 120, height: 80, total_price: 450, selected_options: { shape: 'rechthoek', quantity: 3 } }, 50)
+    const los = computeOrderTotals({ brutoUnitPrice: 450, dealerKortingPct: 50, quantity: 3 })
+    expect(r).toMatchObject({ quantity: 3, unitPrice: 450, totalPrice: los.total, korting: 50, staffelPct: los.staffelPct })
+  })
+
+  test('projectspiegel: opgeslagen netto totaal, geen korting', () => {
+    const r = berekenProjectOrderRegel({ ...basis, total_price: '1250.50', selected_options: { shape: 'projectspiegel', quantity: 10 } }, 50)
+    expect(r).toMatchObject({ quantity: 10, unitPrice: 125.05, totalPrice: 1250.5, korting: 0 })
+  })
+
+  test('totaal telt de regels in centen op', () => {
+    const regels = [
+      berekenProjectOrderRegel({ ...basis, total_price: '5801.12', selected_options: meubelOpts() }, 50),
+      berekenProjectOrderRegel({ ...basis, id: 'b', total_price: 450, selected_options: { shape: 'rechthoek', quantity: 1 } }, 50),
+    ]
+    expect(projectOrderTotaalCents(regels)).toBe(580112 + 22500)
+  })
+})

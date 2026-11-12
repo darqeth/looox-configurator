@@ -8,7 +8,9 @@ import { buildSelectedOptionsJson, DEFAULT_PRODUCT_ID, assertSolLunaMaat, assert
 import { computeOrderTotals, type OrderDiscount } from '@/lib/order-pricing'
 import { runAfterResponse } from '@/lib/after-response'
 import { parseOrThrow, placeOrderInputSchema, orderFromConfigSchema } from '@/lib/validation'
-import { sendOrderConfirmationEmail, sendInternalOrderEmail, type OrderEmailDetails } from '@/lib/email'
+import { sendOrderConfirmationEmail, sendInternalOrderEmail, sendProjectOrderConfirmationEmail, sendInternalProjectOrderEmail, type OrderEmailDetails, type ProjectOrderEmail } from '@/lib/email'
+import { projectKop, type ProjectRegel } from '@/lib/project'
+import { berekenProjectOrderRegel, type ProjectOrderRegel } from '@/lib/project-order'
 import { getNotificationEmails } from '@/lib/actions/settings'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { z } from 'zod'
@@ -688,4 +690,163 @@ export async function placeMeubelOrder(
   ))
 
   return { orderNumber: tx.order_number, orderId: tx.order_id, isOfferte }
+}
+
+// ─── Project bestellen (winkelmandje) ────────────────────────────────────────
+// Alle regels van een project in één keer, onder één ordernummer. Per regel
+// gelden dezelfde rekenregels als bij een losse bestelling: spiegels met
+// dealerkorting en staffel, projectspiegels netto, meubels tegen de tabelprijs.
+// Geen kortingscode op projectniveau. De server rekent alles zelf uit.
+
+const projectOrderSchema = z.object({
+  projectId: z.string().uuid(),
+  notes: z.string().max(5000),
+  altShippingAddress: z.string().max(500).nullish(),
+})
+
+export async function placeProjectOrder(
+  rawProjectId: string,
+  rawNotes: string,
+  rawAltShippingAddress?: string | null,
+): Promise<{ orderNumber: string; isOfferte: boolean }> {
+  const { projectId, notes, altShippingAddress } = parseOrThrow(projectOrderSchema, {
+    projectId: rawProjectId,
+    notes: rawNotes,
+    altShippingAddress: rawAltShippingAddress?.trim() || null,
+  })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+
+  // RLS bepaalt welke regels de aanroeper mag zien
+  const { data: configs, error: configError } = await supabase
+    .from('configurations')
+    .select('id, name, article_number, width, height, total_price, status, selected_options, user_id, created_at')
+    .eq('project_id', projectId)
+    .order('created_at')
+  if (configError || !configs || configs.length === 0) throw new Error('Project niet gevonden')
+  if (configs.some((c) => c.status === 'ordered')) throw new Error('Dit project is al besteld')
+  if (configs.some((c) => c.status !== 'saved')) throw new Error('Dit project bevat een regel die nog niet is opgeslagen')
+
+  for (const eigenaar of new Set(configs.map((c) => c.user_id as string))) {
+    await assertCanOrder(supabase, user.id, eigenaar)
+  }
+
+  const { data: profiel } = await supabase.from('profiles').select('korting').eq('id', user.id).single()
+  const dealerKortingPct = profiel?.korting ?? 50
+  const heeftMeubel = configs.some((c) => leesMeubel(c.selected_options))
+  if (heeftMeubel && !await hasMeubelAccess(supabase, user.id)) throw new Error('Dit account heeft geen toegang tot Tailor-Made')
+
+  const regels = configs.map((config) => berekenProjectOrderRegel(config, dealerKortingPct))
+  const fout = regels.find((r) => r.fout)?.fout
+  if (fout) throw new Error(fout)
+  // Per regel vastleggen wat bij de order hoort: afleveradres en toegepaste staffel
+  const patch = (r: ProjectOrderRegel) => ({
+    ...(altShippingAddress && { altShippingAddress }),
+    ...(r.staffelPct > 0 && { staffelKortingPct: r.staffelPct }),
+  })
+
+  const isOfferte = regels.every((r) => r.regel.opAanvraag)
+  const { data: tx, error: txError } = await supabase.rpc('create_project_order_atomic', {
+    p_project_id: projectId,
+    p_lines: regels.map((r) => ({
+      config_id: r.configId,
+      quantity: r.quantity,
+      unit_price: r.unitPrice,
+      total_price: r.totalPrice,
+      config_patch: patch(r),
+    })),
+    p_notes: notes || '',
+    p_is_offerte: isOfferte,
+  })
+  if (txError || !tx) throw new Error(txError?.message ?? 'Bestelling plaatsen mislukt')
+  const groep = (tx as { order_group: string }).order_group
+  const orderNummers = new Map(((tx as { orders: { config_id: string; order_number: string }[] }).orders ?? []).map((o) => [o.config_id, o.order_number]))
+
+  revalidatePath('/bestellingen')
+  revalidatePath('/dashboard')
+  revalidatePath('/configuraties')
+  revalidatePath(`/projecten/${projectId}`)
+
+  const kop = projectKop(configs)
+  const orderDate = new Date().toISOString()
+  runAfterResponse('project-order-emails', (async () => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, email, company, phone, address, shipping_address, korting')
+      .eq('id', user.id)
+      .single()
+    const p = profile as Profile | null
+    const email = p?.email ?? user.email ?? ''
+    const dealer = {
+      name: p?.full_name ?? null,
+      company: p?.company ?? null,
+      email,
+      phone: p?.phone ?? null,
+      address: p?.address ?? null,
+      shippingAddress: altShippingAddress ?? p?.shipping_address ?? null,
+    }
+    // Voorblad met netto regels, daarna de orderbevestiging per regel: één PDF
+    const nettoRegels: ProjectRegel[] = regels.map((r) => ({
+      ...r.regel,
+      netto: true,
+      totaalCents: Math.round(r.totalPrice * 100),
+      stukCents: Math.round((r.totalPrice / r.quantity) * 100),
+    }))
+    const totaal = regels.reduce((som, r) => som + Math.round(r.totalPrice * 100), 0) / 100
+
+    const pdfBuffer = await (async () => {
+      const [{ renderOrderPDF }, { renderToBuffer }, React, { default: ProjectVoorblad }, { voegPdfsSamen }] = await Promise.all([
+        import('@/lib/pdf/render-order'),
+        import('@react-pdf/renderer'),
+        import('react'),
+        import('@/lib/pdf/project-voorblad'),
+        import('@/lib/pdf/samenvoegen'),
+      ])
+      const voorblad = await renderToBuffer(React.createElement(ProjectVoorblad, {
+        variant: 'order', projectNaam: kop.naam, referentie: kop.referentie, orderNummer: groep, datum: orderDate, dealer, regels: nettoRegels,
+      }) as Parameters<typeof renderToBuffer>[0])
+      const perRegel: Buffer[] = []
+      for (const [i, config] of configs.entries()) {
+        const r = regels[i]
+        const opts = { ...(config.selected_options as ConfigOptions), ...patch(r) } as ConfigOptions
+        perRegel.push(await renderOrderPDF({
+          orderNumber: orderNummers.get(config.id) ?? groep,
+          orderDate,
+          articleNumber: config.article_number,
+          status: 'pending',
+          dealer,
+          config: { name: config.name, width: config.width, height: config.height, options: opts },
+          unitPrice: r.unitPrice,
+          korting: r.korting,
+          quantity: r.quantity,
+          notes: notes || null,
+          attachmentUrl: (opts.attachmentUrl as string | null) ?? null,
+        }))
+      }
+      return voegPdfsSamen([voorblad, ...perRegel])
+    })().catch((e) => {
+      console.error('[project-order-pdf]', groep, e)
+      return undefined
+    })
+
+    const order: ProjectOrderEmail = {
+      orderNumber: groep,
+      projectName: kop.naam,
+      reference: kop.referentie,
+      isOfferte,
+      regels: regels.map((r) => ({ titel: r.regel.titel, omschrijving: r.regel.omschrijving, quantity: r.quantity, totaal: r.totalPrice, opAanvraag: r.regel.opAanvraag })),
+      totaal,
+    }
+    // Beide mails afwachten en fouten loggen: een bestelling zonder interne notificatie mag niet onzichtbaar blijven
+    const results = await Promise.allSettled([
+      sendProjectOrderConfirmationEmail({ to: email, name: p?.full_name ?? 'Gebruiker', order, pdfBuffer }),
+      getNotificationEmails().then((to) => sendInternalProjectOrderEmail({ to, order, customer: dealer, pdfBuffer })),
+    ])
+    results.forEach((res, i) => {
+      if (res.status === 'rejected') console.error(`[project-order-email:${i === 0 ? 'klant' : 'intern'}]`, groep, res.reason)
+    })
+  })())
+
+  return { orderNumber: groep, isOfferte }
 }

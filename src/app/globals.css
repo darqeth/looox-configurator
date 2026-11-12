@@ -215,3 +215,33 @@
 @media (prefers-reduced-motion: reduce) {
   .viz-shine-btn::after { animation: none; }
 }
+
+/* ─── Ruis (LoooX brand guide) ─────────────────────────────────────────────
+ * Zelfde korrel als `rm-noise-menu` en `rm-noise` in tokens.css van het RM
+ * Brand Platform: fractalNoise 0.8, 3 octaven, ontkleurd, als overlay.
+ * Hier als achtergrondlaag met background-blend-mode in plaats van een
+ * ::after, zodat de positie van bestaande elementen niet verandert en tekst
+ * en iconen erbuiten blijven. De sterkte zit in de opacity van de rect:
+ * menu 0.6 (platformstandaard), groene vlakken 0.5.
+ */
+:root {
+  --lx-noise-menu: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");
+  --lx-noise-vlak: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+}
+
+/* Donkere deel van het menu */
+[class~="bg-lx-sidebar-bg"] {
+  background-image: var(--lx-noise-menu);
+  background-blend-mode: overlay;
+}
+
+/* Volle groene vlakken: knoppen, badges, schakelaars, voortgangsbalken.
+ * Tinten (bg-lx-cta/10) en groene tekst vallen hier bewust buiten. */
+[class~="bg-lx-cta"],
+[class~="bg-lx-cta-hover"],
+[class~="hover:bg-lx-cta"]:hover,
+[class~="hover:bg-lx-cta-hover"]:hover,
+.peer:checked ~ [class~="peer-checked:bg-lx-cta"] {
+  background-image: var(--lx-noise-vlak);
+  background-blend-mode: overlay;
+}

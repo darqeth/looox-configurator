@@ -19,7 +19,7 @@ import {
   updateSuperAdmin,
 } from '@/lib/actions/admin'
 import type { UserRowProfile } from './user-row'
-import { parseConfiguratorAccess, ACCESS_LABELS, type ConfiguratorAccess } from '@/lib/configurator-access'
+import { parseConfiguratorAccess, type ConfiguratorAccess } from '@/lib/configurator-access'
 import { toast } from '@/components/toast'
 
 export function UserEditModal({
@@ -47,6 +47,8 @@ export function UserEditModal({
   const [isInternational, setIsInternational] = useState(profile.is_international ?? false)
   const [configuratorAccess, setConfiguratorAccessState] = useState(parseConfiguratorAccess(profile.configurator_access))
   const [meubelAccess, setMeubelAccessState] = useState(profile.meubel_access === true)
+  const heeftMaatwerk = configuratorAccess !== 'project'
+  const heeftProject = configuratorAccess !== 'maatwerk'
 
   // Bedrijfskoppeling
   const matchedCompany = companies.find(c => c.name.toLowerCase() === (profile.company ?? '').toLowerCase())
@@ -381,48 +383,56 @@ export function UserEditModal({
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${isInternational ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
+          </div>
 
-            {/* Configurator-toegang: drie standen (epic EN/EN) */}
-            <div className="mt-4 pt-4 border-t border-lx-divider">
-              <p className="text-[13px] font-medium text-lx-text-primary">Configurator-toegang</p>
-              <p className="text-[11.5px] text-lx-text-secondary mb-2.5">Maatwerk = wizard + milestones · Alleen project = projectspiegels (netto, geen milestones) · Beide = keuze per configuratie</p>
-              <div className="flex gap-1 bg-lx-panel-bg rounded-xl p-1 w-fit" role="radiogroup" aria-label="Configurator-toegang">
-                {(['maatwerk', 'beide', 'project'] as const).map((access) => (
+          {/* Configurator-toegang: één schakelaar per type. Maatwerk en project
+              worden samen opgeslagen als de stand maatwerk / beide / project. */}
+          <div className="px-6 py-4 border-b border-gray-100">
+            <p className="text-[10.5px] font-bold text-lx-text-secondary uppercase tracking-widest mb-4">Configurator-toegang</p>
+            <div className="space-y-4">
+              {([
+                {
+                  label: 'Maatwerk spiegels',
+                  hint: 'Wizard met alle vormen en opties, telt mee voor milestones',
+                  aan: heeftMaatwerk,
+                  vast: heeftMaatwerk && !heeftProject,
+                  toggle: () => handleSetAccess(heeftMaatwerk ? 'project' : 'beide'),
+                },
+                {
+                  label: 'Projectspiegels',
+                  hint: heeftMaatwerk ? 'Rechthoekige spiegels in aantallen, netto prijzen' : 'Alleen project: netto prijzen, geen milestones',
+                  aan: heeftProject,
+                  vast: heeftProject && !heeftMaatwerk,
+                  toggle: () => handleSetAccess(heeftProject ? 'maatwerk' : 'beide'),
+                },
+                {
+                  label: 'Meubels (Tailor-Made)',
+                  hint: isInternational ? 'Niet beschikbaar voor accounts met buitenlandtoeslag' : 'Maatwerk meubels samenstellen en bestellen',
+                  aan: meubelAccess,
+                  vast: false,
+                  toggle: handleToggleMeubel,
+                },
+              ]).map((rij) => (
+                <div key={rij.label} className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[13px] font-medium text-lx-text-primary">{rij.label}</p>
+                    <p className="text-[11.5px] text-lx-text-secondary">
+                      {rij.vast ? 'Spiegels kunnen niet allebei uit. Zet eerst het andere type aan.' : rij.hint}
+                    </p>
+                  </div>
                   <button
-                    key={access}
                     type="button"
-                    role="radio"
-                    aria-checked={configuratorAccess === access}
-                    onClick={() => handleSetAccess(access)}
-                    className={`px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer ${
-                      configuratorAccess === access
-                        ? 'bg-white text-lx-text-primary shadow-sm border border-black/6'
-                        : 'text-lx-text-secondary hover:text-lx-text-primary'
-                    }`}
+                    role="switch"
+                    aria-checked={rij.aan}
+                    aria-label={rij.label}
+                    disabled={rij.vast}
+                    onClick={rij.toggle}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${rij.aan ? 'bg-lx-cta' : 'bg-gray-200'}`}
                   >
-                    {ACCESS_LABELS[access]}
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${rij.aan ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tailor-Made meubels (configurator 2.0) */}
-            <div className="mt-4 pt-4 border-t border-lx-divider flex items-center justify-between">
-              <div>
-                <p className="text-[13px] font-medium text-lx-text-primary">Meubels (Tailor-Made)</p>
-                <p className="text-[11.5px] text-lx-text-secondary">
-                  {isInternational ? 'Niet beschikbaar voor accounts met buitenlandtoeslag' : 'Mag maatwerk meubels samenstellen en bestellen'}
-                </p>
-              </div>
-              <button
-                role="switch"
-                aria-checked={meubelAccess}
-                aria-label="Meubels (Tailor-Made)"
-                onClick={handleToggleMeubel}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer ${meubelAccess ? 'bg-lx-cta' : 'bg-gray-200'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${meubelAccess ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
+                </div>
+              ))}
             </div>
           </div>
 

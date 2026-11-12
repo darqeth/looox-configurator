@@ -84,6 +84,10 @@ export const HOUTKLEUREN: Houtkleur[] = [
 
 export const HOUTKLEUR_DEFAULT = 'old-grey'
 
+export function houtkleurAfbeelding(id: string): string {
+  return `/images/meubels/hout/${id}.webp`
+}
+
 export function getMeubelModel(id: string): MeubelModel | null {
   return MEUBEL_MODELLEN.find((m) => m.id === id) ?? null
 }
@@ -152,4 +156,30 @@ export function calcMeubelBrutoCents(input: MeubelInput, factor: number): number
 
 export function formatCents(cents: number): string {
   return `€ ${(cents / 100).toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+export interface MeubelPrijsRegel {
+  label: string
+  cents: number
+}
+
+/**
+ * Bruto prijsopbouw voor het prijspaneel. De regels tellen altijd exact op tot
+ * het totaal: afronding door de factor komt in de basisregel terecht.
+ */
+export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { regels: MeubelPrijsRegel[]; totaal: number } | null {
+  const totaal = calcMeubelBrutoCents(input, factor)
+  const model = getMeubelModel(input.modelId)
+  const kleur = HOUTKLEUREN.find((k) => k.id === input.houtkleur)
+  if (totaal === null || !model || !kleur) return null
+  const f = parseMeubelFactor(factor)
+  const extra: MeubelPrijsRegel[] = []
+  if (kleur.meerprijs > 0) extra.push({ label: `Houtkleur · ${kleur.naam}`, cents: Math.round(kleur.meerprijs * f) })
+  const uitsparingen = input.uitsparingen ?? 0
+  if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
+  const basis = totaal - extra.reduce((som, r) => som + r.cents, 0)
+  return {
+    regels: [{ label: `${model.naam} ${input.lengte} cm · ${ladeLabel(model, input.lades)}`, cents: basis }, ...extra],
+    totaal,
+  }
 }

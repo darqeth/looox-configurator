@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import {
   calcMeubelNettoCents, calcMeubelBrutoCents, getLadeOpties, getMeubelModel,
-  getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT,
+  getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT, getMeubelPrijsOpbouw,
 } from '../src/lib/meubel-config'
 
 // Prijslijst Tailor-Made juli 2026 (netto). Rij: [lengte, lades, euro].
@@ -85,5 +85,22 @@ test.describe('Meubel: bruto en factor', () => {
     }
     expect(parseMeubelFactor('2,5')).toBe(2.5)
     expect(calcMeubelBrutoCents(in_, NaN)).toBe(196352)
+  })
+})
+
+test.describe('Meubel: prijsopbouw in het paneel', () => {
+  test('regels tellen exact op tot het bruto totaal, ook bij een scheve factor', () => {
+    for (const factor of [2, 2.35, 1.37, 3.33]) {
+      const in_ = { modelId: 'facet-double', lengte: 200, lades: 3, houtkleur: 'white', uitsparingen: 3 }
+      const opbouw = getMeubelPrijsOpbouw(in_, factor)!
+      expect(opbouw.regels.reduce((s, r) => s + r.cents, 0)).toBe(opbouw.totaal)
+      expect(opbouw.totaal).toBe(calcMeubelBrutoCents(in_, factor))
+      expect(opbouw.regels.map((r) => r.label)).toEqual(['Facet Double 200 cm · 3 × 2 lades', 'Houtkleur · White', 'Uitsparing · 3×'])
+    }
+  })
+
+  test('kleur zonder meerprijs geeft geen eigen regel', () => {
+    const opbouw = getMeubelPrijsOpbouw({ modelId: 'facet', lengte: 100, lades: 1, houtkleur: 'black' }, 2)!
+    expect(opbouw.regels).toEqual([{ label: 'Facet 100 cm · 1 lade', cents: 196352 }])
   })
 })

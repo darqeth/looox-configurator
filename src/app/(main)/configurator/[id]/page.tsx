@@ -4,6 +4,9 @@ import ConfiguratorWizard from '../nieuw/configurator-wizard'
 import ProjectspiegelConfigurator from '../nieuw/projectspiegel/index'
 import { LightConfig } from '../nieuw/step-verlichting'
 import { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
+import MeubelConfigurator from '../meubel/meubel-configurator'
+import { leesMeubel, isMeubelConfig } from '@/lib/meubel-opslag'
+import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 
 export default async function EditConfiguratorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -25,6 +28,33 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   if (config.status === 'ordered') redirect('/configuraties')
 
   const opts = config.selected_options as Record<string, unknown>
+
+  // Meubel (configurator 2.0): eigen scherm, alleen met meubeltoegang
+  if (isMeubelConfig(opts)) {
+    const meubel = leesMeubel(opts)
+    const [toegang, factor] = await Promise.all([
+      hasMeubelAccess(supabase, user.id),
+      getMeubelFactor(supabase, user.id),
+    ])
+    if (!meubel || !toegang) redirect('/configuraties')
+    return (
+      <MeubelConfigurator
+        factor={factor}
+        initialConfig={{
+          id: config.id,
+          modelId: meubel.model.id,
+          lengte: meubel.lengte,
+          lades: meubel.lades,
+          ladeBreedtes: meubel.ladeBreedtes,
+          houtkleur: meubel.houtkleur,
+          quantity: meubel.quantity,
+          projectName: config.name ?? '',
+          reference: meubel.reference,
+          description: meubel.description,
+        }}
+      />
+    )
+  }
 
   const initialConfig = {
     id: config.id,

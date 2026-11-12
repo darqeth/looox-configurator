@@ -141,3 +141,14 @@ export function buildSelectedOptionsJson(input: OptionsJsonBase, ctx: { isIntern
     lunaMuurZijde: input.lunaMuurZijde,
   }
 }
+
+export function generateArticleNumber(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const year = new Date().getFullYear()
+  const randomBytes = crypto.getRandomValues(new Uint8Array(6))
+  let result = `LX-${year}-`
+  for (let i = 0; i < 6; i++) {
+    result += chars[randomBytes[i] % chars.length]
+  }
+  return result
+}

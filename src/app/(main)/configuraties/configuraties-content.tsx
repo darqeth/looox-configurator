@@ -1,5 +1,8 @@
 'use client'
 
+import { leesMeubel } from '@/lib/meubel-opslag'
+import { ladeLabel } from '@/lib/meubel-config'
+
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import OrderButton from './order-button'
@@ -125,6 +128,7 @@ export function ConfiguratiesContent({
                 const date = new Date(config.updated_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
                 const opts = config.selected_options as Record<string, unknown> | null
                 const shape = (opts?.shape as string) ?? 'rechthoek'
+                const meubel = leesMeubel(opts)
                 const diameter = opts?.diameter as number | null
                 const organicKey = opts?.organicSizeKey as string | null
                 const extras = (opts?.extras as string[]) ?? []
@@ -132,7 +136,8 @@ export function ConfiguratiesContent({
                 const indirect = opts?.indirectLight as { position: string; control?: string | null } | null
 
                 let dimensionLabel = ''
-                if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
+                if (meubel) dimensionLabel = `${meubel.lengte} cm · ${ladeLabel(meubel.model, meubel.lades)} · ${meubel.houtkleurNaam}`
+                else if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
 
@@ -149,14 +154,14 @@ export function ConfiguratiesContent({
 
                 const extrasLabel = extras.length > 0 ? `${extras.length} extra${extras.length !== 1 ? "'s" : ''}` : ''
                 const metaParts = [
-                  shapeLabel[shape] ?? shape,
+                  (meubel ? meubel.model.naam : shapeLabel[shape] ?? shape),
                   dimensionLabel,
                   ...lightParts,
                   extrasLabel,
                 ].filter(Boolean)
                 // Lijstweergave toont ook het aantal; de bestelmodal niet, daar is het aanpasbaar
                 const listMeta = [
-                  shapeLabel[shape] ?? shape,
+                  (meubel ? meubel.model.naam : shapeLabel[shape] ?? shape),
                   dimensionLabel,
                   quantityLabel,
                   ...lightParts,
@@ -192,7 +197,7 @@ export function ConfiguratiesContent({
                       }
                     : null
 
-                const configPreview: ConfigPreview | undefined = shape && shape !== 'projectspiegel' ? {
+                const configPreview: ConfigPreview | undefined = shape && shape !== 'projectspiegel' && !meubel ? {
                   shape: shape as ShapeSlug,
                   width: config.width ?? null,
                   height: config.height ?? null,
@@ -233,12 +238,12 @@ export function ConfiguratiesContent({
                             <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
                           )}
                           {permissions.canOrder && (
-                            <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
+                            <OrderButton verborgen={!!meubel} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
                             configName={config.name ?? 'Naamloze configuratie'}
-                            canDownload={true}
+                            canDownload={!meubel}
                             canEdit={permissions.canConfigure}
                             canDelete={canDelete}
                           />
@@ -269,7 +274,7 @@ export function ConfiguratiesContent({
 
                       {/* Col: Vorm + afmeting — desktop only */}
                       <div className="hidden lg:block w-[152px] flex-shrink-0">
-                        <p className="text-[12px] font-medium text-lx-text-primary">{shapeLabel[shape] ?? shape}</p>
+                        <p className="text-[12px] font-medium text-lx-text-primary">{(meubel ? meubel.model.naam : shapeLabel[shape] ?? shape)}</p>
                         <p className="text-[11px] text-lx-text-secondary mt-0.5">{dimensionLabel || '—'}{quantityLabel && ` · ${quantityLabel}`}</p>
                       </div>
 
@@ -284,7 +289,7 @@ export function ConfiguratiesContent({
                       {/* Col: Bestellen / Aanvragen CTA */}
                       {permissions.canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
-                          <OrderButton configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
+                          <OrderButton verborgen={!!meubel} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
                         </div>
                       )}
 
@@ -296,7 +301,7 @@ export function ConfiguratiesContent({
                         <ConfigActionsMenu
                           configId={config.id}
                           configName={config.name ?? 'Naamloze configuratie'}
-                          canDownload={true}
+                          canDownload={!meubel}
                           canEdit={permissions.canConfigure}
                           canDelete={canDelete}
                         />

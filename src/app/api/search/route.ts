@@ -10,6 +10,7 @@ const SHAPE_LABELS: Record<string, string> = {
   elips: 'Ellips',
   arc: 'Boog',
   'op-aanvraag': 'Op aanvraag',
+  meubel: 'Meubel',
 }
 
 function shapeLabel(slug: string): string {

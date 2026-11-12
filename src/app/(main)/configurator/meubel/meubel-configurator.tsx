@@ -1,190 +1,419 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { toast } from '@/components/toast'
 import {
-  MEUBEL_MODELLEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT,
+  MEUBEL_MODELLEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_CM, LADE_MAX_CM, MEUBEL_AANTAL_MAX,
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
-  type MeubelModel,
+  getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
+  type MeubelModel, type LadeBreedtes,
 } from '@/lib/meubel-config'
+import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
 
-// Fase 1: model kiezen, lengte en lades invoeren, brutoprijs zien.
-// Hier staat alleen bruto (netto × factor); netto komt pas in de bestelstap.
+// Stappen: model kiezen, samenstellen (lengte, lades, houtkleur), samenvatting.
+// In beeld staat alleen bruto (netto × factor); netto komt pas in de bestelstap.
 
-export default function MeubelConfigurator({ factor }: { factor: number }) {
-  const [model, setModel] = useState<MeubelModel | null>(null)
+const STEPS = ['Model', 'Samenstellen', 'Samenvatting']
 
-  return (
-    <div className="min-h-screen bg-lx-divider p-4 sm:p-6 lg:p-7">
-      <div className="w-full max-w-5xl mx-auto">
-        {model ? (
-          <MeubelDetail model={model} factor={factor} onBack={() => setModel(null)} />
-        ) : (
-          <>
-            <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">Nieuw meubel</h1>
-            <p className="text-[13px] text-lx-text-secondary mt-1 mb-5">Kies een model uit de Tailor-Made collectie.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {MEUBEL_MODELLEN.map((m) => {
-                const bereik = getLengteBereik(m)
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => setModel(m)}
-                    className="text-left bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden hover:border-lx-cta transition-colors cursor-pointer"
-                  >
-                    <div className="relative aspect-[4/3] bg-lx-panel-bg">
-                      <Image src={m.afbeelding} alt={m.naam} fill sizes="(min-width: 640px) 480px, 100vw" className="object-contain p-5" />
-                    </div>
-                    <div className="px-5 py-4">
-                      <p className="font-semibold text-lx-text-primary text-[15px]">{m.naam}</p>
-                      <p className="text-[13px] text-lx-text-secondary mt-0.5">{m.omschrijving}</p>
-                      <p className="text-[12px] text-lx-text-muted mt-2">
-                        Lengte {bereik.min} tot {bereik.max} cm · hoogte {m.hoogte} cm · diepte {m.diepte} cm
-                      </p>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  )
+export interface MeubelInitialConfig {
+  id: string
+  modelId: string
+  lengte: number
+  lades: number
+  ladeBreedtes: LadeBreedtes
+  houtkleur: string
+  quantity: number
+  projectName: string
+  reference: string
+  description: string
 }
 
-function MeubelDetail({ model, factor, onBack }: { model: MeubelModel; factor: number; onBack: () => void }) {
-  const bereik = getLengteBereik(model)
-  const [lengteTekst, setLengteTekst] = useState('120')
-  const [lades, setLades] = useState(2)
-  const [houtkleur, setHoutkleur] = useState(HOUTKLEUR_DEFAULT)
+export default function MeubelConfigurator({ factor, initialConfig }: { factor: number; initialConfig?: MeubelInitialConfig }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const isEditing = !!initialConfig
+
+  const [model, setModel] = useState<MeubelModel | null>(
+    () => MEUBEL_MODELLEN.find((m) => m.id === initialConfig?.modelId) ?? null,
+  )
+  const [step, setStep] = useState(model ? 1 : 0)
+  const [lengteTekst, setLengteTekst] = useState(String(initialConfig?.lengte ?? 120))
+  // Laatste geldige lengte: tekening en opties blijven staan terwijl je typt
+  const [laatsteLengte, setLaatsteLengte] = useState(initialConfig?.lengte ?? 120)
+  const [lades, setLades] = useState(initialConfig?.lades ?? 2)
+  const [eigenBreedtes, setEigenBreedtes] = useState<LadeBreedtes>(initialConfig?.ladeBreedtes ?? null)
+  const [houtkleur, setHoutkleur] = useState(initialConfig?.houtkleur || HOUTKLEUR_DEFAULT)
   // Alleen weergave, wordt niet opgeslagen
   const [toonHout, setToonHout] = useState(true)
-  // Laatste geldige lengte: de tekening blijft staan terwijl je typt
-  const [laatsteLengte, setLaatsteLengte] = useState(120)
+  const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
+  const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
+  const [reference, setReference] = useState(initialConfig?.reference ?? '')
+  const [description, setDescription] = useState(initialConfig?.description ?? '')
 
+  if (!model || step === 0) {
+    return (
+      <Kader step={0} onStep={setStep} maxStep={model ? 2 : 0}>
+        <div className="w-full">
+          <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">{isEditing ? 'Model wijzigen' : 'Nieuw meubel'}</h1>
+          <p className="text-[13px] text-lx-text-secondary mt-1 mb-5">Kies een model uit de Tailor-Made collectie.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {MEUBEL_MODELLEN.map((m) => {
+              const b = getLengteBereik(m)
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    // Ander model: lengte en indeling die daar niet bestaan vervallen
+                    if (m.id !== model?.id) {
+                      const l = Math.min(Math.max(laatsteLengte, b.min), b.max)
+                      setLengteTekst(String(l)); setLaatsteLengte(l); setEigenBreedtes(null)
+                    }
+                    setModel(m); setStep(1)
+                  }}
+                  aria-pressed={model?.id === m.id}
+                  className={`text-left bg-white rounded-[18px] border shadow-sm overflow-hidden hover:border-lx-cta transition-colors cursor-pointer ${model?.id === m.id ? 'border-lx-cta' : 'border-black/6'}`}
+                >
+                  <div className="relative aspect-[4/3] bg-lx-panel-bg">
+                    <Image src={m.afbeelding} alt={m.naam} fill sizes="(min-width: 640px) 480px, 100vw" className="object-contain p-5" />
+                  </div>
+                  <div className="px-5 py-4">
+                    <p className="font-semibold text-lx-text-primary text-[15px]">{m.naam}</p>
+                    <p className="text-[13px] text-lx-text-secondary mt-0.5">{m.omschrijving}</p>
+                    <p className="text-[12px] text-lx-text-muted mt-2">
+                      Lengte {b.min} tot {b.max} cm · hoogte {m.hoogte} cm · diepte {m.diepte} cm
+                    </p>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </Kader>
+    )
+  }
+
+  const bereik = getLengteBereik(model)
   const lengte = /^\d+$/.test(lengteTekst) ? Number(lengteTekst) : NaN
   const lengteOk = lengte >= bereik.min && lengte <= bereik.max
-  if (lengteOk && lengte !== laatsteLengte) setLaatsteLengte(lengte)
+  if (lengteOk && lengte !== laatsteLengte) {
+    setLaatsteLengte(lengte)
+    setEigenBreedtes(null) // een eigen indeling hoort bij één lengte
+  }
   const tekenLengte = lengteOk ? lengte : laatsteLengte
 
   const opties = getLadeOpties(model, tekenLengte)
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
   const gekozen = opties.includes(lades) ? lades : opties[0]
-  const opbouw = lengteOk ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur }, factor) : null
+  const breedtes = eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
+  const ladeFout = valideerLadeBreedtes(breedtes, tekenLengte, gekozen)
+  const magAanpassen = kanLadesAanpassen(tekenLengte, gekozen)
   const kleurNaam = HOUTKLEUREN.find((k) => k.id === houtkleur)?.naam ?? ''
+  const opbouw = lengteOk ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur }, factor) : null
+  const geldig = lengteOk && !ladeFout && opbouw !== null
+
+  function kiesLades(n: number) {
+    setLades(n)
+    setEigenBreedtes(null)
+  }
+
+  // De laatste lade krijgt wat overblijft, zodat het totaal altijd de lengte is
+  function zetBreedte(index: number, tekst: string) {
+    if (!breedtes) return
+    const waarde = Number(tekst.replace(/\D/g, '').slice(0, 3)) || 0
+    const nieuw = breedtes.map((b, i) => (i === index ? waarde : b))
+    nieuw[nieuw.length - 1] = tekenLengte - nieuw.slice(0, -1).reduce((som, b) => som + b, 0)
+    setEigenBreedtes(nieuw)
+  }
+
+  function handleSave() {
+    if (!geldig || !projectName.trim() || !model) return
+    const payload = {
+      modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur,
+      quantity, projectName: projectName.trim(), reference, description,
+    }
+    startTransition(async () => {
+      try {
+        if (initialConfig) await updateMeubelConfiguration(initialConfig.id, payload)
+        else await saveMeubelConfiguration(payload)
+        router.push('/configuraties')
+      } catch (e) {
+        console.error(e)
+        toast(e instanceof Error ? e.message : 'Opslaan mislukt. Probeer het opnieuw.')
+      }
+    })
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-4 items-start">
-      <div className="bg-white rounded-2xl border border-black/8 shadow-sm p-5 space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="relative w-24 h-[72px] shrink-0 rounded-xl bg-lx-panel-bg overflow-hidden">
-            <Image src={model.afbeelding} alt="" fill sizes="96px" className="object-contain p-1.5" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-[18px] font-bold text-lx-text-primary tracking-tight">{model.naam}</h1>
-            <p className="text-[12.5px] text-lx-text-secondary mt-0.5">Hoogte {model.hoogte} cm · diepte {model.diepte} cm</p>
-            <button onClick={onBack} className="flex items-center gap-1 text-[12.5px] font-semibold text-lx-cta hover:underline cursor-pointer mt-1">
-              <ArrowLeft size={13} /> Ander model
-            </button>
-          </div>
-        </div>
+    <Kader step={step} onStep={setStep} maxStep={geldig ? 2 : 1}>
+      {/* Links: stap */}
+      <div className="flex-1 min-w-0 w-full">
+        <div className="bg-white rounded-2xl shadow-sm border border-lx-divider p-5">
+          {step === 1 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="relative w-24 h-[72px] shrink-0 rounded-xl bg-lx-panel-bg overflow-hidden">
+                  <Image src={model.afbeelding} alt="" fill sizes="96px" className="object-contain p-1.5" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-[18px] font-bold text-lx-text-primary tracking-tight">{model.naam}</h1>
+                  <p className="text-[12.5px] text-lx-text-secondary mt-0.5">Hoogte {model.hoogte} cm · diepte {model.diepte} cm</p>
+                  <button onClick={() => setStep(0)} className="text-[12.5px] font-semibold text-lx-cta hover:underline cursor-pointer mt-1">
+                    Ander model
+                  </button>
+                </div>
+              </div>
 
-        <div>
-          <label htmlFor="meubel-lengte" className="block text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</label>
-          <div className="flex items-center gap-2">
-            <input
-              id="meubel-lengte"
-              inputMode="numeric"
-              value={lengteTekst}
-              onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 3))}
-              aria-invalid={!lengteOk}
-              aria-describedby="meubel-lengte-hulp"
-              className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
-            />
-            <span className="text-[13px] text-lx-text-secondary">cm</span>
-          </div>
-          <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
-            Hele centimeters, van {bereik.min} tot {bereik.max} cm.
-          </p>
-        </div>
+              <div>
+                <label htmlFor="meubel-lengte" className="block text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="meubel-lengte"
+                    inputMode="numeric"
+                    value={lengteTekst}
+                    onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                    aria-invalid={!lengteOk}
+                    aria-describedby="meubel-lengte-hulp"
+                    className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
+                  />
+                  <span className="text-[13px] text-lx-text-secondary">cm</span>
+                </div>
+                <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                  Hele centimeters, van {bereik.min} tot {bereik.max} cm.
+                </p>
+              </div>
 
-        <div>
-          <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lades</p>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Aantal lades">
-            {opties.map((n) => (
+              <div>
+                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lades</p>
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Aantal lades">
+                  {opties.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      role="radio"
+                      aria-checked={gekozen === n}
+                      onClick={() => kiesLades(n)}
+                      className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                        gekozen === n
+                          ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                          : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                      }`}
+                    >
+                      {ladeLabel(model, n)}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[12px] text-lx-text-muted mt-1.5">Welke indelingen kunnen, hangt af van de lengte.</p>
+
+                {magAanpassen && (
+                  <div className="mt-4 bg-lx-panel-bg rounded-xl p-4">
+                    <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
+                      <span>
+                        <span className="block text-[13px] font-medium text-lx-text-primary">Breedtes zelf instellen</span>
+                        <span className="block text-[11.5px] text-lx-text-secondary">
+                          Standaard zijn de lades even breed. Per lade {LADE_MIN_CM} tot {LADE_MAX_CM} cm.
+                        </span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={breedtes !== null}
+                        onChange={(e) => setEigenBreedtes(e.target.checked ? startLadeBreedtes(tekenLengte, gekozen) : null)}
+                        className="sr-only peer"
+                      />
+                      <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
+                    </label>
+
+                    {breedtes && (
+                      <>
+                        <div className="flex flex-wrap items-end gap-2.5 mt-4">
+                          {breedtes.map((b, i) => {
+                            const laatste = i === breedtes.length - 1
+                            const fout = b < LADE_MIN_CM || b > LADE_MAX_CM
+                            return (
+                              <div key={i}>
+                                <label htmlFor={`meubel-lade-${i}`} className="block text-[11.5px] font-medium text-lx-text-secondary mb-1">
+                                  Lade {i + 1}{laatste ? ' (rest)' : ''}
+                                </label>
+                                <input
+                                  id={`meubel-lade-${i}`}
+                                  inputMode="numeric"
+                                  value={b}
+                                  readOnly={laatste}
+                                  aria-invalid={fout}
+                                  onChange={(e) => zetBreedte(i, e.target.value)}
+                                  className={`w-[72px] h-10 rounded-xl border text-center text-[14px] font-semibold outline-none px-2 ${
+                                    laatste ? 'bg-transparent text-lx-text-secondary' : 'bg-white text-lx-text-primary focus:border-lx-cta'
+                                  } ${fout ? 'border-red-400' : 'border-black/10'}`}
+                                />
+                              </div>
+                            )
+                          })}
+                          <span className="text-[13px] text-lx-text-secondary pb-2.5">cm</span>
+                        </div>
+                        <p className={`text-[12px] mt-2 ${ladeFout ? 'text-red-600' : 'text-lx-text-muted'}`} role={ladeFout ? 'alert' : undefined}>
+                          {ladeFout ?? `De laatste lade krijgt wat overblijft van ${tekenLengte} cm.`}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">
+                  Houtkleur <span className="font-normal text-lx-text-secondary">· {kleurNaam}</span>
+                </p>
+                <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Houtkleur">
+                  {HOUTKLEUREN.map((k) => (
+                    <button
+                      key={k.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={houtkleur === k.id}
+                      aria-label={k.naam}
+                      title={k.naam}
+                      onClick={() => setHoutkleur(k.id)}
+                      className={`relative w-12 h-12 rounded-xl overflow-hidden cursor-pointer transition-shadow ${
+                        houtkleur === k.id ? 'ring-2 ring-lx-cta ring-offset-2' : 'ring-1 ring-black/10 hover:ring-black/30'
+                      }`}
+                    >
+                      <Image src={houtkleurAfbeelding(k.id)} alt="" fill sizes="48px" className="object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
-                key={n}
-                type="button"
-                role="radio"
-                aria-checked={gekozen === n}
-                onClick={() => setLades(n)}
-                className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
-                  gekozen === n
-                    ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
-                    : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
-                }`}
+                onClick={() => setStep(2)}
+                disabled={!geldig}
+                className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
-                {ladeLabel(model, n)}
+                Verder naar samenvatting
               </button>
-            ))}
-          </div>
-          <p className="text-[12px] text-lx-text-muted mt-1.5">Welke indelingen kunnen, hangt af van de lengte.</p>
-        </div>
+            </div>
+          )}
 
-        <div>
-          <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">
-            Houtkleur <span className="font-normal text-lx-text-secondary">· {kleurNaam}</span>
-          </p>
-          <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Houtkleur">
-            {HOUTKLEUREN.map((k) => (
+          {step === 2 && opbouw && (
+            <div className="space-y-5">
+              <h1 className="text-[16px] font-semibold text-lx-text-primary">Samenvatting</h1>
+
+              <div className="bg-lx-panel-bg rounded-2xl p-4">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
+                <Rij label="Model" waarde={model.naam} onEdit={() => setStep(0)} />
+                <Rij label="Afmeting" waarde={`${lengte} cm lang · ${model.hoogte} cm hoog · ${model.diepte} cm diep`} onEdit={() => setStep(1)} />
+                <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, lengte, gekozen)}`} onEdit={() => setStep(1)} />
+                <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(1)} />
+              </div>
+
+              <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">
+                <span id="meubel-aantal-label" className="text-[13px] font-medium text-lx-text-primary flex-shrink-0">Aantal</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    aria-label="Eén minder"
+                    className="w-9 h-9 rounded-xl bg-white border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer"
+                  >−</button>
+                  <input
+                    inputMode="numeric"
+                    aria-labelledby="meubel-aantal-label"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.min(MEUBEL_AANTAL_MAX, Math.max(1, parseInt(e.target.value.replace(/\D/g, '')) || 1)))}
+                    className="w-16 h-9 rounded-xl border-2 border-lx-cta text-center text-[14px] font-bold text-lx-cta bg-white outline-none"
+                  />
+                  <button
+                    onClick={() => setQuantity((q) => Math.min(MEUBEL_AANTAL_MAX, q + 1))}
+                    aria-label="Eén meer"
+                    className="w-9 h-9 rounded-xl bg-white border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer"
+                  >+</button>
+                </div>
+              </div>
+
+              <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
+                <p className="text-[12px] text-lx-text-secondary tabular-nums">{quantity} × {formatCents(opbouw.totaal)}</p>
+                <div className="flex items-center justify-between border-t border-lx-divider pt-1.5">
+                  <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal bruto ex. BTW</span>
+                  <span className="text-[18px] font-bold text-lx-cta tabular-nums">{formatCents(opbouw.totaal * quantity)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary">Projectgegevens</p>
+                <div>
+                  <label htmlFor="meubel-project" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">
+                    Projectnaam <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="meubel-project"
+                    type="text"
+                    maxLength={200}
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="Bijv. Badkamer renovatie De Vries"
+                    className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="meubel-referentie" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Referentie</label>
+                  <input
+                    id="meubel-referentie"
+                    type="text"
+                    maxLength={200}
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    placeholder="Eigen ordernummer of klantnaam"
+                    className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="meubel-opmerking" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Opmerking</label>
+                  <textarea
+                    id="meubel-opmerking"
+                    rows={3}
+                    maxLength={5000}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full rounded-xl border border-black/12 px-3.5 py-2.5 text-[13.5px] text-lx-text-primary outline-none focus:border-lx-cta bg-white transition-colors resize-y"
+                  />
+                </div>
+              </div>
+
               <button
-                key={k.id}
-                type="button"
-                role="radio"
-                aria-checked={houtkleur === k.id}
-                aria-label={k.naam}
-                title={k.naam}
-                onClick={() => setHoutkleur(k.id)}
-                className={`relative w-12 h-12 rounded-xl overflow-hidden cursor-pointer transition-shadow ${
-                  houtkleur === k.id ? 'ring-2 ring-lx-cta ring-offset-2' : 'ring-1 ring-black/10 hover:ring-black/30'
-                }`}
+                onClick={handleSave}
+                disabled={!projectName.trim() || isPending}
+                className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
-                <Image src={houtkleurAfbeelding(k.id)} alt="" fill sizes="48px" className="object-cover" />
+                {isPending ? 'Opslaan…' : isEditing ? 'Wijzigingen opslaan' : 'Opslaan als offerte'}
               </button>
-            ))}
-          </div>
+              {!projectName.trim() && (
+                <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>
+              )}
+            </div>
+          )}
         </div>
-
-        <p className="text-[12px] text-lx-text-muted leading-relaxed pt-4 border-t border-lx-divider">
-          Testversie. Opslaan als offerte en bestellen volgen in de volgende fase.{' '}
-          <Link href="/configuraties" className="font-semibold text-lx-text-secondary hover:underline">Terug naar overzicht</Link>
-        </p>
       </div>
 
-      <div className="lg:sticky lg:top-6 space-y-4">
-        {/* Tekening */}
+      {/* Rechts: tekening en prijs */}
+      <div className="w-full lg:w-[400px] lg:flex-shrink-0 lg:sticky lg:top-[68px] space-y-4">
         <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-4">
-          <MeubelTekening model={model} lengte={tekenLengte} lades={gekozen} houtkleur={houtkleur} toonHout={toonHout} />
+          <MeubelTekening
+            model={model}
+            lengte={tekenLengte}
+            breedtes={getLadeBreedtes(breedtes, tekenLengte, gekozen)}
+            houtkleur={houtkleur}
+            toonHout={toonHout}
+          />
           <p className="text-[11px] text-lx-text-secondary text-center">Vooraanzicht, maten in cm · diepte {model.diepte} cm</p>
         </div>
 
         {/* Weergave-toggle onder de kaart, net als bij de spiegels */}
         <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={toonHout}
-            onChange={(e) => setToonHout(e.target.checked)}
-            className="sr-only peer"
-          />
+          <input type="checkbox" checked={toonHout} onChange={(e) => setToonHout(e.target.checked)} className="sr-only peer" />
           <span className="w-8 h-[18px] rounded-full bg-black/15 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-[14px] after:h-[14px] after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-[14px]" />
           <span className="text-[12px] text-lx-text-secondary font-medium">Houtkleur in tekening</span>
         </label>
 
-        {/* Prijs */}
         <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-5 space-y-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">Bruto ex. BTW</p>
@@ -208,6 +437,68 @@ function MeubelDetail({ model, factor, onBack }: { model: MeubelModel; factor: n
             </div>
           )}
         </div>
+      </div>
+    </Kader>
+  )
+}
+
+function Rij({ label, waarde, onEdit }: { label: string; waarde: string; onEdit: () => void }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-3 border-b border-lx-divider last:border-0">
+      <span className="text-[12.5px] text-lx-text-secondary font-medium flex-shrink-0 w-24">{label}</span>
+      <span className="text-[13px] text-lx-text-primary font-medium flex-1">{waarde}</span>
+      <button onClick={onEdit} className="text-[12px] text-lx-cta font-semibold hover:underline flex-shrink-0 cursor-pointer">
+        Wijzigen
+      </button>
+    </div>
+  )
+}
+
+// Zelfde stappenbalk en kolommen als de spiegelconfigurators
+function Kader({ step, maxStep, onStep, children }: {
+  step: number
+  /** Verste stap waar je nu naartoe mag springen */
+  maxStep: number
+  onStep: (step: number) => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col min-h-screen bg-lx-divider">
+      <div className="bg-white border-b border-lx-divider sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 py-3">
+          <ol className="flex items-center gap-1 max-w-xl">
+            {STEPS.map((label, i) => {
+              const bereikbaar = i !== step && i <= maxStep
+              return (
+                <li key={label} className="flex items-center gap-1 flex-1 last:flex-none">
+                  <button
+                    onClick={() => bereikbaar && onStep(i)}
+                    disabled={!bereikbaar}
+                    aria-current={i === step ? 'step' : undefined}
+                    className={`flex items-center gap-1.5 ${bereikbaar ? 'cursor-pointer' : 'cursor-default'}`}
+                  >
+                    <span className={`w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center flex-shrink-0 transition-colors ${
+                      i <= step ? 'bg-lx-cta text-white' : 'bg-lx-panel-bg text-lx-text-secondary'
+                    }`}>
+                      {i < step ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                      ) : i + 1}
+                    </span>
+                    <span className={`text-[12px] font-semibold hidden sm:inline ${i === step ? 'text-lx-text-primary' : 'text-lx-text-secondary'}`}>
+                      {label}
+                    </span>
+                  </button>
+                  {i < STEPS.length - 1 && <div className="flex-1 h-px bg-lx-divider mx-1" />}
+                </li>
+              )
+            })}
+          </ol>
+        </div>
+      </div>
+      <div className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 flex flex-col lg:flex-row gap-6 items-start">
+        {children}
       </div>
     </div>
   )

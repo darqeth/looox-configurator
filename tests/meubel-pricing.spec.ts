@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   calcMeubelNettoCents, calcMeubelBrutoCents, getLadeOpties, getMeubelModel,
   getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT, getMeubelPrijsOpbouw,
+  valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
 } from '../src/lib/meubel-config'
 
 // Prijslijst Tailor-Made juli 2026 (netto). Rij: [lengte, lades, euro].
@@ -102,5 +103,45 @@ test.describe('Meubel: prijsopbouw in het paneel', () => {
   test('kleur zonder meerprijs geeft geen eigen regel', () => {
     const opbouw = getMeubelPrijsOpbouw({ modelId: 'facet', lengte: 100, lades: 1, houtkleur: 'black' }, 2)!
     expect(opbouw.regels).toEqual([{ label: 'Facet 100 cm · 1 lade', cents: 196352 }])
+  })
+})
+
+test.describe('Meubel: lade-indeling', () => {
+  test('gelijk verdeeld is altijd goed, ook buiten 30 tot 120 cm', () => {
+    expect(valideerLadeBreedtes(null, 50, 2)).toBeNull()
+    expect(getLadeBreedtes(null, 200, 3)).toEqual([200 / 3, 200 / 3, 200 / 3])
+  })
+
+  test('eigen indeling: hele cm, 30 tot 120, samen de lengte', () => {
+    expect(valideerLadeBreedtes([60, 80, 60], 200, 3)).toBeNull()
+    expect(valideerLadeBreedtes([60, 80], 200, 3)).toContain('aantal')
+    expect(valideerLadeBreedtes([29, 111, 60], 200, 3)).toContain('tussen 30 en 120')
+    expect(valideerLadeBreedtes([121, 39, 40], 200, 3)).toContain('tussen 30 en 120')
+    expect(valideerLadeBreedtes([60, 80, 61], 200, 3)).toContain('samen 200')
+    expect(valideerLadeBreedtes([60.5, 79.5, 60], 200, 3)).toContain('hele')
+  })
+
+  test('startindeling telt op tot de lengte', () => {
+    expect(startLadeBreedtes(200, 3)).toEqual([66, 66, 68])
+    expect(startLadeBreedtes(120, 2)).toEqual([60, 60])
+  })
+
+  test('aanpassen kan alleen als elke lade binnen 30 tot 120 cm past', () => {
+    expect(kanLadesAanpassen(50, 2)).toBe(false)
+    expect(kanLadesAanpassen(60, 2)).toBe(true)
+    expect(kanLadesAanpassen(260, 2)).toBe(false)
+    expect(kanLadesAanpassen(100, 1)).toBe(false)
+  })
+
+  test('ongeldige opgeslagen indeling valt in de tekening terug op gelijk', () => {
+    expect(getLadeBreedtes([10, 10], 120, 2)).toEqual([60, 60])
+  })
+
+  test('volledige configuratie', () => {
+    const ok = { modelId: 'facet', lengte: 200, lades: 3, houtkleur: 'white', ladeBreedtes: [60, 80, 60], quantity: 2 }
+    expect(valideerMeubelConfig(ok)).toBeNull()
+    expect(valideerMeubelConfig({ ...ok, quantity: 0 })).toContain('Aantal')
+    expect(valideerMeubelConfig({ ...ok, lades: 5 })).toContain('combinatie')
+    expect(valideerMeubelConfig({ ...ok, ladeBreedtes: [60, 80, 70] })).toContain('samen 200')
   })
 })

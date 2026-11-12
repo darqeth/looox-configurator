@@ -185,3 +185,64 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
     totaal,
   }
 }
+
+// ─── Lade-indeling ──────────────────────────────────────────────────────────
+// Standaard zijn de lades gelijk verdeeld (ladeBreedtes = null). Past de dealer
+// de breedtes aan, dan zijn het hele centimeters van 30 tot 120 cm die samen
+// de lengte van het meubel vormen. Bij dubbele modellen gelden de breedtes
+// voor beide rijen.
+
+export type LadeBreedtes = number[] | null
+
+/** Foutmelding bij een ongeldige indeling, anders null. */
+export function valideerLadeBreedtes(breedtes: LadeBreedtes, lengte: number, lades: number): string | null {
+  if (breedtes === null) return null
+  if (!Array.isArray(breedtes) || breedtes.length !== lades) return 'Het aantal breedtes klopt niet met het aantal lades.'
+  if (breedtes.some((b) => !Number.isInteger(b))) return 'Vul hele centimeters in.'
+  if (breedtes.some((b) => b < LADE_MIN_CM || b > LADE_MAX_CM)) return `Elke lade moet tussen ${LADE_MIN_CM} en ${LADE_MAX_CM} cm breed zijn.`
+  if (breedtes.reduce((som, b) => som + b, 0) !== lengte) return `De lades moeten samen ${lengte} cm zijn.`
+  return null
+}
+
+/** Breedte per lade voor tekening en samenvatting. */
+export function getLadeBreedtes(breedtes: LadeBreedtes, lengte: number, lades: number): number[] {
+  if (breedtes && valideerLadeBreedtes(breedtes, lengte, lades) === null) return breedtes
+  return Array.from({ length: lades }, () => lengte / lades)
+}
+
+/** Startpunt voor zelf aanpassen: hele centimeters, de rest komt bij de laatste lade. */
+export function startLadeBreedtes(lengte: number, lades: number): number[] {
+  const basis = Math.floor(lengte / lades)
+  return Array.from({ length: lades }, (_, i) => (i === lades - 1 ? lengte - basis * (lades - 1) : basis))
+}
+
+/** Kan deze lengte met dit aantal lades handmatig worden ingedeeld (elke lade 30 tot 120 cm)? */
+export function kanLadesAanpassen(lengte: number, lades: number): boolean {
+  return lades > 1 && lengte >= lades * LADE_MIN_CM && lengte <= lades * LADE_MAX_CM
+}
+
+export function formatCm(n: number): string {
+  return n.toLocaleString('nl-NL', { maximumFractionDigits: 1 })
+}
+
+export function ladeBreedtesTekst(breedtes: LadeBreedtes, lengte: number, lades: number): string {
+  const b = getLadeBreedtes(breedtes, lengte, lades)
+  return breedtes && b === breedtes ? `${b.map(formatCm).join(' + ')} cm` : `Gelijk verdeeld, ${formatCm(lengte / lades)} cm per lade`
+}
+
+export const MEUBEL_AANTAL_MAX = 99
+
+/** Alles wat van een meubel wordt opgeslagen; de server rekent de prijs zelf na. */
+export interface MeubelConfig extends MeubelInput {
+  ladeBreedtes: LadeBreedtes
+  quantity: number
+}
+
+/** Volledige controle van een configuratie (server en client). Foutmelding of null. */
+export function valideerMeubelConfig(c: MeubelConfig): string | null {
+  if (calcMeubelNettoCents(c) === null) return 'Deze combinatie van model, lengte, lades en houtkleur bestaat niet.'
+  const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, c.lengte, c.lades)
+  if (ladeFout) return ladeFout
+  if (!Number.isInteger(c.quantity) || c.quantity < 1 || c.quantity > MEUBEL_AANTAL_MAX) return `Aantal moet tussen 1 en ${MEUBEL_AANTAL_MAX} liggen.`
+  return null
+}

@@ -1,0 +1,54 @@
+import {
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, getMeubelModel, ladeLabel, parseMeubelFactor,
+  type LadeBreedtes, type MeubelModel,
+} from '@/lib/meubel-config'
+
+// Een meubel staat in dezelfde tabel als de spiegels (configurations), herkenbaar
+// aan selected_options.shape = 'meubel' met de keuzes onder selected_options.meubel.
+
+export const MEUBEL_SHAPE = 'meubel'
+
+export interface OpgeslagenMeubel {
+  model: MeubelModel
+  lengte: number
+  lades: number
+  ladeBreedtes: LadeBreedtes
+  houtkleur: string
+  houtkleurNaam: string
+  factor: number
+  quantity: number
+  reference: string
+  description: string
+}
+
+export function isMeubelConfig(selectedOptions: unknown): boolean {
+  return (selectedOptions as { shape?: unknown } | null)?.shape === MEUBEL_SHAPE
+}
+
+/** Leest een opgeslagen meubel uit selected_options; null als het geen (geldig) meubel is. */
+export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
+  if (!isMeubelConfig(selectedOptions)) return null
+  const opts = selectedOptions as Record<string, unknown>
+  const m = (opts.meubel ?? {}) as Record<string, unknown>
+  const model = getMeubelModel(String(m.modelId ?? ''))
+  if (!model) return null
+  const kleur = HOUTKLEUREN.find((k) => k.id === m.houtkleur)
+  const breedtes = Array.isArray(m.ladeBreedtes) ? m.ladeBreedtes.map(Number) : null
+  return {
+    model,
+    lengte: Number(m.lengte) || 0,
+    lades: Number(m.lades) || 1,
+    ladeBreedtes: breedtes,
+    houtkleur: kleur?.id ?? '',
+    houtkleurNaam: kleur?.naam ?? '',
+    factor: m.factor === undefined ? MEUBEL_FACTOR_DEFAULT : parseMeubelFactor(m.factor),
+    quantity: Math.max(1, Math.floor(Number(opts.quantity) || 1)),
+    reference: typeof opts.reference === 'string' ? opts.reference : '',
+    description: typeof opts.description === 'string' ? opts.description : '',
+  }
+}
+
+/** Korte omschrijving voor lijsten: "Facet Double · 200 cm · 3 × 2 lades · White". */
+export function meubelSamenvatting(m: OpgeslagenMeubel): string {
+  return [m.model.naam, `${m.lengte} cm`, ladeLabel(m.model, m.lades), m.houtkleurNaam].filter(Boolean).join(' · ')
+}

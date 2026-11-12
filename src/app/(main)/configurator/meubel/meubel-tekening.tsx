@@ -1,7 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import { HOUTKLEUREN, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
+import { HOUTKLEUREN, formatCm, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
 
 // Schematisch vooraanzicht op schaal, in dezelfde stijl als de spiegeltekening:
 // zachte vulling, dunne lijnen en maatlijnen. Volgt lengte, lades en houtkleur.
@@ -17,14 +17,11 @@ const LIJN_OP_DONKER = '#F4F1EA'
 const VLAK_ZONDER_HOUT = '#F6F4EF'
 const MAAT = 'var(--lx-text-secondary)'
 
-function cm(n: number): string {
-  return n.toLocaleString('nl-NL', { maximumFractionDigits: 1 })
-}
-
-export const MeubelTekening = memo(function MeubelTekening({ model, lengte, lades, houtkleur, toonHout = true }: {
+export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout = true }: {
   model: MeubelModel
   lengte: number
-  lades: number
+  /** Breedte per lade in cm, van links naar rechts; samen de lengte */
+  breedtes: number[]
   houtkleur: string
   /** Uit = kale lijntekening zonder houtkleur */
   toonHout?: boolean
@@ -39,11 +36,13 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, lade
   const H = PAD_TOP + h + PAD_BOTTOM
   const x = (W - 22 - w) / 2
   const y = PAD_TOP
-  const kolomB = w / lades
+  const lades = breedtes.length
+  // Linkerrand van elke lade, plus de rechterrand van de laatste
+  const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x])
   const rijH = h / model.rijen
   const patroon = `hout-${houtkleur}`
   // Maat per lade alleen tonen als de tekst in de lade past
-  const toonLadeMaat = kolomB > 34
+  const toonLadeMaat = Math.min(...breedtes) * schaal > 30
 
   return (
     <svg
@@ -68,7 +67,7 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, lade
 
       {/* Ladefronten */}
       {Array.from({ length: lades - 1 }, (_, i) => (
-        <line key={`k${i}`} x1={x + kolomB * (i + 1)} y1={y} x2={x + kolomB * (i + 1)} y2={y + h} stroke={LIJN} strokeWidth="1.3" />
+        <line key={`k${i}`} x1={grenzen[i + 1]} y1={y} x2={grenzen[i + 1]} y2={y + h} stroke={LIJN} strokeWidth="1.3" />
       ))}
       {Array.from({ length: model.rijen - 1 }, (_, i) => (
         <line key={`r${i}`} x1={x} y1={y + rijH * (i + 1)} x2={x + w} y2={y + rijH * (i + 1)} stroke={LIJN} strokeWidth="1.3" />
@@ -98,12 +97,12 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, lade
       <g stroke={MAAT} strokeWidth="0.8" fill="none">
         <line x1={x} y1={y + h + 14} x2={x + w} y2={y + h + 14} />
         {Array.from({ length: lades + 1 }, (_, i) => (
-          <line key={i} x1={x + kolomB * i} y1={y + h + 6} x2={x + kolomB * i} y2={y + h + 19} />
+          <line key={i} x1={grenzen[i]} y1={y + h + 6} x2={grenzen[i]} y2={y + h + 19} />
         ))}
       </g>
       {toonLadeMaat && Array.from({ length: lades }, (_, i) => (
-        <text key={i} x={x + kolomB * (i + 0.5)} y={y + h + 31} textAnchor="middle" fontSize="10" fontWeight="500" fill={MAAT}>
-          {cm(lengte / lades)}
+        <text key={i} x={(grenzen[i] + grenzen[i + 1]) / 2} y={y + h + 31} textAnchor="middle" fontSize="10" fontWeight="500" fill={MAAT}>
+          {formatCm(breedtes[i])}
         </text>
       ))}
     </svg>

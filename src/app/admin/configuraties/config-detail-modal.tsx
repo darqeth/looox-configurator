@@ -51,6 +51,7 @@ const shapeLabel: Record<string, string> = {
   elips: 'Ellips',
   arc:             'Boog',
   projectspiegel:  'Projectspiegel',
+  meubel:          'Meubel',
 }
 
 const statusLabels: Record<string, { label: string; className: string }> = {

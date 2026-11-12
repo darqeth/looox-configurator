@@ -107,7 +107,7 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
   )
 }
 
-export default function OrderButton({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag, initialQuantity, initialMmsQuantity, mmsUnitPrice: storedMmsUnitPrice }: OrderButtonProps) {
+function OrderButtonInner({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag, initialQuantity, initialMmsQuantity, mmsUnitPrice: storedMmsUnitPrice }: OrderButtonProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const startQuantity = Math.max(1, Math.floor(initialQuantity ?? 1))
@@ -646,4 +646,11 @@ export default function OrderButton({ configId, configName, metaSummary, price, 
       )}
     </>
   )
+}
+
+// Meubels (configurator 2.0) zijn nog niet te bestellen; dat komt in fase 3.
+// De lijsten geven `verborgen` mee zodat de knop daar niet verschijnt.
+export default function OrderButton({ verborgen, ...props }: OrderButtonProps & { verborgen?: boolean }) {
+  if (verborgen) return null
+  return <OrderButtonInner {...props} />
 }

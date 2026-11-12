@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isAdmin } from '@/lib/company-utils'
 import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
-import { DEFAULT_PRODUCT_ID, buildSelectedOptionsJson, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
+import { DEFAULT_PRODUCT_ID, generateArticleNumber, buildSelectedOptionsJson, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
 import { z } from 'zod'
 import { parseOrThrow, configInputSchema } from '@/lib/validation'
 
@@ -14,18 +14,6 @@ const saveConfigSchema = configInputSchema.extend({
 const updateConfigSchema = saveConfigSchema.extend({
   configId: z.string().uuid(),
 })
-
-function generateArticleNumber(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const year = new Date().getFullYear()
-  const randomBytes = crypto.getRandomValues(new Uint8Array(6))
-  let result = `LX-${year}-`
-  for (let i = 0; i < 6; i++) {
-    result += chars[randomBytes[i] % chars.length]
-  }
-  return result
-}
-
 
 type LightConfig = {
   position: string

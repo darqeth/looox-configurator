@@ -167,3 +167,31 @@ export async function updateMeubelConfiguration(configId: string, rawInput: Save
   if (projectId) revalidatePath(`/projecten/${projectId}`)
   return { projectId }
 }
+
+/** Voegt alleen de maattekening toe aan een opgeslagen meubel, zonder de configuratie te openen. */
+export async function setMeubelTekening(configId: string, rawUrl: string): Promise<void> {
+  if (!z.string().uuid().safeParse(configId).success) throw new Error('Ongeldige configuratie')
+  const attachmentUrl = assertValidAttachmentUrl(rawUrl)
+  if (!attachmentUrl) throw new Error('Ongeldige maattekening')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+  if (!await hasMeubelAccess(supabase, user.id)) throw new Error('Dit account heeft geen toegang tot meubels')
+
+  const { data: bestaand } = await supabase.from('configurations').select('selected_options, status, project_id').eq('id', configId).maybeSingle()
+  const opts = (bestaand?.selected_options ?? {}) as Record<string, unknown>
+  if (!bestaand || opts.shape !== MEUBEL_SHAPE) throw new Error('Configuratie niet gevonden')
+  if (bestaand.status === 'ordered') throw new Error('Een bestelde configuratie kan niet meer worden aangepast')
+
+  // Geen .eq('user_id'): RLS staat eigenaar én manager binnen het bedrijf toe.
+  const { data, error } = await supabase.from('configurations')
+    .update({ selected_options: { ...opts, attachmentUrl }, updated_at: new Date().toISOString() })
+    .eq('id', configId)
+    .select('id')
+  if (error) throw new Error(error.message)
+  if (!data || data.length === 0) throw new Error('Configuratie niet gevonden of geen rechten om op te slaan')
+
+  revalidatePath('/configuraties')
+  revalidatePath(`/configurator/${configId}`)
+  if (bestaand.project_id) revalidatePath(`/projecten/${bestaand.project_id}`)
+}

@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
 import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
 import { meubelPrijsInput, type OpgeslagenMeubel } from '@/lib/meubel-opslag'
+import TekeningUpload from '@/components/tekening-upload'
 
 // Bestelmodal voor een Tailor-Made meubel. Dit is de enige plek waar de dealer
 // de nettoprijs ziet: de tabelprijs, zonder dealerkorting, staffel of kortingscode.
@@ -37,7 +38,8 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   const nettoCents = opAanvraag ? null : calcMeubelNettoCents(meubelPrijsInput(meubel))
   const opbouw = nettoCents !== null ? getMeubelOrderOpbouw(nettoCents, meubel.factor) : null
   // Staat het meubel niet meer in de prijslijst, dan kan het niet besteld worden
-  const tekeningOntbreekt = !meubel.attachmentUrl
+  const [tekeningToegevoegd, setTekeningToegevoegd] = useState(false)
+  const tekeningOntbreekt = !meubel.attachmentUrl && !tekeningToegevoegd
   const bestelbaar = (opAanvraag || nettoCents !== null) && !tekeningOntbreekt
   const altOk = !altShipping || (alt.straat.trim() !== '' && alt.woonplaats.trim() !== '')
 
@@ -169,10 +171,12 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                   </div>
 
                   {tekeningOntbreekt && (
-                    <p role="alert" className="text-[12.5px] text-red-600 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
-                      De maattekening ontbreekt en is verplicht om te bestellen.{' '}
-                      <a href={`/configurator/${configId}`} className="font-semibold underline">Configuratie openen en tekening toevoegen</a>
-                    </p>
+                    <div role="alert" className="bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-3 space-y-2.5">
+                      <p className="text-[12.5px] text-amber-800 leading-relaxed">
+                        <strong>De maattekening ontbreekt.</strong> Die is verplicht om te bestellen. Voeg hem hier toe.
+                      </p>
+                      <TekeningUpload configId={configId} groot onKlaar={() => setTekeningToegevoegd(true)} />
+                    </div>
                   )}
 
                   {opAanvraag ? (

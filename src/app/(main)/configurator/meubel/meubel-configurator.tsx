@@ -925,7 +925,7 @@ function TekeningNodig() {
         <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" />
       </svg>
       <p className="text-[12px] text-amber-800 leading-relaxed">
-        <strong>Nog geen maattekening.</strong> Opslaan als offerte kan zonder, maar om te bestellen is een maattekening verplicht. Je kunt hem later toevoegen door de configuratie te bewerken.
+        <strong>Nog geen maattekening.</strong> Opslaan als offerte kan zonder, maar om te bestellen is een maattekening verplicht. Je kunt hem later toevoegen vanuit het overzicht.
       </p>
     </div>
   )

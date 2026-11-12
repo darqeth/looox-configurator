@@ -7,6 +7,7 @@ import { isUuid, projectKop, projectRegel, projectTotaal } from '@/lib/project'
 import { formatCents } from '@/lib/meubel-config'
 import ProjectNaam from './project-naam'
 import RegelActies from './regel-acties'
+import TekeningUpload from '@/components/tekening-upload'
 import ProjectBestellen from './project-bestellen'
 import { berekenProjectOrderRegel, projectOrderTotaalCents } from '@/lib/project-order'
 
@@ -125,6 +126,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                   {r.quantity}×{!r.opAanvraag && r.quantity > 1 ? ` ${formatCents(r.stukCents)}` : ''}{r.opAanvraag ? '' : r.netto ? ' · netto' : ' · bruto'}
                 </p>
               </div>
+              {!besteld && r.tekeningOntbreekt && <TekeningUpload configId={r.id} />}
               {!besteld && <RegelActies configId={r.id} titel={r.titel} laatste={regels.length === 1} />}
             </li>
           ))}

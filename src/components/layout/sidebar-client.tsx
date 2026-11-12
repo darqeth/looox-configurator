@@ -19,6 +19,8 @@ export function SidebarClient() {
       company={data.company}
       tier={data.tier}
       configCount={data.configCount}
+      projectCount={data.projectCount}
+      toonProjecten={data.toonProjecten}
       orderCount={data.orderCount}
       isAdmin={data.isAdmin}
       isSubAdmin={data.isSubAdmin}

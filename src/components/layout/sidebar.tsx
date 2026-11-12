@@ -15,6 +15,8 @@ interface SidebarProps {
   tier: string
   orderCount: number
   configCount: number
+  projectCount?: number
+  toonProjecten?: boolean
   isAdmin: boolean
   isSubAdmin?: boolean
   isManager?: boolean
@@ -28,7 +30,7 @@ interface SidebarProps {
   allMilestonesAchieved?: boolean
 }
 
-export default function Sidebar({ userName, company, tier, orderCount, configCount, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, isInternational = false, isGroothandel = false, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone, allMilestonesAchieved = false }: SidebarProps) {
+export default function Sidebar({ userName, company, tier, orderCount, configCount, projectCount = 0, toonProjecten = false, isAdmin, isSubAdmin = false, isManager = false, canConfigure = true, isInternational = false, isGroothandel = false, pendingCount = 0, pendingColleaguesCount = 0, avatarUrl, closestMilestone, allMilestonesAchieved = false }: SidebarProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
@@ -47,6 +49,14 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
       badgeStyle: 'default',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>,
     },
+    // Projecten: het winkelmandje, meerdere producten in één offerte en bestelling
+    ...(toonProjecten ? [{
+      href: '/projecten',
+      label: 'Projecten',
+      badge: projectCount > 0 ? String(projectCount) : null,
+      badgeStyle: 'default',
+      icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>,
+    }] : []),
     {
       href: '/bestellingen',
       label: 'Bestellingen',
@@ -116,7 +126,8 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
   ]
 
   function NavItem({ item }: { item: typeof navItems[0] }) {
-    const isActive = pathname === item.href
+    // Een open project hoort bij het menu-item Projecten
+    const isActive = pathname === item.href || (item.href === '/projecten' && pathname.startsWith('/projecten/'))
     return (
       <Link
         href={item.href}

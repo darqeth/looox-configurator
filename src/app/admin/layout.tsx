@@ -21,6 +21,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         company={sidebar.company}
         tier={sidebar.tier}
         configCount={sidebar.configCount}
+        projectCount={sidebar.projectCount}
+        toonProjecten={sidebar.toonProjecten}
         orderCount={sidebar.orderCount}
         isAdmin={sidebar.isAdmin}
         isSubAdmin={sidebar.isSubAdmin}

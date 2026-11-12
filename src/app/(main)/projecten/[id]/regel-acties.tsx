@@ -23,7 +23,7 @@ export default function RegelActies({ configId, titel, laatste }: { configId: st
         queryClient.invalidateQueries({ queryKey: ['dashboard'] })
         queryClient.invalidateQueries({ queryKey: ['sidebar'] })
         // Was dit de laatste regel, dan bestaat het project niet meer
-        if (laatste) router.push('/configuraties')
+        if (laatste) router.push('/projecten')
         else router.refresh()
       } catch (e) {
         console.error(e)

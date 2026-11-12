@@ -59,8 +59,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 w-full max-w-4xl">
-      <Link href="/configuraties" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-lx-text-secondary hover:text-lx-text-primary transition-colors mb-4">
-        <ArrowLeft size={14} /> Configuraties
+      <Link href="/projecten" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-lx-text-secondary hover:text-lx-text-primary transition-colors mb-4">
+        <ArrowLeft size={14} /> Projecten
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4 mb-5">

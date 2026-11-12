@@ -29,6 +29,10 @@ export type SidebarData = {
   tier: string
   configCount: number
   orderCount: number
+  /** Aantal open projecten (winkelmandjes) van deze gebruiker */
+  projectCount: number
+  /** Menu-item Projecten tonen: bij Tailor-Made toegang of zodra er een project is */
+  toonProjecten: boolean
   isAdmin: boolean
   isSubAdmin: boolean
   isManager: boolean
@@ -105,9 +109,24 @@ export async function fetchSidebarData(
   // Snelle pad: één RPC i.p.v. 13 losse queries in 4 sequentiële golven.
   // Vereist supabase/sidebar-rpc-migration.sql; zolang die niet is uitgevoerd
   // valt dit automatisch terug op het oude query-pad.
-  const { data: rpc, error } = await supabase.rpc('get_sidebar_data')
-  if (!error && rpc) return buildFromRpc(rpc as SidebarRpcResult)
-  return fetchSidebarDataLegacy(supabase, userId)
+  // De projectgegevens lopen parallel mee, zodat het menu er geen extra wachttijd door krijgt
+  const [{ data: rpc, error }, projecten] = await Promise.all([
+    supabase.rpc('get_sidebar_data'),
+    fetchProjectMenu(supabase, userId),
+  ])
+  const basis = !error && rpc ? buildFromRpc(rpc as SidebarRpcResult) : await fetchSidebarDataLegacy(supabase, userId)
+  return { ...basis, ...projecten }
+}
+
+// Open projecten (winkelmandjes) voor het menu. Faalt stil: het menu blijft dan gewoon zonder dit item.
+async function fetchProjectMenu(supabase: SupabaseClient, userId: string): Promise<{ projectCount: number; toonProjecten: boolean }> {
+  const [{ data: regels }, { data: profiel }] = await Promise.all([
+    supabase.from('configurations').select('project_id').eq('user_id', userId).eq('status', 'saved').not('project_id', 'is', null).limit(500),
+    supabase.from('profiles').select('meubel_access, is_international').eq('id', userId).maybeSingle(),
+  ])
+  const projectCount = new Set((regels ?? []).map((r) => r.project_id as string)).size
+  const tailorMade = profiel?.meubel_access === true && profiel?.is_international !== true
+  return { projectCount, toonProjecten: tailorMade || projectCount > 0 }
 }
 
 function buildFromRpc(rpc: SidebarRpcResult): SidebarData {
@@ -145,6 +164,8 @@ function buildFromRpc(rpc: SidebarRpcResult): SidebarData {
     company: profile?.company ?? '',
     tier: profile?.tier ?? 'Studio',
     configCount: Number(rpc.config_count ?? 0),
+    projectCount: 0,
+    toonProjecten: false,
     orderCount: Number(rpc.own_order_count ?? 0),
     isAdmin,
     isSubAdmin,
@@ -274,6 +295,8 @@ async function fetchSidebarDataLegacy(
     company: profile?.company ?? '',
     tier: profile?.tier ?? 'Studio',
     configCount: totalConfigs,
+    projectCount: 0,
+    toonProjecten: false,
     orderCount: ownOrders,
     isAdmin,
     isSubAdmin,

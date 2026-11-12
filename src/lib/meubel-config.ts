@@ -5,7 +5,7 @@
 
 export const MEUBEL_FACTOR_DEFAULT = 2
 export const MEUBEL_FACTOR_MAX = 10
-// Een lade is minimaal 350 mm breed (Mark, 12 nov); dat geldt ook bij gelijke verdeling
+// Een lade is 350 tot 1200 mm breed (Mark, 12 nov). Harde grenzen, ook bij gelijke verdeling.
 export const LADE_MIN_MM = 350
 export const LADE_MAX_MM = 1200
 export const UITSPARING_NETTO_CENTS = 1040
@@ -119,15 +119,14 @@ function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
 
 /**
  * Aantal lades (kolommen) dat bij deze lengte te bestellen is: de combinaties
- * uit de prijslijst, zolang een lade bij gelijke verdeling minimaal 350 mm is.
- * Naar boven is de prijslijst leidend (een lade mag daar breder dan 1200 mm uitkomen).
+ * uit de prijslijst, zolang een lade bij gelijke verdeling 350 tot 1200 mm is.
  */
 export function getLadeOpties(model: MeubelModel, lengte: number): number[] {
   const staffel = findStaffel(model, lengte)
   if (!staffel) return []
   return Object.keys(staffel.prijzen)
     .map(Number)
-    .filter((n) => lengte / n >= LADE_MIN_MM)
+    .filter((n) => lengte / n >= LADE_MIN_MM && lengte / n <= LADE_MAX_MM)
     .sort((a, b) => a - b)
 }
 

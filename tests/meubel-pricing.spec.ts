@@ -13,7 +13,7 @@ const FACET: [number, number, number][] = [
   [1210, 2, 1226.16], [1290, 2, 1226.16],
   [1300, 2, 1558.96], [1900, 2, 1558.96], [1300, 3, 1798.16], [1900, 3, 1798.16],
   [1910, 2, 1694.16], [2100, 2, 1694.16], [1910, 3, 1964.56], [2100, 3, 1964.56], [1910, 4, 2224.56], [2100, 4, 2224.56],
-  [2110, 2, 1922.96], [2600, 2, 1922.96], [2110, 3, 2141.36], [2600, 3, 2141.36], [2110, 4, 2494.96], [2600, 4, 2494.96],
+  [2110, 2, 1922.96], [2400, 2, 1922.96], [2110, 3, 2141.36], [2600, 3, 2141.36], [2110, 4, 2494.96], [2600, 4, 2494.96],
 ]
 
 const FACET_DOUBLE: [number, number, number][] = [
@@ -21,7 +21,7 @@ const FACET_DOUBLE: [number, number, number][] = [
   [1210, 2, 1870.96], [1290, 2, 1870.96],
   [1300, 2, 2266.16], [1900, 2, 2266.16], [1300, 3, 2640.56], [1900, 3, 2640.56],
   [1910, 2, 2302.56], [2100, 2, 2302.56], [1910, 3, 2858.96], [2100, 3, 2858.96],
-  [2110, 2, 2489.76], [2600, 2, 2489.76], [2110, 3, 3046.16], [2600, 3, 3046.16],
+  [2110, 2, 2489.76], [2400, 2, 2489.76], [2110, 3, 3046.16], [2600, 3, 3046.16],
   [2610, 3, 3233.36], [2900, 3, 3233.36],
 ]
 
@@ -58,14 +58,16 @@ test.describe('Meubel: opties en grenzen', () => {
     expect(calcMeubelNettoCents({ modelId: 'facet', lengte: 1000, lades: 1, ...basis, uitsparingen: -1 })).toBeNull()
   })
 
-  test('aantal lades: prijslijst, met minimaal 350 mm per lade', () => {
+  test('aantal lades: prijslijst, met 350 tot 1200 mm per lade', () => {
     const facet = getMeubelModel('facet')!
     expect(getLadeOpties(facet, 500)).toEqual([1])
     expect(getLadeOpties(facet, 699)).toEqual([1])
     expect(getLadeOpties(facet, 700)).toEqual([1, 2])
     expect(calcMeubelNettoCents({ modelId: 'facet', lengte: 699, lades: 2, houtkleur: 'old-grey' })).toBeNull()
     expect(getLadeOpties(facet, 1250)).toEqual([2])
-    expect(getLadeOpties(facet, 2500)).toEqual([2, 3, 4])
+    expect(getLadeOpties(facet, 2400)).toEqual([2, 3, 4])
+    expect(getLadeOpties(facet, 2401)).toEqual([3, 4])
+    expect(calcMeubelNettoCents({ modelId: 'facet', lengte: 2600, lades: 2, houtkleur: 'old-grey' })).toBeNull()
     expect(getLadeOpties(getMeubelModel('facet-double')!, 2700)).toEqual([3])
   })
 
@@ -112,7 +114,7 @@ test.describe('Meubel: prijsopbouw in het paneel', () => {
 
 test.describe('Meubel: lade-indeling', () => {
   test('gelijk verdeeld', () => {
-    expect(valideerLadeBreedtes(null, 2600, 2)).toBeNull()
+    expect(valideerLadeBreedtes(null, 2400, 2)).toBeNull()
     expect(getLadeBreedtes(null, 1800, 3)).toEqual([600, 600, 600])
     // Komt het niet uit, dan scheelt het hooguit 1 mm en klopt het totaal
     expect(getLadeBreedtes(null, 2000, 3)).toEqual([667, 667, 666])

@@ -6,6 +6,8 @@ import React from 'react'
 import OfferteDocument from '@/lib/pdf/offerte-document'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { prepareAttachmentForPdf } from '@/lib/pdf/prepare-attachment'
+import MeubelDocument from '@/lib/pdf/meubel-document'
+import { leesMeubel } from '@/lib/meubel-opslag'
 
 export async function GET(
   _req: NextRequest,
@@ -32,6 +34,36 @@ export async function GET(
     .select('full_name, company, phone, address, shipping_address')
     .eq('id', user.id)
     .single()
+
+  // Meubel (configurator 2.0): eigen document met de brutoprijs van de offerte
+  const meubel = leesMeubel(config.selected_options)
+  if (meubel) {
+    const meubelBuffer = await renderToBuffer(React.createElement(MeubelDocument, {
+      variant: 'offerte',
+      projectName: config.name,
+      date: config.created_at,
+      articleNumber: config.article_number,
+      dealer: {
+        name: profile?.full_name ?? null,
+        company: profile?.company ?? null,
+        email: user.email ?? '',
+        phone: profile?.phone ?? null,
+        address: profile?.address ?? null,
+      },
+      meubel,
+      unitPrice: Number(config.total_price),
+      quantity: meubel.quantity,
+    }) as React.ReactElement<DocumentProps>)
+    const meubelNaam = `LoooX-Offerte-${(config.name ?? 'meubel').replace(/[^a-z0-9\-_]/gi, '-')}.pdf`
+    return new NextResponse(new Uint8Array(meubelBuffer), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(meubelNaam)}`,
+        'Content-Length': meubelBuffer.length.toString(),
+      },
+    })
+  }
 
   // Aangevinkt sfeerbeeld voor deze configuratie (besluit V3, exclusief)
   const { data: viz } = await supabase

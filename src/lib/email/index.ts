@@ -140,10 +140,32 @@ export type OrderEmailDetails = {
   /** Mirror Maintenance Set: aantal en netto regeltotaal (na dealerkorting) */
   mmsQuantity?: number
   mmsNetto?: number
+  /** Tailor-Made meubel: eigen specificatieregels; unitPrice is dan de nettoprijs per stuk */
+  meubel?: { regels: [label: string, waarde: string][]; opAanvraag: boolean }
+}
+
+/** Offerteaanvraag in plaats van bestelling: spiegel op aanvraag of meubel op aanvraag */
+function isOfferteAanvraag(d: OrderEmailDetails): boolean {
+  return d.shape === 'op-aanvraag' || d.meubel?.opAanvraag === true
 }
 
 function buildOrderRows(d: OrderEmailDetails) {
   const fmt = (n: number) => new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n)
+  if (d.meubel) {
+    const slot = (label: string, waarde: string) => `<tr style="border-top:1px solid #ececec;">
+        <td style="font-size:14px;font-weight:700;padding:10px 0 0;padding-right:16px;">${label}</td>
+        <td style="font-size:14px;font-weight:700;text-align:right;padding-top:10px;">${waarde}</td>
+      </tr>`
+    return [
+      row(d.meubel.opAanvraag ? 'Offertenummer' : 'Ordernummer', d.orderNumber),
+      row('Project', esc(d.projectName) || '—'),
+      ...d.meubel.regels.map(([label, waarde]) => row(esc(label), esc(waarde))),
+      row('Aantal', `${d.quantity}×`),
+      ...(d.meubel.opAanvraag
+        ? [slot('Prijs', 'Op aanvraag')]
+        : [row('Netto p/st', fmt(d.unitPrice)), slot('Totaal netto excl. btw', fmt(d.totalPrice))]),
+    ].join('')
+  }
   const dimensions = formatDimensions(d.shape, d.width, d.height, d.diameter, d.organicSizeKey)
   const shapeLabel = SHAPE_LABELS[d.shape] ?? d.shape
   const glasLabel = d.glasKleur ? (GLAS_LABELS[d.glasKleur] ?? d.glasKleur) : null
@@ -284,7 +306,7 @@ export async function sendOrderConfirmationEmail({
   order: OrderEmailDetails
   pdfBuffer?: Buffer
 }) {
-  const isOfferte = order.shape === 'op-aanvraag'
+  const isOfferte = isOfferteAanvraag(order)
   await getResend().emails.send({
     from: FROM,
     to,
@@ -340,7 +362,7 @@ export async function sendInternalOrderEmail({
   ].join('')
 
   const orderRows = buildOrderRows(order)
-  const isOfferte = order.shape === 'op-aanvraag'
+  const isOfferte = isOfferteAanvraag(order)
 
   await getResend().emails.send({
     from: FROM,
@@ -352,7 +374,7 @@ export async function sendInternalOrderEmail({
       ${h1(isOfferte ? 'Nieuwe offerteaanvraag!' : 'Nieuwe bestelling!')}
       ${p(isOfferte
         ? 'Hoi Collega, er is zojuist een offerteaanvraag binnengekomen via de configurator. <strong>Let op: dit is nog géén bestelling — de klant wacht op een prijsopgave.</strong> In de bijlage vind je de aanvraag en hieronder een kort overzicht:'
-        : 'Hoi Collega, er is zojuist een spiegel besteld via de configurator. In de bijlage vind je de bestelling en hieronder een kort overzicht:')}
+        : 'Hoi Collega, er is zojuist een ' + (order.meubel ? 'Tailor-Made meubel' : 'spiegel') + ' besteld via de configurator. In de bijlage vind je de bestelling en hieronder een kort overzicht:')}
       ${divider()}
       <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#999;">Klantgegevens</p>
       ${orderTable(customerRows)}

@@ -11,6 +11,10 @@ import { parseOrThrow, placeOrderInputSchema, orderFromConfigSchema } from '@/li
 import { sendOrderConfirmationEmail, sendInternalOrderEmail, type OrderEmailDetails } from '@/lib/email'
 import { getNotificationEmails } from '@/lib/actions/settings'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
+import { z } from 'zod'
+import { hasMeubelAccess } from '@/lib/meubel-access'
+import { leesMeubel } from '@/lib/meubel-opslag'
+import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
 
 type LightConfig = {
   position: string
@@ -570,4 +574,118 @@ export async function placeOrderFromConfig(
   ))
 
   return { orderNumber, orderId: tx.order_id }
+}
+
+// ─── Tailor-Made meubel bestellen (configurator 2.0) ────────────────────────
+// Eigen stroom naast de spiegels: de order gaat tegen de nettoprijs uit de
+// prijslijst, zonder dealerkorting, staffel of kortingscode. De server rekent
+// de prijs opnieuw uit de opgeslagen keuzes; de client stuurt alleen het aantal.
+// Een meubel op aanvraag wordt een offerteaanvraag zonder prijs (OFF-nummer).
+
+const meubelOrderSchema = z.object({
+  configId: z.string().uuid(),
+  quantity: z.number().int().min(1).max(MEUBEL_AANTAL_MAX),
+  notes: z.string().max(5000),
+  altShippingAddress: z.string().max(500).nullish(),
+})
+
+export async function placeMeubelOrder(
+  rawConfigId: string,
+  rawQuantity: number,
+  rawNotes: string,
+  rawAltShippingAddress?: string | null,
+): Promise<{ orderNumber: string; orderId: string; isOfferte: boolean }> {
+  const { configId, quantity, notes, altShippingAddress } = parseOrThrow(meubelOrderSchema, {
+    configId: rawConfigId,
+    quantity: rawQuantity,
+    notes: rawNotes,
+    altShippingAddress: rawAltShippingAddress?.trim() || null,
+  })
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+  if (!await hasMeubelAccess(supabase, user.id)) throw new Error('Dit account heeft geen toegang tot meubels')
+
+  const { data: config, error: configError } = await supabase
+    .from('configurations')
+    .select('id, name, article_number, width, height, status, selected_options, user_id')
+    .eq('id', configId)
+    .single()
+  if (configError || !config) throw new Error('Configuratie niet gevonden')
+  if (config.status === 'ordered') throw new Error('Deze configuratie is al besteld')
+
+  await assertCanOrder(supabase, user.id, config.user_id as string)
+
+  const meubel = leesMeubel(config.selected_options)
+  if (!meubel) throw new Error('Dit is geen meubelconfiguratie')
+
+  const isOfferte = meubel.opAanvraag
+  const nettoCents = isOfferte ? 0 : calcMeubelNettoCents({
+    modelId: meubel.model.id,
+    lengte: meubel.lengte,
+    lades: meubel.lades,
+    houtkleur: meubel.houtkleur,
+  })
+  if (nettoCents === null) throw new Error('Dit meubel is met de huidige prijslijst niet meer te bestellen. Open de configuratie en sla hem opnieuw op.')
+  const unitPrice = nettoCents / 100
+  const totalPrice = (nettoCents * quantity) / 100
+
+  const opts = (config.selected_options ?? {}) as ConfigOptions
+  // Het bestelde aantal en een afwijkend afleveradres horen bij de order: PDF en lijsten lezen ze uit de configuratie
+  const configPatch = { quantity, ...(altShippingAddress && { altShippingAddress }) }
+
+  const orderDate = new Date().toISOString()
+  const tx = await createOrderAtomic(supabase, {
+    configId: config.id,
+    newConfig: null,
+    configPatch,
+    quantity,
+    unitPrice,
+    totalPrice,
+    notes: notes || '',
+    discountCodeId: null,
+    discountUseType: 'single',
+    isOfferte,
+  })
+
+  revalidatePath('/bestellingen')
+  revalidatePath('/dashboard')
+  revalidatePath('/configuraties')
+
+  const emailDetails: OrderEmailDetails = {
+    orderNumber: tx.order_number,
+    projectName: config.name ?? 'Meubel',
+    shape: 'meubel',
+    width: config.width ?? null,
+    height: config.height ?? null,
+    diameter: null,
+    organicSizeKey: null,
+    quantity,
+    unitPrice,
+    totalPrice,
+    meubel: {
+      opAanvraag: isOfferte,
+      regels: [
+        ['Model', meubel.model.naam],
+        ['Afmeting', `${meubel.lengte} mm lang · ${meubel.model.hoogte} mm hoog · ${meubel.model.diepte} mm diep`],
+        ['Lades', `${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.lengte, meubel.lades)}`],
+        ['Houtkleur', meubel.houtkleurNaam],
+      ],
+    },
+  }
+
+  runAfterResponse('order-emails', sendOrderEmails(
+    supabase, user.id, user.email ?? '',
+    tx.order_number, orderDate,
+    (config as { article_number?: string | null }).article_number ?? null,
+    emailDetails,
+    notes || null,
+    null,
+    { ...opts, ...configPatch } as ConfigOptions,
+    config.width ?? null,
+    config.height ?? null,
+    altShippingAddress ?? null,
+  ))
+
+  return { orderNumber: tx.order_number, orderId: tx.order_id, isOfferte }
 }

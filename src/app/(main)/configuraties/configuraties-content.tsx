@@ -238,12 +238,12 @@ export function ConfiguratiesContent({
                             <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
                           )}
                           {permissions.canOrder && (
-                            <OrderButton verborgen={!!meubel} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
+                            <OrderButton meubel={meubel} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
                             configName={config.name ?? 'Naamloze configuratie'}
-                            canDownload={!meubel}
+                            canDownload={true}
                             canEdit={permissions.canConfigure}
                             canDelete={canDelete}
                           />
@@ -289,7 +289,7 @@ export function ConfiguratiesContent({
                       {/* Col: Bestellen / Aanvragen CTA */}
                       {permissions.canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
-                          <OrderButton verborgen={!!meubel} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
+                          <OrderButton meubel={meubel} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
                         </div>
                       )}
 
@@ -301,7 +301,7 @@ export function ConfiguratiesContent({
                         <ConfigActionsMenu
                           configId={config.id}
                           configName={config.name ?? 'Naamloze configuratie'}
-                          canDownload={!meubel}
+                          canDownload={true}
                           canEdit={permissions.canConfigure}
                           canDelete={canDelete}
                         />

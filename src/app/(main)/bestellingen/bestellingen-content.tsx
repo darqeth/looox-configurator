@@ -1,5 +1,7 @@
 'use client'
 
+import { leesMeubel } from '@/lib/meubel-opslag'
+
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { OrderApprovalButtons } from './order-approval-buttons'
@@ -151,7 +153,10 @@ export function BestellingenContent({ page, view }: { page: string; view: string
               selected_options: Record<string, unknown>
             } | null
             const shape = (config?.selected_options as { shape?: string })?.shape ?? '—'
-            const dims = config?.width && config?.height
+            const meubel = leesMeubel(config?.selected_options)
+            const dims = meubel
+              ? `${meubel.model.naam} · ${meubel.lengte} mm`
+              : config?.width && config?.height
               ? `B ${config.width} × H ${config.height} cm`
               : shape === 'rond'
               ? `⌀ ${(config?.selected_options as { diameter?: number })?.diameter ?? '—'} cm`
@@ -161,7 +166,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
             const unitPrice = Number(order.unit_price)
             const priceSubLabel = order.quantity > 1
               ? `€${unitPrice.toLocaleString('nl-NL')} p.st.`
-              : 'Bruto ex. BTW'
+              : meubel ? 'Netto ex. BTW' : 'Bruto ex. BTW'
 
             const drawings = (Array.isArray(order.order_drawings) ? order.order_drawings : []) as { file_url: string; file_name: string }[]
 
@@ -183,10 +188,10 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                         {STATUS_LABELS[order.status] ?? order.status}
                       </span>
                     </div>
-                    <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{shape === 'op-aanvraag' && <OfferteBadge className="ml-1.5" />}</p>
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{(shape === 'op-aanvraag' || meubel?.opAanvraag) && <OfferteBadge className="ml-1.5" />}</p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[11px] text-lx-text-secondary">{dims} · {order.quantity}×</span>
-                      <span className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op offerte' : formatEuro(price)}</span>
+                      <span className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : formatEuro(price)}</span>
                     </div>
                     <div className="flex items-center justify-end gap-1 mt-2.5">
                       {config && (
@@ -220,7 +225,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
 
                   {/* Col: Project name + dims */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{shape === 'op-aanvraag' && <OfferteBadge className="ml-1.5" />}</p>
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{(shape === 'op-aanvraag' || meubel?.opAanvraag) && <OfferteBadge className="ml-1.5" />}</p>
                     <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">{dims}</p>
                   </div>
 
@@ -231,7 +236,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
 
                   {/* Col: Price */}
                   <div className="w-[92px] flex-shrink-0 text-right">
-                    <p className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' ? 'Op offerte' : formatEuro(price)}</p>
+                    <p className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : formatEuro(price)}</p>
                     {shape !== 'op-aanvraag' && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceSubLabel}</p>}
                   </div>
 

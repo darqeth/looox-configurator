@@ -119,7 +119,8 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
             {pagedOrders.map(order => {
               const shape = (order.config?.selected_options as { shape?: string })?.shape ?? 'rechthoek'
               const isProjectspiegel = shape === 'projectspiegel'
-              const isOpAanvraag = shape === 'op-aanvraag'
+              // Ook een meubel groter dan standaard is een offerteaanvraag zonder prijs
+              const isOpAanvraag = shape === 'op-aanvraag' || (shape === 'meubel' && (order.config?.selected_options as { meubel?: { opAanvraag?: boolean } })?.meubel?.opAanvraag === true)
               const priceLabel = isOpAanvraag ? 'Op offerte' : formatEuro(Number(order.total_price))
               return (
                 <div key={order.id} className={`transition-colors ${isProjectspiegel ? 'border-l-[3px] border-l-violet-500 bg-violet-50/30 hover:bg-violet-50/50' : isOpAanvraag ? 'border-l-[3px] border-l-amber-400 bg-amber-50/30 hover:bg-amber-50/50' : 'hover:bg-lx-panel-bg/40'}`}>

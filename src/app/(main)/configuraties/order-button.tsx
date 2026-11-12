@@ -1,5 +1,8 @@
 'use client'
 
+import MeubelOrderButton from './meubel-order-button'
+import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
@@ -648,9 +651,9 @@ function OrderButtonInner({ configId, configName, metaSummary, price, korting, i
   )
 }
 
-// Meubels (configurator 2.0) zijn nog niet te bestellen; dat komt in fase 3.
-// De lijsten geven `verborgen` mee zodat de knop daar niet verschijnt.
-export default function OrderButton({ verborgen, ...props }: OrderButtonProps & { verborgen?: boolean }) {
-  if (verborgen) return null
+// Meubels (configurator 2.0) hebben een eigen bestelmodal met nettoprijs; de
+// lijsten geven het uitgelezen meubel mee en krijgen dan die knop.
+export default function OrderButton({ meubel, ...props }: OrderButtonProps & { meubel?: OpgeslagenMeubel | null }) {
+  if (meubel) return <MeubelOrderButton configId={props.configId} configName={props.configName} meubel={meubel} />
   return <OrderButtonInner {...props} />
 }

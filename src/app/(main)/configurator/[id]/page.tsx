@@ -48,6 +48,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
           ladeBreedtes: meubel.ladeBreedtes,
           houtkleur: meubel.houtkleur,
           opAanvraag: meubel.opAanvraag,
+          hoogte: meubel.model.hoogte,
           quantity: meubel.quantity,
           projectName: config.name ?? '',
           reference: meubel.reference,

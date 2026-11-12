@@ -2,7 +2,7 @@ import React from 'react'
 import { Document, Page, View, Text, StyleSheet, Svg, Rect, Line, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
-import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting } from '@/lib/meubel-config'
+import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
@@ -94,14 +94,16 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   const MAX_H = 72
   const ruimteB = W - PAD_X * 2 - 30
   const { model, lengte } = meubel
-  const breedtes = getLadeBreedtes(meubel.ladeBreedtes, lengte, meubel.lades)
+  const rand = model.rand ?? 0
+  const breedtes = getLadeBreedtes(meubel.ladeBreedtes, ladeRuimte(model, lengte), meubel.lades)
   const schaal = Math.min(ruimteB / lengte, MAX_H / model.hoogte)
   const w = lengte * schaal
   const h = model.hoogte * schaal
   const H = PAD_TOP + h + PAD_BOTTOM
   const x = (W - 30 - w) / 2
   const y = PAD_TOP
-  const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x])
+  // De lades beginnen na de rand van het frame
+  const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x + rand * schaal])
   const rijH = h / model.rijen
   const toonLadeMaat = Math.min(...breedtes) * schaal > 26
   const lijn = { stroke: '#26282B', strokeWidth: 1 }
@@ -111,9 +113,9 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   return (
     <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       <Rect x={x} y={y} width={w} height={h} fill="#F6F4EF" stroke="#26282B" strokeWidth={1.2} />
-      {grenzen.slice(1, -1).map((gx, i) => <Line key={`k${i}`} x1={gx} y1={y} x2={gx} y2={y + h} {...lijn} />)}
+      {(rand > 0 ? grenzen : grenzen.slice(1, -1)).map((gx, i) => <Line key={`k${i}`} x1={gx} y1={y} x2={gx} y2={y + h} {...lijn} />)}
       {Array.from({ length: model.rijen - 1 }, (_, i) => (
-        <Line key={`r${i}`} x1={x} y1={y + rijH * (i + 1)} x2={x + w} y2={y + rijH * (i + 1)} {...lijn} />
+        <Line key={`r${i}`} x1={grenzen[0]} y1={y + rijH * (i + 1)} x2={grenzen[grenzen.length - 1]} y2={y + rijH * (i + 1)} {...lijn} />
       ))}
 
       {/* Lengte */}
@@ -129,7 +131,7 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
       <SvgText x={x + w + 17} y={y + h / 2 + 3} style={{ ...tekst, fontFamily: 'Helvetica-Bold' }}>{String(model.hoogte)}</SvgText>
 
       {/* Per lade */}
-      <Line x1={x} y1={y + h + 11} x2={x + w} y2={y + h + 11} {...maat} />
+      <Line x1={grenzen[0]} y1={y + h + 11} x2={grenzen[grenzen.length - 1]} y2={y + h + 11} {...maat} />
       {grenzen.map((gx, i) => <Line key={`m${i}`} x1={gx} y1={y + h + 5} x2={gx} y2={y + h + 15} {...maat} />)}
       {toonLadeMaat && breedtes.map((b, i) => (
         <SvgText key={`t${i}`} x={(grenzen[i] + grenzen[i + 1]) / 2} y={y + h + 24} textAnchor="middle" style={{ ...tekst, fill: GRAY }}>{formatMm(b)}</SvgText>
@@ -180,7 +182,8 @@ export default function MeubelDocument({
   const specs: [string, string][] = [
     ['Model', model.naam],
     ['Afmeting', meubelAfmeting(model, meubel.lengte)],
-    ['Lades', `${ladeLabel(model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.lengte, meubel.lades)}`],
+    ['Lades', `${ladeLabel(model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(model, meubel.lengte), meubel.lades)}`],
+    ...(model.rand ? [['Rand', `${model.rand} mm aan beide zijden`] as [string, string]] : []),
     ['Houtkleur', meubel.houtkleurNaam || '—'],
     ...(opAanvraag ? [['Bijzonderheid', 'Groter dan de standaardmaten, op aanvraag'] as [string, string]] : []),
   ]

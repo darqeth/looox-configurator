@@ -1,7 +1,7 @@
 'use client'
 
 import { leesMeubel } from '@/lib/meubel-opslag'
-import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel, meubelAfmeting } from '@/lib/meubel-config'
+import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
 import { useState } from 'react'
 import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
@@ -266,7 +266,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                 <>
                   <ModalRow label="Model" value={meubel.model.naam} />
                   <ModalRow label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
-                  <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.lengte, meubel.lades)}`} />
+                  <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}`} />
                   <ModalRow label="Houtkleur" value={meubel.houtkleurNaam} />
                   <ModalRow label="Aantal" value={`${meubel.quantity}×`} />
                   {meubel.reference && <ModalRow label="Referentie" value={meubel.reference} />}

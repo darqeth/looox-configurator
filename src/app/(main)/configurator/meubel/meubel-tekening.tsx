@@ -38,7 +38,9 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   const y = PAD_TOP
   const lades = breedtes.length
   // Linkerrand van elke lade, plus de rechterrand van de laatste
-  const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x])
+  // De lades beginnen na de rand van het frame (U-Floor, U-Frame, Full-Frame)
+  const rand = (model.rand ?? 0) * schaal
+  const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x + rand])
   const rijH = h / model.rijen
   // Uniek per tekening: in de popup staat dezelfde tekening een tweede keer op de pagina
   const patroon = `hout-${houtkleur}-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
@@ -67,11 +69,11 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
       <rect x={x} y={y} width={w} height={h} rx="1.5" fill="none" stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
 
       {/* Ladefronten */}
-      {Array.from({ length: lades - 1 }, (_, i) => (
-        <line key={`k${i}`} x1={grenzen[i + 1]} y1={y} x2={grenzen[i + 1]} y2={y + h} stroke={LIJN} strokeWidth="1.3" />
+      {(rand > 0 ? grenzen : grenzen.slice(1, -1)).map((gx, i) => (
+        <line key={`k${i}`} x1={gx} y1={y} x2={gx} y2={y + h} stroke={LIJN} strokeWidth="1.3" />
       ))}
       {Array.from({ length: model.rijen - 1 }, (_, i) => (
-        <line key={`r${i}`} x1={x} y1={y + rijH * (i + 1)} x2={x + w} y2={y + rijH * (i + 1)} stroke={LIJN} strokeWidth="1.3" />
+        <line key={`r${i}`} x1={grenzen[0]} y1={y + rijH * (i + 1)} x2={grenzen[grenzen.length - 1]} y2={y + rijH * (i + 1)} stroke={LIJN} strokeWidth="1.3" />
       ))}
 
       {/* Maatlijn lengte (boven) */}
@@ -96,7 +98,7 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
 
       {/* Maatlijn per lade (onder) */}
       <g stroke={MAAT} strokeWidth="0.8" fill="none">
-        <line x1={x} y1={y + h + 14} x2={x + w} y2={y + h + 14} />
+        <line x1={grenzen[0]} y1={y + h + 14} x2={grenzen[grenzen.length - 1]} y2={y + h + 14} />
         {Array.from({ length: lades + 1 }, (_, i) => (
           <line key={i} x1={grenzen[i]} y1={y + h + 6} x2={grenzen[i]} y2={y + h + 19} />
         ))}

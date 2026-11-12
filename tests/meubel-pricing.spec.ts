@@ -3,6 +3,7 @@ import {
   calcMeubelNettoCents, calcMeubelBrutoCents, getLadeOpties, getMeubelModel,
   getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT, getMeubelPrijsOpbouw,
   getAanvraagBereik, getAanvraagLadeOpties, getMeubelOrderOpbouw, formatPct,
+  MEUBEL_MODELLEN, getHoutkleuren, getMeubelHoogte, ladeRuimte,
   formatMm, ladeBreedtesTekst, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
 } from '../src/lib/meubel-config'
 
@@ -223,5 +224,88 @@ test.describe('Meubel: prijsopbouw bij de bestelling', () => {
     expect(o.kortingPct).toBe(57.4)
     expect(formatPct(o.kortingPct)).toBe('57,4%')
     expect(getMeubelOrderOpbouw(98176, 1).kortingCents).toBe(0)
+  })
+})
+
+// Fase 4: overige houten modellen. Per model een paar cellen uit de prijslijst,
+// op de onder- of bovengrens van de staffel. Rij: [model, lengte in mm, lades, euro].
+const FASE4: [string, number, number, number][] = [
+  ['facet-deco', 500, 1, 1038.96], ['facet-deco', 1200, 2, 1215.76], ['facet-deco', 1290, 2, 1257.36],
+  ['facet-stripes', 700, 1, 976.56], ['facet-stripes', 1200, 2, 1142.96], ['facet-stripes', 1390, 2, 1215.76],
+  ['facet-stripes', 1900, 3, 1860.56], ['facet-stripes', 2100, 2, 1702.48], ['facet-stripes', 2550, 3, 2078.96],
+  ['facet-stripes-double', 700, 1, 1777.36], ['facet-stripes-double', 1400, 2, 2214.16], ['facet-stripes-double', 1900, 3, 3170.96],
+  ['facet-stripes-double', 2100, 2, 2921.36], ['facet-stripes-double', 2500, 3, 3576.56],
+  ['facet-waves', 500, 1, 1392.56], ['facet-waves', 1290, 2, 1704.56], ['facet-waves', 1900, 3, 2229.76], ['facet-waves', 2600, 3, 2474.16],
+  ['full-frame', 500, 1, 1402.96], ['full-frame', 1750, 3, 1922.96], ['full-frame', 2250, 2, 1954.16], ['full-frame', 2700, 3, 2422.16],
+  ['u-frame', 500, 1, 1142.96], ['u-frame', 1200, 2, 1454.96], ['u-frame', 1750, 3, 1891.76], ['u-frame', 2700, 3, 2385.76],
+  ['u-floor', 500, 1, 2110.16], ['u-floor', 1200, 1, 2141.36], ['u-floor', 1400, 2, 2744.56], ['u-floor', 1800, 2, 3430.96], ['u-floor', 2200, 2, 3753.36],
+  ['basic-drawer', 800, 1, 1038.96], ['basic-drawer', 1000, 2, 1142.96], ['basic-drawer', 1200, 1, 1132.56], ['basic-drawer', 1600, 2, 1350.96], ['basic-drawer', 2400, 2, 1766.96],
+  ['drawer-box', 800, 1, 1226.16], ['drawer-box', 1000, 2, 1553.76], ['drawer-box', 1600, 2, 1725.36], ['drawer-box', 2100, 3, 2302.56], ['drawer-box', 2400, 2, 2390.96],
+  ['drawer-box-double', 800, 1, 1829.36], ['drawer-box-double', 1000, 1, 1766.96], ['drawer-box-double', 1200, 2, 2224.56], ['drawer-box-double', 2100, 3, 3108.56], ['drawer-box-double', 2600, 3, 3347.76],
+  ['block', 680, 1, 1007.76], ['block', 880, 1, 1012.96], ['block', 1200, 2, 1397.76], ['block', 1580, 2, 1428.96], ['block', 2280, 2, 1647.36],
+]
+
+test.describe('Fase 4: tabelprijzen overige houten modellen', () => {
+  for (const [modelId, lengte, lades, euro] of FASE4) {
+    test(`${modelId} ${lengte} mm, ${lades} lade(s) = € ${euro}`, () => {
+      expect(calcMeubelNettoCents({ modelId, lengte, lades, houtkleur: 'old-grey' })).toBe(Math.round(euro * 100))
+    })
+  }
+
+  test('elk model heeft bij elke staffelgrens minstens één ladekeuze', () => {
+    for (const model of MEUBEL_MODELLEN) {
+      for (const staffel of model.staffels) {
+        expect(getLadeOpties(model, staffel.max * 10).length, `${model.id} ${staffel.max} cm`).toBeGreaterThan(0)
+      }
+    }
+  })
+})
+
+test.describe('Fase 4: rand, hoogte en kleur', () => {
+  const fullFrame = getMeubelModel('full-frame')!
+  const uFloor = getMeubelModel('u-floor')!
+
+  test('rand gaat er aan beide zijden af voordat de lades verdeeld worden', () => {
+    expect(ladeRuimte(fullFrame, 2000)).toBe(1900)
+    expect(ladeRuimte(uFloor, 1400)).toBe(1320)
+    expect(ladeRuimte(getMeubelModel('facet')!, 2000)).toBe(2000)
+    expect(getLadeBreedtes(null, ladeRuimte(fullFrame, 2000), 2)).toEqual([950, 950])
+  })
+
+  test('grenzen van 350 en 1200 mm gelden op de ruimte na de rand', () => {
+    // Full-Frame 2500 mm: 2400 mm voor de lades, dus 2 lades van 1200 kan nog net
+    expect(getLadeOpties(fullFrame, 2500)).toEqual([2, 3])
+    expect(getLadeOpties(fullFrame, 2501)).toEqual([3])
+    // 790 mm: 690 mm voor de lades, 2 lades zou 345 mm zijn
+    expect(getLadeOpties(fullFrame, 790)).toEqual([1])
+    expect(getLadeOpties(fullFrame, 800)).toEqual([1, 2])
+  })
+
+  test('eigen indeling moet optellen tot de ruimte na de rand', () => {
+    const basisCfg = { modelId: 'full-frame', lengte: 2000, lades: 2, houtkleur: 'old-grey', quantity: 1 }
+    expect(valideerMeubelConfig({ ...basisCfg, ladeBreedtes: [900, 1000] })).toBeNull()
+    expect(valideerMeubelConfig({ ...basisCfg, ladeBreedtes: [1000, 1000] })).toContain('samen 1900')
+  })
+
+  test('hoogte: keuze zonder prijsverschil, alleen bij modellen die het hebben', () => {
+    expect(getMeubelHoogte(fullFrame, 400)).toBe(400)
+    expect(getMeubelHoogte(fullFrame, 380)).toBe(300)
+    expect(getMeubelHoogte(getMeubelModel('facet')!, 400)).toBe(300)
+    const cfg = { modelId: 'full-frame', lengte: 1000, lades: 1, houtkleur: 'old-grey', ladeBreedtes: null, quantity: 1 }
+    expect(valideerMeubelConfig({ ...cfg, hoogte: 350 })).toBeNull()
+    expect(valideerMeubelConfig({ ...cfg, hoogte: 380 })).toContain('hoogte')
+    expect(calcMeubelNettoCents({ ...cfg, hoogte: 400 })).toBe(calcMeubelNettoCents(cfg))
+  })
+
+  test('Stripes is niet in White te krijgen', () => {
+    expect(getHoutkleuren(getMeubelModel('facet-stripes')!).map((k) => k.id)).not.toContain('white')
+    expect(getHoutkleuren(getMeubelModel('facet-stripes-double')!).map((k) => k.id)).not.toContain('white')
+    expect(calcMeubelNettoCents({ modelId: 'facet-stripes', lengte: 1000, lades: 1, houtkleur: 'white' })).toBeNull()
+    expect(calcMeubelNettoCents({ modelId: 'facet-stripes', lengte: 1000, lades: 1, houtkleur: 'pure' })).toBe(97656 + 4160)
+    expect(getHoutkleuren(getMeubelModel('facet')!)).toHaveLength(7)
+  })
+
+  test('Basic Drawer kan niet op aanvraag', () => {
+    expect(valideerMeubelConfig({ modelId: 'basic-drawer', lengte: 2600, lades: 3, houtkleur: 'old-grey', ladeBreedtes: null, quantity: 1, opAanvraag: true })).toContain('bestaat niet')
   })
 })

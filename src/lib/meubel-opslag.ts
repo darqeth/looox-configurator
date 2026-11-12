@@ -1,5 +1,5 @@
 import {
-  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, getMeubelModel, ladeLabel, parseMeubelFactor,
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, getMeubelHoogte, getMeubelModel, ladeLabel, parseMeubelFactor,
   type LadeBreedtes, type MeubelModel,
 } from '@/lib/meubel-config'
 
@@ -33,8 +33,10 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
   if (!isMeubelConfig(selectedOptions)) return null
   const opts = selectedOptions as Record<string, unknown>
   const m = (opts.meubel ?? {}) as Record<string, unknown>
-  const model = getMeubelModel(String(m.modelId ?? ''))
-  if (!model) return null
+  const basisModel = getMeubelModel(String(m.modelId ?? ''))
+  if (!basisModel) return null
+  // Bij modellen met meerdere hoogtes geldt de gekozen hoogte overal waar het model wordt getoond
+  const model = { ...basisModel, hoogte: getMeubelHoogte(basisModel, m.hoogte == null ? null : Number(m.hoogte)) }
   const kleur = HOUTKLEUREN.find((k) => k.id === m.houtkleur)
   const breedtes = Array.isArray(m.ladeBreedtes) ? m.ladeBreedtes.map(Number) : null
   return {

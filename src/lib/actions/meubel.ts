@@ -7,7 +7,7 @@ import { parseOrThrow } from '@/lib/validation'
 import { DEFAULT_PRODUCT_ID, generateArticleNumber } from '@/lib/actions/configurator-helpers'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import {
-  MEUBEL_AANTAL_MAX, calcMeubelBrutoCents, getMeubelModel, valideerMeubelConfig,
+  MEUBEL_AANTAL_MAX, calcMeubelBrutoCents, getMeubelHoogte, getMeubelModel, valideerMeubelConfig,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
 
@@ -18,6 +18,7 @@ const meubelInputSchema = z.object({
   ladeBreedtes: z.array(z.number().int().min(1).max(10000)).max(10).nullable(),
   houtkleur: z.string().max(40),
   opAanvraag: z.boolean().optional(),
+  hoogte: z.number().int().min(1).max(3000).optional(),
   quantity: z.number().int().min(1).max(MEUBEL_AANTAL_MAX),
   projectName: z.string().trim().min(1, 'Projectnaam is verplicht').max(200),
   reference: z.string().max(200),
@@ -50,7 +51,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
       name: input.projectName,
       // De kolommen zijn in cm, zoals bij spiegels; de exacte mm staan in de opties
       width: Math.round(input.lengte / 10),
-      height: Math.round(model.hoogte / 10),
+      height: Math.round(getMeubelHoogte(model, input.hoogte) / 10),
       // Bruto per stuk, net als bij maatwerk spiegels; het aantal staat in de opties.
       total_price: (brutoCents / 100).toFixed(2),
       selected_options: {
@@ -61,6 +62,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           eenheid: 'mm',
           modelId: input.modelId,
           lengte: input.lengte,
+          hoogte: getMeubelHoogte(model, input.hoogte),
           lades: input.lades,
           ladeBreedtes: input.ladeBreedtes,
           houtkleur: input.houtkleur,

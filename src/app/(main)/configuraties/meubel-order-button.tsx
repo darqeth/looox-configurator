@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
-import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting } from '@/lib/meubel-config'
+import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
 // Bestelmodal voor een Tailor-Made meubel. Dit is de enige plek waar de dealer
@@ -142,7 +142,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                       {meubelAfmeting(meubel.model, meubel.lengte)}
                     </p>
                     <p className="text-lx-text-secondary">
-                      {ladeLabel(meubel.model, meubel.lades)} · {ladeBreedtesTekst(meubel.ladeBreedtes, meubel.lengte, meubel.lades)}
+                      {ladeLabel(meubel.model, meubel.lades)} · {ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}
                     </p>
                   </div>
 

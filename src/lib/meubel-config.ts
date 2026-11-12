@@ -33,8 +33,19 @@ export interface MeubelModel {
   hoogte: number
   /** Aantal laderijen boven elkaar */
   rijen: number
-  /** Rand van het frame in mm (U-Floor 40, U-Frame en Full-Frame 50); de dealer krijgt een melding bij de ladeverdeling */
+  /**
+   * Rand van het frame in mm aan beide zijden (U-Floor 40, U-Frame en Full-Frame 50).
+   * De lades verdelen de lengte min twee keer de rand.
+   */
   rand?: number
+  /** Meerdere hoogtes zonder prijsverschil (Full-Frame, U-Frame); `hoogte` is de standaard */
+  hoogtes?: number[]
+  /** Houtkleuren die bij dit model niet kunnen (Stripes: geen White) */
+  geenKleuren?: string[]
+  /** Alleen in de standaardmaten te bestellen: geen "groter dan" op aanvraag */
+  geenAanvraag?: boolean
+  /** Bijzonderheid uit de prijslijst, getoond bij het samenstellen */
+  opmerking?: string
   staffels: Staffel[]
 }
 
@@ -70,6 +81,199 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
       { min: 191, max: 210, prijzen: { 2: 230256, 3: 285896 } },
       { min: 211, max: 260, prijzen: { 2: 248976, 3: 304616 } },
       { min: 261, max: 290, prijzen: { 3: 323336 } },
+    ],
+  },
+  {
+    id: 'facet-deco',
+    naam: 'Facet Deco',
+    omschrijving: 'Smalle Facet zonder ruimte voor een waskom.',
+    afbeelding: '/images/meubels/model-facet-deco.webp',
+    diepte: 420,
+    hoogte: 350,
+    rijen: 1,
+    opmerking: 'Door onvoldoende ruimte achter de lade is het niet mogelijk om een waskom op de Facet Deco te plaatsen.',
+    staffels: [
+      { min: 50, max: 120, prijzen: { 1: 103896, 2: 121576 } },
+      { min: 121, max: 129, prijzen: { 2: 125736 } },
+    ],
+  },
+  {
+    id: 'facet-stripes',
+    naam: 'Facet Stripes',
+    omschrijving: 'Facet met verticale lamellen op het front.',
+    afbeelding: '/images/meubels/model-facet-stripes.webp',
+    diepte: 460,
+    hoogte: 300,
+    rijen: 1,
+    geenKleuren: ['white'],
+    opmerking: 'De Facet Stripes is niet in een witte lak te verkrijgen.',
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 97656, 2: 114296 } },
+      { min: 121, max: 139, prijzen: { 2: 121576 } },
+      { min: 140, max: 190, prijzen: { 2: 153816, 3: 186056 } },
+      { min: 191, max: 210, prijzen: { 2: 170248, 3: 197496 } },
+      { min: 211, max: 255, prijzen: { 2: 180856, 3: 207896 } },
+    ],
+  },
+  {
+    id: 'facet-stripes-double',
+    naam: 'Facet Stripes Double',
+    omschrijving: 'Facet Stripes met twee laderijen boven elkaar.',
+    afbeelding: '/images/meubels/model-facet-stripes-double.webp',
+    diepte: 460,
+    hoogte: 600,
+    rijen: 2,
+    geenKleuren: ['white'],
+    opmerking: 'De Facet Stripes is niet in een witte lak te verkrijgen.',
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 177736, 2: 198536 } },
+      { min: 121, max: 140, prijzen: { 2: 221416 } },
+      { min: 141, max: 190, prijzen: { 2: 279656, 3: 317096 } },
+      { min: 191, max: 210, prijzen: { 2: 292136, 3: 331656 } },
+      { min: 211, max: 250, prijzen: { 2: 321256, 3: 357656 } },
+    ],
+  },
+  {
+    id: 'facet-waves',
+    naam: 'Facet Waves',
+    omschrijving: 'Facet met golvend front.',
+    afbeelding: '/images/meubels/model-facet-waves.webp',
+    diepte: 460,
+    hoogte: 300,
+    rijen: 1,
+    staffels: [
+      { min: 50, max: 120, prijzen: { 1: 139256, 2: 155896 } },
+      { min: 121, max: 129, prijzen: { 2: 170456 } },
+      { min: 130, max: 190, prijzen: { 2: 197496, 3: 222976 } },
+      { min: 191, max: 210, prijzen: { 2: 203736, 3: 227656 } },
+      { min: 211, max: 260, prijzen: { 2: 226616, 3: 247416 } },
+    ],
+  },
+  {
+    id: 'full-frame',
+    naam: 'Full-Frame',
+    omschrijving: 'Ladenmeubel met een frame rondom.',
+    afbeelding: '/images/meubels/model-full-frame.webp',
+    diepte: 460,
+    hoogte: 300,
+    rijen: 1,
+    hoogtes: [300, 350, 400],
+    rand: 50,
+    staffels: [
+      { min: 50, max: 120, prijzen: { 1: 140296, 2: 154856 } },
+      { min: 121, max: 175, prijzen: { 2: 170456, 3: 192296 } },
+      { min: 176, max: 225, prijzen: { 2: 195416, 3: 213096 } },
+      { min: 226, max: 270, prijzen: { 2: 226096, 3: 242216 } },
+    ],
+  },
+  {
+    id: 'u-frame',
+    naam: 'U-Frame',
+    omschrijving: 'Ladenmeubel met een U-vormig frame.',
+    afbeelding: '/images/meubels/model-u-frame.webp',
+    diepte: 460,
+    hoogte: 300,
+    rijen: 1,
+    hoogtes: [300, 350, 400],
+    rand: 50,
+    staffels: [
+      { min: 50, max: 120, prijzen: { 1: 114296, 2: 145496 } },
+      { min: 121, max: 175, prijzen: { 2: 161096, 3: 189176 } },
+      { min: 176, max: 225, prijzen: { 2: 185016, 3: 207896 } },
+      { min: 226, max: 270, prijzen: { 2: 217256, 3: 238576 } },
+    ],
+  },
+  {
+    id: 'u-floor',
+    naam: 'U-Floor',
+    omschrijving: 'Staand meubel met twee laderijen in een U-frame.',
+    afbeelding: '/images/meubels/model-u-floor.webp',
+    diepte: 460,
+    hoogte: 780,
+    rijen: 2,
+    rand: 40,
+    staffels: [
+      { min: 50, max: 100, prijzen: { 1: 211016 } },
+      { min: 101, max: 120, prijzen: { 1: 214136 } },
+      { min: 121, max: 140, prijzen: { 2: 274456 } },
+      { min: 141, max: 160, prijzen: { 2: 287976 } },
+      { min: 161, max: 180, prijzen: { 2: 343096 } },
+      { min: 181, max: 220, prijzen: { 2: 375336 } },
+    ],
+  },
+  {
+    id: 'basic-drawer',
+    naam: 'Basic Drawer',
+    omschrijving: 'Strak ladenmeubel met greeplijst.',
+    afbeelding: '/images/meubels/model-basic-drawer.webp',
+    diepte: 430,
+    hoogte: 380,
+    rijen: 1,
+    geenAanvraag: true,
+    opmerking: 'De Basic Drawer kan alleen besteld worden in de standaardmaten.',
+    staffels: [
+      { min: 50, max: 80, prijzen: { 1: 103896 } },
+      { min: 81, max: 100, prijzen: { 1: 109096, 2: 114296 } },
+      { min: 101, max: 120, prijzen: { 1: 113256, 2: 117416 } },
+      { min: 121, max: 160, prijzen: { 2: 135096 } },
+      { min: 161, max: 190, prijzen: { 2: 148616 } },
+      { min: 191, max: 230, prijzen: { 2: 169416 } },
+      { min: 231, max: 240, prijzen: { 2: 176696 } },
+    ],
+  },
+  {
+    id: 'drawer-box',
+    naam: 'Drawer Box',
+    omschrijving: 'Ladenmeubel met overstekend blad.',
+    afbeelding: '/images/meubels/model-drawer-box.webp',
+    diepte: 460,
+    hoogte: 450,
+    rijen: 1,
+    staffels: [
+      { min: 50, max: 80, prijzen: { 1: 122616 } },
+      { min: 81, max: 100, prijzen: { 1: 128856, 2: 155376 } },
+      { min: 101, max: 120, prijzen: { 1: 132496, 2: 155896 } },
+      { min: 121, max: 160, prijzen: { 2: 172536 } },
+      { min: 161, max: 210, prijzen: { 2: 204776, 3: 230256 } },
+      { min: 211, max: 260, prijzen: { 2: 239096, 3: 259896 } },
+    ],
+  },
+  {
+    id: 'drawer-box-double',
+    naam: 'Drawer Box Double',
+    omschrijving: 'Drawer Box met twee laderijen boven elkaar.',
+    afbeelding: '/images/meubels/model-drawer-box-double.webp',
+    diepte: 460,
+    hoogte: 600,
+    rijen: 2,
+    opmerking: 'De onderste rij laden is voorzien van push-to-open.',
+    staffels: [
+      { min: 50, max: 80, prijzen: { 1: 182936 } },
+      { min: 81, max: 100, prijzen: { 1: 176696, 2: 218296 } },
+      { min: 101, max: 120, prijzen: { 1: 179816, 2: 222456 } },
+      { min: 121, max: 160, prijzen: { 2: 232336 } },
+      { min: 161, max: 210, prijzen: { 2: 273936, 3: 310856 } },
+      { min: 211, max: 260, prijzen: { 2: 309816, 3: 334776 } },
+    ],
+  },
+  {
+    id: 'block',
+    naam: 'Block',
+    omschrijving: 'Compact blokmeubel zonder ruimte voor een waskom.',
+    afbeelding: '/images/meubels/model-block.webp',
+    diepte: 400,
+    hoogte: 300,
+    rijen: 1,
+    opmerking: 'Door onvoldoende ruimte achter de lade is het niet mogelijk om een waskom op de Block te plaatsen.',
+    staffels: [
+      { min: 50, max: 68, prijzen: { 1: 100776 } },
+      { min: 69, max: 88, prijzen: { 1: 101296 } },
+      { min: 89, max: 108, prijzen: { 1: 101816 } },
+      { min: 109, max: 120, prijzen: { 1: 102856, 2: 139776 } },
+      { min: 121, max: 138, prijzen: { 2: 140816 } },
+      { min: 139, max: 158, prijzen: { 2: 142896 } },
+      { min: 159, max: 178, prijzen: { 2: 161616 } },
+      { min: 179, max: 228, prijzen: { 2: 164736 } },
     ],
   },
 ]
@@ -126,8 +330,26 @@ export function getLadeOpties(model: MeubelModel, lengte: number): number[] {
   if (!staffel) return []
   return Object.keys(staffel.prijzen)
     .map(Number)
-    .filter((n) => lengte / n >= LADE_MIN_MM && lengte / n <= LADE_MAX_MM)
+    .filter((n) => ladeRuimte(model, lengte) / n >= LADE_MIN_MM && ladeRuimte(model, lengte) / n <= LADE_MAX_MM)
     .sort((a, b) => a - b)
+}
+
+/** Breedte die de lades samen innemen: de lengte min de rand aan beide zijden. */
+export function ladeRuimte(model: MeubelModel, lengte: number): number {
+  return lengte - 2 * (model.rand ?? 0)
+}
+
+/** Houtkleuren die bij dit model te kiezen zijn. */
+export function getHoutkleuren(model: MeubelModel): Houtkleur[] {
+  return HOUTKLEUREN.filter((k) => !model.geenKleuren?.includes(k.id))
+}
+
+/** Toelichting uit de prijslijst bij Brown Grey; tonen zodra die kleur gekozen is. */
+export const BROWN_GREY_MELDING = 'Brown Grey heeft meer aandacht nodig dan andere kleurafwerkingen. Deze kleur is daarom niet op elk item toepasbaar. Informeer naar de voorwaarden.'
+
+/** Gekozen hoogte, of de standaard van het model als de keuze niet (meer) bestaat. */
+export function getMeubelHoogte(model: MeubelModel, hoogte?: number | null): number {
+  return hoogte != null && model.hoogtes?.includes(hoogte) ? hoogte : model.hoogte
 }
 
 export function ladeLabel(model: MeubelModel, kolommen: number): string {
@@ -143,6 +365,8 @@ export interface MeubelInput {
   uitsparingen?: number
   /** Groter dan de standaardmaten: geen tabelprijs, altijd op aanvraag */
   opAanvraag?: boolean
+  /** Gekozen hoogte in mm bij modellen met meerdere hoogtes; geen invloed op de prijs */
+  hoogte?: number
 }
 
 /** Netto per stuk in centen, of null bij een ongeldige combinatie. Niet tonen buiten de bestelstap. */
@@ -151,7 +375,7 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
   if (!model || input.opAanvraag) return null
   if (!getLadeOpties(model, input.lengte).includes(input.lades)) return null
   const staffel = findStaffel(model, input.lengte)
-  const kleur = HOUTKLEUREN.find((k) => k.id === input.houtkleur)
+  const kleur = getHoutkleuren(model).find((k) => k.id === input.houtkleur)
   if (!staffel || !kleur) return null
   const uitsparingen = input.uitsparingen ?? 0
   if (!Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX) return null
@@ -266,15 +490,17 @@ export interface MeubelConfig extends MeubelInput {
 export function valideerMeubelConfig(c: MeubelConfig): string | null {
   if (c.opAanvraag) {
     const model = getMeubelModel(c.modelId)
-    if (!model || !HOUTKLEUREN.some((k) => k.id === c.houtkleur)) return 'Dit model of deze houtkleur bestaat niet.'
+    if (!model || model.geenAanvraag || !getHoutkleuren(model).some((k) => k.id === c.houtkleur)) return 'Dit model of deze houtkleur bestaat niet.'
     const bereik = getAanvraagBereik(model)
     if (!Number.isInteger(c.lengte) || c.lengte < bereik.min || c.lengte > bereik.max) return `Op aanvraag kan van ${bereik.min} tot ${bereik.max} mm.`
-    if (!getAanvraagLadeOpties(c.lengte).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
+    if (!getAanvraagLadeOpties(ladeRuimte(model, c.lengte)).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
   } else if (calcMeubelNettoCents(c) === null) {
     return 'Deze combinatie van model, lengte, lades en houtkleur bestaat niet.'
   }
-  const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, c.lengte, c.lades)
+  const model = getMeubelModel(c.modelId)!
+  const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, ladeRuimte(model, c.lengte), c.lades)
   if (ladeFout) return ladeFout
+  if (c.hoogte != null && getMeubelHoogte(model, c.hoogte) !== c.hoogte) return 'Deze hoogte bestaat niet bij dit model.'
   if (!Number.isInteger(c.quantity) || c.quantity < 1 || c.quantity > MEUBEL_AANTAL_MAX) return `Aantal moet tussen 1 en ${MEUBEL_AANTAL_MAX} liggen.`
   return null
 }

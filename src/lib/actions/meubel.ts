@@ -22,7 +22,7 @@ const meubelInputSchema = z.object({
   hoogte: z.number().int().min(1).max(3000).optional(),
   logo: z.boolean().optional(),
   regaalBreedte: z.number().int().min(1).max(2000).optional(),
-  regaalZijde: z.enum(['links', 'rechts']).optional(),
+  regaalZijde: z.enum(['links', 'rechts', 'midden']).optional(),
   uitsparingen: z.number().int().min(0).max(UITSPARING_MAX).optional(),
   attachmentUrl: z.string().max(1000).nullish(),
   /** Toevoegen aan een bestaand project (winkelmandje) */

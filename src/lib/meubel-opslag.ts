@@ -26,7 +26,7 @@ export interface OpgeslagenMeubel {
   attachmentUrl: string | null
   /** Regaalkast (Regal-modellen): breedte in mm, 0 bij een model zonder */
   regaalBreedte: number
-  regaalZijde: 'links' | 'rechts'
+  regaalZijde: 'links' | 'rechts' | 'midden'
   /** Breedte die de lades samen innemen: lengte min rand en regaalkast */
   ladeRuimte: number
   quantity: number
@@ -55,7 +55,7 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     model,
     lengte,
     regaalBreedte,
-    regaalZijde: m.regaalZijde === 'links' ? 'links' : 'rechts',
+    regaalZijde: m.regaalZijde === 'links' || m.regaalZijde === 'midden' ? m.regaalZijde : 'rechts',
     ladeRuimte: ladeRuimte(model, lengte, regaalBreedte),
     lades: Number(m.lades) || 1,
     ladeBreedtes: breedtes,
@@ -79,5 +79,5 @@ export function meubelSamenvatting(m: OpgeslagenMeubel): string {
 
 /** Invoer voor de prijsmotor uit een opgeslagen meubel: één plek, zodat geen optie wordt vergeten. */
 export function meubelPrijsInput(m: OpgeslagenMeubel): MeubelInput {
-  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde }
+  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
 }

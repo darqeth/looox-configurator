@@ -13,6 +13,7 @@ import {
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
+  getDuoPrijs, getDuoReeksen,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
@@ -21,6 +22,8 @@ import { MeubelTekening } from './meubel-tekening'
 // In beeld staat alleen bruto (netto × factor); netto komt pas in de bestelstap.
 
 const STEPS = ['Categorie', 'Model', 'Samenstellen', 'Samenvatting']
+// Startbreedte per kast bij een duo-model, en de terugval voor de tekening bij ongeldige invoer
+const DUO_START_MM = 700
 
 export interface MeubelInitialConfig {
   id: string
@@ -33,7 +36,7 @@ export interface MeubelInitialConfig {
   hoogte?: number
   logo?: boolean
   regaalBreedte?: number
-  regaalZijde?: 'links' | 'rechts'
+  regaalZijde?: 'links' | 'rechts' | 'midden'
   uitsparingen?: number
   attachmentUrl?: string | null
   quantity: number
@@ -75,7 +78,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const [tekeningGroot, setTekeningGroot] = useState(false)
   // Regaalkast bij Regal-modellen: kant en breedte
   const [regaalTekst, setRegaalTekst] = useState(String(initialConfig?.regaalBreedte || REGAAL_STANDAARD_MM))
-  const [regaalZijde, setRegaalZijde] = useState<'links' | 'rechts'>(initialConfig?.regaalZijde ?? 'rechts')
+  const [regaalZijde, setRegaalZijde] = useState<'links' | 'rechts'>(initialConfig?.regaalZijde === 'links' ? 'links' : 'rechts')
+  // Duo-model (Drawer Box Regal): breedte per kast in plaats van één lengte
+  const [kastTekst, setKastTekst] = useState<[string, string]>([
+    String(initialConfig?.ladeBreedtes?.[0] ?? DUO_START_MM), String(initialConfig?.ladeBreedtes?.[1] ?? DUO_START_MM),
+  ])
   // Opties uit de tabel "Opties meubels": logo is gratis, een uitsparing kost per stuk
   // Logo staat standaard aan (Mark, 12 nov); bij bewerken geldt wat is opgeslagen
   const [logo, setLogo] = useState(initialConfig ? initialConfig.logo === true : true)
@@ -172,31 +179,41 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
 
   const standaardBereik = getLengteBereik(model)
   const bereik = opAanvraag ? getAanvraagBereik(model) : standaardBereik
-  const lengte = /^\d+$/.test(lengteTekst) ? Number(lengteTekst) : NaN
-  const lengteOk = lengte >= bereik.min && lengte <= bereik.max && (opAanvraag || !model.vasteLengtes || model.vasteLengtes.includes(lengte))
-  if (lengteOk && lengte !== laatsteLengte) {
-    setLaatsteLengte(lengte)
-    setEigenBreedtes(null) // een eigen indeling hoort bij één lengte
-  }
-  const tekenLengte = lengteOk ? lengte : laatsteLengte
 
-  // Lades verdelen de lengte min de rand van het frame aan beide zijden
   // Regaalkast: bij een ongeldige breedte blijft de tekening op de standaard staan
   const regaalInvoer = /^\d+$/.test(regaalTekst) ? Number(regaalTekst) : NaN
   const regaalOk = !model.regaal || (regaalInvoer >= model.regaal.min && regaalInvoer <= model.regaal.max)
   const regaalMm = model.regaal ? (regaalOk ? regaalInvoer : REGAAL_STANDAARD_MM) : 0
+
+  // Duo: twee kastbreedtes die in dezelfde reeks van de prijslijst moeten vallen; de lengte is de som
+  const isDuo = !!model.duo
+  const duoInvoer = kastTekst.map((t) => (/^\d+$/.test(t) ? Number(t) : 0))
+  const duoOk = isDuo && getDuoPrijs(model, duoInvoer) !== null
+  const duoBreedtes = duoOk ? duoInvoer : [DUO_START_MM, DUO_START_MM]
+
+  const lengte = isDuo ? duoBreedtes[0] + duoBreedtes[1] + regaalMm : /^\d+$/.test(lengteTekst) ? Number(lengteTekst) : NaN
+  const lengteOk = isDuo
+    ? duoOk
+    : lengte >= bereik.min && lengte <= bereik.max && (opAanvraag || !model.vasteLengtes || model.vasteLengtes.includes(lengte))
+  if (!isDuo && lengteOk && lengte !== laatsteLengte) {
+    setLaatsteLengte(lengte)
+    setEigenBreedtes(null) // een eigen indeling hoort bij één lengte
+  }
+  const tekenLengte = isDuo || lengteOk ? lengte : laatsteLengte
+
+  // Lades verdelen de lengte min de rand van het frame en min de regaalkast
   const ruimte = ladeRuimte(model, tekenLengte, regaalMm)
   const opties = opAanvraag ? getAanvraagLadeOpties(ruimte) : getLadeOpties(model, tekenLengte, regaalMm)
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
   const gekozen = opties.includes(lades) ? lades : opties[0]
-  const breedtes = eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
-  const ladeFout = valideerLadeBreedtes(breedtes, ruimte, gekozen)
-  const magAanpassen = kanLadesAanpassen(ruimte, gekozen)
+  const breedtes = isDuo ? duoBreedtes : eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
+  const ladeFout = isDuo ? null : valideerLadeBreedtes(breedtes, ruimte, gekozen)
+  const magAanpassen = !isDuo && kanLadesAanpassen(ruimte, gekozen)
   // Niet elke kleur kan bij elk model (Stripes: geen White); valt de keuze af, dan de standaard
   const kleuren = getHoutkleuren(model)
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
-  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, regaalBreedte: regaalMm || undefined }, factor) : null
+  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
   // Zonder maattekening kan LoooX het meubel niet maken: zonder tekening niet verder
   const tekeningOntbreekt = !tekeningBestand && !bestaandeTekening
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null) && !tekeningOntbreekt
@@ -241,7 +258,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
       logo, uitsparingen,
-      ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde }),
+      ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
       quantity, projectName: projectName.trim(), reference, description,
     }
     startTransition(async () => {
@@ -279,89 +296,121 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               </div>
 
-              <div>
-                {model.vasteLengtes ? (
-                  <>
-                    <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</p>
-                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Lengte">
-                      {model.vasteLengtes.map((l) => (
-                        <button
-                          key={l}
-                          type="button"
-                          role="radio"
-                          aria-checked={lengte === l}
-                          onClick={() => setLengteTekst(String(l))}
-                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
-                            lengte === l
-                              ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
-                              : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
-                          }`}
-                        >
-                          {l} mm
-                        </button>
-                      ))}
-                    </div>
-                    <p className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
-                      Dit model is alleen in deze standaardmaten te bestellen.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <label htmlFor="meubel-lengte" className="block text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        id="meubel-lengte"
-                        inputMode="numeric"
-                        value={lengteTekst}
-                        onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        aria-invalid={!lengteOk}
-                        aria-describedby="meubel-lengte-hulp"
-                        className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
-                      />
-                      <span className="text-[13px] text-lx-text-secondary">mm</span>
-                    </div>
-                    <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
-                      Hele millimeters, van {bereik.min} tot {bereik.max} mm.
-                    </p>
-                  </>
-                )}
+              {isDuo ? (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Kasten</p>
+                  <div className="flex flex-wrap items-end gap-2.5">
+                    {(['Kast links', 'Kast rechts'] as const).map((label, i) => (
+                      <div key={label}>
+                        <label htmlFor={`meubel-kast-${i}`} className="block text-[11.5px] font-medium text-lx-text-secondary mb-1">{label}</label>
+                        <input
+                          id={`meubel-kast-${i}`}
+                          inputMode="numeric"
+                          value={kastTekst[i]}
+                          onChange={(e) => {
+                            const waarde = e.target.value.replace(/\D/g, '').slice(0, 4)
+                            setKastTekst(i === 0 ? [waarde, kastTekst[1]] : [kastTekst[0], waarde])
+                          }}
+                          aria-invalid={!duoOk}
+                          aria-describedby="meubel-kast-hulp"
+                          className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${duoOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
+                        />
+                      </div>
+                    ))}
+                    <span className="text-[13px] text-lx-text-secondary pb-2.5">mm</span>
+                  </div>
+                  <p id="meubel-kast-hulp" className={`text-[12px] mt-1.5 leading-relaxed ${duoOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                    Elke kast heeft één lade. Beide kasten moeten in dezelfde reeks vallen: {getDuoReeksen(model).map((r) => `${r.min} tot ${r.max} mm`).join(' of ')}.
+                    {duoOk ? ` Totale lengte met regaalkast: ${lengte} mm.` : ''}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  {model.vasteLengtes ? (
+                    <>
+                      <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</p>
+                      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Lengte">
+                        {model.vasteLengtes.map((l) => (
+                          <button
+                            key={l}
+                            type="button"
+                            role="radio"
+                            aria-checked={lengte === l}
+                            onClick={() => setLengteTekst(String(l))}
+                            className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                              lengte === l
+                                ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                                : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                            }`}
+                          >
+                            {l} mm
+                          </button>
+                        ))}
+                      </div>
+                      <p className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                        Dit model is alleen in deze standaardmaten te bestellen.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <label htmlFor="meubel-lengte" className="block text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="meubel-lengte"
+                          inputMode="numeric"
+                          value={lengteTekst}
+                          onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          aria-invalid={!lengteOk}
+                          aria-describedby="meubel-lengte-hulp"
+                          className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
+                        />
+                        <span className="text-[13px] text-lx-text-secondary">mm</span>
+                      </div>
+                      <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                        Hele millimeters, van {bereik.min} tot {bereik.max} mm.
+                      </p>
+                    </>
+                  )}
 
-                {!model.geenAanvraag && (
-                  <label className="mt-3 flex items-center justify-between gap-4 bg-lx-panel-bg rounded-xl p-4 cursor-pointer select-none">
-                    <span>
-                      <span className="block text-[13px] font-medium text-lx-text-primary">Groter dan {standaardBereik.max} mm</span>
-                      <span className="block text-[11.5px] text-lx-text-secondary">
-                        Buiten de standaardmaten is dit meubel altijd op aanvraag, zonder prijs vooraf.
+                  {!model.geenAanvraag && (
+                    <label className="mt-3 flex items-center justify-between gap-4 bg-lx-panel-bg rounded-xl p-4 cursor-pointer select-none">
+                      <span>
+                        <span className="block text-[13px] font-medium text-lx-text-primary">Groter dan {standaardBereik.max} mm</span>
+                        <span className="block text-[11.5px] text-lx-text-secondary">
+                          Buiten de standaardmaten is dit meubel altijd op aanvraag, zonder prijs vooraf.
+                        </span>
                       </span>
-                    </span>
-                    <input type="checkbox" checked={opAanvraag} onChange={(e) => wisselAanvraag(e.target.checked)} className="sr-only peer" />
-                    <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
-                  </label>
-                )}
-              </div>
+                      <input type="checkbox" checked={opAanvraag} onChange={(e) => wisselAanvraag(e.target.checked)} className="sr-only peer" />
+                      <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
+                    </label>
+                  )}
+                </div>
+              )}
 
               {model.regaal && (
                 <div>
                   <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Regaalkast</p>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <div className="flex gap-2" role="radiogroup" aria-label="Kant van de regaalkast">
-                      {(['links', 'rechts'] as const).map((zijde) => (
-                        <button
-                          key={zijde}
-                          type="button"
-                          role="radio"
-                          aria-checked={regaalZijde === zijde}
-                          onClick={() => setRegaalZijde(zijde)}
-                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
-                            regaalZijde === zijde
-                              ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
-                              : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
-                          }`}
-                        >
-                          {zijde === 'links' ? 'Links' : 'Rechts'}
-                        </button>
-                      ))}
-                    </div>
+                    {!isDuo && (
+                      <div className="flex gap-2" role="radiogroup" aria-label="Kant van de regaalkast">
+                        {(['links', 'rechts'] as const).map((zijde) => (
+                          <button
+                            key={zijde}
+                            type="button"
+                            role="radio"
+                            aria-checked={regaalZijde === zijde}
+                            onClick={() => setRegaalZijde(zijde)}
+                            className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                              regaalZijde === zijde
+                                ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                                : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                            }`}
+                          >
+                            {zijde === 'links' ? 'Links' : 'Rechts'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <label htmlFor="meubel-regaal" className="text-[12.5px] text-lx-text-secondary">Breedte</label>
                       <input
@@ -377,7 +426,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     </div>
                   </div>
                   <p id="meubel-regaal-hulp" className={`text-[12px] mt-1.5 ${regaalOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
-                    Open vak naast de lades, {model.regaal.min} tot {model.regaal.max} mm breed. De lengte is inclusief de regaalkast.
+                    {isDuo ? 'Open vak tussen de twee kasten' : 'Open vak naast de lades'}, {model.regaal.min} tot {model.regaal.max} mm breed.{isDuo ? '' : ' De lengte is inclusief de regaalkast.'}
                   </p>
                 </div>
               )}
@@ -407,95 +456,97 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               )}
 
-              <div>
-                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lades</p>
-                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Aantal lades">
-                  {opties.map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      role="radio"
-                      aria-checked={gekozen === n}
-                      onClick={() => kiesLades(n)}
-                      className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
-                        gekozen === n
-                          ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
-                          : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
-                      }`}
-                    >
-                      {ladeLabel(model, n)}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[12px] text-lx-text-muted mt-1.5">
-                  Welke indelingen kunnen, hangt af van de lengte.
-                  {model.rand ? ` De rand van ${model.rand} mm aan beide zijden gaat er eerst af.` : ''}
-                </p>
-
-
-                {magAanpassen && (
-                  <div className="mt-4 bg-lx-panel-bg rounded-xl p-4">
-                    <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
-                      <span>
-                        <span className="block text-[13px] font-medium text-lx-text-primary">Breedtes zelf instellen</span>
-                        <span className="block text-[11.5px] text-lx-text-secondary">
-                          Standaard zijn de lades even breed. Per lade {LADE_MIN_MM} tot {LADE_MAX_MM} mm.
-                        </span>
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={breedtes !== null}
-                        onChange={(e) => setEigenBreedtes(e.target.checked ? startLadeBreedtes(ruimte, gekozen) : null)}
-                        className="sr-only peer"
-                      />
-                      <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
-                    </label>
-
-                    {breedtes && (
-                      <>
-                        {model.rand && (
-                          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3" role="note">
-                            <svg className="flex-shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
-                            </svg>
-                            <p className="text-[12px] text-amber-800 leading-relaxed">
-                              <strong>Let op:</strong> dit model heeft een rand van {model.rand} mm aan beide zijden. De lades verdelen samen {ruimte} mm, niet de volle {tekenLengte} mm.
-                            </p>
-                          </div>
-                        )}
-                        <div className="flex flex-wrap items-end gap-2.5 mt-4">
-                          {breedtes.map((b, i) => {
-                            const laatste = i === breedtes.length - 1
-                            const fout = b < LADE_MIN_MM || b > LADE_MAX_MM
-                            return (
-                              <div key={i}>
-                                <label htmlFor={`meubel-lade-${i}`} className="block text-[11.5px] font-medium text-lx-text-secondary mb-1">
-                                  Lade {i + 1}{laatste ? ' (rest)' : ''}
-                                </label>
-                                <input
-                                  id={`meubel-lade-${i}`}
-                                  inputMode="numeric"
-                                  value={b}
-                                  readOnly={laatste}
-                                  aria-invalid={fout}
-                                  onChange={(e) => zetBreedte(i, e.target.value)}
-                                  className={`w-[72px] h-10 rounded-xl border text-center text-[14px] font-semibold outline-none px-2 ${
-                                    laatste ? 'bg-transparent text-lx-text-secondary' : 'bg-white text-lx-text-primary focus:border-lx-cta'
-                                  } ${fout ? 'border-red-400' : 'border-black/10'}`}
-                                />
-                              </div>
-                            )
-                          })}
-                          <span className="text-[13px] text-lx-text-secondary pb-2.5">mm</span>
-                        </div>
-                        <p className={`text-[12px] mt-2 ${ladeFout ? 'text-red-600' : 'text-lx-text-muted'}`} role={ladeFout ? 'alert' : undefined}>
-                          {ladeFout ?? `De laatste lade krijgt wat overblijft van ${ruimte} mm.`}
-                        </p>
-                      </>
-                    )}
+              {!isDuo && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lades</p>
+                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Aantal lades">
+                    {opties.map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={gekozen === n}
+                        onClick={() => kiesLades(n)}
+                        className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                          gekozen === n
+                            ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                            : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                        }`}
+                      >
+                        {ladeLabel(model, n)}
+                      </button>
+                    ))}
                   </div>
-                )}
-              </div>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">
+                    Welke indelingen kunnen, hangt af van de lengte.
+                    {model.rand ? ` De rand van ${model.rand} mm aan beide zijden gaat er eerst af.` : ''}
+                  </p>
+
+
+                  {magAanpassen && (
+                    <div className="mt-4 bg-lx-panel-bg rounded-xl p-4">
+                      <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
+                        <span>
+                          <span className="block text-[13px] font-medium text-lx-text-primary">Breedtes zelf instellen</span>
+                          <span className="block text-[11.5px] text-lx-text-secondary">
+                            Standaard zijn de lades even breed. Per lade {LADE_MIN_MM} tot {LADE_MAX_MM} mm.
+                          </span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={breedtes !== null}
+                          onChange={(e) => setEigenBreedtes(e.target.checked ? startLadeBreedtes(ruimte, gekozen) : null)}
+                          className="sr-only peer"
+                        />
+                        <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
+                      </label>
+
+                      {breedtes && (
+                        <>
+                          {model.rand && (
+                            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3" role="note">
+                              <svg className="flex-shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+                              </svg>
+                              <p className="text-[12px] text-amber-800 leading-relaxed">
+                                <strong>Let op:</strong> dit model heeft een rand van {model.rand} mm aan beide zijden. De lades verdelen samen {ruimte} mm, niet de volle {tekenLengte} mm.
+                              </p>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap items-end gap-2.5 mt-4">
+                            {breedtes.map((b, i) => {
+                              const laatste = i === breedtes.length - 1
+                              const fout = b < LADE_MIN_MM || b > LADE_MAX_MM
+                              return (
+                                <div key={i}>
+                                  <label htmlFor={`meubel-lade-${i}`} className="block text-[11.5px] font-medium text-lx-text-secondary mb-1">
+                                    Lade {i + 1}{laatste ? ' (rest)' : ''}
+                                  </label>
+                                  <input
+                                    id={`meubel-lade-${i}`}
+                                    inputMode="numeric"
+                                    value={b}
+                                    readOnly={laatste}
+                                    aria-invalid={fout}
+                                    onChange={(e) => zetBreedte(i, e.target.value)}
+                                    className={`w-[72px] h-10 rounded-xl border text-center text-[14px] font-semibold outline-none px-2 ${
+                                      laatste ? 'bg-transparent text-lx-text-secondary' : 'bg-white text-lx-text-primary focus:border-lx-cta'
+                                    } ${fout ? 'border-red-400' : 'border-black/10'}`}
+                                  />
+                                </div>
+                              )
+                            })}
+                            <span className="text-[13px] text-lx-text-secondary pb-2.5">mm</span>
+                          </div>
+                          <p className={`text-[12px] mt-2 ${ladeFout ? 'text-red-600' : 'text-lx-text-muted'}`} role={ladeFout ? 'alert' : undefined}>
+                            {ladeFout ?? `De laatste lade krijgt wat overblijft van ${ruimte} mm.`}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">
@@ -608,8 +659,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
                 <Rij label="Model" waarde={model.naam} onEdit={() => setStep(1)} />
                 <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(2)} />
-                <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte, regaalMm), gekozen)}`} onEdit={() => setStep(2)} />
-                {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${regaalZijde}`} onEdit={() => setStep(2)} />}
+                <Rij label={isDuo ? 'Kasten' : 'Lades'} waarde={isDuo ? `Links ${duoBreedtes[0]} mm, rechts ${duoBreedtes[1]} mm, elk 1 lade` : `${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte, regaalMm), gekozen)}`} onEdit={() => setStep(2)} />
+                {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${isDuo ? 'in het midden' : regaalZijde}`} onEdit={() => setStep(2)} />}
                 <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />
                 <Rij label="Opties" waarde={meubelOptiesTekst({ logo, uitsparingen })} onEdit={() => setStep(2)} />
               </div>
@@ -740,7 +791,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
             breedtes={getLadeBreedtes(breedtes, ruimte, gekozen)}
             houtkleur={houtkleur}
             toonHout={toonHout}
-            regaal={model.regaal ? { breedte: regaalMm, zijde: regaalZijde } : null}
+            regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
           />
           <p className="text-[11px] text-lx-text-secondary text-center">Vooraanzicht, maten in mm · diepte {model.diepte} mm</p>
           <button
@@ -764,7 +815,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
               breedtes={getLadeBreedtes(breedtes, ruimte, gekozen)}
               houtkleur={houtkleur}
               toonHout={toonHout}
-              regaal={model.regaal ? { breedte: regaalMm, zijde: regaalZijde } : null}
+              regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
             />
             <p className="text-[12px] text-lx-text-secondary text-center mt-1">
               Vooraanzicht, maten in mm · hoogte {model.hoogte} mm · diepte {model.diepte} mm

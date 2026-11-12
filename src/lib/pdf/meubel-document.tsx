@@ -4,6 +4,7 @@ import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
 import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
+import { tekenIndeling } from '@/lib/meubel-tekening'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
 //   offerte: voor de klant van de dealer, met de brutoprijs (netto × factor)
@@ -94,7 +95,6 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   const MAX_H = 72
   const ruimteB = W - PAD_X * 2 - 30
   const { model, lengte } = meubel
-  const rand = model.rand ?? 0
   const breedtes = getLadeBreedtes(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)
   const schaal = Math.min(ruimteB / lengte, MAX_H / model.hoogte)
   const w = lengte * schaal
@@ -102,22 +102,13 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   const H = PAD_TOP + h + PAD_BOTTOM
   const x = (W - 30 - w) / 2
   const y = PAD_TOP
-  // De lades beginnen na de rand van het frame
-  // Een regaalkast links schuift de lades op; rechts sluit hij aan op de laatste lade
-  const regaalB = meubel.regaalBreedte * schaal
-  const regaalLinks = meubel.regaalBreedte > 0 && meubel.regaalZijde === 'links'
-  const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x + rand * schaal + (regaalLinks ? regaalB : 0)])
-  // Het vlak met de lades: binnen het frame, dat boven en soms ook onder doorloopt
-  const boven = y + (model.randBoven ? rand * schaal : 0)
-  const onder = y + h - (model.randOnder ? rand * schaal : 0)
-  const links = grenzen[0]
-  const rechts = grenzen[grenzen.length - 1]
+  // Zelfde indeling als de tekening op het scherm
+  const { vakken, links, rechts, boven, onder, scheidingen } = tekenIndeling({
+    model, breedtes, x, y, w, h, schaal,
+    regaal: meubel.regaalBreedte > 0 ? { breedte: meubel.regaalBreedte, zijde: meubel.regaalZijde } : null,
+  })
+  const heeftRand = (model.rand ?? 0) > 0
   const rijH = (onder - boven) / model.rijen
-  const heeftRegaal = meubel.regaalBreedte > 0
-  const regaalX = regaalLinks ? x + rand * schaal : rechts
-  const maatLinks = heeftRegaal ? Math.min(links, regaalX) : links
-  const maatRechts = heeftRegaal ? Math.max(rechts, regaalX + regaalB) : rechts
-  const toonLadeMaat = Math.min(...breedtes) * schaal > 26
   const lijn = { stroke: '#26282B', strokeWidth: 1 }
   const maat = { stroke: GRAY, strokeWidth: 0.6 }
   const tekst = { fontSize: 8, fill: DARK, fontFamily: 'Helvetica' }
@@ -125,15 +116,18 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   return (
     <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       <Rect x={x} y={y} width={w} height={h} fill="#F6F4EF" stroke="#26282B" strokeWidth={1.2} />
-      {(rand > 0 || heeftRegaal ? grenzen : grenzen.slice(1, -1)).map((gx, i) => <Line key={`k${i}`} x1={gx} y1={boven} x2={gx} y2={onder} {...lijn} />)}
-      {heeftRegaal && <Rect x={regaalX} y={boven} width={regaalB} height={onder - boven} fill="#D9D5CC" stroke="#26282B" strokeWidth={0.6} />}
-      {heeftRegaal && <Rect x={regaalX + 3} y={boven + 3} width={Math.max(0, regaalB - 6)} height={Math.max(0, onder - boven - 6)} fill="none" stroke="#26282B" strokeWidth={0.5} />}
-      {Array.from({ length: model.rijen - 1 }, (_, i) => (
-        <Line key={`r${i}`} x1={links} y1={boven + rijH * (i + 1)} x2={rechts} y2={boven + rijH * (i + 1)} {...lijn} />
+      {vakken.filter((v) => v.soort === 'regaal').map((v, i) => (
+        <React.Fragment key={`g${i}`}>
+          <Rect x={v.x0} y={boven} width={v.x1 - v.x0} height={onder - boven} fill="#D9D5CC" />
+          <Rect x={v.x0 + 3} y={boven + 3} width={Math.max(0, v.x1 - v.x0 - 6)} height={Math.max(0, onder - boven - 6)} fill="none" stroke="#26282B" strokeWidth={0.5} />
+        </React.Fragment>
       ))}
-
-      {model.randBoven && rand > 0 && <Line x1={maatLinks} y1={boven} x2={maatRechts} y2={boven} {...lijn} />}
-      {model.randOnder && rand > 0 && <Line x1={maatLinks} y1={onder} x2={maatRechts} y2={onder} {...lijn} />}
+      {scheidingen.map((gx, i) => <Line key={`k${i}`} x1={gx} y1={boven} x2={gx} y2={onder} {...lijn} />)}
+      {vakken.filter((v) => v.soort === 'lade').flatMap((v, vi) => Array.from({ length: model.rijen - 1 }, (_, i) => (
+        <Line key={`r${vi}-${i}`} x1={v.x0} y1={boven + rijH * (i + 1)} x2={v.x1} y2={boven + rijH * (i + 1)} {...lijn} />
+      )))}
+      {model.randBoven && heeftRand && <Line x1={links} y1={boven} x2={rechts} y2={boven} {...lijn} />}
+      {model.randOnder && heeftRand && <Line x1={links} y1={onder} x2={rechts} y2={onder} {...lijn} />}
 
       {/* Lengte */}
       <Line x1={x} y1={y - 12} x2={x + w} y2={y - 12} {...maat} />
@@ -147,15 +141,11 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
       <Line x1={x + w + 5} y1={y + h} x2={x + w + 15} y2={y + h} {...maat} />
       <SvgText x={x + w + 17} y={y + h / 2 + 3} style={{ ...tekst, fontFamily: 'Helvetica-Bold' }}>{String(model.hoogte)}</SvgText>
 
-      {/* Per lade */}
-      <Line x1={maatLinks} y1={y + h + 11} x2={maatRechts} y2={y + h + 11} {...maat} />
-      {heeftRegaal && <Line x1={regaalLinks ? regaalX : regaalX + regaalB} y1={y + h + 5} x2={regaalLinks ? regaalX : regaalX + regaalB} y2={y + h + 15} {...maat} />}
-      {heeftRegaal && regaalB > 22 && (
-        <SvgText x={regaalX + regaalB / 2} y={y + h + 24} textAnchor="middle" style={{ ...tekst, fill: GRAY }}>{String(meubel.regaalBreedte)}</SvgText>
-      )}
-      {grenzen.map((gx, i) => <Line key={`m${i}`} x1={gx} y1={y + h + 5} x2={gx} y2={y + h + 15} {...maat} />)}
-      {toonLadeMaat && breedtes.map((b, i) => (
-        <SvgText key={`t${i}`} x={(grenzen[i] + grenzen[i + 1]) / 2} y={y + h + 24} textAnchor="middle" style={{ ...tekst, fill: GRAY }}>{formatMm(b)}</SvgText>
+      {/* Per vak */}
+      <Line x1={links} y1={y + h + 11} x2={rechts} y2={y + h + 11} {...maat} />
+      {[links, ...vakken.map((v) => v.x1)].map((gx, i) => <Line key={`m${i}`} x1={gx} y1={y + h + 5} x2={gx} y2={y + h + 15} {...maat} />)}
+      {vakken.filter((v) => v.x1 - v.x0 > 22).map((v, i) => (
+        <SvgText key={`t${i}`} x={(v.x0 + v.x1) / 2} y={y + h + 24} textAnchor="middle" style={{ ...tekst, fill: GRAY }}>{formatMm(v.breedte)}</SvgText>
       ))}
     </Svg>
   )

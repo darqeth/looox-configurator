@@ -4,7 +4,7 @@ import {
   getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT, getMeubelPrijsOpbouw,
   getAanvraagBereik, getAanvraagLadeOpties, getMeubelOrderOpbouw, formatPct,
   MEUBEL_MODELLEN, getHoutkleuren, getMeubelHoogte, ladeRuimte, meubelOptiesTekst,
-  getRegaalBreedte,
+  getRegaalBreedte, getDuoPrijs, getDuoReeksen, getLengteBereik as lengteBereik,
   formatMm, ladeBreedtesTekst, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
 } from '../src/lib/meubel-config'
 
@@ -395,5 +395,44 @@ test.describe('Regal-modellen: regaalkast', () => {
     expect(getRegaalBreedte(facetRegal, 350)).toBe(350)
     expect(getRegaalBreedte(facetRegal, 900)).toBe(400)
     expect(getRegaalBreedte(getMeubelModel('facet')!, 350)).toBe(0)
+  })
+})
+
+test.describe('Drawer Box Regal: twee kasten met een regaalkast ertussen', () => {
+  const model = getMeubelModel('drawer-box-regal')!
+  const cfg = (links: number, rechts: number, regaal = 400) => ({
+    modelId: 'drawer-box-regal', lengte: links + rechts + regaal, lades: 2, ladeBreedtes: [links, rechts],
+    houtkleur: 'old-grey', regaalBreedte: regaal, regaalZijde: 'midden' as const, quantity: 1,
+  })
+
+  test('reeksen uit de prijslijst in mm', () => {
+    expect(getDuoReeksen(model)).toEqual([{ min: 560, max: 800, prijs: 257400 }, { min: 801, max: 1000, prijs: 285896 }])
+    expect(lengteBereik(model)).toEqual({ min: 1420, max: 2500 })
+  })
+
+  test('prijs volgt de reeks van beide kasten', () => {
+    expect(calcMeubelNettoCents(cfg(560, 800))).toBe(257400)
+    expect(calcMeubelNettoCents(cfg(700, 750))).toBe(257400)
+    expect(calcMeubelNettoCents(cfg(801, 1000))).toBe(285896)
+    expect(calcMeubelNettoCents({ ...cfg(700, 700), houtkleur: 'white', uitsparingen: 1 })).toBe(257400 + 4160 + 1040)
+  })
+
+  test('kasten in verschillende reeksen of buiten bereik kunnen niet', () => {
+    expect(getDuoPrijs(model, [750, 950])).toBeNull()
+    expect(getDuoPrijs(model, [559, 700])).toBeNull()
+    expect(getDuoPrijs(model, [900, 1001])).toBeNull()
+    expect(calcMeubelNettoCents(cfg(750, 950))).toBeNull()
+    expect(valideerMeubelConfig(cfg(750, 950))).toContain('dezelfde reeks')
+  })
+
+  test('validatie: lengte is de som, regaalkast 300 tot 500 mm, geen op aanvraag', () => {
+    expect(valideerMeubelConfig(cfg(700, 780))).toBeNull()
+    expect(valideerMeubelConfig({ ...cfg(700, 780), lengte: 2000 })).toContain('lengte')
+    expect(valideerMeubelConfig(cfg(700, 780, 299))).toContain('regaalkast')
+    expect(valideerMeubelConfig({ ...cfg(700, 780), opAanvraag: true })).toContain('bestaat niet')
+  })
+
+  test('de regaalbreedte verandert de prijs niet', () => {
+    expect(calcMeubelNettoCents(cfg(700, 700, 300))).toBe(calcMeubelNettoCents(cfg(700, 700, 500)))
   })
 })

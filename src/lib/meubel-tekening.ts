@@ -1,0 +1,68 @@
+import type { MeubelModel } from '@/lib/meubel-config'
+
+// Indeling van het vooraanzicht, gedeeld door de tekening op het scherm en in de
+// PDF: de vakken (lades en regaalkast) van links naar rechts, in tekeneenheden.
+
+export type RegaalZijde = 'links' | 'rechts' | 'midden'
+
+export interface TekenVak {
+  soort: 'lade' | 'regaal'
+  x0: number
+  x1: number
+  /** Breedte in mm, voor het maatlabel */
+  breedte: number
+}
+
+export interface TekenIndeling {
+  vakken: TekenVak[]
+  /** Linker- en rechterkant van alle vakken samen (binnen de rand) */
+  links: number
+  rechts: number
+  /** Boven- en onderkant van het vlak met de vakken (binnen de rand als die doorloopt) */
+  boven: number
+  onder: number
+  /** Alle verticale scheidingen, zonder de buitenkant van het korpus */
+  scheidingen: number[]
+}
+
+export function tekenIndeling(opties: {
+  model: MeubelModel
+  /** Breedte per lade in mm */
+  breedtes: number[]
+  regaal?: { breedte: number; zijde: RegaalZijde } | null
+  /** Linkerbovenhoek en maat van het korpus in tekeneenheden */
+  x: number
+  y: number
+  w: number
+  h: number
+  /** Tekeneenheden per mm */
+  schaal: number
+}): TekenIndeling {
+  const { model, breedtes, regaal, x, y, w, h, schaal } = opties
+  const rand = (model.rand ?? 0) * schaal
+  const vakken: TekenVak[] = []
+  let cx = x + rand
+  const regaalVak = () => {
+    if (!regaal || regaal.breedte <= 0) return
+    vakken.push({ soort: 'regaal', x0: cx, x1: cx + regaal.breedte * schaal, breedte: regaal.breedte })
+    cx += regaal.breedte * schaal
+  }
+  if (regaal?.zijde === 'links') regaalVak()
+  breedtes.forEach((b, i) => {
+    // In het midden: de regaalkast staat na de eerste lade (Drawer Box Regal)
+    if (regaal?.zijde === 'midden' && i === 1) regaalVak()
+    vakken.push({ soort: 'lade', x0: cx, x1: cx + b * schaal, breedte: b })
+    cx += b * schaal
+  })
+  if (regaal?.zijde === 'rechts') regaalVak()
+
+  const links = vakken[0]?.x0 ?? x
+  const rechts = vakken[vakken.length - 1]?.x1 ?? x + w
+  const buiten = (gx: number) => Math.abs(gx - x) < 0.5 || Math.abs(gx - (x + w)) < 0.5
+  const scheidingen = [...new Set([links, ...vakken.map((v) => v.x1)].map((gx) => Math.round(gx * 100) / 100))].filter((gx) => !buiten(gx))
+  return {
+    vakken, links, rechts, scheidingen,
+    boven: y + (model.randBoven ? rand : 0),
+    onder: y + h - (model.randOnder ? rand : 0),
+  }
+}

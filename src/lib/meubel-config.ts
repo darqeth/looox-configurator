@@ -62,6 +62,12 @@ export interface MeubelModel {
    * en een breedte binnen dit bereik in mm. De lengte in de prijslijst is de totale lengte.
    */
   regaal?: { min: number; max: number }
+  /**
+   * Twee kasten met elk één lade en de regaalkast ertussen (Drawer Box Regal). Er is geen
+   * lengte-invoer: de dealer kiest per kast een breedte. Beide breedtes moeten in dezelfde
+   * reeks uit de prijslijst vallen (cm, zoals in de prijslijst); de lengte is de som.
+   */
+  duo?: { min: number; max: number; prijs: number }[]
   /** Meerdere hoogtes zonder prijsverschil (Full-Frame, U-Frame); `hoogte` is de standaard */
   hoogtes?: number[]
   /** Houtkleuren die bij dit model niet kunnen (Stripes: geen White) */
@@ -336,6 +342,23 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     ],
   },
   {
+    id: 'drawer-box-regal',
+    categorie: 'wastafelmeubels',
+    naam: 'Drawer Box Regal',
+    omschrijving: 'Twee Drawer Box-kasten met een open regaalkast ertussen.',
+    afbeelding: '/images/meubels/model-drawer-box-regal.webp',
+    diepte: 460,
+    hoogte: 450,
+    rijen: 1,
+    regaal: { min: 300, max: 500 },
+    geenAanvraag: true,
+    duo: [
+      { min: 56, max: 80, prijs: 257400 },
+      { min: 81, max: 100, prijs: 285896 },
+    ],
+    staffels: [],
+  },
+  {
     id: 'block',
     categorie: 'wastafelmeubels',
     naam: 'Block',
@@ -388,6 +411,14 @@ export function getMeubelModel(id: string): MeubelModel | null {
 
 /** Standaardbereik van de lengte in mm. */
 export function getLengteBereik(model: MeubelModel): { min: number; max: number } {
+  if (model.duo) {
+    // Twee kasten plus de regaalkast ertussen
+    const regaal = model.regaal ?? { min: 0, max: 0 }
+    return {
+      min: 2 * Math.min(...model.duo.map((d) => d.min)) * 10 + regaal.min,
+      max: 2 * Math.max(...model.duo.map((d) => d.max)) * 10 + regaal.max,
+    }
+  }
   return {
     min: Math.min(...model.staffels.map((s) => s.min)) * 10,
     max: Math.max(...model.staffels.map((s) => s.max)) * 10,
@@ -407,12 +438,31 @@ function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
  * uit de prijslijst, zolang een lade bij gelijke verdeling 350 tot 1200 mm is.
  */
 export function getLadeOpties(model: MeubelModel, lengte: number, regaalBreedte = 0): number[] {
+  // Duo: altijd twee kasten met elk één lade
+  if (model.duo) return [2]
   const staffel = findStaffel(model, lengte)
   if (!staffel) return []
   return Object.keys(staffel.prijzen)
     .map(Number)
     .filter((n) => ladeRuimte(model, lengte, regaalBreedte) / n >= LADE_MIN_MM && ladeRuimte(model, lengte, regaalBreedte) / n <= LADE_MAX_MM)
     .sort((a, b) => a - b)
+}
+
+/** Bereik van een kastbreedte in mm per reeks van een duo-model: [560, 800], [801, 1000]. */
+export function getDuoReeksen(model: MeubelModel): { min: number; max: number; prijs: number }[] {
+  return (model.duo ?? []).map((d, i, alle) => ({
+    // Zelfde grensregel als bij de staffels: boven de bovengrens geldt de volgende reeks
+    min: i === 0 ? d.min * 10 : alle[i - 1].max * 10 + 1,
+    max: d.max * 10,
+    prijs: d.prijs,
+  }))
+}
+
+/** Netto prijs van een duo-model: beide kastbreedtes in dezelfde reeks, anders null. */
+export function getDuoPrijs(model: MeubelModel, breedtes: LadeBreedtes | undefined): number | null {
+  if (!model.duo || !breedtes || breedtes.length !== 2 || breedtes.some((b) => !Number.isInteger(b))) return null
+  const reeks = getDuoReeksen(model).find((r) => breedtes.every((b) => b >= r.min && b <= r.max))
+  return reeks?.prijs ?? null
 }
 
 /** Breedte die de lades samen innemen: de lengte min de rand aan beide zijden en min de regaalkast. */
@@ -455,21 +505,27 @@ export interface MeubelInput {
   hoogte?: number
   /** Breedte van de regaalkast in mm (Regal-modellen); geen invloed op de prijs, wel op de ladeverdeling */
   regaalBreedte?: number
+  /** Kastbreedtes bij een duo-model (bepalen daar de prijs); bij andere modellen niet nodig voor de prijs */
+  ladeBreedtes?: LadeBreedtes
   /** Kant van de regaalkast */
-  regaalZijde?: 'links' | 'rechts'
+  regaalZijde?: 'links' | 'rechts' | 'midden'
 }
 
 /** Netto per stuk in centen, of null bij een ongeldige combinatie. Niet tonen buiten de bestelstap. */
 export function calcMeubelNettoCents(input: MeubelInput): number | null {
   const model = getMeubelModel(input.modelId)
   if (!model || input.opAanvraag) return null
-  if (!getLadeOpties(model, input.lengte, getRegaalBreedte(model, input.regaalBreedte)).includes(input.lades)) return null
-  const staffel = findStaffel(model, input.lengte)
   const kleur = getHoutkleuren(model).find((k) => k.id === input.houtkleur)
-  if (!staffel || !kleur) return null
   const uitsparingen = input.uitsparingen ?? 0
-  if (!Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX) return null
-  return staffel.prijzen[input.lades] + kleur.meerprijs + uitsparingen * UITSPARING_NETTO_CENTS
+  if (!kleur || !Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX) return null
+  // Duo (Drawer Box Regal): prijs volgt uit de twee kastbreedtes, niet uit een lengtestaffel
+  const basis = model.duo
+    ? getDuoPrijs(model, input.ladeBreedtes)
+    : getLadeOpties(model, input.lengte, getRegaalBreedte(model, input.regaalBreedte)).includes(input.lades)
+      ? findStaffel(model, input.lengte)?.prijzen[input.lades] ?? null
+      : null
+  if (basis === null) return null
+  return basis + kleur.meerprijs + uitsparingen * UITSPARING_NETTO_CENTS
 }
 
 export function parseMeubelFactor(v: unknown): number {
@@ -586,13 +642,21 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
     const bereik = getAanvraagBereik(model)
     if (!Number.isInteger(c.lengte) || c.lengte < bereik.min || c.lengte > bereik.max) return `Op aanvraag kan van ${bereik.min} tot ${bereik.max} mm.`
     if (!getAanvraagLadeOpties(ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte))).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
-  } else if (calcMeubelNettoCents(c) === null) {
-    return 'Deze combinatie van model, lengte, lades en houtkleur bestaat niet.'
+  } else {
+    // Duo: eerst de eigen melding over de kastbreedtes, die zegt wat er wel kan
+    const duoModel = getMeubelModel(c.modelId)
+    if (duoModel?.duo && getDuoPrijs(duoModel, c.ladeBreedtes) === null) {
+      return `Beide kasten moeten in dezelfde reeks vallen: ${getDuoReeksen(duoModel).map((r) => `${r.min} tot ${r.max} mm`).join(' of ')}.`
+    }
+    if (calcMeubelNettoCents(c) === null) return 'Deze combinatie van model, lengte, lades en houtkleur bestaat niet.'
   }
   const model = getMeubelModel(c.modelId)!
   if (model.regaal) {
     if (c.regaalBreedte == null || getRegaalBreedte(model, c.regaalBreedte) !== c.regaalBreedte) return `De regaalkast moet tussen ${model.regaal.min} en ${model.regaal.max} mm breed zijn.`
-    if (c.regaalZijde !== 'links' && c.regaalZijde !== 'rechts') return 'Kies de kant van de regaalkast.'
+    if (!model.duo && c.regaalZijde !== 'links' && c.regaalZijde !== 'rechts') return 'Kies de kant van de regaalkast.'
+  }
+  if (model.duo) {
+    if (c.lades !== 2 || c.lengte !== (c.ladeBreedtes as number[]).reduce((som, b) => som + b, 0) + (c.regaalBreedte ?? 0)) return 'De lengte klopt niet met de kasten en de regaalkast.'
   }
   const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte)), c.lades)
   if (ladeFout) return ladeFout

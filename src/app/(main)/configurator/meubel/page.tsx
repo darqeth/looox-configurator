@@ -2,10 +2,12 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import MeubelConfigurator from './meubel-configurator'
+import { isUuid, projectKop } from '@/lib/project'
 
 export const metadata = { title: 'Tailor-Made | LoooX Configurator' }
 
-export default async function MeubelPage() {
+export default async function MeubelPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+  const { project: projectParam } = await searchParams
   const supabase = await createClient()
   const { data: claimsData } = await supabase.auth.getClaims()
   const userId = claimsData?.claims?.sub
@@ -18,5 +20,18 @@ export default async function MeubelPage() {
   ])
   if (!toegang) redirect('/configurator/nieuw')
 
-  return <MeubelConfigurator factor={factor} />
+  // ?project=<id>: dit product komt als regel bij een bestaand project (RLS bepaalt of dat mag)
+  let project = null
+  if (isUuid(projectParam)) {
+    const { data: regels } = await supabase
+      .from('configurations')
+      .select('id, name, total_price, status, width, height, selected_options')
+      .eq('project_id', projectParam)
+      .order('created_at')
+    if (!regels || regels.length === 0 || regels.some((r) => r.status === 'ordered')) redirect('/configuraties')
+    const kop = projectKop(regels)
+    project = { id: projectParam, naam: kop.naam, referentie: kop.referentie }
+  }
+
+  return <MeubelConfigurator factor={factor} project={project} />
 }

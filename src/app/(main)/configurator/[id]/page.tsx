@@ -17,7 +17,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   if (!user) redirect('/login')
 
   const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([
-    supabase.from('configurations').select('id, name, width, height, selected_options, status').eq('id', id).single(),
+    supabase.from('configurations').select('id, name, width, height, selected_options, status, project_id').eq('id', id).single(),
     supabase.from('profiles').select('korting, is_international, is_groothandel, configurator_access').eq('id', user.id).single(),
     supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle(),
   ])
@@ -40,6 +40,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     return (
       <MeubelConfigurator
         factor={factor}
+        project={config.project_id ? { id: config.project_id as string, naam: config.name ?? '', referentie: meubel.reference } : null}
         initialConfig={{
           id: config.id,
           modelId: meubel.model.id,

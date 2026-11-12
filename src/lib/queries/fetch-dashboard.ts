@@ -14,6 +14,7 @@ export type DashboardConfig = {
   width: number | null
   height: number | null
   selected_options: Record<string, unknown> | null
+  project_id?: string | null
 }
 
 type CircleMilestoneEnriched = {
@@ -102,7 +103,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
   ] = await Promise.all([
     getCompanyUserIds(supabase, user.id, companyId),
     supabase.from('notifications').select('id, title, body, type, published_at').order('published_at', { ascending: false }).limit(20),
-    supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
+    supabase.from('configurations').select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, project_id').eq('user_id', user.id).order('updated_at', { ascending: false }).limit(5),
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', user.id).in('status', ['pending', 'confirmed']),
     supabase.from('changelogs').select('id, title, body, published_at').order('published_at', { ascending: false }).limit(20),
     supabase.from('rss_cache').select('id, title, url, summary, image_url, published_at').order('published_at', { ascending: false }).limit(4),

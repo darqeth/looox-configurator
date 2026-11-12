@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import MeubelOrderButton from './meubel-order-button'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
@@ -653,7 +655,15 @@ function OrderButtonInner({ configId, configName, metaSummary, price, korting, i
 
 // Meubels (configurator 2.0) hebben een eigen bestelmodal met nettoprijs; de
 // lijsten geven het uitgelezen meubel mee en krijgen dan die knop.
-export default function OrderButton({ meubel, ...props }: OrderButtonProps & { meubel?: OpgeslagenMeubel | null }) {
+export default function OrderButton({ meubel, projectId, ...props }: OrderButtonProps & { meubel?: OpgeslagenMeubel | null; projectId?: string | null }) {
+  // Een regel van een project wordt met het hele project besteld, niet los
+  if (projectId) {
+    return (
+      <Link href={`/projecten/${projectId}`} className="px-3 py-2.5 rounded-lg border border-lx-cta/40 text-lx-cta text-[12.5px] font-semibold hover:bg-lx-icon-bg transition-colors whitespace-nowrap">
+        Project →
+      </Link>
+    )
+  }
   if (meubel) return <MeubelOrderButton configId={props.configId} configName={props.configName} meubel={meubel} />
   return <OrderButtonInner {...props} />
 }

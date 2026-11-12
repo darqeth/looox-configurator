@@ -40,7 +40,14 @@ export interface MeubelInitialConfig {
   description: string
 }
 
-export default function MeubelConfigurator({ factor, initialConfig }: { factor: number; initialConfig?: MeubelInitialConfig }) {
+/** Project (winkelmandje) waar deze regel bij komt of al bij hoort; naam en referentie volgen het project */
+export interface MeubelProject {
+  id: string
+  naam: string
+  referentie: string
+}
+
+export default function MeubelConfigurator({ factor, initialConfig, project }: { factor: number; initialConfig?: MeubelInitialConfig; project?: MeubelProject | null }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const isEditing = !!initialConfig
@@ -74,8 +81,8 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   // Alleen weergave, wordt niet opgeslagen
   const [toonHout, setToonHout] = useState(true)
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
-  const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
-  const [reference, setReference] = useState(initialConfig?.reference ?? '')
+  const [projectName, setProjectName] = useState(project?.naam ?? initialConfig?.projectName ?? '')
+  const [reference, setReference] = useState(project?.referentie ?? initialConfig?.reference ?? '')
   const [description, setDescription] = useState(initialConfig?.description ?? '')
 
   if (!categorie || step === 0) {
@@ -219,7 +226,8 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
     setEigenBreedtes(nieuw)
   }
 
-  function handleSave() {
+  // nieuwProject: opslaan als eerste regel van een project, om er daarna een product aan toe te voegen
+  function handleSave(nieuwProject = false) {
     if (!geldig || !projectName.trim() || !model) return
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
@@ -229,9 +237,11 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
     startTransition(async () => {
       try {
         const payload = { ...basis, attachmentUrl: await uploadTekening() }
-        if (initialConfig) await updateMeubelConfiguration(initialConfig.id, payload)
-        else await saveMeubelConfiguration(payload)
-        router.push('/configuraties')
+        const { projectId } = initialConfig
+          ? await updateMeubelConfiguration(initialConfig.id, payload)
+          : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject })
+        // Een regel van een project gaat terug naar het project, een losse configuratie naar de lijst
+        router.push(projectId ? `/projecten/${projectId}` : '/configuraties')
       } catch (e) {
         console.error(e)
         toast(e instanceof Error ? e.message : 'Opslaan mislukt. Probeer het opnieuw.')
@@ -590,32 +600,44 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
 
               <div className="space-y-3">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary">Projectgegevens</p>
-                <div>
-                  <label htmlFor="meubel-project" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">
-                    Projectnaam <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    id="meubel-project"
-                    type="text"
-                    maxLength={200}
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="Bijv. Badkamer renovatie De Vries"
-                    className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="meubel-referentie" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Referentie</label>
-                  <input
-                    id="meubel-referentie"
-                    type="text"
-                    maxLength={200}
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    placeholder="Eigen ordernummer of klantnaam"
-                    className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
-                  />
-                </div>
+                {project ? (
+                  <div className="bg-lx-panel-bg rounded-xl px-4 py-3">
+                    <p className="text-[13px] font-semibold text-lx-text-primary">{project.naam}</p>
+                    <p className="text-[12px] text-lx-text-secondary mt-0.5">
+                      {project.referentie ? `Referentie: ${project.referentie}. ` : ''}
+                      {isEditing ? 'Deze regel hoort bij dit project.' : 'Dit product wordt aan dit project toegevoegd.'}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label htmlFor="meubel-project" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">
+                        Projectnaam <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        id="meubel-project"
+                        type="text"
+                        maxLength={200}
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        placeholder="Bijv. Badkamer renovatie De Vries"
+                        className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="meubel-referentie" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Referentie</label>
+                      <input
+                        id="meubel-referentie"
+                        type="text"
+                        maxLength={200}
+                        value={reference}
+                        onChange={(e) => setReference(e.target.value)}
+                        placeholder="Eigen ordernummer of klantnaam"
+                        className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
+                      />
+                    </div>
+                  </>
+                )}
                 <div>
                   <label htmlFor="meubel-opmerking" className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">Opmerking</label>
                   <textarea
@@ -630,12 +652,21 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
               </div>
 
               <button
-                onClick={handleSave}
+                onClick={() => handleSave()}
                 disabled={!projectName.trim() || isPending}
                 className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
-                {isPending ? 'Opslaan…' : isEditing ? 'Wijzigingen opslaan' : opAanvraag ? 'Opslaan als aanvraag' : 'Opslaan als offerte'}
+                {isPending ? 'Opslaan…' : isEditing ? 'Wijzigingen opslaan' : project ? 'Toevoegen aan project' : opAanvraag ? 'Opslaan als aanvraag' : 'Opslaan als offerte'}
               </button>
+              {!isEditing && !project && (
+                <button
+                  onClick={() => handleSave(true)}
+                  disabled={!projectName.trim() || isPending}
+                  className="w-full h-11 rounded-xl border border-black/10 text-lx-text-primary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Opslaan en nog een product toevoegen
+                </button>
+              )}
               {!projectName.trim() && (
                 <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>
               )}

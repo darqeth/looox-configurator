@@ -10,6 +10,7 @@ import {
   MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, getMeubelHoogte, getMeubelModel, valideerMeubelConfig,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
+import { projectKop } from '@/lib/project'
 
 const meubelInputSchema = z.object({
   modelId: z.string().max(40),
@@ -22,6 +23,10 @@ const meubelInputSchema = z.object({
   logo: z.boolean().optional(),
   uitsparingen: z.number().int().min(0).max(UITSPARING_MAX).optional(),
   attachmentUrl: z.string().max(1000).nullish(),
+  /** Toevoegen aan een bestaand project (winkelmandje) */
+  projectId: z.string().uuid().nullish(),
+  /** Opslaan als eerste regel van een nieuw project */
+  nieuwProject: z.boolean().optional(),
   quantity: z.number().int().min(1).max(MEUBEL_AANTAL_MAX),
   projectName: z.string().trim().min(1, 'Projectnaam is verplicht').max(200),
   reference: z.string().max(200),
@@ -55,6 +60,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
   return {
     supabase,
     userId: user.id,
+    input,
     rij: {
       name: input.projectName,
       // De kolommen zijn in cm, zoals bij spiegels; de exacte mm staan in de opties
@@ -96,33 +102,68 @@ async function bouwRij(rawInput: SaveMeubelInput) {
   }
 }
 
-export async function saveMeubelConfiguration(rawInput: SaveMeubelInput) {
-  const { supabase, userId, rij } = await bouwRij(rawInput)
-  const { error } = await supabase.from('configurations').insert({
+export async function saveMeubelConfiguration(rawInput: SaveMeubelInput): Promise<{ id: string; projectId: string | null }> {
+  const { supabase, userId, rij, input } = await bouwRij(rawInput)
+
+  // Project (winkelmandje): een regel erbij in een bestaand project, of de eerste regel van een nieuw
+  let projectId: string | null = null
+  let naam = rij.name
+  let opties = rij.selected_options
+  if (input.projectId) {
+    // RLS bepaalt of de aanroeper dit project mag zien; naam en referentie volgen het project
+    const { data: regels } = await supabase
+      .from('configurations')
+      .select('id, name, total_price, status, width, height, selected_options')
+      .eq('project_id', input.projectId)
+      .order('created_at')
+    if (!regels || regels.length === 0) throw new Error('Project niet gevonden')
+    if (regels.some((r) => r.status === 'ordered')) throw new Error('Dit project is al besteld; er kan geen regel meer bij')
+    const kop = projectKop(regels)
+    projectId = input.projectId
+    naam = kop.naam
+    opties = { ...opties, reference: kop.referentie }
+  } else if (input.nieuwProject) {
+    projectId = crypto.randomUUID()
+  }
+
+  const { data, error } = await supabase.from('configurations').insert({
     ...rij,
+    name: naam,
+    selected_options: opties,
+    project_id: projectId,
     user_id: userId,
     product_id: DEFAULT_PRODUCT_ID,
     status: 'saved',
     article_number: generateArticleNumber(),
-  })
-  if (error) throw new Error(error.message)
+  }).select('id').single()
+  if (error || !data) throw new Error(error?.message ?? 'Opslaan mislukt')
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
+  if (projectId) revalidatePath(`/projecten/${projectId}`)
+  return { id: data.id as string, projectId }
 }
 
-export async function updateMeubelConfiguration(configId: string, rawInput: SaveMeubelInput) {
+export async function updateMeubelConfiguration(configId: string, rawInput: SaveMeubelInput): Promise<{ projectId: string | null }> {
   if (!z.string().uuid().safeParse(configId).success) throw new Error('Ongeldige configuratie')
   const { supabase, rij } = await bouwRij(rawInput)
 
   // Alleen een bestaand meubel bijwerken, nooit een spiegel omzetten
-  const { data: bestaand } = await supabase.from('configurations').select('selected_options, status').eq('id', configId).maybeSingle()
+  const { data: bestaand } = await supabase.from('configurations').select('selected_options, status, name, project_id').eq('id', configId).maybeSingle()
   const opts = (bestaand?.selected_options ?? {}) as { shape?: string }
   if (!bestaand || opts.shape !== MEUBEL_SHAPE) throw new Error('Configuratie niet gevonden')
   if (bestaand.status === 'ordered') throw new Error('Een bestelde configuratie kan niet meer worden aangepast')
 
   // Geen .eq('user_id'): RLS staat eigenaar én manager binnen het bedrijf toe.
   const { data, error } = await supabase.from('configurations')
-    .update({ ...rij, updated_at: new Date().toISOString() })
+    .update({
+      ...rij,
+      // Een regel in een project houdt de naam en referentie van het project
+      ...(bestaand.project_id && {
+        name: bestaand.name,
+        selected_options: { ...rij.selected_options, reference: (bestaand.selected_options as { reference?: string } | null)?.reference ?? '' },
+      }),
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', configId)
     .select('id')
   if (error) throw new Error(error.message)
@@ -131,4 +172,7 @@ export async function updateMeubelConfiguration(configId: string, rawInput: Save
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
   revalidatePath(`/configurator/${configId}`)
+  const projectId = (bestaand.project_id as string | null) ?? null
+  if (projectId) revalidatePath(`/projecten/${projectId}`)
+  return { projectId }
 }

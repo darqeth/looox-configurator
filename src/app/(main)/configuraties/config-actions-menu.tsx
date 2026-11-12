@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useQueryClient } from '@tanstack/react-query'
 import type { ConfigurationsData } from '@/lib/queries/fetch-configurations'
 import { deleteConfiguration } from '@/lib/actions/configurator'
+import { startProjectVanConfig } from '@/lib/actions/project'
+import { useRouter } from 'next/navigation'
 import { toast } from '@/components/toast'
 
 interface Props {
@@ -14,9 +16,29 @@ interface Props {
   canDownload: boolean
   canEdit: boolean
   canDelete: boolean
+  /** Project waar deze regel al bij hoort (winkelmandje) */
+  projectId?: string | null
+  /** Toon "Product toevoegen": maakt van deze configuratie een project. Alleen met Tailor-Made toegang. */
+  kanProject?: boolean
 }
 
-export default function ConfigActionsMenu({ configId, configName, canDownload, canEdit, canDelete }: Props) {
+export default function ConfigActionsMenu({ configId, configName, canDownload, canEdit, canDelete, projectId, kanProject }: Props) {
+  const router = useRouter()
+  const [projectBezig, setProjectBezig] = useState(false)
+
+  // Losse configuratie wordt de eerste regel van een project; daarna naar het project
+  async function naarProject() {
+    setProjectBezig(true)
+    try {
+      const id = projectId ?? (await startProjectVanConfig(configId)).projectId
+      queryClient.invalidateQueries({ queryKey: ['configurations'] })
+      router.push(`/projecten/${id}`)
+    } catch (e) {
+      console.error(e)
+      toast(e instanceof Error ? e.message : 'Project openen mislukt. Probeer het opnieuw.')
+      setProjectBezig(false)
+    }
+  }
   const [open, setOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -104,6 +126,18 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
               </svg>
               Bewerken
             </Link>
+          )}
+          {(projectId || (kanProject && canEdit)) && (
+            <button
+              onClick={naarProject}
+              disabled={projectBezig}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] text-lx-text-primary hover:bg-lx-panel-bg transition-colors cursor-pointer disabled:opacity-60 text-left"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 7h18M3 12h18M3 17h10" /><path d="M18 14v6M15 17h6" />
+              </svg>
+              {projectId ? 'Naar project' : 'Product toevoegen'}
+            </button>
           )}
           {canDelete && (
             <>

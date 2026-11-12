@@ -19,6 +19,8 @@ export type ConfigRow = {
   height: number | null
   selected_options: Record<string, unknown> | null
   user_id: string
+  /** Project (winkelmandje) waar deze regel bij hoort; null = losse configuratie */
+  project_id: string | null
 }
 
 export type ConfigurationsData = {
@@ -110,7 +112,7 @@ export async function fetchConfigurations(params: {
     (() => {
       const q = supabase
         .from('configurations')
-        .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
+        .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id, project_id', { count: 'exact' })
         .eq('user_id', viewUserId)
         .eq('status', 'saved')
       const gefilterd = soort === 'meubels'

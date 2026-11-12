@@ -228,6 +228,7 @@ export function ConfiguratiesContent({
                           <p className="text-[13px] font-semibold text-lx-text-primary truncate leading-snug">
                             {config.name ?? 'Naamloze configuratie'}
                             {isProjectspiegel && <ProjectBadge className="ml-1.5" />}
+                            {config.project_id && <span className="ml-1.5 align-middle text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-lx-icon-bg text-lx-cta">Project</span>}
                           </p>
                           <p className="text-[13px] font-bold text-lx-text-primary flex-shrink-0">
                             {shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : `€${displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
@@ -243,7 +244,7 @@ export function ConfiguratiesContent({
                             <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
                           )}
                           {permissions.canOrder && (
-                            <OrderButton meubel={meubel} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
+                            <OrderButton meubel={meubel} projectId={config.project_id} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
                           )}
                           <ConfigActionsMenu
                             configId={config.id}
@@ -251,6 +252,8 @@ export function ConfiguratiesContent({
                             canDownload={true}
                             canEdit={permissions.canConfigure}
                             canDelete={canDelete}
+                          projectId={config.project_id}
+                          kanProject={meubelToegang}
                           />
                         </div>
                       </div>
@@ -268,6 +271,7 @@ export function ConfiguratiesContent({
                         <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">
                           {config.name ?? 'Naamloze configuratie'}
                           {isProjectspiegel && <ProjectBadge className="ml-1.5" />}
+                            {config.project_id && <span className="ml-1.5 align-middle text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-lx-icon-bg text-lx-cta">Project</span>}
                         </p>
                         <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
                           {config.article_number && <span className="font-mono">{config.article_number} · </span>}
@@ -294,7 +298,7 @@ export function ConfiguratiesContent({
                       {/* Col: Bestellen / Aanvragen CTA */}
                       {permissions.canOrder && (
                         <div className="w-[96px] flex-shrink-0 flex justify-end">
-                          <OrderButton meubel={meubel} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
+                          <OrderButton meubel={meubel} projectId={config.project_id} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
                         </div>
                       )}
 
@@ -309,6 +313,8 @@ export function ConfiguratiesContent({
                           canDownload={true}
                           canEdit={permissions.canConfigure}
                           canDelete={canDelete}
+                          projectId={config.project_id}
+                          kanProject={meubelToegang}
                         />
                       </div>
                     </div>

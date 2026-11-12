@@ -3,7 +3,7 @@ import { projectRegel, projectTotaal, projectKop, isUuid } from '../src/lib/proj
 
 const basis = { id: 'a', name: 'Badkamer De Vries', status: 'saved', width: 200, height: 60 }
 const meubelOpts = (extra = {}, top = {}) => ({
-  shape: 'meubel', quantity: 2, reference: 'REF-1',
+  shape: 'meubel', quantity: 2, reference: 'REF-1', attachmentUrl: 'https://example.com/storage/v1/object/public/attachments/tekening.png',
   meubel: { eenheid: 'mm', modelId: 'facet-double', lengte: 2000, lades: 3, ladeBreedtes: null, houtkleur: 'white', factor: 2, ...extra },
   ...top,
 })
@@ -100,5 +100,17 @@ test.describe('Project: prijs bij bestellen', () => {
       berekenProjectOrderRegel({ ...basis, id: 'b', total_price: 450, selected_options: { shape: 'rechthoek', quantity: 1 } }, 50),
     ]
     expect(projectOrderTotaalCents(regels)).toBe(580112 + 22500)
+  })
+})
+
+test.describe('Project: maattekening verplicht bij meubels', () => {
+  test('meubel zonder maattekening is niet te bestellen', () => {
+    const r = berekenProjectOrderRegel({ ...basis, total_price: '5801.12', selected_options: meubelOpts({}, { attachmentUrl: null }) }, 50)
+    expect(r.fout).toContain('maattekening')
+    expect(r.totalPrice).toBe(0)
+  })
+
+  test('spiegels hebben geen maattekening nodig', () => {
+    expect(berekenProjectOrderRegel({ ...basis, total_price: 450, selected_options: { shape: 'rechthoek', quantity: 1 } }, 50).fout).toBeNull()
   })
 })

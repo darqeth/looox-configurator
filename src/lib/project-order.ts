@@ -33,6 +33,10 @@ export function berekenProjectOrderRegel(config: ProjectConfigRij, dealerKorting
 
   const meubel = leesMeubel(opts)
   if (meubel) {
+    // Regel van 12 nov: bij elk meubel hoort een maattekening. Oudere offertes zonder tekening eerst aanvullen.
+    if (!meubel.attachmentUrl) {
+      return { ...basis, quantity: meubel.quantity, korting: 0, unitPrice: 0, totalPrice: 0, fout: `Bij ${meubel.model.naam} ontbreekt de maattekening. Open de regel en voeg hem toe.` }
+    }
     const nettoCents = meubel.opAanvraag ? 0 : calcMeubelNettoCents(meubelPrijsInput(meubel))
     if (nettoCents === null) {
       return { ...basis, quantity: meubel.quantity, korting: 0, unitPrice: 0, totalPrice: 0, fout: `${meubel.model.naam} staat niet meer in de prijslijst. Open de regel en sla hem opnieuw op.` }

@@ -49,10 +49,10 @@ async function bouwRij(rawInput: SaveMeubelInput) {
   if (fout) throw new Error(fout)
   const model = getMeubelModel(input.modelId)!
 
-  // Uitsparingen worden volgens de maattekening gemaakt: zonder tekening geen uitsparing
+  // Bij elk meubel hoort een maattekening (waskom, kraan, afvoer, uitsparingen): zonder tekening niet opslaan
   const uitsparingen = input.uitsparingen ?? 0
-  const attachmentUrl = uitsparingen > 0 ? assertValidAttachmentUrl(input.attachmentUrl) : null
-  if (uitsparingen > 0 && !attachmentUrl) throw new Error('Voeg een maattekening toe voor de uitsparingen.')
+  const attachmentUrl = assertValidAttachmentUrl(input.attachmentUrl)
+  if (!attachmentUrl) throw new Error('Voeg een maattekening toe.')
 
   const factor = await getMeubelFactor(supabase, user.id)
   // Op aanvraag heeft geen prijs vanuit de configurator: 0 opslaan, net als bij een spiegel op aanvraag

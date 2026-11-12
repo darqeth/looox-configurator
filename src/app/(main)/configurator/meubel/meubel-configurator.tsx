@@ -80,7 +80,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   // Logo staat standaard aan (Mark, 12 nov); bij bewerken geldt wat is opgeslagen
   const [logo, setLogo] = useState(initialConfig ? initialConfig.logo === true : true)
   const [uitsparingen, setUitsparingen] = useState(initialConfig?.uitsparingen ?? 0)
-  // Maattekening voor de uitsparingen: nieuw gekozen bestand, of de al opgeslagen bijlage
+  // Maattekening: bij elk meubel verplicht (plaats van waskom, kraan, afvoer en uitsparingen).
+  // Nieuw gekozen bestand, of de al opgeslagen bijlage
   const [tekeningBestand, setTekeningBestand] = useState<File | null>(null)
   const bestaandeTekening = initialConfig?.attachmentUrl ?? null
   // Alleen weergave, wordt niet opgeslagen
@@ -196,12 +197,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
   const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, regaalBreedte: regaalMm || undefined }, factor) : null
-  // Uitsparingen worden volgens een maattekening gemaakt: zonder tekening niet verder
-  const tekeningOntbreekt = uitsparingen > 0 && !tekeningBestand && !bestaandeTekening
+  // Zonder maattekening kan LoooX het meubel niet maken: zonder tekening niet verder
+  const tekeningOntbreekt = !tekeningBestand && !bestaandeTekening
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null) && !tekeningOntbreekt
 
   async function uploadTekening(): Promise<string | null> {
-    if (uitsparingen === 0) return null
     if (!tekeningBestand) return bestaandeTekening
     const supabase = createClient()
     const ext = tekeningBestand.name.split('.').pop() ?? 'bin'
@@ -555,32 +555,32 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                         >+</button>
                       </div>
                     </div>
-
-                    {uitsparingen > 0 && (
-                      <div className="mt-3">
-                        <label className="block cursor-pointer">
-                          <input
-                            id="meubel-tekening"
-                            type="file"
-                            accept="image/*,.pdf"
-                            className="sr-only peer"
-                            onChange={(e) => { const f = e.target.files?.[0]; if (f) setTekeningBestand(f) }}
-                          />
-                          <span className={`block border-2 border-dashed rounded-xl px-4 py-3 text-center text-[12.5px] transition-colors peer-focus-visible:border-lx-cta ${tekeningOntbreekt ? 'border-red-300 text-red-600' : 'border-lx-cta/25 hover:border-lx-cta/50 text-lx-text-secondary'}`}>
-                            {tekeningBestand
-                              ? <>Gekozen: <span className="font-semibold text-lx-text-primary">{tekeningBestand.name}</span> · <span className="text-lx-cta font-semibold">ander bestand</span></>
-                              : bestaandeTekening
-                                ? <>Maattekening al toegevoegd · <span className="text-lx-cta font-semibold">vervangen</span></>
-                                : <><span className="text-lx-cta font-semibold">Maattekening toevoegen</span> (verplicht, afbeelding of PDF)</>}
-                          </span>
-                        </label>
-                        {tekeningOntbreekt && (
-                          <p className="text-[12px] text-red-600 mt-1.5" role="alert">Voeg een maattekening toe met de plaats en maat van elke uitsparing.</p>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
+              </div>
+
+              <div>
+                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Maattekening <span className="text-red-400">*</span></p>
+                <label className="block cursor-pointer">
+                  <input
+                    id="meubel-tekening"
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="sr-only peer"
+                    aria-describedby="meubel-tekening-hulp"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) setTekeningBestand(f) }}
+                  />
+                  <span className="block border-2 border-dashed border-lx-cta/25 hover:border-lx-cta/50 peer-focus-visible:border-lx-cta rounded-xl px-4 py-4 text-center text-[12.5px] text-lx-text-secondary transition-colors">
+                    {tekeningBestand
+                      ? <>Gekozen: <span className="font-semibold text-lx-text-primary">{tekeningBestand.name}</span> · <span className="text-lx-cta font-semibold">ander bestand</span></>
+                      : bestaandeTekening
+                        ? <>Maattekening al toegevoegd · <span className="text-lx-cta font-semibold">vervangen</span></>
+                        : <><span className="text-lx-cta font-semibold">Maattekening toevoegen</span> (afbeelding of PDF)</>}
+                  </span>
+                </label>
+                <p id="meubel-tekening-hulp" className="text-[12px] text-lx-text-muted mt-1.5 leading-relaxed">
+                  Verplicht bij elk meubel. Teken hierop de plaats van de waskom, kraan en afvoer{uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.
+                </p>
               </div>
 
               {model.opmerking && (
@@ -594,6 +594,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
               >
                 Verder naar samenvatting
               </button>
+              {tekeningOntbreekt && lengteOk && regaalOk && !ladeFout && (
+                <p className="text-[11.5px] text-lx-text-secondary text-center -mt-3">Voeg een maattekening toe om verder te gaan</p>
+              )}
             </div>
           )}
 

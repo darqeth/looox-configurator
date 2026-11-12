@@ -620,6 +620,7 @@ export async function placeMeubelOrder(
 
   const meubel = leesMeubel(config.selected_options)
   if (!meubel) throw new Error('Dit is geen meubelconfiguratie')
+  if (!meubel.attachmentUrl) throw new Error('De maattekening ontbreekt. Open de configuratie en voeg hem toe.')
 
   const isOfferte = meubel.opAanvraag
   const nettoCents = isOfferte ? 0 : calcMeubelNettoCents(meubelPrijsInput(meubel))

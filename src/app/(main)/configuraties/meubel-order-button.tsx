@@ -37,7 +37,8 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   const nettoCents = opAanvraag ? null : calcMeubelNettoCents(meubelPrijsInput(meubel))
   const opbouw = nettoCents !== null ? getMeubelOrderOpbouw(nettoCents, meubel.factor) : null
   // Staat het meubel niet meer in de prijslijst, dan kan het niet besteld worden
-  const bestelbaar = opAanvraag || nettoCents !== null
+  const tekeningOntbreekt = !meubel.attachmentUrl
+  const bestelbaar = (opAanvraag || nettoCents !== null) && !tekeningOntbreekt
   const altOk = !altShipping || (alt.straat.trim() !== '' && alt.woonplaats.trim() !== '')
 
   function sluit() {
@@ -166,6 +167,12 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                       >+</button>
                     </div>
                   </div>
+
+                  {tekeningOntbreekt && (
+                    <p role="alert" className="text-[12.5px] text-red-600 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
+                      De maattekening ontbreekt. Open de configuratie en voeg hem toe; daarna kun je bestellen.
+                    </p>
+                  )}
 
                   {opAanvraag ? (
                     <div className="bg-lx-panel-bg rounded-xl px-4 py-3">

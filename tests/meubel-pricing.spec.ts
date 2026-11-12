@@ -239,7 +239,7 @@ const FASE4: [string, number, number, number][] = [
   ['full-frame', 500, 1, 1402.96], ['full-frame', 1750, 3, 1922.96], ['full-frame', 2250, 2, 1954.16], ['full-frame', 2700, 3, 2422.16],
   ['u-frame', 500, 1, 1142.96], ['u-frame', 1200, 2, 1454.96], ['u-frame', 1750, 3, 1891.76], ['u-frame', 2700, 3, 2385.76],
   ['u-floor', 500, 1, 2110.16], ['u-floor', 1200, 1, 2141.36], ['u-floor', 1400, 2, 2744.56], ['u-floor', 1800, 2, 3430.96], ['u-floor', 2200, 2, 3753.36],
-  ['basic-drawer', 600, 1, 1038.96], ['basic-drawer', 800, 1, 1038.96], ['basic-drawer', 1000, 2, 1142.96], ['basic-drawer', 1200, 1, 1132.56], ['basic-drawer', 1200, 2, 1174.16],
+  ['basic-drawer', 800, 1, 1038.96], ['basic-drawer', 1000, 2, 1142.96], ['basic-drawer', 1200, 1, 1132.56], ['basic-drawer', 1600, 2, 1350.96], ['basic-drawer', 2400, 2, 1766.96],
   ['drawer-box', 800, 1, 1226.16], ['drawer-box', 1000, 2, 1553.76], ['drawer-box', 1600, 2, 1725.36], ['drawer-box', 2100, 3, 2302.56], ['drawer-box', 2400, 2, 2390.96],
   ['drawer-box-double', 800, 1, 1829.36], ['drawer-box-double', 1000, 1, 1766.96], ['drawer-box-double', 1200, 2, 2224.56], ['drawer-box-double', 2100, 3, 3108.56], ['drawer-box-double', 2600, 3, 3347.76],
   ['block', 680, 1, 1007.76], ['block', 880, 1, 1012.96], ['block', 1200, 2, 1397.76], ['block', 1580, 2, 1428.96], ['block', 2280, 2, 1647.36],
@@ -304,19 +304,14 @@ test.describe('Fase 4: rand, hoogte en kleur', () => {
     expect(calcMeubelNettoCents({ modelId: 'facet-stripes', lengte: 1000, lades: 1, houtkleur: 'pure' })).toBe(97656 + 4160)
     expect(getHoutkleuren(getMeubelModel('facet')!)).toHaveLength(7)
   })
-
-  test('Basic Drawer kan niet op aanvraag', () => {
-    expect(valideerMeubelConfig({ modelId: 'basic-drawer', lengte: 2600, lades: 3, houtkleur: 'old-grey', ladeBreedtes: null, quantity: 1, opAanvraag: true })).toContain('bestaat niet')
-  })
 })
 
 test.describe('Meubel: vaste maten en opties', () => {
-  test('Basic Drawer alleen in de standaardmaten', () => {
+  test('Basic Drawer is in elke lengte uit de tabel te bestellen', () => {
     const basic = { modelId: 'basic-drawer', lades: 1, houtkleur: 'old-grey' }
-    expect(calcMeubelNettoCents({ ...basic, lengte: 700 })).toBe(103896)
-    expect(calcMeubelNettoCents({ ...basic, lengte: 750 })).toBeNull()
-    expect(calcMeubelNettoCents({ ...basic, lades: 2, lengte: 1600 })).toBeNull()
-    expect(getLadeOpties(getMeubelModel('basic-drawer')!, 750)).toEqual([])
+    expect(calcMeubelNettoCents({ ...basic, lengte: 750 })).toBe(103896)
+    expect(calcMeubelNettoCents({ ...basic, lades: 2, lengte: 1650 })).toBe(148616)
+    expect(getMeubelModel('basic-drawer')!.vasteLengtes).toBeUndefined()
   })
 
   test('uitsparing telt mee in netto en in de bruto opbouw; logo kost niets', () => {

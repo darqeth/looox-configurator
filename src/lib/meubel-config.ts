@@ -46,7 +46,7 @@ export interface MeubelModel {
   hoogtes?: number[]
   /** Houtkleuren die bij dit model niet kunnen (Stripes: geen White) */
   geenKleuren?: string[]
-  /** Alleen in de standaardmaten te bestellen: geen "groter dan" op aanvraag */
+  /** Alleen in de standaardmaten te bestellen: geen "groter dan" op aanvraag (nu bij geen enkel model; zie Mirror Cabinet later) */
   geenAanvraag?: boolean
   /** Alleen deze lengtes in mm zijn te bestellen (Basic Drawer); de dealer kiest uit de lijst */
   vasteLengtes?: number[]
@@ -219,10 +219,6 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     diepte: 430,
     hoogte: 380,
     rijen: 1,
-    geenAanvraag: true,
-    // Voorlopige lijst, afgeleid van de renders; definitieve standaardmaten navragen bij Mark
-    vasteLengtes: [600, 700, 800, 1000, 1200],
-    opmerking: 'De Basic Drawer kan alleen besteld worden in de standaardmaten.',
     staffels: [
       { min: 50, max: 80, prijzen: { 1: 103896 } },
       { min: 81, max: 100, prijzen: { 1: 109096, 2: 114296 } },
@@ -356,9 +352,6 @@ export function ladeRuimte(model: MeubelModel, lengte: number): number {
 export function getHoutkleuren(model: MeubelModel): Houtkleur[] {
   return HOUTKLEUREN.filter((k) => !model.geenKleuren?.includes(k.id))
 }
-
-/** Toelichting uit de prijslijst bij Brown Grey; tonen zodra die kleur gekozen is. */
-export const BROWN_GREY_MELDING = 'Brown Grey heeft meer aandacht nodig dan andere kleurafwerkingen. Deze kleur is daarom niet op elk item toepasbaar. Informeer naar de voorwaarden.'
 
 /** Gekozen hoogte, of de standaard van het model als de keuze niet (meer) bestaat. */
 export function getMeubelHoogte(model: MeubelModel, hoogte?: number | null): number {

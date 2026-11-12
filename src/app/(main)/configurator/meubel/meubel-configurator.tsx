@@ -12,7 +12,7 @@ import {
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
-  getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, BROWN_GREY_MELDING,
+  getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte,
   type MeubelModel, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
@@ -63,7 +63,8 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   const [opAanvraag, setOpAanvraag] = useState(initialConfig?.opAanvraag === true)
   const [tekeningGroot, setTekeningGroot] = useState(false)
   // Opties uit de tabel "Opties meubels": logo is gratis, een uitsparing kost per stuk
-  const [logo, setLogo] = useState(initialConfig?.logo === true)
+  // Logo staat standaard aan (Mark, 12 nov); bij bewerken geldt wat is opgeslagen
+  const [logo, setLogo] = useState(initialConfig ? initialConfig.logo === true : true)
   const [uitsparingen, setUitsparingen] = useState(initialConfig?.uitsparingen ?? 0)
   // Maattekening voor de uitsparingen: nieuw gekozen bestand, of de al opgeslagen bijlage
   const [tekeningBestand, setTekeningBestand] = useState<File | null>(null)
@@ -480,10 +481,6 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                   </div>
                 </div>
               </div>
-
-              {houtkleur === 'brown-grey' && (
-                <p className="text-[12px] text-lx-text-secondary bg-lx-panel-bg rounded-xl px-4 py-3 leading-relaxed" role="note">{BROWN_GREY_MELDING}</p>
-              )}
 
               {model.opmerking && (
                 <p className="text-[12px] text-lx-text-secondary leading-relaxed" role="note">{model.opmerking}</p>

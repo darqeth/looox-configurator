@@ -444,6 +444,9 @@ export async function placeOrderFromConfig(
   const dealerKortingPct = profileForKorting?.korting ?? 50
 
   const opts = (config.selected_options ?? {}) as ConfigOptions
+  // Meubels (configurator 2.0) hebben een eigen bestelstroom met nettoprijzen; die
+  // komt in fase 3. Via de spiegelstroom zou de dealerkorting er ten onrechte overheen gaan.
+  if ((opts.shape as string | undefined) === 'meubel') throw new Error('Meubels zijn nog niet te bestellen')
   const isProjectspiegel = (opts.shape as string | undefined) === 'projectspiegel'
   const isOpAanvraag = (opts.shape as string | undefined) === 'op-aanvraag'
   const configQty = (opts.quantity as number | undefined) ?? 1

@@ -107,6 +107,6 @@ export async function updateMeubelFactor(value: string): Promise<{ success: bool
   const { error } = await admin.from('companies').update({ meubel_factor: factor }).eq('id', member.company_id)
   if (error) return { success: false, error: 'Opslaan mislukt. Probeer het opnieuw.' }
 
-  revalidatePath('/account/collegas')
+  revalidatePath('/account')
   return { success: true, factor }
 }

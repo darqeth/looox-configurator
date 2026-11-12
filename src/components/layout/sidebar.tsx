@@ -213,7 +213,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
             className="flex items-center justify-center gap-1.5 bg-lx-cta hover:bg-lx-cta-hover text-white rounded-xl py-2.5 text-[13.5px] font-semibold transition-colors"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-            Nieuwe spiegel
+            Nieuwe configuratie
           </Link>
         </div>
       )}

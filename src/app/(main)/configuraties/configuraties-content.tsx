@@ -51,11 +51,16 @@ export function ConfiguratiesContent({
 
   if (!data) return <ConfiguratiesContentSkeleton />
 
-  const { configs, filteredCount, savedCount, ownCount, permissions, teamMembers, validView, viewingName, korting, currentPage, totalPages, currentUserId } = data
+  const { configs, filteredCount, savedCount, meubelCount, meubelToegang, ownCount, permissions, teamMembers, validView, viewingName, korting, currentPage, totalPages, currentUserId } = data
 
+  // Standaard alles door elkaar. De tab Meubels alleen voor wie meubels heeft of mag maken.
+  const toonMeubels = meubelToegang || meubelCount > 0 || filter === 'meubels'
   const productTabs = [
-    { key: '', label: 'Spiegels', count: savedCount },
-    { key: 'alle', label: 'Alle', count: savedCount },
+    { key: '', label: 'Alle', count: savedCount },
+    ...(toonMeubels ? [
+      { key: 'spiegels', label: 'Spiegels', count: savedCount - meubelCount },
+      { key: 'meubels', label: 'Meubels', count: meubelCount },
+    ] : []),
   ]
 
   return (
@@ -325,9 +330,9 @@ export function ConfiguratiesContent({
             </p>
             {!viewingName && (
               <>
-                <p className="text-[13px] text-lx-text-secondary mb-5">Configureer je eerste spiegel en sla hem hier op.</p>
+                <p className="text-[13px] text-lx-text-secondary mb-5">Maak je eerste configuratie en sla hem hier op.</p>
                 <Link href="/configurator/nieuw" className="inline-flex items-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors">
-                  Nieuwe spiegel configureren
+                  Nieuwe configuratie
                 </Link>
               </>
             )}

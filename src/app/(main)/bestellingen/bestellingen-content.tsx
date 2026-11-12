@@ -119,7 +119,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                 href="/configurator/nieuw"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors"
               >
-                + Nieuwe spiegel configureren
+                + Nieuwe configuratie
               </Link>
             </>
           )}
@@ -322,7 +322,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
           href="/configurator/nieuw"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors"
         >
-          + Nieuwe spiegel
+          + Nieuwe configuratie
         </Link>
       </div>
     </>

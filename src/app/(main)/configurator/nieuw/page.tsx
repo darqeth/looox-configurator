@@ -6,7 +6,7 @@ import { getExtraOptionTooltips, getControlTooltips } from '@/lib/actions/admin'
 import { parseConfiguratorAccess } from '@/lib/configurator-access'
 import { hasMeubelAccess } from '@/lib/meubel-access'
 
-export const metadata = { title: 'Nieuwe spiegel — LoooX Configurator' }
+export const metadata = { title: 'Nieuwe configuratie | LoooX Configurator' }
 
 export default async function NieuweConfiguratiePage() {
   const supabase = await createClient()

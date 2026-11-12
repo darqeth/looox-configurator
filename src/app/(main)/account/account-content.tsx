@@ -1,3 +1,5 @@
+import MeubelFactorCard from './meubel-factor-card'
+import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import { createClient } from '@/lib/supabase/server'
 import { ProfileForm, PasswordForm } from './profile-form'
 import AvatarUpload from './avatar-upload'
@@ -70,6 +72,11 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
     supabase.from('company_members').select('role').eq('user_id', userId).maybeSingle(),
   ])
 
+  // Factor meubels: alleen voor de manager van een bedrijf met meubeltoegang
+  const meubelFactor = _memberData?.role === 'manager' && await hasMeubelAccess(supabase, userId)
+    ? await getMeubelFactor(supabase, userId)
+    : null
+
   const tier = tierInfo[profile?.tier ?? 'Studio'] ?? tierInfo.Studio
   const memberSince = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -97,6 +104,8 @@ export async function AccountContent({ userId, userEmail }: { userId: string; us
           </div>
         </div>
       </Card>
+
+      {meubelFactor !== null && <MeubelFactorCard factor={meubelFactor} />}
 
       {/* Profielgegevens */}
       <Card title="Profielgegevens" description="Je naam en bedrijfsgegevens zijn zichtbaar voor LoooX.">

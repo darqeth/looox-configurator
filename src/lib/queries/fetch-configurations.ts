@@ -1,5 +1,6 @@
 'use server'
 
+import { hasMeubelAccess } from '@/lib/meubel-access'
 import { createClient } from '@/lib/supabase/server'
 
 const PAGE_SIZE = 20
@@ -24,6 +25,10 @@ export type ConfigurationsData = {
   configs: ConfigRow[]
   filteredCount: number
   savedCount: number
+  /** Aantal opgeslagen meubels van de bekeken gebruiker */
+  meubelCount: number
+  /** Account mag meubels configureren: de tab Meubels is dan altijd zichtbaar */
+  meubelToegang: boolean
   ownCount: number
   permissions: { isManager: boolean; canOrder: boolean; canConfigure: boolean }
   teamMembers: TeamMember[]
@@ -50,13 +55,17 @@ export async function fetchConfigurations(params: {
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
-  const [{ data: memberPerms }, { data: profileData }] = await Promise.all([
+  // Tabs: '' = alles door elkaar (standaard), 'spiegels' of 'meubels'
+  const soort = params.filter === 'spiegels' || params.filter === 'meubels' ? params.filter : ''
+
+  const [{ data: memberPerms }, { data: profileData }, meubelToegang] = await Promise.all([
     supabase
       .from('company_members')
       .select('role, can_order, can_configure, own_configs_only, company_id')
       .eq('user_id', userId)
       .maybeSingle(),
     supabase.from('profiles').select('korting').eq('id', userId).single(),
+    hasMeubelAccess(supabase, userId),
   ])
 
   const korting = profileData?.korting ?? 50
@@ -98,13 +107,18 @@ export async function fetchConfigurations(params: {
   }
 
   const loadMain = (viewUserId: string) => Promise.all([
-    supabase
-      .from('configurations')
-      .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
-      .eq('user_id', viewUserId)
-      .eq('status', 'saved')
-      .order('updated_at', { ascending: false })
-      .range(from, to),
+    (() => {
+      const q = supabase
+        .from('configurations')
+        .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id', { count: 'exact' })
+        .eq('user_id', viewUserId)
+        .eq('status', 'saved')
+      const gefilterd = soort === 'meubels'
+        ? q.eq('selected_options->>shape', 'meubel')
+        : soort === 'spiegels' ? q.neq('selected_options->>shape', 'meubel') : q
+      return gefilterd.order('updated_at', { ascending: false }).range(from, to)
+    })(),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved').eq('selected_options->>shape', 'meubel'),
     supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved'),
     isManager
       ? supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'saved')
@@ -128,6 +142,7 @@ export async function fetchConfigurations(params: {
 
   const [
     { data: configs, count: filteredCount },
+    { count: meubelCount },
     { count: savedCount },
     { count: ownCountRaw },
   ] = mainResult
@@ -143,6 +158,8 @@ export async function fetchConfigurations(params: {
     configs: (configs ?? []) as ConfigRow[],
     filteredCount: filteredCount ?? 0,
     savedCount: savedCount ?? 0,
+    meubelCount: meubelCount ?? 0,
+    meubelToegang,
     ownCount,
     permissions: { isManager, canOrder, canConfigure },
     teamMembers,

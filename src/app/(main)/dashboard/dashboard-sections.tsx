@@ -355,10 +355,10 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
         </div>
         <div>
           <p className="text-[13.5px] font-semibold text-lx-text-primary">Nog geen configuraties</p>
-          <p className="text-[12px] text-lx-text-secondary mt-0.5">Maak je eerste spiegel aan om te beginnen.</p>
+          <p className="text-[12px] text-lx-text-secondary mt-0.5">Maak je eerste configuratie aan om te beginnen.</p>
         </div>
         <Link href="/configurator/nieuw" className="bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2 rounded-xl transition-colors inline-flex items-center gap-1.5">
-          Nieuwe spiegel <ArrowRight className="w-3.5 h-3.5" />
+          Nieuwe configuratie <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
     )
@@ -557,7 +557,7 @@ export function SnelStartenCard() {
       </div>
       <div className="px-5 py-5 flex-1 flex flex-col justify-between">
         <div>
-          <p className="text-white text-[15px] font-semibold leading-snug mb-1.5">Nieuwe spiegel configureren</p>
+          <p className="text-white text-[15px] font-semibold leading-snug mb-1.5">Nieuwe configuratie maken</p>
           <p className="text-white/55 text-[12.5px] leading-relaxed">Kies een vorm, stel je opties in en vraag een offerte aan.</p>
         </div>
         <Link href="/configurator/nieuw" className="mt-5 inline-flex items-center gap-2 bg-white/15 hover:bg-white/22 text-white rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-colors self-start">

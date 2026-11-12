@@ -9,7 +9,7 @@ export default function Loading() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">Configuraties</h1>
-          <p className="text-[13px] text-lx-text-secondary mt-0.5">Jouw opgeslagen spiegelconfiguraties</p>
+          <p className="text-[13px] text-lx-text-secondary mt-0.5">Jouw opgeslagen configuraties</p>
         </div>
         <div className="h-10 w-36 bg-white rounded-xl animate-pulse" />
       </div>

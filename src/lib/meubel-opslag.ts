@@ -1,6 +1,6 @@
 import {
   HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
-  type LadeBreedtes, type MeubelInput, type MeubelModel,
+  type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm,
 } from '@/lib/meubel-config'
 
 // Een meubel staat in dezelfde tabel als de spiegels (configurations), herkenbaar
@@ -24,6 +24,9 @@ export interface OpgeslagenMeubel {
   /** Aantal uitsparingen of boorgaten; maattekening staat in attachmentUrl */
   uitsparingen: number
   attachmentUrl: string | null
+  /** Waskom in het Solid Surface blad; null bij een model zonder ingebouwde waskom */
+  waskomVorm: WaskomVorm | null
+  waskomAantal: number
   /** Regaalkast (Regal-modellen): breedte in mm, 0 bij een model zonder */
   regaalBreedte: number
   regaalZijde: 'links' | 'rechts' | 'midden'
@@ -54,6 +57,8 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
   return {
     model,
     lengte,
+    waskomVorm: model.waskom && (m.waskomVorm === 'ovaal' || m.waskomVorm === 'vierkant') ? m.waskomVorm : null,
+    waskomAantal: m.waskomAantal === 2 ? 2 : 1,
     regaalBreedte,
     regaalZijde: m.regaalZijde === 'links' || m.regaalZijde === 'midden' ? m.regaalZijde : 'rechts',
     ladeRuimte: ladeRuimte(model, lengte, regaalBreedte),

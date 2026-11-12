@@ -436,3 +436,45 @@ test.describe('Drawer Box Regal: twee kasten met een regaalkast ertussen', () =>
     expect(calcMeubelNettoCents(cfg(700, 700, 300))).toBe(calcMeubelNettoCents(cfg(700, 700, 500)))
   })
 })
+
+// Solid Surface: per model een paar cellen uit de prijslijst. Rij: [model, lengte in mm, lades, euro].
+const SOLID: [string, number, number, number][] = [
+  ['solid-facet', 700, 1, 1860.56], ['solid-facet', 1200, 2, 2172.56], ['solid-facet', 1390, 2, 2442.96], ['solid-facet', 1600, 3, 2973.36],
+  ['solid-facet', 1800, 2, 2838.16], ['solid-facet', 2400, 3, 3347.76], ['solid-facet', 2600, 3, 3607.76],
+  ['solid-facet-double', 1200, 1, 2942.16], ['solid-facet-double', 1390, 2, 3222.96], ['solid-facet-double', 1800, 2, 3628.56], ['solid-facet-double', 2400, 3, 4574.96], ['solid-facet-double', 2600, 3, 4678.96],
+  ['solid-facet-stripes', 700, 1, 1870.96], ['solid-facet-stripes', 1200, 2, 2297.36], ['solid-facet-stripes', 1900, 3, 3274.96], ['solid-facet-stripes', 2100, 2, 3254.16], ['solid-facet-stripes', 2550, 3, 3690.96],
+  ['solid-facet-stripes-double', 1200, 1, 2515.76], ['solid-facet-stripes-double', 1600, 2, 3618.16], ['solid-facet-stripes-double', 1810, 2, 4262.96], ['solid-facet-stripes-double', 2500, 3, 4730.96],
+  ['solid-drawer-box', 1200, 1, 2151.76], ['solid-drawer-box', 1390, 2, 2640.56], ['solid-drawer-box', 2100, 3, 3742.96], ['solid-drawer-box', 2400, 2, 3846.96],
+  ['solid-drawer-box-double', 1200, 1, 2728.96], ['solid-drawer-box-double', 1600, 2, 3846.96], ['solid-drawer-box-double', 2100, 3, 4855.76], ['solid-drawer-box-double', 2600, 3, 5510.96],
+  ['solid-base-drawer-box', 1200, 1, 1959.36], ['solid-base-drawer-box', 1400, 2, 2401.36], ['solid-base-drawer-box', 1410, 2, 2505.36], ['solid-base-drawer-box', 2400, 3, 3711.76], ['solid-base-drawer-box', 2500, 3, 3784.56],
+  ['solid-base-drawer-box-double', 1200, 1, 2562.56], ['solid-base-drawer-box-double', 1600, 2, 2994.16], ['solid-base-drawer-box-double', 2100, 3, 4616.56], ['solid-base-drawer-box-double', 2600, 3, 5302.96],
+  ['solid-frame', 700, 1, 1479.00], ['solid-frame', 1200, 2, 1999.00], ['solid-frame', 1600, 2, 2299.00], ['solid-frame', 1800, 3, 2479.00], ['solid-frame', 2400, 2, 2899.00], ['solid-frame', 2600, 3, 3119.00],
+]
+
+test.describe('Solid Surface: tabelprijzen', () => {
+  for (const [modelId, lengte, lades, euro] of SOLID) {
+    test(`${modelId} ${lengte} mm, ${lades} lade(s) = € ${euro}`, () => {
+      expect(calcMeubelNettoCents({ modelId, lengte, lades, houtkleur: 'old-grey' })).toBe(Math.round(euro * 100))
+    })
+  }
+
+  test('categorie-indeling', () => {
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'solid-surface')).toHaveLength(9)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'wastafelmeubels')).toHaveLength(16)
+  })
+
+  test('waskom: alleen bij modellen met ingebouwde waskom, vorm en aantal verplicht', () => {
+    const cfg = { modelId: 'solid-facet', lengte: 1200, lades: 2, houtkleur: 'old-grey', ladeBreedtes: null, quantity: 1 }
+    expect(valideerMeubelConfig(cfg)).toContain('vorm van de waskom')
+    expect(valideerMeubelConfig({ ...cfg, waskomVorm: 'ovaal' })).toContain('twee waskommen')
+    expect(valideerMeubelConfig({ ...cfg, waskomVorm: 'ovaal', waskomAantal: 3 })).toContain('twee waskommen')
+    expect(valideerMeubelConfig({ ...cfg, waskomVorm: 'vierkant', waskomAantal: 2 })).toBeNull()
+    // Solid Base heeft geen ingebouwde waskom
+    expect(valideerMeubelConfig({ ...cfg, modelId: 'solid-base-drawer-box', lengte: 1400 })).toBeNull()
+    expect(getMeubelModel('solid-base-drawer-box')!.waskom).toBeUndefined()
+  })
+
+  test('Solid Facet Stripes ook niet in White', () => {
+    expect(calcMeubelNettoCents({ modelId: 'solid-facet-stripes', lengte: 1000, lades: 1, houtkleur: 'white' })).toBeNull()
+  })
+})

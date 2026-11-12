@@ -3,7 +3,7 @@
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { leesMeubel } from '@/lib/meubel-opslag'
-import { formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst } from '@/lib/meubel-config'
+import { formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 import { formatOrganicSize } from '@/lib/configurator-config'
 import { formatEuro } from '@/lib/mms'
 import type { AdminOrder } from './admin-bestellingen-list'
@@ -101,7 +101,8 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
                 <Rij label="Model" value={meubel.model.naam} />
                 <Rij label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
                 <Rij label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}`} />
-                {meubel.regaalBreedte > 0 && <Rij label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
+                {meubel.waskomVorm && <Rij label="Waskom" value={waskomTekst(meubel)} />}
+                  {meubel.regaalBreedte > 0 && <Rij label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
                 <Rij label="Houtkleur" value={meubel.houtkleurNaam} />
                 <Rij label="Opties" value={meubelOptiesTekst(meubel)} />
                 {meubel.attachmentUrl && (

@@ -68,6 +68,11 @@ export interface MeubelModel {
    * reeks uit de prijslijst vallen (cm, zoals in de prijslijst); de lengte is de som.
    */
   duo?: { min: number; max: number; prijs: number }[]
+  /**
+   * Solid Surface blad met ingebouwde waskom: de dealer kiest de vorm en één of twee
+   * waskommen, zonder prijsverschil. De plaats tekent hij op de maattekening.
+   */
+  waskom?: boolean
   /** Meerdere hoogtes zonder prijsverschil (Full-Frame, U-Frame); `hoogte` is de standaard */
   hoogtes?: number[]
   /** Houtkleuren die bij dit model niet kunnen (Stripes: geen White) */
@@ -379,6 +384,174 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
       { min: 179, max: 228, prijzen: { 2: 164736 } },
     ],
   },
+  {
+    id: 'solid-facet',
+    categorie: 'solid-surface',
+    naam: 'Solid Facet',
+    omschrijving: 'Facet met Solid Surface blad en ingebouwde waskom.',
+    afbeelding: '/images/meubels/model-solid-facet.webp',
+    diepte: 460,
+    hoogte: 350,
+    rijen: 1,
+    waskom: true,
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 186056, 2: 217256 } },
+      { min: 121, max: 139, prijzen: { 2: 244296 } },
+      { min: 140, max: 160, prijzen: { 2: 278616, 3: 297336 } },
+      { min: 161, max: 180, prijzen: { 2: 283816, 3: 308776 } },
+      { min: 181, max: 240, prijzen: { 2: 309816, 3: 334776 } },
+      { min: 241, max: 260, prijzen: { 3: 360776 } },
+    ],
+  },
+  {
+    id: 'solid-facet-double',
+    categorie: 'solid-surface',
+    naam: 'Solid Facet Double',
+    omschrijving: 'Solid Facet met twee laderijen boven elkaar.',
+    afbeelding: '/images/meubels/model-solid-facet-double.webp',
+    diepte: 460,
+    hoogte: 700,
+    rijen: 2,
+    waskom: true,
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 294216 } },
+      { min: 121, max: 139, prijzen: { 2: 322296 } },
+      { min: 140, max: 160, prijzen: { 2: 346216 } },
+      { min: 161, max: 180, prijzen: { 2: 362856 } },
+      { min: 181, max: 240, prijzen: { 2: 430456, 3: 457496 } },
+      { min: 241, max: 260, prijzen: { 3: 467896 } },
+    ],
+  },
+  {
+    id: 'solid-facet-stripes',
+    categorie: 'solid-surface',
+    naam: 'Solid Facet Stripes',
+    omschrijving: 'Facet Stripes met Solid Surface blad en ingebouwde waskom.',
+    afbeelding: '/images/meubels/model-solid-facet-stripes.webp',
+    diepte: 460,
+    hoogte: 350,
+    rijen: 1,
+    waskom: true,
+    geenKleuren: ['white'],
+    opmerking: 'De Solid Facet Stripes is niet in een witte lak te verkrijgen.',
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 187096, 2: 229736 } },
+      { min: 121, max: 139, prijzen: { 2: 254696 } },
+      { min: 140, max: 190, prijzen: { 2: 297336, 3: 327496 } },
+      { min: 191, max: 210, prijzen: { 2: 325416, 3: 356616 } },
+      { min: 211, max: 255, prijzen: { 2: 349336, 3: 369096 } },
+    ],
+  },
+  {
+    id: 'solid-facet-stripes-double',
+    categorie: 'solid-surface',
+    naam: 'Solid Facet Stripes Double',
+    omschrijving: 'Solid Facet Stripes met twee laderijen boven elkaar.',
+    afbeelding: '/images/meubels/model-solid-facet-stripes-double.webp',
+    diepte: 460,
+    hoogte: 700,
+    rijen: 2,
+    waskom: true,
+    geenKleuren: ['white'],
+    opmerking: 'De Solid Facet Stripes is niet in een witte lak te verkrijgen.',
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 251576 } },
+      { min: 121, max: 139, prijzen: { 2: 329576 } },
+      { min: 140, max: 160, prijzen: { 2: 361816 } },
+      { min: 161, max: 180, prijzen: { 2: 376376 } },
+      { min: 181, max: 240, prijzen: { 2: 426296, 3: 457496 } },
+      { min: 241, max: 250, prijzen: { 3: 473096 } },
+    ],
+  },
+  {
+    id: 'solid-drawer-box',
+    categorie: 'solid-surface',
+    naam: 'Solid Drawer Box',
+    omschrijving: 'Drawer Box met Solid Surface blad en ingebouwde waskom.',
+    afbeelding: '/images/meubels/model-solid-drawer-box.webp',
+    diepte: 460,
+    hoogte: 450,
+    rijen: 1,
+    waskom: true,
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 215176 } },
+      { min: 121, max: 139, prijzen: { 2: 264056 } },
+      { min: 140, max: 160, prijzen: { 2: 276016 } },
+      { min: 161, max: 210, prijzen: { 2: 329576, 3: 374296 } },
+      { min: 211, max: 260, prijzen: { 2: 384696, 3: 415896 } },
+    ],
+  },
+  {
+    id: 'solid-drawer-box-double',
+    categorie: 'solid-surface',
+    naam: 'Solid Drawer Box Double',
+    omschrijving: 'Solid Drawer Box met twee laderijen boven elkaar.',
+    afbeelding: '/images/meubels/model-solid-drawer-box-double.webp',
+    diepte: 460,
+    hoogte: 600,
+    rijen: 2,
+    waskom: true,
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 272896 } },
+      { min: 121, max: 139, prijzen: { 2: 332696 } },
+      { min: 140, max: 160, prijzen: { 2: 384696 } },
+      { min: 161, max: 210, prijzen: { 2: 447096, 3: 485576 } },
+      { min: 211, max: 260, prijzen: { 2: 502216, 3: 551096 } },
+    ],
+  },
+  {
+    id: 'solid-base-drawer-box',
+    categorie: 'solid-surface',
+    naam: 'Solid Base Drawer Box',
+    omschrijving: 'Drawer Box met vlak Solid Surface blad, zonder ingebouwde waskom.',
+    afbeelding: '/images/meubels/model-solid-base-drawer-box.webp',
+    diepte: 460,
+    hoogte: 450,
+    rijen: 1,
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 195936 } },
+      { min: 121, max: 140, prijzen: { 2: 240136 } },
+      { min: 141, max: 160, prijzen: { 2: 250536 } },
+      { min: 161, max: 180, prijzen: { 2: 299416 } },
+      { min: 181, max: 240, prijzen: { 2: 349856, 3: 371176 } },
+      { min: 241, max: 250, prijzen: { 3: 378456 } },
+    ],
+  },
+  {
+    id: 'solid-base-drawer-box-double',
+    categorie: 'solid-surface',
+    naam: 'Solid Base Drawer Box Double',
+    omschrijving: 'Solid Base Drawer Box met twee laderijen boven elkaar.',
+    afbeelding: '/images/meubels/model-solid-base-drawer-box-double.webp',
+    diepte: 460,
+    hoogte: 600,
+    rijen: 2,
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 256256 } },
+      { min: 121, max: 160, prijzen: { 2: 299416 } },
+      { min: 161, max: 210, prijzen: { 2: 361816, 3: 461656 } },
+      { min: 211, max: 260, prijzen: { 2: 472056, 3: 530296 } },
+    ],
+  },
+  {
+    id: 'solid-frame',
+    categorie: 'solid-surface',
+    naam: 'Solid Frame',
+    omschrijving: 'Meubel met frame, Solid Surface blad en ingebouwde waskom.',
+    afbeelding: '/images/meubels/model-solid-frame.webp',
+    diepte: 460,
+    hoogte: 370,
+    rijen: 1,
+    waskom: true,
+    staffels: [
+      { min: 70, max: 120, prijzen: { 1: 147900, 2: 199900 } },
+      { min: 121, max: 139, prijzen: { 2: 214900 } },
+      { min: 140, max: 160, prijzen: { 2: 229900 } },
+      { min: 161, max: 180, prijzen: { 2: 239900, 3: 247900 } },
+      { min: 181, max: 240, prijzen: { 2: 289900, 3: 298900 } },
+      { min: 241, max: 260, prijzen: { 3: 311900 } },
+    ],
+  },
 ]
 
 export interface Houtkleur {
@@ -493,6 +666,18 @@ export function ladeLabel(model: MeubelModel, kolommen: number): string {
   return kolommen === 1 ? '1 lade' : `${kolommen} lades`
 }
 
+export type WaskomVorm = 'ovaal' | 'vierkant'
+export const WASKOM_VORMEN: { id: WaskomVorm; naam: string }[] = [
+  { id: 'ovaal', naam: 'Ovaal' },
+  { id: 'vierkant', naam: 'Vierkant' },
+]
+
+export function waskomTekst(o: { waskomVorm?: WaskomVorm | null; waskomAantal?: number | null }): string {
+  const vorm = WASKOM_VORMEN.find((v) => v.id === o.waskomVorm)
+  if (!vorm) return ''
+  return `${o.waskomAantal === 2 ? '2 waskommen' : '1 waskom'}, ${vorm.naam.toLowerCase()} (plaats volgens maattekening)`
+}
+
 export interface MeubelInput {
   modelId: string
   lengte: number
@@ -505,6 +690,9 @@ export interface MeubelInput {
   hoogte?: number
   /** Breedte van de regaalkast in mm (Regal-modellen); geen invloed op de prijs, wel op de ladeverdeling */
   regaalBreedte?: number
+  /** Waskom in het Solid Surface blad: vorm en aantal, zonder prijsverschil */
+  waskomVorm?: WaskomVorm
+  waskomAantal?: number
   /** Kastbreedtes bij een duo-model (bepalen daar de prijs); bij andere modellen niet nodig voor de prijs */
   ladeBreedtes?: LadeBreedtes
   /** Kant van de regaalkast */
@@ -657,6 +845,10 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
   }
   if (model.duo) {
     if (c.lades !== 2 || c.lengte !== (c.ladeBreedtes as number[]).reduce((som, b) => som + b, 0) + (c.regaalBreedte ?? 0)) return 'De lengte klopt niet met de kasten en de regaalkast.'
+  }
+  if (model.waskom) {
+    if (!WASKOM_VORMEN.some((v) => v.id === c.waskomVorm)) return 'Kies de vorm van de waskom.'
+    if (c.waskomAantal !== 1 && c.waskomAantal !== 2) return 'Kies één of twee waskommen.'
   }
   const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte)), c.lades)
   if (ladeFout) return ladeFout

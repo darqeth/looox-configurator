@@ -51,6 +51,8 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
           opAanvraag: meubel.opAanvraag,
           hoogte: meubel.model.hoogte,
           logo: meubel.logo,
+          waskomVorm: meubel.waskomVorm,
+          waskomAantal: meubel.waskomAantal,
           regaalBreedte: meubel.regaalBreedte || undefined,
           regaalZijde: meubel.regaalZijde,
           uitsparingen: meubel.uitsparingen,

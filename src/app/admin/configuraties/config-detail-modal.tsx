@@ -1,7 +1,7 @@
 'use client'
 
 import { leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
-import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst } from '@/lib/meubel-config'
+import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 import { useState } from 'react'
 import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
@@ -267,6 +267,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                   <ModalRow label="Model" value={meubel.model.naam} />
                   <ModalRow label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
                   <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}`} />
+                  {meubel.waskomVorm && <ModalRow label="Waskom" value={waskomTekst(meubel)} />}
                   {meubel.regaalBreedte > 0 && <ModalRow label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
                   <ModalRow label="Houtkleur" value={meubel.houtkleurNaam} />
                   <ModalRow label="Opties" value={meubelOptiesTekst(meubel)} />

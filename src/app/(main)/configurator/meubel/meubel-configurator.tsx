@@ -13,7 +13,7 @@ import {
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
-  getDuoPrijs, getDuoReeksen,
+  getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
@@ -37,6 +37,8 @@ export interface MeubelInitialConfig {
   logo?: boolean
   regaalBreedte?: number
   regaalZijde?: 'links' | 'rechts' | 'midden'
+  waskomVorm?: WaskomVorm | null
+  waskomAantal?: number
   uitsparingen?: number
   attachmentUrl?: string | null
   quantity: number
@@ -79,6 +81,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   // Regaalkast bij Regal-modellen: kant en breedte
   const [regaalTekst, setRegaalTekst] = useState(String(initialConfig?.regaalBreedte || REGAAL_STANDAARD_MM))
   const [regaalZijde, setRegaalZijde] = useState<'links' | 'rechts'>(initialConfig?.regaalZijde === 'links' ? 'links' : 'rechts')
+  // Solid Surface met ingebouwde waskom: vorm en aantal, zonder prijsverschil
+  const [waskomVorm, setWaskomVorm] = useState<WaskomVorm>(initialConfig?.waskomVorm ?? 'ovaal')
+  const [waskomAantal, setWaskomAantal] = useState(initialConfig?.waskomAantal === 2 ? 2 : 1)
   // Duo-model (Drawer Box Regal): breedte per kast in plaats van één lengte
   const [kastTekst, setKastTekst] = useState<[string, string]>([
     String(initialConfig?.ladeBreedtes?.[0] ?? DUO_START_MM), String(initialConfig?.ladeBreedtes?.[1] ?? DUO_START_MM),
@@ -259,6 +264,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
       logo, uitsparingen,
       ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
+      ...(model.waskom && { waskomVorm, waskomAantal }),
       quantity, projectName: projectName.trim(), reference, description,
     }
     startTransition(async () => {
@@ -548,6 +554,53 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               )}
 
+              {model.waskom && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Waskom</p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-3">
+                    <div className="flex gap-2" role="radiogroup" aria-label="Vorm van de waskom">
+                      {WASKOM_VORMEN.map((v) => (
+                        <button
+                          key={v.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={waskomVorm === v.id}
+                          onClick={() => setWaskomVorm(v.id)}
+                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                            waskomVorm === v.id
+                              ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                              : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                          }`}
+                        >
+                          {v.naam}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2" role="radiogroup" aria-label="Aantal waskommen">
+                      {[1, 2].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          role="radio"
+                          aria-checked={waskomAantal === n}
+                          onClick={() => setWaskomAantal(n)}
+                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                            waskomAantal === n
+                              ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                              : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                          }`}
+                        >
+                          {n === 1 ? '1 waskom' : '2 waskommen'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">
+                    Ingebouwd in het Solid Surface blad, zonder meerprijs. Teken de plaats van de {waskomAantal === 2 ? 'waskommen' : 'waskom'} op de maattekening.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">
                   Houtkleur <span className="font-normal text-lx-text-secondary">· {kleurNaam}</span>
@@ -661,6 +714,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(2)} />
                 <Rij label={isDuo ? 'Kasten' : 'Lades'} waarde={isDuo ? `Links ${duoBreedtes[0]} mm, rechts ${duoBreedtes[1]} mm, elk 1 lade` : `${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte, regaalMm), gekozen)}`} onEdit={() => setStep(2)} />
                 {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${isDuo ? 'in het midden' : regaalZijde}`} onEdit={() => setStep(2)} />}
+                {model.waskom && <Rij label="Waskom" waarde={waskomTekst({ waskomVorm, waskomAantal })} onEdit={() => setStep(2)} />}
                 <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />
                 <Rij label="Opties" waarde={meubelOptiesTekst({ logo, uitsparingen })} onEdit={() => setStep(2)} />
               </div>

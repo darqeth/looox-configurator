@@ -3,7 +3,7 @@ import {
   calcMeubelNettoCents, calcMeubelBrutoCents, getLadeOpties, getMeubelModel,
   getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT, getMeubelPrijsOpbouw,
   getAanvraagBereik, getAanvraagLadeOpties, getMeubelOrderOpbouw, formatPct,
-  verdeelGelijk, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
+  formatMm, ladeBreedtesTekst, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
 } from '../src/lib/meubel-config'
 
 // Prijslijst Tailor-Made juli 2026 (netto). Rij: [lengte in mm, lades, euro].
@@ -116,9 +116,13 @@ test.describe('Meubel: lade-indeling', () => {
   test('gelijk verdeeld', () => {
     expect(valideerLadeBreedtes(null, 2400, 2)).toBeNull()
     expect(getLadeBreedtes(null, 1800, 3)).toEqual([600, 600, 600])
-    // Komt het niet uit, dan scheelt het hooguit 1 mm en klopt het totaal
-    expect(getLadeBreedtes(null, 2000, 3)).toEqual([667, 667, 666])
-    expect(verdeelGelijk(2501, 4)).toEqual([626, 625, 625, 625])
+    // Komt het niet uit, dan is elke lade toch even breed, met een maat achter de komma
+    const derde = getLadeBreedtes(null, 2000, 3)
+    expect(new Set(derde).size).toBe(1)
+    expect(derde.map(formatMm)).toEqual(['666,7', '666,7', '666,7'])
+    expect(ladeBreedtesTekst(null, 2000, 3)).toBe('Gelijk verdeeld, 666,7 mm per lade')
+    expect(ladeBreedtesTekst(null, 1800, 3)).toBe('Gelijk verdeeld, 600 mm per lade')
+    expect(formatMm(1250)).toBe('1250')
   })
 
   test('eigen indeling: hele mm, 350 tot 1200, samen de lengte', () => {

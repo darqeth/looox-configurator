@@ -219,25 +219,29 @@ export function valideerLadeBreedtes(breedtes: LadeBreedtes, lengte: number, lad
   return null
 }
 
+/** Maat in mm voor weergave: hele mm, of één decimaal als het niet uitkomt (666,7). */
+export function formatMm(n: number): string {
+  return n.toLocaleString('nl-NL', { maximumFractionDigits: 1, useGrouping: false })
+}
+
 /**
- * Gelijke verdeling in hele mm. Komt de lengte niet precies uit, dan zijn de
- * eerste lades 1 mm breder (2000 mm over 3 lades: 667, 667, 666).
+ * Breedte per lade voor tekening en samenvatting. Gelijk verdeeld is echt
+ * gelijk: komt de lengte niet uit, dan krijgt elke lade dezelfde maat achter
+ * de komma (2000 mm over 3 lades: 666,7 per lade).
  */
-export function verdeelGelijk(lengte: number, lades: number): number[] {
+export function getLadeBreedtes(breedtes: LadeBreedtes, lengte: number, lades: number): number[] {
+  if (breedtes && valideerLadeBreedtes(breedtes, lengte, lades) === null) return breedtes
+  return Array.from({ length: lades }, () => lengte / lades)
+}
+
+/**
+ * Startpunt voor zelf aanpassen: hele mm die samen de lengte zijn. Komt het
+ * niet uit, dan zijn de eerste lades 1 mm breder (2000 over 3: 667, 667, 666).
+ */
+export function startLadeBreedtes(lengte: number, lades: number): number[] {
   const basis = Math.floor(lengte / lades)
   const rest = lengte - basis * lades
   return Array.from({ length: lades }, (_, i) => basis + (i < rest ? 1 : 0))
-}
-
-/** Breedte per lade voor tekening en samenvatting. */
-export function getLadeBreedtes(breedtes: LadeBreedtes, lengte: number, lades: number): number[] {
-  if (breedtes && valideerLadeBreedtes(breedtes, lengte, lades) === null) return breedtes
-  return verdeelGelijk(lengte, lades)
-}
-
-/** Startpunt voor zelf aanpassen: de gelijke verdeling. */
-export function startLadeBreedtes(lengte: number, lades: number): number[] {
-  return verdeelGelijk(lengte, lades)
 }
 
 /** Kan deze lengte met dit aantal lades handmatig worden ingedeeld (elke lade 350 tot 1200 mm)? */
@@ -247,8 +251,7 @@ export function kanLadesAanpassen(lengte: number, lades: number): boolean {
 
 export function ladeBreedtesTekst(breedtes: LadeBreedtes, lengte: number, lades: number): string {
   const b = getLadeBreedtes(breedtes, lengte, lades)
-  if (breedtes && b === breedtes) return `${b.join(' + ')} mm`
-  return b.every((x) => x === b[0]) ? `Gelijk verdeeld, ${b[0]} mm per lade` : `Gelijk verdeeld, ${b.join(' + ')} mm`
+  return breedtes && b === breedtes ? `${b.join(' + ')} mm` : `Gelijk verdeeld, ${formatMm(lengte / lades)} mm per lade`
 }
 
 export const MEUBEL_AANTAL_MAX = 99

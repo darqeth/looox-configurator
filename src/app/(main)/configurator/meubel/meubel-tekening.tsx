@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useId } from 'react'
-import { HOUTKLEUREN, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
+import { HOUTKLEUREN, formatMm, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
 
 // Schematisch vooraanzicht op schaal, in dezelfde stijl als de spiegeltekening:
 // zachte vulling, dunne lijnen en maatlijnen. Volgt lengte, lades en houtkleur.
@@ -103,7 +103,7 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
       </g>
       {toonLadeMaat && Array.from({ length: lades }, (_, i) => (
         <text key={i} x={(grenzen[i] + grenzen[i + 1]) / 2} y={y + h + 31} textAnchor="middle" fontSize="10" fontWeight="500" fill={MAAT}>
-          {breedtes[i]}
+          {formatMm(breedtes[i])}
         </text>
       ))}
     </svg>

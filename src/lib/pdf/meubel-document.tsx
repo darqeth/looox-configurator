@@ -2,7 +2,7 @@ import React from 'react'
 import { Document, Page, View, Text, StyleSheet, Svg, Rect, Line, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
-import { formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
+import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
@@ -132,7 +132,7 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
       <Line x1={x} y1={y + h + 11} x2={x + w} y2={y + h + 11} {...maat} />
       {grenzen.map((gx, i) => <Line key={`m${i}`} x1={gx} y1={y + h + 5} x2={gx} y2={y + h + 15} {...maat} />)}
       {toonLadeMaat && breedtes.map((b, i) => (
-        <SvgText key={`t${i}`} x={(grenzen[i] + grenzen[i + 1]) / 2} y={y + h + 24} textAnchor="middle" style={{ ...tekst, fill: GRAY }}>{String(b)}</SvgText>
+        <SvgText key={`t${i}`} x={(grenzen[i] + grenzen[i + 1]) / 2} y={y + h + 24} textAnchor="middle" style={{ ...tekst, fill: GRAY }}>{formatMm(b)}</SvgText>
       ))}
     </Svg>
   )

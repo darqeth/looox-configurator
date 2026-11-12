@@ -61,6 +61,8 @@ function MeubelDetail({ model, factor, onBack }: { model: MeubelModel; factor: n
   const [lengteTekst, setLengteTekst] = useState('120')
   const [lades, setLades] = useState(2)
   const [houtkleur, setHoutkleur] = useState(HOUTKLEUR_DEFAULT)
+  // Alleen weergave, wordt niet opgeslagen
+  const [toonHout, setToonHout] = useState(true)
   // Laatste geldige lengte: de tekening blijft staan terwijl je typt
   const [laatsteLengte, setLaatsteLengte] = useState(120)
 
@@ -166,9 +168,21 @@ function MeubelDetail({ model, factor, onBack }: { model: MeubelModel; factor: n
       <div className="lg:sticky lg:top-6 space-y-4">
         {/* Tekening */}
         <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-4">
-          <MeubelTekening model={model} lengte={tekenLengte} lades={gekozen} houtkleur={houtkleur} />
+          <MeubelTekening model={model} lengte={tekenLengte} lades={gekozen} houtkleur={houtkleur} toonHout={toonHout} />
           <p className="text-[11px] text-lx-text-secondary text-center">Vooraanzicht, maten in cm · diepte {model.diepte} cm</p>
         </div>
+
+        {/* Weergave-toggle onder de kaart, net als bij de spiegels */}
+        <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={toonHout}
+            onChange={(e) => setToonHout(e.target.checked)}
+            className="sr-only peer"
+          />
+          <span className="w-8 h-[18px] rounded-full bg-black/15 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-[14px] after:h-[14px] after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-[14px]" />
+          <span className="text-[12px] text-lx-text-secondary font-medium">Houtkleur in tekening</span>
+        </label>
 
         {/* Prijs */}
         <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-5 space-y-4">

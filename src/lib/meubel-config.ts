@@ -70,6 +70,8 @@ export interface Houtkleur {
   id: string
   naam: string
   meerprijs: number
+  /** Donker hout: de tekening gebruikt dan lichte lijnen */
+  donker?: boolean
 }
 
 export const HOUTKLEUREN: Houtkleur[] = [
@@ -77,9 +79,9 @@ export const HOUTKLEUREN: Houtkleur[] = [
   { id: 'pure',       naam: 'Pure',       meerprijs: 4160 },
   { id: 'old-grey',   naam: 'Old Grey',   meerprijs: 0 },
   { id: 'dark-grey',  naam: 'Dark Grey',  meerprijs: 4160 },
-  { id: 'brown-grey', naam: 'Brown Grey', meerprijs: 4160 },
-  { id: 'dark-brown', naam: 'Dark Brown', meerprijs: 4160 },
-  { id: 'black',      naam: 'Black',      meerprijs: 0 },
+  { id: 'brown-grey', naam: 'Brown Grey', meerprijs: 4160, donker: true },
+  { id: 'dark-brown', naam: 'Dark Brown', meerprijs: 4160, donker: true },
+  { id: 'black',      naam: 'Black',      meerprijs: 0, donker: true },
 ]
 
 export const HOUTKLEUR_DEFAULT = 'old-grey'

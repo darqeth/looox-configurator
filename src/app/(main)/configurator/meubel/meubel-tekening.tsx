@@ -1,7 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import { houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
+import { HOUTKLEUREN, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
 
 // Schematisch vooraanzicht op schaal, in dezelfde stijl als de spiegeltekening:
 // zachte vulling, dunne lijnen en maatlijnen. Volgt lengte, lades en houtkleur.
@@ -11,19 +11,26 @@ const PAD_X = 34
 const PAD_TOP = 34
 const PAD_BOTTOM = 40
 const MAX_H = 150
-const LIJN = '#8A8F94'
+// Lijnkleur volgt de ondergrond, zodat de ladeverdeling op elke houtkleur leesbaar blijft
+const LIJN_OP_LICHT = '#26282B'
+const LIJN_OP_DONKER = '#F4F1EA'
+const VLAK_ZONDER_HOUT = '#F6F4EF'
 const MAAT = 'var(--lx-text-secondary)'
 
 function cm(n: number): string {
   return n.toLocaleString('nl-NL', { maximumFractionDigits: 1 })
 }
 
-export const MeubelTekening = memo(function MeubelTekening({ model, lengte, lades, houtkleur }: {
+export const MeubelTekening = memo(function MeubelTekening({ model, lengte, lades, houtkleur, toonHout = true }: {
   model: MeubelModel
   lengte: number
   lades: number
   houtkleur: string
+  /** Uit = kale lijntekening zonder houtkleur */
+  toonHout?: boolean
 }) {
+  const donker = toonHout && HOUTKLEUREN.find((k) => k.id === houtkleur)?.donker === true
+  const LIJN = donker ? LIJN_OP_DONKER : LIJN_OP_LICHT
   const ruimteB = W - PAD_X * 2 - 22
   const schaal = Math.min(ruimteB / lengte, MAX_H / model.hoogte)
   const w = lengte * schaal
@@ -56,15 +63,15 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, lade
       </defs>
 
       {/* Korpus */}
-      <rect x={x} y={y} width={w} height={h} rx="1.5" fill={`url(#${patroon})`} />
-      <rect x={x} y={y} width={w} height={h} rx="1.5" fill="none" stroke={LIJN} strokeWidth="1.5" />
+      <rect x={x} y={y} width={w} height={h} rx="1.5" fill={toonHout ? `url(#${patroon})` : VLAK_ZONDER_HOUT} />
+      <rect x={x} y={y} width={w} height={h} rx="1.5" fill="none" stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
 
       {/* Ladefronten */}
       {Array.from({ length: lades - 1 }, (_, i) => (
-        <line key={`k${i}`} x1={x + kolomB * (i + 1)} y1={y} x2={x + kolomB * (i + 1)} y2={y + h} stroke={LIJN} strokeWidth="1.2" />
+        <line key={`k${i}`} x1={x + kolomB * (i + 1)} y1={y} x2={x + kolomB * (i + 1)} y2={y + h} stroke={LIJN} strokeWidth="1.3" />
       ))}
       {Array.from({ length: model.rijen - 1 }, (_, i) => (
-        <line key={`r${i}`} x1={x} y1={y + rijH * (i + 1)} x2={x + w} y2={y + rijH * (i + 1)} stroke={LIJN} strokeWidth="1.2" />
+        <line key={`r${i}`} x1={x} y1={y + rijH * (i + 1)} x2={x + w} y2={y + rijH * (i + 1)} stroke={LIJN} strokeWidth="1.3" />
       ))}
 
       {/* Maatlijn lengte (boven) */}

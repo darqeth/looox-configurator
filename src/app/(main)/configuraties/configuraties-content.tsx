@@ -59,7 +59,7 @@ export function ConfiguratiesContent({
     { key: '', label: 'Alle', count: savedCount },
     ...(toonMeubels ? [
       { key: 'spiegels', label: 'Spiegels', count: savedCount - meubelCount },
-      { key: 'meubels', label: 'Meubels', count: meubelCount },
+      { key: 'meubels', label: 'Tailor-Made', count: meubelCount },
     ] : []),
   ]
 

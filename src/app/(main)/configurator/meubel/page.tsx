@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import MeubelConfigurator from './meubel-configurator'
 
-export const metadata = { title: 'Nieuw meubel | LoooX Configurator' }
+export const metadata = { title: 'Tailor-Made | LoooX Configurator' }
 
 export default async function MeubelPage() {
   const supabase = await createClient()

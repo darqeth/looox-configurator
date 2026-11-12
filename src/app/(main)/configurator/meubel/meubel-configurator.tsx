@@ -8,19 +8,19 @@ import { useRouter } from 'next/navigation'
 import { Maximize2, X } from 'lucide-react'
 import { toast } from '@/components/toast'
 import {
-  MEUBEL_MODELLEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_MM, LADE_MAX_MM, MEUBEL_AANTAL_MAX,
+  MEUBEL_MODELLEN, MEUBEL_CATEGORIEEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_MM, LADE_MAX_MM, MEUBEL_AANTAL_MAX,
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte,
-  type MeubelModel, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
+  type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
 
 // Stappen: model kiezen, samenstellen (lengte, lades, houtkleur), samenvatting.
 // In beeld staat alleen bruto (netto × factor); netto komt pas in de bestelstap.
 
-const STEPS = ['Model', 'Samenstellen', 'Samenvatting']
+const STEPS = ['Categorie', 'Model', 'Samenstellen', 'Samenvatting']
 
 export interface MeubelInitialConfig {
   id: string
@@ -52,7 +52,9 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   const [hoogteKeuze, setHoogteKeuze] = useState<number | null>(initialConfig?.hoogte ?? null)
   // Overal waar het model getoond wordt geldt de gekozen hoogte
   const model = basisModel ? { ...basisModel, hoogte: getMeubelHoogte(basisModel, hoogteKeuze) } : null
-  const [step, setStep] = useState(model ? 1 : 0)
+  const [categorie, setCategorie] = useState<MeubelCategorieId | null>(basisModel?.categorie ?? null)
+  // 0 categorie, 1 model, 2 samenstellen, 3 samenvatting
+  const [step, setStep] = useState(model ? 2 : 0)
   const [lengteTekst, setLengteTekst] = useState(String(initialConfig?.lengte ?? 1200))
   // Laatste geldige lengte: tekening en opties blijven staan terwijl je typt
   const [laatsteLengte, setLaatsteLengte] = useState(initialConfig?.lengte ?? 1200)
@@ -76,14 +78,51 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   const [reference, setReference] = useState(initialConfig?.reference ?? '')
   const [description, setDescription] = useState(initialConfig?.description ?? '')
 
-  if (!model || step === 0) {
+  if (!categorie || step === 0) {
     return (
-      <Kader step={0} onStep={setStep} maxStep={model ? 2 : 0}>
+      <Kader step={0} onStep={setStep} maxStep={model ? 3 : categorie ? 1 : 0}>
         <div className="w-full">
-          <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">{isEditing ? 'Model wijzigen' : 'Nieuw meubel'}</h1>
-          <p className="text-[13px] text-lx-text-secondary mt-1 mb-5">Kies een model uit de Tailor-Made collectie.</p>
+          <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">Tailor-Made</h1>
+          <p className="text-[13px] text-lx-text-secondary mt-1 mb-5">Wat wil je samenstellen?</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {MEUBEL_MODELLEN.map((m) => {
+            {MEUBEL_CATEGORIEEN.map((c) => {
+              const modellen = MEUBEL_MODELLEN.filter((m) => m.categorie === c.id)
+              const leeg = modellen.length === 0
+              return (
+                <button
+                  key={c.id}
+                  disabled={leeg}
+                  onClick={() => { setCategorie(c.id); setStep(1) }}
+                  aria-pressed={categorie === c.id}
+                  className={`flex flex-col items-stretch justify-start text-left bg-white rounded-[18px] border shadow-sm overflow-hidden transition-colors ${
+                    leeg ? 'opacity-60 cursor-not-allowed border-black/6' : `cursor-pointer hover:border-lx-cta ${categorie === c.id ? 'border-lx-cta' : 'border-black/6'}`
+                  }`}
+                >
+                  <div className="relative aspect-[16/9] w-full flex-shrink-0 bg-lx-panel-bg">
+                    {modellen[0] && <Image src={modellen[0].afbeelding} alt="" fill sizes="(min-width: 1024px) 320px, (min-width: 640px) 480px, 100vw" className="object-contain p-4" />}
+                  </div>
+                  <div className="px-5 py-4">
+                    <p className="font-semibold text-lx-text-primary text-[15px]">{c.naam}</p>
+                    <p className="text-[13px] text-lx-text-secondary mt-0.5">{c.omschrijving}</p>
+                    <p className="text-[12px] text-lx-text-muted mt-2">{leeg ? 'Binnenkort' : `${modellen.length} ${modellen.length === 1 ? 'model' : 'modellen'}`}</p>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </Kader>
+    )
+  }
+
+  if (!model || step === 1) {
+    return (
+      <Kader step={1} onStep={setStep} maxStep={model ? 3 : 1}>
+        <div className="w-full">
+          <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">{MEUBEL_CATEGORIEEN.find((c) => c.id === categorie)?.naam ?? 'Model'}</h1>
+          <p className="text-[13px] text-lx-text-secondary mt-1 mb-5">{isEditing ? 'Kies een ander model.' : 'Kies een model.'}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {MEUBEL_MODELLEN.filter((m) => m.categorie === categorie).map((m) => {
               const b = getLengteBereik(m)
               return (
                 <button
@@ -94,7 +133,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                       const l = m.vasteLengtes ? (m.vasteLengtes.includes(laatsteLengte) ? laatsteLengte : m.vasteLengtes[0]) : Math.min(Math.max(laatsteLengte, b.min), b.max)
                       setLengteTekst(String(l)); setLaatsteLengte(l); setEigenBreedtes(null); setOpAanvraag(false); setHoogteKeuze(null)
                     }
-                    setModel(m); setStep(1)
+                    setModel(m); setStep(2)
                   }}
                   aria-pressed={model?.id === m.id}
                   className={`flex flex-col items-stretch justify-start text-left bg-white rounded-[18px] border shadow-sm overflow-hidden hover:border-lx-cta transition-colors cursor-pointer ${model?.id === m.id ? 'border-lx-cta' : 'border-black/6'}`}
@@ -201,11 +240,11 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   }
 
   return (
-    <Kader step={step} onStep={setStep} maxStep={geldig ? 2 : 1}>
+    <Kader step={step} onStep={setStep} maxStep={geldig ? 3 : 2}>
       {/* Links: stap */}
       <div className="flex-1 min-w-0 w-full">
         <div className="bg-white rounded-2xl shadow-sm border border-lx-divider p-5">
-          {step === 1 && (
+          {step === 2 && (
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="relative w-24 h-[72px] shrink-0 rounded-xl bg-lx-panel-bg overflow-hidden">
@@ -214,7 +253,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                 <div className="min-w-0">
                   <h1 className="text-[18px] font-bold text-lx-text-primary tracking-tight">{model.naam}</h1>
                   <p className="text-[12.5px] text-lx-text-secondary mt-0.5">Hoogte {model.hoogte} mm · diepte {model.diepte} mm</p>
-                  <button onClick={() => setStep(0)} className="text-[12.5px] font-semibold text-lx-cta hover:underline cursor-pointer mt-1">
+                  <button onClick={() => setStep(1)} className="text-[12.5px] font-semibold text-lx-cta hover:underline cursor-pointer mt-1">
                     Ander model
                   </button>
                 </div>
@@ -487,7 +526,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
               )}
 
               <button
-                onClick={() => setStep(2)}
+                onClick={() => setStep(3)}
                 disabled={!geldig}
                 className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
@@ -496,17 +535,17 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
             </div>
           )}
 
-          {step === 2 && geldig && (
+          {step === 3 && geldig && (
             <div className="space-y-5">
               <h1 className="text-[16px] font-semibold text-lx-text-primary">Samenvatting</h1>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
-                <Rij label="Model" waarde={model.naam} onEdit={() => setStep(0)} />
-                <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(1)} />
-                <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte), gekozen)}`} onEdit={() => setStep(1)} />
-                <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(1)} />
-                <Rij label="Opties" waarde={meubelOptiesTekst({ logo, uitsparingen })} onEdit={() => setStep(1)} />
+                <Rij label="Model" waarde={model.naam} onEdit={() => setStep(1)} />
+                <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(2)} />
+                <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte), gekozen)}`} onEdit={() => setStep(2)} />
+                <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />
+                <Rij label="Opties" waarde={meubelOptiesTekst({ logo, uitsparingen })} onEdit={() => setStep(2)} />
               </div>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">

@@ -406,8 +406,8 @@ export function UserEditModal({
                   toggle: () => handleSetAccess(heeftProject ? 'maatwerk' : 'beide'),
                 },
                 {
-                  label: 'Meubels (Tailor-Made)',
-                  hint: isInternational ? 'Niet beschikbaar voor accounts met buitenlandtoeslag' : 'Maatwerk meubels samenstellen en bestellen',
+                  label: 'Tailor-Made',
+                  hint: isInternational ? 'Niet beschikbaar voor accounts met buitenlandtoeslag' : 'Meubels, kasten en accessoires samenstellen en bestellen',
                   aan: meubelAccess,
                   vast: false,
                   toggle: handleToggleMeubel,

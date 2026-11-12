@@ -22,8 +22,23 @@ interface Staffel {
   prijzen: Record<number, number>
 }
 
+export type MeubelCategorieId = 'wastafelmeubels' | 'solid-surface' | 'kasten' | 'toiletmeubels' | 'planken' | 'waskommen' | 'accessoires'
+
+// Tailor-Made assortiment in categorieën: de dealer kiest eerst een categorie,
+// daarna een model. Een categorie zonder modellen staat er als "binnenkort".
+export const MEUBEL_CATEGORIEEN: { id: MeubelCategorieId; naam: string; omschrijving: string }[] = [
+  { id: 'wastafelmeubels', naam: 'Wastafelmeubels', omschrijving: 'Houten ladenmeubels op maat.' },
+  { id: 'solid-surface', naam: 'Solid Surface', omschrijving: 'Meubels met een Solid Surface blad en waskom.' },
+  { id: 'kasten', naam: 'Kasten', omschrijving: 'Hoge kasten, regalen en de spiegelkast.' },
+  { id: 'toiletmeubels', naam: 'Toiletmeubels', omschrijving: 'Compacte meubels en planken voor het toilet.' },
+  { id: 'planken', naam: 'Planken', omschrijving: 'Base Shelf, Wall Shelf, Niche Shelf en Cover.' },
+  { id: 'waskommen', naam: 'Waskommen', omschrijving: 'Keramiek, Solid Surface en vrijstaande zuilen.' },
+  { id: 'accessoires', naam: 'Accessoires', omschrijving: 'Organizers en dividers voor in de lade.' },
+]
+
 export interface MeubelModel {
   id: string
+  categorie: MeubelCategorieId
   naam: string
   omschrijving: string
   afbeelding: string
@@ -58,6 +73,7 @@ export interface MeubelModel {
 export const MEUBEL_MODELLEN: MeubelModel[] = [
   {
     id: 'facet',
+    categorie: 'wastafelmeubels',
     naam: 'Facet',
     omschrijving: 'Greeploos ladenmeubel met facetrand.',
     afbeelding: '/images/meubels/model-facet.webp',
@@ -74,6 +90,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'facet-double',
+    categorie: 'wastafelmeubels',
     naam: 'Facet Double',
     omschrijving: 'Facet met twee laderijen boven elkaar.',
     afbeelding: '/images/meubels/model-facet-double.webp',
@@ -91,6 +108,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'facet-deco',
+    categorie: 'wastafelmeubels',
     naam: 'Facet Deco',
     omschrijving: 'Smalle Facet zonder ruimte voor een waskom.',
     afbeelding: '/images/meubels/model-facet-deco.webp',
@@ -105,6 +123,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'facet-stripes',
+    categorie: 'wastafelmeubels',
     naam: 'Facet Stripes',
     omschrijving: 'Facet met verticale lamellen op het front.',
     afbeelding: '/images/meubels/model-facet-stripes.webp',
@@ -123,6 +142,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'facet-stripes-double',
+    categorie: 'wastafelmeubels',
     naam: 'Facet Stripes Double',
     omschrijving: 'Facet Stripes met twee laderijen boven elkaar.',
     afbeelding: '/images/meubels/model-facet-stripes-double.webp',
@@ -141,6 +161,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'facet-waves',
+    categorie: 'wastafelmeubels',
     naam: 'Facet Waves',
     omschrijving: 'Facet met golvend front.',
     afbeelding: '/images/meubels/model-facet-waves.webp',
@@ -157,6 +178,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'full-frame',
+    categorie: 'wastafelmeubels',
     naam: 'Full-Frame',
     omschrijving: 'Ladenmeubel met een frame rondom.',
     afbeelding: '/images/meubels/model-full-frame.webp',
@@ -176,6 +198,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'u-frame',
+    categorie: 'wastafelmeubels',
     naam: 'U-Frame',
     omschrijving: 'Ladenmeubel met een U-vormig frame.',
     afbeelding: '/images/meubels/model-u-frame.webp',
@@ -194,6 +217,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'u-floor',
+    categorie: 'wastafelmeubels',
     naam: 'U-Floor',
     omschrijving: 'Staand meubel met twee laderijen in een U-frame.',
     afbeelding: '/images/meubels/model-u-floor.webp',
@@ -213,6 +237,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'basic-drawer',
+    categorie: 'wastafelmeubels',
     naam: 'Basic Drawer',
     omschrijving: 'Strak ladenmeubel met greeplijst.',
     afbeelding: '/images/meubels/model-basic-drawer.webp',
@@ -231,6 +256,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'drawer-box',
+    categorie: 'wastafelmeubels',
     naam: 'Drawer Box',
     omschrijving: 'Ladenmeubel met overstekend blad.',
     afbeelding: '/images/meubels/model-drawer-box.webp',
@@ -248,6 +274,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'drawer-box-double',
+    categorie: 'wastafelmeubels',
     naam: 'Drawer Box Double',
     omschrijving: 'Drawer Box met twee laderijen boven elkaar.',
     afbeelding: '/images/meubels/model-drawer-box-double.webp',
@@ -266,6 +293,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
   },
   {
     id: 'block',
+    categorie: 'wastafelmeubels',
     naam: 'Block',
     omschrijving: 'Compact blokmeubel zonder ruimte voor een waskom.',
     afbeelding: '/images/meubels/model-block.webp',

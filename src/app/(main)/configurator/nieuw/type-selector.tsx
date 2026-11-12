@@ -59,8 +59,8 @@ function TypeSelector({ onMaatwerk, onProject, onMeubel, onClose }: {
               <rect x="2" y="8" width="20" height="9" rx="1.5" />
               <path d="M12 8v9" /><path d="M6 12.5h2" /><path d="M16 12.5h2" />
             </svg>
-            <p className="font-semibold text-lx-text-primary text-[15px] mb-1">Meubel</p>
-            <p className="text-[13px] text-lx-text-secondary leading-relaxed">Tailor-Made wastafelmeubel op maat, met lades naar keuze.</p>
+            <p className="font-semibold text-lx-text-primary text-[15px] mb-1">Tailor-Made</p>
+            <p className="text-[13px] text-lx-text-secondary leading-relaxed">Meubels, kasten en accessoires op maat.</p>
           </button>}
         </div>
       </div>

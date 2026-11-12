@@ -5,7 +5,8 @@
 
 export const MEUBEL_FACTOR_DEFAULT = 2
 export const MEUBEL_FACTOR_MAX = 10
-export const LADE_MIN_MM = 300
+// Een lade is minimaal 350 mm breed (Mark, 12 nov); dat geldt ook bij gelijke verdeling
+export const LADE_MIN_MM = 350
 export const LADE_MAX_MM = 1200
 export const UITSPARING_NETTO_CENTS = 1040
 export const UITSPARING_MAX = 10
@@ -117,14 +118,17 @@ function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
 }
 
 /**
- * Aantal lades (kolommen) dat bij deze lengte te bestellen is.
- * De prijslijst is leidend (Mark, 12 nov): elke combinatie die erin staat mag,
- * ook als een gelijke verdeling buiten 300 tot 1200 mm per lade valt.
+ * Aantal lades (kolommen) dat bij deze lengte te bestellen is: de combinaties
+ * uit de prijslijst, zolang een lade bij gelijke verdeling minimaal 350 mm is.
+ * Naar boven is de prijslijst leidend (een lade mag daar breder dan 1200 mm uitkomen).
  */
 export function getLadeOpties(model: MeubelModel, lengte: number): number[] {
   const staffel = findStaffel(model, lengte)
   if (!staffel) return []
-  return Object.keys(staffel.prijzen).map(Number).sort((a, b) => a - b)
+  return Object.keys(staffel.prijzen)
+    .map(Number)
+    .filter((n) => lengte / n >= LADE_MIN_MM)
+    .sort((a, b) => a - b)
 }
 
 export function ladeLabel(model: MeubelModel, kolommen: number): string {
@@ -200,7 +204,7 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
 
 // ─── Lade-indeling ──────────────────────────────────────────────────────────
 // Standaard zijn de lades gelijk verdeeld (ladeBreedtes = null). Past de dealer
-// de breedtes aan, dan zijn het hele millimeters van 300 tot 1200 mm die samen
+// de breedtes aan, dan zijn het hele millimeters van 350 tot 1200 mm die samen
 // de lengte van het meubel vormen. Bij dubbele modellen gelden de breedtes
 // voor beide rijen.
 
@@ -237,7 +241,7 @@ export function startLadeBreedtes(lengte: number, lades: number): number[] {
   return verdeelGelijk(lengte, lades)
 }
 
-/** Kan deze lengte met dit aantal lades handmatig worden ingedeeld (elke lade 300 tot 1200 mm)? */
+/** Kan deze lengte met dit aantal lades handmatig worden ingedeeld (elke lade 350 tot 1200 mm)? */
 export function kanLadesAanpassen(lengte: number, lades: number): boolean {
   return lades > 1 && lengte >= lades * LADE_MIN_MM && lengte <= lades * LADE_MAX_MM
 }
@@ -284,7 +288,7 @@ export function getAanvraagBereik(model: MeubelModel): { min: number; max: numbe
   return { min: getLengteBereik(model).max + 1, max: MEUBEL_AANVRAAG_MAX_MM }
 }
 
-/** Aantal lades naast elkaar waarbij elke lade bij gelijke verdeling 300 tot 1200 mm is. */
+/** Aantal lades naast elkaar waarbij elke lade bij gelijke verdeling 350 tot 1200 mm is. */
 export function getAanvraagLadeOpties(lengte: number): number[] {
   const opties: number[] = []
   for (let n = 1; n <= MEUBEL_AANVRAAG_LADES_MAX; n++) {

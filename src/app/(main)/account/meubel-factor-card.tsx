@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { updateMeubelFactor } from '@/lib/actions/account'
 
 export default function MeubelFactorCard({ factor }: { factor: number }) {
-  const opgemaakt = (n: number) => n.toLocaleString('nl-NL', { maximumFractionDigits: 2 })
+  const opgemaakt = (n: number) => n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
   const [waarde, setWaarde] = useState(opgemaakt(factor))
   const [melding, setMelding] = useState<{ ok: boolean; tekst: string } | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -29,7 +29,7 @@ export default function MeubelFactorCard({ factor }: { factor: number }) {
       <div className="px-6 py-4 border-b border-lx-divider">
         <h2 className="text-[14px] font-bold text-lx-text-primary">Tailor-Made meubels</h2>
         <p className="text-[12px] text-lx-text-secondary mt-0.5">
-          De prijs in beeld en op de offerte is de inkoopprijs maal deze factor. Geldt voor het hele bedrijf.
+          De prijs in beeld en op de offerte is de inkoopprijs maal deze factor. Geldt voor het hele bedrijf. Eén cijfer achter de komma, bijvoorbeeld 2,0 of 2,5.
         </p>
       </div>
       <form onSubmit={handleSubmit} className="px-6 py-5">
@@ -39,7 +39,7 @@ export default function MeubelFactorCard({ factor }: { factor: number }) {
             id="meubel-factor"
             inputMode="decimal"
             value={waarde}
-            onChange={(e) => setWaarde(e.target.value.replace(/[^\d.,]/g, '').slice(0, 5))}
+            onChange={(e) => setWaarde(e.target.value.replace(/[^\d.,]/g, '').slice(0, 4))}
             className="w-20 h-10 rounded-xl border border-black/10 text-center text-[14px] font-semibold text-lx-text-primary outline-none focus:border-lx-cta bg-white px-2"
           />
           <button

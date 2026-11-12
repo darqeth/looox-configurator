@@ -89,9 +89,10 @@ export async function updateMeubelFactor(value: string): Promise<{ success: bool
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Niet ingelogd' }
 
-  const factor = Math.round(Number(String(value).replace(',', '.')) * 100) / 100
+  // Eén decimaal (Mark, 12 nov): 2,35 wordt 2,4
+  const factor = Math.round(Number(String(value).replace(',', '.')) * 10) / 10
   if (!Number.isFinite(factor) || factor <= 0 || factor > MEUBEL_FACTOR_MAX) {
-    return { success: false, error: `Vul een factor in tussen 0,01 en ${MEUBEL_FACTOR_MAX}.` }
+    return { success: false, error: `Vul een factor in tussen 0,1 en ${MEUBEL_FACTOR_MAX}.` }
   }
 
   const { data: member } = await supabase

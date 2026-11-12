@@ -87,6 +87,14 @@ export interface MeubelModel {
   zonderLades?: boolean
   /** Geen hout aan dit product: geen houtkleur en geen logo (Solid Washbasin Solo) */
   geenHout?: boolean
+  /** Afmeting als tekst, ingevuld bij een gekozen vast artikel (de maat hoort bij de uitvoering) */
+  afmetingTekst?: string
+  /** Plank: lengte, diepte en dikte in plaats van lades; `staffels` blijft leeg */
+  plank?: PlankOpbouw
+  /** Vast artikel met artikelnummer (waskommen, accessoires): de dealer kiest alleen een uitvoering */
+  artikel?: ArtikelOpbouw
+  /** Valt onder "Opties accessoires": lagere meerprijs voor de houtkleur (toiletmeubels) */
+  accessoireKleur?: boolean
   /** Kast in plaats van ladenmeubel: breedte, hoogte en diepte uit vaste keuzes; `staffels` blijft leeg */
   kast?: KastOpbouw
   staffels: Staffel[]
@@ -97,6 +105,52 @@ export interface MeubelModel {
  * en de hoogte uit een lijst of vrij binnen de hoogtestaffel. In de opslag staat de
  * breedte in `lengte` en het aantal deuren in `lades` (0 = open kast of geen keuze).
  */
+/**
+ * Een plank heeft een vrije lengte, een diepte (lijst of vrij) en een dikte. De prijs komt uit
+ * een tabel: de eerste rij waar lengte en diepte in passen, en daarbinnen de kolom van de
+ * diepte of de dikte. In de opslag staat de dikte in `hoogte`.
+ */
+export interface PlankOpbouw {
+  lengte: { min: number; max: number }
+  /** Dieptes in mm om uit te kiezen, of een vrij bereik */
+  dieptes?: number[]
+  diepteBereik?: { min: number; max: number }
+  /** Diktes in mm */
+  diktes: number[]
+  /** Rijen oplopend: grootste lengte en (bij prijs op oppervlakte) grootste diepte in mm */
+  rijen: { maxL: number; maxD?: number; prijzen: number[] }[]
+  /** Wat de kolom bepaalt: niets, de diepte (bovengrens per kolom) of de dikte */
+  kolom?: { op: 'diepte' | 'dikte'; grenzen: number[] }
+  /** Handdoekhouders onder de plank (Base Shelf Solo): prijs per stuk, en de diepte die daarbij minimaal nodig is */
+  handdoekhouder?: { prijs: number; minDiepte: number }
+  /** Rail, Roll of Towel holder onder de plank, zonder meerprijs */
+  extras?: boolean
+}
+
+export interface ArtikelVariant {
+  /** Artikelnummer uit de prijslijst */
+  id: string
+  naam: string
+  afmeting: string
+  prijs: number
+}
+
+export interface ArtikelOpbouw {
+  varianten: ArtikelVariant[]
+}
+
+export const PLANK_EXTRAS = [
+  { id: 'rail', naam: 'Rail' },
+  { id: 'rail-curved', naam: 'Rail curved' },
+  { id: 'towel-holder-curved', naam: 'Towel holder curved' },
+  { id: 'roll', naam: 'Roll' },
+  { id: 'roll-curved', naam: 'Roll curved' },
+] as const
+export type PlankExtra = typeof PLANK_EXTRAS[number]['id']
+
+export const HANDDOEKHOUDER_TYPES = ['A', 'B'] as const
+export type HanddoekType = typeof HANDDOEKHOUDER_TYPES[number]
+
 export interface KastOpbouw {
   /** Breedtes in mm; één waarde is een vaste maat */
   breedtes: number[]
@@ -125,6 +179,88 @@ export interface KastOpbouw {
   /** Valt onder "Opties accessoires": lagere meerprijs voor de houtkleur */
   accessoire?: boolean
 }
+
+// Vaste artikelen uit de prijslijst: [artikelnummer, uitvoering, afmeting, netto in centen]
+type ArtikelRij = [string, string, string, number]
+const ARTIKEL_GROEPEN: { id: string; categorie: MeubelCategorieId; naam: string; omschrijving: string; afbeelding?: string; hout?: boolean; opmerking?: string; varianten: ArtikelRij[] }[] = [
+  { id: 'waskom-ceramic', categorie: 'waskommen', naam: 'Ceramic', omschrijving: 'Keramische opzetwaskommen, rond, vierkant of rechthoekig.', varianten: [
+    ['WTMWK30W', 'Round Gloss White', 'Ø 30 cm, hoogte 13 cm', 8216],
+    ['WTMWK30MW', 'Round Matt White', 'Ø 30 cm, hoogte 13 cm', 13936],
+    ['WTMWK30MZ', 'Round Matt Black', 'Ø 30 cm, hoogte 13 cm', 14976],
+    ['WTMWK40W', 'Round Gloss White', 'Ø 40 cm, hoogte 15 cm', 9776],
+    ['WTMWK40MW', 'Round Matt White', 'Ø 40 cm, hoogte 15 cm', 13416],
+    ['WTMWK40MZ', 'Round Matt Black', 'Ø 40 cm, hoogte 15 cm', 14456],
+    ['WTMWKQ41W', 'Square Gloss White', '41 × 41 cm, hoogte 14,5 cm', 9776],
+    ['WTMWK4940W', 'Rectangle Gloss White', '49 × 40 cm, hoogte 14,5 cm', 11336],
+    ['WTMWK4532MW', 'Rectangle Matt White', '45 × 32,5 cm, hoogte 13,5 cm', 12376],
+    ['WTMWK4532MZ', 'Rectangle Matt Black', '45 × 32,5 cm, hoogte 13,5 cm', 12376],
+    ['WTMWK36MW', 'Waves Round Matt White', 'Ø 36 cm, hoogte 16,5 cm', 18616],
+    ['WTMWK36MZ', 'Waves Round Matt Black', 'Ø 36 cm, hoogte 16,5 cm', 18616],
+  ] },
+  { id: 'waskom-ceramic-raw', categorie: 'waskommen', naam: 'Ceramic Raw', omschrijving: 'Keramische waskommen met een ruwe afwerking.', varianten: [
+    ['WTMWK40RO', 'Round Rust', 'Ø 40 cm, hoogte 15 cm', 31096],
+    ['WTMWK40LG', 'Round Light Grey', 'Ø 40 cm, hoogte 15 cm', 31096],
+    ['WTMWK40DG', 'Round Dark Grey', 'Ø 40 cm, hoogte 15 cm', 31096],
+    ['WTMWK40ZW', 'Round Black', 'Ø 40 cm, hoogte 15 cm', 31096],
+    ['WTMWK40CA', 'Round Calacatta', 'Ø 40 cm, hoogte 15 cm', 31096],
+    ['WTMWKQ41DG', 'Square Dark Grey', '41 × 41 cm, hoogte 15 cm', 31096],
+    ['WTMWKQ41LG', 'Square Light Grey', '41 × 41 cm, hoogte 15 cm', 31096],
+    ['WTMWK4940DG', 'Rectangle Dark Grey', '49 × 40 cm, hoogte 15 cm', 33176],
+    ['WTMWK4940LG', 'Rectangle Light Grey', '49 × 40 cm, hoogte 15 cm', 33176],
+  ] },
+  { id: 'waskom-ceramic-terrazzo', categorie: 'waskommen', naam: 'Ceramic Terrazzo', omschrijving: 'Ronde keramische waskommen met terrazzo-uitstraling.', varianten: [
+    ['WTMWK40TB', 'Terrazzo Beige', 'Ø 40 cm, hoogte 15 cm', 29536],
+    ['WTMWK40TG', 'Terrazzo Grey', 'Ø 40 cm, hoogte 15 cm', 29536],
+    ['WTMWK40TZW', 'Terrazzo Black', 'Ø 40 cm, hoogte 15 cm', 29536],
+  ] },
+  { id: 'waskom-ceramic-small', categorie: 'waskommen', naam: 'Ceramic Small', omschrijving: 'Kleine ronde waskommen, Ø 23 cm.', varianten: [
+    ['WTMWKS23RO', 'Raw Rust', 'Ø 23 cm, hoogte 13 cm', 23296],
+    ['WTMWKS23LG', 'Raw Light Grey', 'Ø 23 cm, hoogte 13 cm', 23296],
+    ['WTMWKS23DG', 'Raw Dark Grey', 'Ø 23 cm, hoogte 13 cm', 23296],
+    ['WTMWKS23ZW', 'Raw Black', 'Ø 23 cm, hoogte 13 cm', 23296],
+    ['WTMWKS23TB', 'Terrazzo Beige', 'Ø 23 cm, hoogte 13 cm', 17576],
+    ['WTMWKS23TG', 'Terrazzo Grey', 'Ø 23 cm, hoogte 13 cm', 17576],
+    ['WTMWKS23TZW', 'Terrazzo Black', 'Ø 23 cm, hoogte 13 cm', 17576],
+    ['WTMWKS23CA', 'Calacatta', 'Ø 23 cm, hoogte 13 cm', 23296],
+    ['WTMWKS23MW', 'Matt White', 'Ø 23 cm, hoogte 13 cm', 7696],
+    ['WTMWKS23MZ', 'Matt Black', 'Ø 23 cm, hoogte 13 cm', 8216],
+    ['WTMWKS23W', 'Gloss White', 'Ø 23 cm, hoogte 13 cm', 5096],
+  ] },
+  { id: 'waskom-ceramic-high', categorie: 'waskommen', naam: 'Ceramic High', omschrijving: 'Hoge keramische waskom, Ø 41 cm.', varianten: [
+    ['WTMWK4129W', 'Gloss White', 'Ø 41 cm, hoogte 29,5 cm', 22776],
+    ['WTMWK4129MW', 'Matt White', 'Ø 41 cm, hoogte 29,5 cm', 27976],
+    ['WTMWK4129MZ', 'Matt Black', 'Ø 41 cm, hoogte 29,5 cm', 27976],
+  ] },
+  { id: 'waskom-bronze', categorie: 'waskommen', naam: 'Bronze', omschrijving: 'Metalen waskommen in Bronze of Gun Metal.', varianten: [
+    ['WTMWK38BR', 'Bronze', 'Ø 38 cm, hoogte 12 cm', 35256],
+    ['WTMWK38GM', 'Gun Metal', 'Ø 38 cm, hoogte 12 cm', 35256],
+    ['WTMWK5538BR', 'Bronze', '55 × 38 cm, hoogte 12 cm', 41496],
+    ['WTMWK5538GM', 'Gun Metal', '55 × 38 cm, hoogte 12 cm', 41496],
+  ] },
+  { id: 'waskom-basin-free', categorie: 'waskommen', naam: 'Basin Free', omschrijving: 'Solid Surface waskommen.', varianten: [
+    ['TMSWTFR35W', 'Rectangle', '47,5 × 42 cm, hoogte 35 cm', 58136],
+    ['TMSMBS425W', 'Rectangle Mini', '42,5 × 22,5 cm, hoogte 8,5 cm', 13416],
+  ] },
+  { id: 'waskom-mineral-pillar', categorie: 'waskommen', naam: 'Mineral Pillar', omschrijving: 'Vrijstaande zuil, rond of vierkant, 90 cm hoog.', varianten: [
+    ['TMMPROUNDGW', 'Round, buiten Gloss White, binnen Gloss White', 'Ø 40 cm, hoogte 90 cm', 37336],
+    ['TMMPROUNDMW', 'Round, buiten Matt White, binnen Matt White', 'Ø 40 cm, hoogte 90 cm', 35256],
+    ['TMMPROUNDGWLG', 'Round, buiten Matt Light Grey, binnen Gloss White', 'Ø 40 cm, hoogte 90 cm', 41496],
+    ['TMMPSQUAREGW', 'Square, buiten Matt White, binnen Matt White', '40 × 40 cm, hoogte 90 cm', 40456],
+    ['TMMPSQUAREMW', 'Square, buiten Gloss White, binnen Gloss White', '40 × 40 cm, hoogte 90 cm', 38376],
+    ['TMMPSQUAREGWLG', 'Square, buiten Matt Light Grey, binnen Gloss White', '40 × 40 cm, hoogte 90 cm', 44616],
+  ] },
+  { id: 'organizer', categorie: 'accessoires', naam: 'Organizer', omschrijving: 'Organizer voor in de lade, met magnetische bevestiging.', opmerking: 'Elke Organizer wordt geleverd met 1 Divider.', varianten: [
+    ['organizer-m', 'M', 'Maat M', 5096],
+    ['organizer-l', 'L', 'Maat L', 5616],
+  ] },
+  { id: 'divider', categorie: 'accessoires', naam: 'Divider', omschrijving: 'Losse verdeler voor in de Organizer.', varianten: [
+    ['divider-m', 'M', 'Maat M', 936],
+    ['divider-l', 'L', 'Maat L', 936],
+  ] },
+  { id: 'wooden-box-facet', categorie: 'accessoires', naam: 'Wooden Box Facet', omschrijving: 'Open houten box, mooi naast de Mirror Cabinet.', hout: true, opmerking: 'De Wooden Box Facet kan alleen besteld worden in de standaardmaat.', varianten: [
+    ['wooden-box-facet-20', 'Standaard', 'Breedte 20 cm', 21736],
+  ] },
+]
 
 export const MEUBEL_MODELLEN: MeubelModel[] = [
   {
@@ -692,6 +828,134 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     kast: { breedtes: [425], dieptes: [225], hoogtes: [600], front: 'deuren', accessoire: true, uitsparing: true, prijs: k.prijs },
     staffels: [],
   })),
+  // ─── Toiletmeubels: plank ─────────────────────────────────────────────────
+  {
+    id: 'mini-base-shelf',
+    categorie: 'toiletmeubels',
+    naam: 'Mini Base Shelf',
+    omschrijving: 'Smalle plank voor het toilet, met optionele handdoekuitsparing.',
+    afbeelding: '/images/meubels/model-mini-base-shelf.webp',
+    diepte: 230,
+    hoogte: 70,
+    rijen: 1,
+    zonderLades: true,
+    geenAanvraag: true,
+    accessoireKleur: true,
+    opmerking: 'Een handdoekuitsparing is 18 × 3 cm en telt als uitsparing. Is de gewenste diepte groter dan 28 cm, kies dan de Base Shelf.',
+    plank: {
+      lengte: { min: 300, max: 1250 }, dieptes: [200, 230, 250, 280], diktes: [70], extras: true,
+      rijen: [{ maxL: 600, prijzen: [19136] }, { maxL: 1000, prijzen: [25376] }, { maxL: 1250, prijzen: [26936] }],
+    },
+    staffels: [],
+  },
+  // ─── Planken ──────────────────────────────────────────────────────────────
+  {
+    id: 'base-shelf-solo',
+    categorie: 'planken',
+    naam: 'Base Shelf Solo',
+    omschrijving: 'Wastafelplank, met of zonder handdoekhouder.',
+    afbeelding: '/images/meubels/model-base-shelf-solo.webp',
+    diepte: 460,
+    hoogte: 70,
+    rijen: 1,
+    zonderLades: true,
+    geenAanvraag: true,
+    opmerking: 'Standaard 46 cm diep. Zonder handdoekhouder kan de diepte op maat van 30 tot 50 cm.',
+    plank: {
+      lengte: { min: 500, max: 2700 }, diepteBereik: { min: 300, max: 500 }, diktes: [70], extras: true,
+      handdoekhouder: { prijs: 2600, minDiepte: 460 },
+      rijen: [{ maxL: 800, prijzen: [51896] }, { maxL: 1200, prijzen: [54496] }, { maxL: 1600, prijzen: [61256] }, { maxL: 2100, prijzen: [74776] }, { maxL: 2700, prijzen: [86216] }],
+    },
+    staffels: [],
+  },
+  {
+    id: 'base-shelf-deco',
+    categorie: 'planken',
+    naam: 'Base Shelf Deco',
+    omschrijving: 'Decoratieve plank zonder handdoekhouder.',
+    afbeelding: '/images/meubels/model-base-shelf-deco.webp',
+    diepte: 410,
+    hoogte: 70,
+    rijen: 1,
+    zonderLades: true,
+    geenAanvraag: true,
+    plank: {
+      lengte: { min: 500, max: 2700 }, dieptes: [410], diktes: [70],
+      rijen: [{ maxL: 800, prijzen: [50856] }, { maxL: 1200, prijzen: [53456] }, { maxL: 1600, prijzen: [60216] }, { maxL: 2100, prijzen: [73736] }, { maxL: 2700, prijzen: [85176] }],
+    },
+    staffels: [],
+  },
+  {
+    id: 'niche-shelf',
+    categorie: 'planken',
+    naam: 'Niche Shelf',
+    omschrijving: 'Plank op maat voor in een nis.',
+    afbeelding: '/images/meubels/model-niche-shelf.webp',
+    diepte: 300,
+    hoogte: 30,
+    rijen: 1,
+    zonderLades: true,
+    geenAanvraag: true,
+    plank: {
+      lengte: { min: 100, max: 600 }, diepteBereik: { min: 100, max: 600 }, diktes: [30, 40, 50],
+      kolom: { op: 'dikte', grenzen: [30, 40, 50] },
+      rijen: [{ maxL: 400, maxD: 400, prijzen: [14456, 15496, 16536] }, { maxL: 600, maxD: 600, prijzen: [19656, 25896, 27976] }],
+    },
+    staffels: [],
+  },
+  {
+    id: 'wall-shelf-free',
+    categorie: 'planken',
+    naam: 'Wall Shelf Free',
+    omschrijving: 'Zwevende wandplank op maat.',
+    afbeelding: '/images/meubels/model-wall-shelf-free.webp',
+    diepte: 150,
+    hoogte: 30,
+    rijen: 1,
+    zonderLades: true,
+    geenAanvraag: true,
+    plank: {
+      lengte: { min: 200, max: 1600 }, diepteBereik: { min: 100, max: 250 }, diktes: [30, 40],
+      kolom: { op: 'diepte', grenzen: [150, 200, 250] },
+      rijen: [{ maxL: 800, prijzen: [11856, 12896, 14456] }, { maxL: 1200, prijzen: [15496, 16536, 18096] }, { maxL: 1600, prijzen: [21216, 24856, 28496] }],
+    },
+    staffels: [],
+  },
+  {
+    id: 'cover',
+    categorie: 'planken',
+    naam: 'Cover',
+    omschrijving: 'Afdekplank op maat, bijvoorbeeld over een inbouwreservoir.',
+    afbeelding: '/images/meubels/model-cover.webp',
+    diepte: 230,
+    hoogte: 40,
+    rijen: 1,
+    zonderLades: true,
+    geenAanvraag: true,
+    plank: {
+      lengte: { min: 200, max: 2250 }, diepteBereik: { min: 100, max: 350 }, diktes: [40, 50, 70],
+      rijen: [{ maxL: 1300, maxD: 230, prijzen: [22256] }, { maxL: 2250, maxD: 350, prijzen: [35256] }],
+    },
+    staffels: [],
+  },
+  // ─── Waskommen en accessoires: vaste artikelen ────────────────────────────
+  ...ARTIKEL_GROEPEN.map((g): MeubelModel => ({
+    id: g.id,
+    categorie: g.categorie,
+    naam: g.naam,
+    omschrijving: g.omschrijving,
+    afbeelding: `/images/meubels/model-${g.afbeelding ?? g.id}.webp`,
+    diepte: 0,
+    hoogte: 0,
+    rijen: 1,
+    zonderLades: true,
+    geenAanvraag: true,
+    geenHout: !g.hout,
+    accessoireKleur: true,
+    opmerking: g.opmerking,
+    artikel: { varianten: g.varianten.map(([id, naam, afmeting, prijs]) => ({ id, naam, afmeting, prijs })) },
+    staffels: [],
+  })),
 ]
 
 export interface Houtkleur {
@@ -725,6 +989,8 @@ export function getMeubelModel(id: string): MeubelModel | null {
 /** Standaardbereik van de lengte in mm. */
 export function getLengteBereik(model: MeubelModel): { min: number; max: number } {
   if (model.kast) return { min: Math.min(...model.kast.breedtes), max: Math.max(...model.kast.breedtes) }
+  if (model.plank) return model.plank.lengte
+  if (model.artikel) return { min: 0, max: 0 }
   if (model.duo) {
     // Twee kasten plus de regaalkast ertussen
     const regaal = model.regaal ?? { min: 0, max: 0 }
@@ -755,6 +1021,7 @@ export function getLadeOpties(model: MeubelModel, lengte: number, regaalBreedte 
   // Duo: altijd twee kasten met elk één lade
   if (model.duo) return [2]
   if (model.kast) return [model.kast.deuren ?? 0]
+  if (model.plank || model.artikel) return [0]
   const staffel = findStaffel(model, lengte)
   if (!staffel) return []
   if (model.zonderLades) return [0]
@@ -804,7 +1071,7 @@ export const KLEUR_MEERPRIJS_ACCESSOIRE = 2080
 
 /** Meerprijs van de houtkleur in centen netto: accessoires hebben een lagere meerprijs dan meubels. */
 export function kleurMeerprijs(model: MeubelModel, kleur: Houtkleur): number {
-  return kleur.meerprijs > 0 && model.kast?.accessoire ? KLEUR_MEERPRIJS_ACCESSOIRE : kleur.meerprijs
+  return kleur.meerprijs > 0 && (model.kast?.accessoire || model.accessoireKleur) ? KLEUR_MEERPRIJS_ACCESSOIRE : kleur.meerprijs
 }
 
 /** Bereik van een vrije kasthoogte in mm, of null bij vaste hoogtes. */
@@ -822,12 +1089,52 @@ export function getMeubelHoogte(model: MeubelModel, hoogte?: number | null): num
     const ok = model.kast.hoogtes?.includes(hoogte) || (bereik !== null && hoogte >= bereik.min && hoogte <= bereik.max)
     return ok ? hoogte : model.hoogte
   }
+  if (model.plank) return model.plank.diktes.includes(hoogte) ? hoogte : model.hoogte
   return model.hoogtes?.includes(hoogte) ? hoogte : model.hoogte
 }
 
 /** Gekozen diepte bij een kast met meerdere dieptes, anders de diepte van het model. */
 export function getMeubelDiepte(model: MeubelModel, diepte?: number | null): number {
-  return diepte != null && model.kast?.dieptes.includes(diepte) ? diepte : model.diepte
+  if (diepte == null || !Number.isInteger(diepte)) return model.diepte
+  if (model.plank) {
+    const b = model.plank.diepteBereik
+    return model.plank.dieptes?.includes(diepte) || (b && diepte >= b.min && diepte <= b.max) ? diepte : model.diepte
+  }
+  return model.kast?.dieptes.includes(diepte) ? diepte : model.diepte
+}
+
+/** Netto basisprijs van een plank in centen, of null als de maten niet bestaan. */
+export function getPlankPrijs(model: MeubelModel, input: { lengte: number; hoogte?: number; diepte?: number }): number | null {
+  const p = model.plank
+  if (!p) return null
+  const dikte = input.hoogte ?? model.hoogte
+  const diepte = input.diepte ?? model.diepte
+  if (!Number.isInteger(input.lengte) || input.lengte < p.lengte.min || input.lengte > p.lengte.max) return null
+  if (getMeubelDiepte(model, diepte) !== diepte || !p.diktes.includes(dikte)) return null
+  // Eerste rij waar lengte en diepte in passen; boven een grens geldt de volgende rij
+  const rij = p.rijen.find((r) => input.lengte <= r.maxL && (r.maxD === undefined || diepte <= r.maxD))
+  if (!rij) return null
+  if (!p.kolom) return rij.prijzen[0] ?? null
+  const kolom = p.kolom.op === 'dikte' ? p.kolom.grenzen.indexOf(dikte) : p.kolom.grenzen.findIndex((g) => diepte <= g)
+  return kolom < 0 ? null : rij.prijzen[kolom] ?? null
+}
+
+/** Artikelnummer uit de prijslijst, of null bij een artikel zonder nummer (Organizer, Divider). */
+export function artikelNummer(v: ArtikelVariant): string | null {
+  return /^[A-Z0-9]+$/.test(v.id) ? v.id : null
+}
+
+export function getArtikelVariant(model: MeubelModel, id?: string | null): ArtikelVariant | null {
+  return model.artikel?.varianten.find((v) => v.id === id) ?? null
+}
+
+/** Uitvoering van een plank in één regel: handdoekhouders en wat eronder hangt. */
+export function plankTekst(o: { handdoekhouders?: number | null; handdoekType?: string | null; extra?: string | null }): string {
+  const delen = [
+    o.handdoekhouders ? `${o.handdoekhouders} ${o.handdoekhouders === 1 ? 'handdoekhouder' : 'handdoekhouders'} type ${o.handdoekType ?? 'A'}` : '',
+    PLANK_EXTRAS.find((e) => e.id === o.extra)?.naam ?? '',
+  ].filter(Boolean)
+  return delen.length > 0 ? delen.join(' · ') : 'Zonder handdoekhouder'
 }
 
 /** Netto basisprijs van een kast in centen, of null als de maten niet bestaan. */
@@ -848,31 +1155,47 @@ export function getKastPrijs(model: MeubelModel, input: { lengte: number; lades:
 
 /** Label van de kleurregel: een los Solid Surface blad heeft geen houtkleur. */
 export function kleurLabel(model: MeubelModel): string {
-  return model.geenHout ? 'Materiaal' : 'Houtkleur'
+  return model.geenHout && !model.artikel ? 'Materiaal' : 'Houtkleur'
 }
 
 /** Wat er in plaats van "Lades" boven de indeling staat. */
 export function indelingLabel(model: MeubelModel): string {
-  return model.kast ? 'Uitvoering' : 'Lades'
+  return model.kast || model.plank || model.artikel ? 'Uitvoering' : 'Lades'
+}
+
+/** Keuzes die alleen bij een plank of vast artikel horen. */
+export interface UitvoeringKeuzes {
+  handdoekhouders?: number | null
+  handdoekType?: string | null
+  extra?: string | null
+  variant?: string | null
 }
 
 /**
  * Indeling in één regel voor samenvatting, PDF en mail: lades met hun breedtes,
  * of bij een kast het aantal deuren.
  */
-export function indelingTekst(model: MeubelModel, lades: number, breedtes: LadeBreedtes, ruimte: number): string {
+export function indelingTekst(model: MeubelModel, lades: number, breedtes: LadeBreedtes, ruimte: number, keuzes: UitvoeringKeuzes = {}): string {
+  if (model.artikel) {
+    const v = getArtikelVariant(model, keuzes.variant)
+    if (!v) return 'Onbekend'
+    return artikelNummer(v) ? `${v.naam} · art. ${v.id}` : v.naam
+  }
+  if (model.plank) return model.plank.handdoekhouder || model.plank.extras ? plankTekst(keuzes) : 'Standaard'
   if (model.kast || model.zonderLades) return ladeLabel(model, lades)
   return `${ladeLabel(model, lades)} · ${ladeBreedtesTekst(breedtes, ruimte, lades)}`
 }
 
 /** Kan er een uitsparing of boorgat in dit model? In de hoge kasten en de Mirror Cabinet niet. */
 export function kanUitsparing(model: MeubelModel): boolean {
+  if (model.artikel) return false
   return !model.kast || model.kast.uitsparing === true
 }
 
 /** Is een maattekening nodig om te bestellen? Bij een kast alleen als er uitsparingen in moeten. */
 export function tekeningVerplicht(model: MeubelModel, uitsparingen = 0): boolean {
-  return !model.kast || uitsparingen > 0
+  if (model.artikel) return false
+  return !(model.kast || model.plank) || uitsparingen > 0
 }
 
 export function ladeLabel(model: MeubelModel, kolommen: number): string {
@@ -918,6 +1241,12 @@ export interface MeubelInput {
   waskomAantal?: number
   /** Kastbreedtes bij een duo-model (bepalen daar de prijs); bij andere modellen niet nodig voor de prijs */
   ladeBreedtes?: LadeBreedtes
+  /** Plank: aantal handdoekhouders (0 tot 2), het type, en wat eronder hangt */
+  handdoekhouders?: number
+  handdoekType?: HanddoekType
+  extra?: PlankExtra | null
+  /** Vast artikel: het artikelnummer van de gekozen uitvoering */
+  variant?: string
   /** Kant van de regaalkast */
   regaalZijde?: 'links' | 'rechts' | 'midden'
 }
@@ -930,7 +1259,19 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
   const uitsparingen = input.uitsparingen ?? 0
   if (!kleur || !Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX) return null
   // Duo (Drawer Box Regal): prijs volgt uit de twee kastbreedtes, niet uit een lengtestaffel
-  const basis = model.kast
+  if (uitsparingen > 0 && !kanUitsparing(model)) return null
+  const houders = input.handdoekhouders ?? 0
+  if (houders !== 0) {
+    const h = model.plank?.handdoekhouder
+    // Met een handdoekhouder moet de plank diep genoeg zijn
+    if (!h || !Number.isInteger(houders) || houders < 0 || houders > 2 || (input.diepte ?? model.diepte) < h.minDiepte) return null
+  }
+  if (input.extra != null && (!model.plank?.extras || !PLANK_EXTRAS.some((e) => e.id === input.extra))) return null
+  const basis = model.artikel
+    ? getArtikelVariant(model, input.variant)?.prijs ?? null
+    : model.plank
+    ? getPlankPrijs(model, input)
+    : model.kast
     ? getKastPrijs(model, input)
     : model.duo
     ? getDuoPrijs(model, input.ladeBreedtes)
@@ -938,7 +1279,7 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
       ? findStaffel(model, input.lengte)?.prijzen[input.lades] ?? null
       : null
   if (basis === null) return null
-  return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS
+  return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0)
 }
 
 export function parseMeubelFactor(v: unknown): number {
@@ -977,10 +1318,16 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   if (kleurMeerprijs(model, kleur) > 0) extra.push({ label: `Houtkleur · ${kleur.naam}`, cents: Math.round(kleurMeerprijs(model, kleur) * f) })
   const uitsparingen = input.uitsparingen ?? 0
   if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
+  const houders = input.handdoekhouders ?? 0
+  if (houders > 0) extra.push({ label: `Handdoekhouder · ${houders}×`, cents: Math.round(houders * (model.plank?.handdoekhouder?.prijs ?? 0) * f) })
   const basis = totaal - extra.reduce((som, r) => som + r.cents, 0)
   return {
     regels: [{
-      label: model.kast
+      label: model.artikel
+        ? `${model.naam} · ${getArtikelVariant(model, input.variant)?.naam ?? ''}`
+        : model.plank
+        ? `${model.naam} · ${input.lengte} × ${getMeubelDiepte(model, input.diepte)} mm`
+        : model.kast
         ? `${model.naam} · B ${input.lengte} × H ${getMeubelHoogte(model, input.hoogte)} mm`
         : `${model.naam} ${input.lengte} mm · ${ladeLabel(model, input.lades)}`,
       cents: basis,
@@ -1056,12 +1403,14 @@ export interface MeubelConfig extends MeubelInput {
 /** Volledige controle van een configuratie (server en client). Foutmelding of null. */
 export function valideerMeubelConfig(c: MeubelConfig): string | null {
   const kastModel = getMeubelModel(c.modelId)
-  if (kastModel?.kast) {
-    // Een kast heeft geen lades, lengtestaffel of aanvraag: alleen de maten uit de lijst
-    if (c.opAanvraag || c.ladeBreedtes !== null) return 'Deze kast bestaat alleen in de standaardmaten.'
+  if (kastModel?.kast || kastModel?.plank || kastModel?.artikel) {
+    // Geen lades, lengtestaffel of aanvraag: alleen de maten en uitvoeringen uit de prijslijst
+    if (c.opAanvraag || c.ladeBreedtes !== null) return 'Dit product bestaat alleen in de maten uit de prijslijst.'
+    const h = kastModel.plank?.handdoekhouder
+    if (h && (c.handdoekhouders ?? 0) > 0 && (c.diepte ?? kastModel.diepte) < h.minDiepte) return `Met een handdoekhouder is de plank minimaal ${h.minDiepte} mm diep.`
     if (calcMeubelNettoCents(c) === null) return 'Deze combinatie van maten, uitvoering en houtkleur bestaat niet.'
     const u = c.uitsparingen ?? 0
-    if (u > 0 && !kanUitsparing(kastModel)) return 'In deze kast kan geen uitsparing.'
+    if (u > 0 && !kanUitsparing(kastModel)) return 'In dit product kan geen uitsparing.'
     if (!Number.isInteger(u) || u < 0 || u > UITSPARING_MAX) return `Uitsparingen: 0 tot ${UITSPARING_MAX}.`
     if (!Number.isInteger(c.quantity) || c.quantity < 1 || c.quantity > MEUBEL_AANTAL_MAX) return `Aantal moet tussen 1 en ${MEUBEL_AANTAL_MAX} liggen.`
     return null
@@ -1151,7 +1500,9 @@ export function formatPct(pct: number): string {
 
 /** Afmeting in één regel, zelfde notatie als bij spiegels: "L 2000 × H 600 × D 460 mm". */
 export function meubelAfmeting(model: MeubelModel, lengte: number): string {
+  if (model.artikel) return model.afmetingTekst ?? ''
   if (model.kast) return `B ${lengte} × H ${model.hoogte} × D ${model.diepte} mm`
+  if (model.plank) return `L ${lengte} × D ${model.diepte} × dikte ${model.hoogte} mm`
   return `L ${lengte} × H ${model.hoogte} × D ${model.diepte} mm`
 }
 

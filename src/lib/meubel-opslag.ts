@@ -1,5 +1,6 @@
 import {
-  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getArtikelVariant, indelingTekst, PLANK_EXTRAS,
+  type PlankExtra, type HanddoekType, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
   type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm,
 } from '@/lib/meubel-config'
 
@@ -29,6 +30,12 @@ export interface OpgeslagenMeubel {
   /** Waskom in het Solid Surface blad; null bij een model zonder ingebouwde waskom */
   waskomVorm: WaskomVorm | null
   waskomAantal: number
+  /** Plank: handdoekhouders, het type en wat eronder hangt */
+  handdoekhouders: number
+  handdoekType: HanddoekType
+  extra: PlankExtra | null
+  /** Vast artikel: artikelnummer van de gekozen uitvoering */
+  variant: string | null
   /** Regaalkast (Regal-modellen): breedte in mm, 0 bij een model zonder */
   regaalBreedte: number
   regaalZijde: 'links' | 'rechts' | 'midden'
@@ -55,7 +62,9 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     ...basisModel,
     hoogte: getMeubelHoogte(basisModel, m.hoogte == null ? null : Number(m.hoogte)),
     diepte: getMeubelDiepte(basisModel, m.diepte == null ? null : Number(m.diepte)),
+    afmetingTekst: getArtikelVariant(basisModel, typeof m.variant === 'string' ? m.variant : null)?.afmeting,
   }
+  const houders = basisModel.plank?.handdoekhouder ? Math.min(2, Math.max(0, Math.floor(Number(m.handdoekhouders) || 0))) : 0
   const kleur = HOUTKLEUREN.find((k) => k.id === m.houtkleur)
   const breedtes = Array.isArray(m.ladeBreedtes) ? m.ladeBreedtes.map(Number) : null
   const lengte = Number(m.lengte) || 0
@@ -68,13 +77,17 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     waskomVorm: model.waskom && (m.waskomVorm === 'ovaal' || m.waskomVorm === 'vierkant') ? m.waskomVorm : null,
     waskomAantal: m.waskomAantal === 2 ? 2 : 1,
     regaalBreedte,
+    handdoekhouders: houders,
+    handdoekType: m.handdoekType === 'B' ? 'B' : 'A',
+    extra: basisModel.plank?.extras ? PLANK_EXTRAS.find((e) => e.id === m.extra)?.id ?? null : null,
+    variant: getArtikelVariant(basisModel, typeof m.variant === 'string' ? m.variant : null)?.id ?? null,
     regaalZijde: m.regaalZijde === 'links' || m.regaalZijde === 'midden' ? m.regaalZijde : 'rechts',
     ladeRuimte: ladeRuimte(model, lengte, regaalBreedte),
     // Een kast of los blad heeft geen lades: daar is 0 een geldige waarde
-    lades: model.kast || model.zonderLades ? Math.max(0, Number(m.lades) || 0) : Number(m.lades) || 1,
+    lades: model.kast || model.zonderLades || model.plank || model.artikel ? Math.max(0, Number(m.lades) || 0) : Number(m.lades) || 1,
     ladeBreedtes: breedtes,
     houtkleur: kleur?.id ?? '',
-    houtkleurNaam: model.geenHout ? 'Solid Surface' : kleur?.naam ?? '',
+    houtkleurNaam: model.geenHout ? (model.artikel ? '' : 'Solid Surface') : kleur?.naam ?? '',
     factor: m.factor === undefined ? MEUBEL_FACTOR_DEFAULT : parseMeubelFactor(m.factor),
     opAanvraag: m.opAanvraag === true,
     logo: m.logo === true,
@@ -94,11 +107,14 @@ export function meubelSamenvatting(m: OpgeslagenMeubel): string {
 
 /** Maat en indeling voor een lijstregel: "2000 mm · 3 lades", of bij een kast de drie maten. */
 export function meubelKort(m: OpgeslagenMeubel): string {
+  if (m.model.artikel) return indelingTekst(m.model, 0, null, 0, m)
+  if (m.model.plank) return meubelAfmeting(m.model, m.lengte)
   if (m.model.kast) return [meubelAfmeting(m.model, m.lengte), m.model.kast.deuren ? ladeLabel(m.model, m.lades) : ''].filter(Boolean).join(' · ')
   return `${m.lengte} mm · ${ladeLabel(m.model, m.lades)}`
 }
 
 /** Invoer voor de prijsmotor uit een opgeslagen meubel: één plek, zodat geen optie wordt vergeten. */
 export function meubelPrijsInput(m: OpgeslagenMeubel): MeubelInput {
-  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, hoogte: m.model.hoogte, diepte: m.model.diepte, houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
+  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, hoogte: m.model.hoogte, diepte: m.model.diepte,
+    ...(m.handdoekhouders > 0 && { handdoekhouders: m.handdoekhouders, handdoekType: m.handdoekType }), ...(m.extra && { extra: m.extra }), ...(m.variant && { variant: m.variant }), houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
 }

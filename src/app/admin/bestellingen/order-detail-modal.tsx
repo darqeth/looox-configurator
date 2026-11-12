@@ -100,10 +100,10 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
               <>
                 <Rij label="Model" value={meubel.model.naam} />
                 <Rij label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
-                <Rij label={indelingLabel(meubel.model)} value={indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)} />
+                <Rij label={indelingLabel(meubel.model)} value={indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte, meubel)} />
                 {meubel.waskomVorm && <Rij label="Waskom" value={waskomTekst(meubel)} />}
                   {meubel.regaalBreedte > 0 && <Rij label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
-                <Rij label={kleurLabel(meubel.model)} value={meubel.houtkleurNaam} />
+                <Rij label={kleurLabel(meubel.model)} value={meubel.houtkleurNaam || 'Geen'} />
                 <Rij label="Opties" value={meubelOptiesTekst(meubel)} />
                 {meubel.attachmentUrl && (
                   <a href={meubel.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block py-2.5 text-[12.5px] font-semibold text-lx-cta hover:underline border-b border-lx-divider">Maattekening uitsparingen openen</a>

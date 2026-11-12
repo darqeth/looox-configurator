@@ -98,11 +98,12 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   // Bij een kast staat in `lades` het aantal deuren: daar zijn geen ladevakken
   const breedtes = model.kast ? [] : getLadeBreedtes(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)
   const kast = tekenKast(model, meubel.lades)
-  const schaal = Math.min(ruimteB / lengte, (kast ? 150 : MAX_H) / model.hoogte)
+  // Plank: de diepte bepaalt de schaal, zodat een vierkante nisplank niet te groot wordt
+  const schaal = model.plank ? Math.min(ruimteB / lengte, 110 / model.diepte) : Math.min(ruimteB / lengte, (kast ? 150 : MAX_H) / model.hoogte)
   const w = lengte * schaal
   const h = model.hoogte * schaal
   // Solid Surface: bovenaanzicht van het blad boven het vooraanzicht
-  const heeftBlad = model.categorie === 'solid-surface'
+  const heeftBlad = model.categorie === 'solid-surface' || !!model.plank
   const bladD = heeftBlad ? model.diepte * schaal : 0
   const yBlad = PAD_TOP
   const x = (W - 30 - w) / 2
@@ -124,7 +125,7 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   return (
     <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       {/* Bovenaanzicht: Solid Surface blad met de waskommen (plaats indicatief) */}
-      {heeftBlad && <Rect x={x} y={yBlad} width={w} height={bladD} fill="#FBFAF7" stroke="#26282B" strokeWidth={1.2} />}
+      {heeftBlad && <Rect x={x} y={yBlad} width={w} height={bladD} fill={model.plank ? '#F6F4EF' : '#FBFAF7'} stroke="#26282B" strokeWidth={1.2} />}
       {heeftBlad && meubel.waskomVorm && tekenWaskommen(lengte, model.diepte, meubel.waskomAantal).map((k, i) => (
         meubel.waskomVorm === 'ovaal'
           ? <Ellipse key={`w${i}`} cx={x + k.cx * schaal} cy={yBlad + k.cy * schaal} rx={(k.b / 2) * schaal} ry={(k.d / 2) * schaal} fill="#EDEAE3" stroke="#26282B" strokeWidth={0.7} />
@@ -224,11 +225,11 @@ export default function MeubelDocument({
   const specs: [string, string][] = [
     ['Model', model.naam],
     ['Afmeting', meubelAfmeting(model, meubel.lengte)],
-    [indelingLabel(model), indelingTekst(model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)],
+    [indelingLabel(model), indelingTekst(model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte, meubel)],
     ...(meubel.waskomVorm ? [['Waskom', waskomTekst(meubel)] as [string, string]] : []),
     ...(meubel.regaalBreedte > 0 ? [['Regaalkast', `${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`] as [string, string]] : []),
     ...(model.rand ? [['Rand', `${model.rand} mm ${model.randOnder ? 'rondom' : model.randBoven ? 'links, rechts en boven' : 'links en rechts'}`] as [string, string]] : []),
-    [kleurLabel(model), meubel.houtkleurNaam || '—'],
+    [kleurLabel(model), meubel.houtkleurNaam || 'Geen'],
     ['Opties', meubelOptiesTekst(meubel)],
     ...(opAanvraag ? [['Bijzonderheid', 'Groter dan de standaardmaten, op aanvraag'] as [string, string]] : []),
   ]
@@ -309,8 +310,8 @@ export default function MeubelDocument({
 
         {/* Tekening */}
         <View style={[styles.section, { alignItems: 'center' }]} wrap={false}>
-          <PdfMeubelTekening meubel={meubel} />
-          <Text style={styles.caption}>{meubel.model.categorie === 'solid-surface' ? 'Bovenaanzicht en vooraanzicht, maten in mm' : 'Vooraanzicht, maten in mm'}</Text>
+          {!meubel.model.artikel && <PdfMeubelTekening meubel={meubel} />}
+          {!meubel.model.artikel && <Text style={styles.caption}>{meubel.model.categorie === 'solid-surface' || meubel.model.plank ? 'Bovenaanzicht en vooraanzicht, maten in mm' : 'Vooraanzicht, maten in mm'}</Text>}
         </View>
 
         {/* Specificatie */}

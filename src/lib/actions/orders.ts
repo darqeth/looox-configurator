@@ -670,10 +670,10 @@ export async function placeMeubelOrder(
       regels: [
         ['Model', meubel.model.naam],
         ['Afmeting', meubelAfmeting(meubel.model, meubel.lengte)],
-        [indelingLabel(meubel.model), indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)],
+        [indelingLabel(meubel.model), indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte, meubel)],
         ...(meubel.waskomVorm ? [['Waskom', waskomTekst(meubel)] as [string, string]] : []),
         ...(meubel.regaalBreedte > 0 ? [['Regaalkast', `${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`] as [string, string]] : []),
-        [kleurLabel(meubel.model), meubel.houtkleurNaam],
+        [kleurLabel(meubel.model), meubel.houtkleurNaam || 'Geen'],
         ['Opties', meubelOptiesTekst(meubel)],
       ],
     },

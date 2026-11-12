@@ -390,7 +390,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
                   optionSubChoices: opts?.optionSubChoices as Record<string, string> | undefined,
         } : undefined
         let dimensionLabel = ''
-        if (meubel) dimensionLabel = `${meubelKort(meubel)} · ${meubel.houtkleurNaam}`
+        if (meubel) dimensionLabel = [meubelKort(meubel), meubel.houtkleurNaam].filter(Boolean).join(' · ')
         else if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
         else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
         else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`

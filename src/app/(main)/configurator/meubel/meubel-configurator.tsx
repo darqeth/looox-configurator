@@ -16,7 +16,8 @@ import {
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
-  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
+  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES,
+  type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
 
@@ -44,6 +45,10 @@ export interface MeubelInitialConfig {
   uitsparingen?: number
   attachmentUrl?: string | null
   diepte?: number | null
+  handdoekhouders?: number
+  handdoekType?: HanddoekType
+  extra?: PlankExtra | null
+  variant?: string | null
   quantity: number
   projectName: string
   reference: string
@@ -74,10 +79,24 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const kastHoogteBereik = basisModel ? getKastHoogteBereik(basisModel) : null
   const kastHoogteInvoer = /^\d+$/.test(kastHoogteTekst) ? Number(kastHoogteTekst) : NaN
   const kastHoogteOk = !kastHoogteBereik || (kastHoogteInvoer >= kastHoogteBereik.min && kastHoogteInvoer <= kastHoogteBereik.max)
+  // Plank: vrije diepte binnen een bereik, handdoekhouders en wat eronder hangt
+  const [plankDiepteTekst, setPlankDiepteTekst] = useState(String(initialConfig?.diepte ?? basisModel?.diepte ?? 0))
+  const plankDiepteBereik = basisModel?.plank?.diepteBereik ?? null
+  const plankDiepteInvoer = /^\d+$/.test(plankDiepteTekst) ? Number(plankDiepteTekst) : NaN
+  const [handdoekhouders, setHanddoekhouders] = useState(initialConfig?.handdoekhouders ?? 0)
+  const [handdoekType, setHanddoekType] = useState<HanddoekType>(initialConfig?.handdoekType ?? 'A')
+  const [extra, setExtra] = useState<PlankExtra | null>(initialConfig?.extra ?? null)
+  // Met een handdoekhouder moet de plank diep genoeg zijn
+  const houderMinDiepte = basisModel?.plank?.handdoekhouder && handdoekhouders > 0 ? basisModel.plank.handdoekhouder.minDiepte : 0
+  const plankDiepteOk = !plankDiepteBereik || (plankDiepteInvoer >= Math.max(plankDiepteBereik.min, houderMinDiepte) && plankDiepteInvoer <= plankDiepteBereik.max)
+  // Vast artikel: de gekozen uitvoering
+  const [variantKeuze, setVariant] = useState<string | null>(initialConfig?.variant ?? null)
+  const variant = basisModel?.artikel ? getArtikelVariant(basisModel, variantKeuze) ?? basisModel.artikel.varianten[0] : null
   const model = basisModel ? {
     ...basisModel,
     hoogte: getMeubelHoogte(basisModel, kastHoogteBereik ? (kastHoogteOk ? kastHoogteInvoer : null) : hoogteKeuze),
-    diepte: getMeubelDiepte(basisModel, diepteKeuze),
+    diepte: getMeubelDiepte(basisModel, plankDiepteBereik ? (plankDiepteOk ? plankDiepteInvoer : null) : diepteKeuze),
+    afmetingTekst: variant?.afmeting,
   } : null
   const [categorie, setCategorie] = useState<MeubelCategorieId | null>(basisModel?.categorie ?? null)
   // 0 categorie, 1 model, 2 samenstellen, 3 samenvatting
@@ -173,6 +192,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                       const l = vast ? (vast.includes(laatsteLengte) ? laatsteLengte : vast[0]) : Math.min(Math.max(laatsteLengte, b.min), b.max)
                       setLengteTekst(String(l)); setLaatsteLengte(l); setEigenBreedtes(null); setOpAanvraag(false); setHoogteKeuze(null)
                       setDiepteKeuze(null); setKastHoogteTekst(String(m.hoogte))
+                      setPlankDiepteTekst(String(m.diepte)); setHanddoekhouders(0); setExtra(null); setVariant(null)
                     }
                     setModel(m); setStep(2)
                   }}
@@ -186,7 +206,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     <p className="font-semibold text-lx-text-primary text-[15px]">{m.naam}</p>
                     <p className="text-[13px] text-lx-text-secondary mt-0.5">{m.omschrijving}</p>
                     <p className="text-[12px] text-lx-text-muted mt-2">
-                      {m.kast
+                      {m.artikel
+                        ? `${m.artikel.varianten.length} ${m.artikel.varianten.length === 1 ? 'uitvoering' : 'uitvoeringen'}`
+                        : m.plank
+                        ? `Lengte ${m.plank.lengte.min} tot ${m.plank.lengte.max} mm · diepte ${m.plank.dieptes ? m.plank.dieptes.join(' / ') : `${m.plank.diepteBereik?.min} tot ${m.plank.diepteBereik?.max}`} mm · dikte ${m.plank.diktes.join(' / ')} mm`
+                        : m.kast
                         ? `Breedte ${m.kast.breedtes.join(' / ')} mm · hoogte ${m.kast.hoogtes ? m.kast.hoogtes.join(' / ') : `${getKastHoogteBereik(m)?.min} tot ${getKastHoogteBereik(m)?.max}`} mm · diepte ${m.kast.dieptes.join(' / ')} mm`
                         : `Lengte ${b.min} tot ${b.max} mm · hoogte ${m.hoogtes ? m.hoogtes.join(' / ') : m.hoogte} mm · diepte ${m.diepte} mm`}
                     </p>
@@ -217,6 +241,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const lengte = isDuo ? duoBreedtes[0] + duoBreedtes[1] + regaalMm : /^\d+$/.test(lengteTekst) ? Number(lengteTekst) : NaN
   const lengteOk = isDuo
     ? duoOk
+    : model.artikel
+    ? variant !== null
+    : model.plank
+    ? lengte >= bereik.min && lengte <= bereik.max && plankDiepteOk
     : model.kast
     ? model.kast.breedtes.includes(lengte) && kastHoogteOk
     : lengte >= bereik.min && lengte <= bereik.max && (opAanvraag || !model.vasteLengtes || model.vasteLengtes.includes(lengte))
@@ -231,7 +259,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const opties = opAanvraag ? (model.zonderLades ? [0] : getAanvraagLadeOpties(ruimte)) : getLadeOpties(model, tekenLengte, regaalMm)
   // Vaste maten waaruit de dealer kiest: breedtes van een kast of de standaardlengtes van een model
   const vasteMaten = model.kast?.breedtes ?? model.vasteLengtes
-  const hoogteKeuzes = model.kast ? model.kast.hoogtes : model.hoogtes
+  const hoogteKeuzes = model.kast ? model.kast.hoogtes : model.plank ? model.plank.diktes : model.hoogtes
+  const diepteKeuzes = model.kast?.dieptes ?? model.plank?.dieptes
+  const plankKeuzes = { handdoekhouders, handdoekType, extra, variant: variant?.id }
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
   const gekozen = opties.includes(lades) ? lades : opties[0]
   const breedtes = isDuo ? duoBreedtes : eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
@@ -241,7 +271,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const kleuren = getHoutkleuren(model)
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
-  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, hoogte: model.hoogte, diepte: model.diepte, regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
+  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, hoogte: model.hoogte, diepte: model.diepte,
+    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(model.plank?.extras && extra && { extra }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
   const magUitsparing = kanUitsparing(model)
   const tekeningNodig = tekeningVerplicht(model, uitsparingen)
@@ -288,8 +319,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
     if (!geldig || !projectName.trim() || !model) return
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
-      logo: logo && !model.geenHout, uitsparingen: magUitsparing ? uitsparingen : 0,
-      ...(model.kast && { diepte: model.diepte }),
+      logo: logo && !model.geenHout && !model.artikel, uitsparingen: magUitsparing ? uitsparingen : 0,
+      ...((model.kast || model.plank) && { diepte: model.diepte }),
+      ...(model.plank?.handdoekhouder && { handdoekhouders, handdoekType }),
+      ...(model.plank?.extras && { extra }),
+      ...(variant && { variant: variant.id }),
       ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
       ...(model.waskom && { waskomVorm, waskomAantal }),
       quantity, projectName: projectName.trim(), reference, description,
@@ -322,14 +356,38 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-[18px] font-bold text-lx-text-primary tracking-tight">{model.naam}</h1>
-                  <p className="text-[12.5px] text-lx-text-secondary mt-0.5">Hoogte {model.hoogte} mm · diepte {model.diepte} mm</p>
+                  <p className="text-[12.5px] text-lx-text-secondary mt-0.5">{model.artikel ? variant?.afmeting : model.plank ? `Diepte ${model.diepte} mm · dikte ${model.hoogte} mm` : `Hoogte ${model.hoogte} mm · diepte ${model.diepte} mm`}</p>
                   <button onClick={() => setStep(1)} className="text-[12.5px] font-semibold text-lx-cta hover:underline cursor-pointer mt-1">
                     Ander model
                   </button>
                 </div>
               </div>
 
-              {isDuo ? (
+              {model.artikel ? (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Uitvoering</p>
+                  <div className="space-y-2" role="radiogroup" aria-label="Uitvoering">
+                    {model.artikel.varianten.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={variant?.id === v.id}
+                        onClick={() => setVariant(v.id)}
+                        className={`w-full flex items-center justify-between gap-4 text-left px-4 py-3 rounded-xl border transition-colors cursor-pointer ${
+                          variant?.id === v.id ? 'border-lx-cta bg-lx-icon-bg' : 'border-black/10 hover:border-black/25'
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-semibold text-lx-text-primary">{v.naam}</span>
+                          <span className="block text-[11.5px] text-lx-text-secondary">{v.afmeting}{artikelNummer(v) ? ` · art. ${v.id}` : ''}</span>
+                        </span>
+                        <span className="text-[13px] font-semibold text-lx-text-primary tabular-nums flex-shrink-0">{formatCents(Math.round(v.prijs * parseMeubelFactor(factor)))}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : isDuo ? (
                 <div>
                   <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Kasten</p>
                   <div className="flex flex-wrap items-end gap-2.5">
@@ -489,8 +547,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
 
               {hoogteKeuzes && hoogteKeuzes.length > 1 && (
                 <div>
-                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Hoogte</p>
-                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Hoogte">
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">{model.plank ? 'Dikte' : 'Hoogte'}</p>
+                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={model.plank ? 'Dikte' : 'Hoogte'}>
                     {hoogteKeuzes.map((hgt) => (
                       <button
                         key={hgt}
@@ -508,15 +566,119 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                       </button>
                     ))}
                   </div>
-                  {!model.kast && <p className="text-[12px] text-lx-text-muted mt-1.5">De hoogte heeft geen invloed op de prijs.</p>}
+                  {!model.kast && !model.plank && <p className="text-[12px] text-lx-text-muted mt-1.5">De hoogte heeft geen invloed op de prijs.</p>}
                 </div>
               )}
 
-              {model.kast && model.kast.dieptes.length > 1 && (
+              {plankDiepteBereik && (
+                <div>
+                  <label htmlFor="meubel-plank-diepte" className="block text-[13px] font-medium text-lx-text-primary mb-1.5">Diepte</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="meubel-plank-diepte"
+                      inputMode="numeric"
+                      value={plankDiepteTekst}
+                      onChange={(e) => setPlankDiepteTekst(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      aria-invalid={!plankDiepteOk}
+                      aria-describedby="meubel-plank-diepte-hulp"
+                      className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${plankDiepteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
+                    />
+                    <span className="text-[13px] text-lx-text-secondary">mm</span>
+                  </div>
+                  <p id="meubel-plank-diepte-hulp" className={`text-[12px] mt-1.5 ${plankDiepteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                    Hele millimeters, van {Math.max(plankDiepteBereik.min, houderMinDiepte)} tot {plankDiepteBereik.max} mm.
+                    {houderMinDiepte > 0 ? ` Met een handdoekhouder is de plank minimaal ${houderMinDiepte} mm diep.` : ''}
+                  </p>
+                </div>
+              )}
+
+              {model.plank?.handdoekhouder && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Handdoekhouder</p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-3">
+                    <div className="flex gap-2" role="radiogroup" aria-label="Aantal handdoekhouders">
+                      {[0, 1, 2].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          role="radio"
+                          aria-checked={handdoekhouders === n}
+                          onClick={() => setHanddoekhouders(n)}
+                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                            handdoekhouders === n ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                          }`}
+                        >
+                          {n === 0 ? 'Geen' : n === 1 ? '1 houder' : '2 houders'}
+                        </button>
+                      ))}
+                    </div>
+                    {handdoekhouders > 0 && (
+                      <div className="flex gap-2" role="radiogroup" aria-label="Type handdoekhouder">
+                        {HANDDOEKHOUDER_TYPES.map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            role="radio"
+                            aria-checked={handdoekType === t}
+                            onClick={() => setHanddoekType(t)}
+                            className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                              handdoekType === t ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                            }`}
+                          >
+                            Type {t}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">
+                    {formatCents(Math.round(model.plank.handdoekhouder.prijs * parseMeubelFactor(factor)))} per handdoekhouder. In mat zwart of geborsteld rvs; geef de kleur door bij Opmerking.
+                  </p>
+                </div>
+              )}
+
+              {model.plank?.extras && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Onder de plank</p>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2" role="radiogroup" aria-label="Accessoire onder de plank">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={extra === null}
+                      onClick={() => setExtra(null)}
+                      className={`flex flex-col items-center justify-center rounded-xl border p-2 text-[11.5px] font-semibold transition-colors cursor-pointer ${
+                        extra === null ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                      }`}
+                    >
+                      Geen
+                    </button>
+                    {PLANK_EXTRAS.map((e) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={extra === e.id}
+                        onClick={() => setExtra(e.id)}
+                        className={`flex flex-col items-center rounded-xl border p-2 text-[11.5px] font-semibold text-center leading-tight transition-colors cursor-pointer ${
+                          extra === e.id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                        }`}
+                      >
+                        <span className="relative block w-full aspect-[4/3] mb-1">
+                          <Image src={`/images/meubels/extra-${e.id}.webp`} alt="" fill sizes="90px" className="object-contain" />
+                        </span>
+                        {e.naam}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">Zonder meerprijs.</p>
+                </div>
+              )}
+
+              {diepteKeuzes && diepteKeuzes.length > 1 && (
                 <div>
                   <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Diepte</p>
                   <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Diepte">
-                    {model.kast.dieptes.map((d) => (
+                    {diepteKeuzes.map((d) => (
                       <button
                         key={d}
                         type="button"
@@ -533,7 +695,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                       </button>
                     ))}
                   </div>
-                  <p className="text-[12px] text-lx-text-muted mt-1.5">De diepte heeft geen invloed op de prijs.</p>
+                  {!model.plank?.kolom && <p className="text-[12px] text-lx-text-muted mt-1.5">De diepte heeft geen invloed op de prijs.</p>}
                 </div>
               )}
 
@@ -700,7 +862,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               </div>}
 
-              <div>
+              {!model.artikel && <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Opties</p>
                 <div className="bg-lx-panel-bg rounded-xl p-4 space-y-4">
                   {!model.geenHout && <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
@@ -736,7 +898,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     </div>
                   </div>}
                 </div>
-              </div>
+              </div>}
 
               {magUitsparing && <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Maattekening{!tekeningNodig && <span className="font-normal text-lx-text-secondary"> (optioneel)</span>}</p>
@@ -760,6 +922,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 <p id="meubel-tekening-hulp" className="text-[12px] text-lx-text-muted mt-1.5 leading-relaxed">
                   {model.kast
                     ? (uitsparingen > 0 ? 'Teken hierop de plaats en maat van elke uitsparing.' : 'Alleen nodig als er uitsparingen in de kast moeten.')
+                    : model.plank
+                    ? (uitsparingen > 0 ? 'Teken hierop de plaats en maat van elke uitsparing.' : 'Alleen nodig als er uitsparingen in de plank moeten.')
                     : `Teken hierop de plaats van de waskom, kraan en afvoer${uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.`}
                 </p>
                 {tekeningOntbreekt && <TekeningNodig />}
@@ -787,11 +951,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
                 <Rij label="Model" waarde={model.naam} onEdit={() => setStep(1)} />
                 <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(2)} />
-                <Rij label={isDuo ? 'Kasten' : indelingLabel(model)} waarde={isDuo ? `Links ${duoBreedtes[0]} mm, rechts ${duoBreedtes[1]} mm, elk 1 lade` : indelingTekst(model, gekozen, breedtes, ladeRuimte(model, lengte, regaalMm))} onEdit={() => setStep(2)} />
+                <Rij label={isDuo ? 'Kasten' : indelingLabel(model)} waarde={isDuo ? `Links ${duoBreedtes[0]} mm, rechts ${duoBreedtes[1]} mm, elk 1 lade` : indelingTekst(model, gekozen, breedtes, ladeRuimte(model, lengte, regaalMm), plankKeuzes)} onEdit={() => setStep(2)} />
                 {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${isDuo ? 'in het midden' : regaalZijde}`} onEdit={() => setStep(2)} />}
                 {model.waskom && <Rij label="Waskom" waarde={waskomTekst({ waskomVorm, waskomAantal })} onEdit={() => setStep(2)} />}
                 {!model.geenHout && <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />}
-                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && !model.geenHout, uitsparingen })} onEdit={() => setStep(2)} />
+                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && !model.geenHout && !model.artikel, uitsparingen })} onEdit={() => setStep(2)} />
               </div>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">
@@ -916,7 +1080,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
       {/* Rechts: tekening en prijs */}
       <div className="w-full lg:w-[400px] lg:flex-shrink-0 lg:sticky lg:top-[68px] space-y-4">
         <div className="relative bg-white rounded-2xl shadow-sm border border-black/8 p-4">
-          <MeubelTekening
+{model.artikel ? (
+            <div className="relative w-full aspect-[4/3]"><Image src={model.afbeelding} alt={model.naam} fill sizes="400px" className="object-contain" /></div>
+          ) : (
+                    <MeubelTekening
             model={model}
             lengte={tekenLengte}
             breedtes={model.kast ? [] : getLadeBreedtes(breedtes, ruimte, gekozen)}
@@ -926,15 +1093,16 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
             regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
             waskom={model.waskom ? { vorm: waskomVorm, aantal: waskomAantal } : null}
           />
-          <p className="text-[11px] text-lx-text-secondary text-center">{model.categorie === 'solid-surface' ? 'Bovenaanzicht en vooraanzicht, maten in mm' : `Vooraanzicht, maten in mm · diepte ${model.diepte} mm`}</p>
-          <button
+          )}
+          <p className="text-[11px] text-lx-text-secondary text-center">{model.artikel ? `${variant?.naam ?? ''} · ${variant?.afmeting ?? ''}` : model.categorie === 'solid-surface' || model.plank ? 'Bovenaanzicht en vooraanzicht, maten in mm' : `Vooraanzicht, maten in mm · diepte ${model.diepte} mm`}</p>
+{!model.artikel &&           <button
             onClick={() => setTekeningGroot(true)}
             aria-label="Tekening groot bekijken"
             title="Groot bekijken"
             className="absolute top-2.5 right-2.5 w-8 h-8 rounded-lg bg-white/90 border border-black/8 text-lx-text-secondary hover:text-lx-text-primary hover:border-black/20 flex items-center justify-center transition-colors cursor-pointer"
           >
             <Maximize2 size={14} />
-          </button>
+          </button>}
         </div>
 
         {tekeningGroot && (
@@ -959,7 +1127,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
         )}
 
         {/* Weergave-toggle onder de kaart, net als bij de spiegels */}
-        {!model.geenHout && <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
+        {!model.geenHout && !model.artikel && <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
           <input type="checkbox" checked={toonHout} onChange={(e) => setToonHout(e.target.checked)} className="sr-only peer" />
           <span className="w-8 h-[18px] rounded-full bg-black/15 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-[14px] after:h-[14px] after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-[14px]" />
           <span className="text-[12px] text-lx-text-secondary font-medium">Houtkleur in tekening</span>

@@ -41,11 +41,11 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   const LIJN = donker ? LIJN_OP_DONKER : LIJN_OP_LICHT
   const ruimteB = W - PAD_X * 2 - 22
   // Een kast is hoog en smal: die krijgt meer hoogte in de tekening
-  const schaal = Math.min(ruimteB / lengte, (kast ? MAX_H_KAST : MAX_H) / model.hoogte)
+  const schaal = model.plank ? Math.min(ruimteB / lengte, 200 / model.diepte) : Math.min(ruimteB / lengte, (kast ? MAX_H_KAST : MAX_H) / model.hoogte)
   const w = lengte * schaal
   const h = model.hoogte * schaal
   // Solid Surface: bovenaanzicht van het blad boven het vooraanzicht
-  const heeftBlad = model.categorie === 'solid-surface'
+  const heeftBlad = model.categorie === 'solid-surface' || !!model.plank
   const bladD = heeftBlad ? model.diepte * schaal : 0
   const yBlad = PAD_TOP
   const x = (W - 22 - w) / 2
@@ -85,7 +85,7 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
       {/* Bovenaanzicht: Solid Surface blad met de waskommen (plaats indicatief) */}
       {heeftBlad && (
         <g>
-          <rect x={x} y={yBlad} width={w} height={bladD} rx="1.5" fill="#FBFAF7" stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
+          <rect x={x} y={yBlad} width={w} height={bladD} rx="1.5" fill={model.plank ? (toonHout ? `url(#${patroon})` : VLAK_ZONDER_HOUT) : '#FBFAF7'} stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
           {waskom && tekenWaskommen(lengte, model.diepte, waskom.aantal).map((k) => (
             waskom.vorm === 'ovaal'
               ? <ellipse key={k.cx} cx={x + k.cx * schaal} cy={yBlad + k.cy * schaal} rx={(k.b / 2) * schaal} ry={(k.d / 2) * schaal} fill="#EDEAE3" stroke={LIJN_OP_LICHT} strokeWidth="1" />

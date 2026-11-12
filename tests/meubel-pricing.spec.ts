@@ -6,7 +6,7 @@ import {
   MEUBEL_MODELLEN, getHoutkleuren, getMeubelHoogte, ladeRuimte, meubelOptiesTekst,
   getRegaalBreedte, getDuoPrijs, getDuoReeksen, getLengteBereik as lengteBereik,
   formatMm, ladeBreedtesTekst, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
-  tekeningVerplicht, meubelAfmeting, indelingTekst,
+  tekeningVerplicht, meubelAfmeting, indelingTekst, kanUitsparing,
 } from '../src/lib/meubel-config'
 import { leesMeubel, meubelPrijsInput, meubelKort } from '../src/lib/meubel-opslag'
 
@@ -464,7 +464,10 @@ test.describe('Solid Surface: tabelprijzen', () => {
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'solid-surface')).toHaveLength(10)
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'wastafelmeubels')).toHaveLength(16)
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'kasten')).toHaveLength(6)
-    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'toiletmeubels')).toHaveLength(3)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'toiletmeubels')).toHaveLength(4)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'planken')).toHaveLength(5)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'waskommen')).toHaveLength(8)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'accessoires')).toHaveLength(3)
   })
 
   test('waskom: alleen bij modellen met ingebouwde waskom, vorm en aantal verplicht', () => {
@@ -569,5 +572,98 @@ test.describe('Solid Washbasin Solo en kasten', () => {
     expect(solo.tekeningOntbreekt).toBe(true)
     expect(solo.houtkleurNaam).toBe('Solid Surface')
     expect(calcMeubelNettoCents(meubelPrijsInput(solo))).toBe(146536)
+  })
+})
+
+test.describe('Planken, waskommen en accessoires', () => {
+  const k = { houtkleur: 'old-grey', lades: 0 }
+
+  test('Base Shelf Solo: lengtestaffel, handdoekhouders en diepte', () => {
+    const b = { ...k, modelId: 'base-shelf-solo', diepte: 460, hoogte: 70 }
+    expect(calcMeubelNettoCents({ ...b, lengte: 500 })).toBe(51896)
+    expect(calcMeubelNettoCents({ ...b, lengte: 800 })).toBe(51896)
+    expect(calcMeubelNettoCents({ ...b, lengte: 801 })).toBe(54496)
+    expect(calcMeubelNettoCents({ ...b, lengte: 2700 })).toBe(86216)
+    expect(calcMeubelNettoCents({ ...b, lengte: 2701 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...b, lengte: 499 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...b, lengte: 1000, handdoekhouders: 1, handdoekType: 'A' })).toBe(54496 + 2600)
+    expect(calcMeubelNettoCents({ ...b, lengte: 1000, handdoekhouders: 2, handdoekType: 'B' })).toBe(54496 + 5200)
+    // Maatwerk diepte 300 tot 500, maar met handdoekhouder minimaal 460
+    expect(calcMeubelNettoCents({ ...b, lengte: 1000, diepte: 300 })).toBe(54496)
+    expect(calcMeubelNettoCents({ ...b, lengte: 1000, diepte: 501 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...b, lengte: 1000, diepte: 400, handdoekhouders: 1 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...b, lengte: 1000, extra: 'rail' })).toBe(54496)
+    expect(calcMeubelNettoCents({ ...b, lengte: 1000, houtkleur: 'white' })).toBe(54496 + 4160)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'base-shelf-deco', lengte: 2100, diepte: 410, hoogte: 70 })).toBe(73736)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'base-shelf-deco', lengte: 2100, diepte: 410, hoogte: 70, handdoekhouders: 1 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...k, modelId: 'base-shelf-deco', lengte: 2100, diepte: 410, hoogte: 70, extra: 'rail' })).toBeNull()
+  })
+
+  test('Mini Base Shelf: accessoirekleur en uitsparing', () => {
+    const b = { ...k, modelId: 'mini-base-shelf', hoogte: 70 }
+    expect(calcMeubelNettoCents({ ...b, lengte: 300, diepte: 200 })).toBe(19136)
+    expect(calcMeubelNettoCents({ ...b, lengte: 601, diepte: 280 })).toBe(25376)
+    expect(calcMeubelNettoCents({ ...b, lengte: 1250, diepte: 250 })).toBe(26936)
+    expect(calcMeubelNettoCents({ ...b, lengte: 600, diepte: 240 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...b, lengte: 600, diepte: 230, uitsparingen: 1, houtkleur: 'pure', extra: 'roll' })).toBe(19136 + 1040 + 2080)
+  })
+
+  test('Niche Shelf, Wall Shelf Free en Cover', () => {
+    const n = { ...k, modelId: 'niche-shelf' }
+    expect(calcMeubelNettoCents({ ...n, lengte: 400, diepte: 400, hoogte: 30 })).toBe(14456)
+    expect(calcMeubelNettoCents({ ...n, lengte: 400, diepte: 400, hoogte: 50 })).toBe(16536)
+    expect(calcMeubelNettoCents({ ...n, lengte: 401, diepte: 300, hoogte: 40 })).toBe(25896)
+    expect(calcMeubelNettoCents({ ...n, lengte: 300, diepte: 600, hoogte: 30 })).toBe(19656)
+    expect(calcMeubelNettoCents({ ...n, lengte: 601, diepte: 300, hoogte: 30 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...n, lengte: 300, diepte: 300, hoogte: 35 })).toBeNull()
+    const w = { ...k, modelId: 'wall-shelf-free', hoogte: 30 }
+    expect(calcMeubelNettoCents({ ...w, lengte: 800, diepte: 150 })).toBe(11856)
+    expect(calcMeubelNettoCents({ ...w, lengte: 800, diepte: 151 })).toBe(12896)
+    expect(calcMeubelNettoCents({ ...w, lengte: 1200, diepte: 250 })).toBe(18096)
+    expect(calcMeubelNettoCents({ ...w, lengte: 1600, diepte: 200, hoogte: 40 })).toBe(24856)
+    expect(calcMeubelNettoCents({ ...w, lengte: 1600, diepte: 251 })).toBeNull()
+    const c = { ...k, modelId: 'cover', hoogte: 40 }
+    expect(calcMeubelNettoCents({ ...c, lengte: 1300, diepte: 230 })).toBe(22256)
+    expect(calcMeubelNettoCents({ ...c, lengte: 1300, diepte: 231 })).toBe(35256)
+    expect(calcMeubelNettoCents({ ...c, lengte: 2250, diepte: 350, hoogte: 70 })).toBe(35256)
+    expect(calcMeubelNettoCents({ ...c, lengte: 2251, diepte: 350 })).toBeNull()
+  })
+
+  test('Vaste artikelen: prijs per uitvoering, geen opties', () => {
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'WTMWK30W' })).toBe(8216)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'WTMWK36MZ' })).toBe(18616)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-mineral-pillar', lengte: 0, variant: 'TMMPSQUAREGWLG' })).toBe(44616)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-bronze', lengte: 0, variant: 'WTMWK5538GM' })).toBe(41496)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'BESTAATNIET' })).toBeNull()
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'WTMWK30W', uitsparingen: 1 })).toBeNull()
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'WTMWK30W', houtkleur: 'white' })).toBeNull()
+    expect(calcMeubelNettoCents({ ...k, modelId: 'organizer', lengte: 0, variant: 'organizer-l' })).toBe(5616)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'divider', lengte: 0, variant: 'divider-m' })).toBe(936)
+    // Wooden Box Facet is van hout: accessoirekleur
+    expect(calcMeubelNettoCents({ ...k, modelId: 'wooden-box-facet', lengte: 0, variant: 'wooden-box-facet-20' })).toBe(21736)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'wooden-box-facet', lengte: 0, variant: 'wooden-box-facet-20', houtkleur: 'white' })).toBe(21736 + 2080)
+    const m = getMeubelModel('waskom-ceramic')!
+    expect(kanUitsparing(m)).toBe(false)
+    expect(tekeningVerplicht(m, 0)).toBe(false)
+    expect(tekeningVerplicht(getMeubelModel('base-shelf-solo')!, 0)).toBe(false)
+    expect(tekeningVerplicht(getMeubelModel('base-shelf-solo')!, 1)).toBe(true)
+    expect(valideerMeubelConfig({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'WTMWK30W', ladeBreedtes: null, quantity: 3 })).toBeNull()
+    expect(valideerMeubelConfig({ ...k, modelId: 'base-shelf-solo', lengte: 1000, diepte: 400, hoogte: 70, handdoekhouders: 1, ladeBreedtes: null, quantity: 1 })).toContain('460')
+  })
+
+  test('Opgeslagen plank en artikel lezen terug', () => {
+    const p = leesMeubel({ shape: 'meubel', meubel: { modelId: 'base-shelf-solo', lengte: 1400, lades: 0, hoogte: 70, diepte: 480, houtkleur: 'old-grey', handdoekhouders: 2, handdoekType: 'B', extra: 'roll' }, quantity: 1 })!
+    expect(p.model.diepte).toBe(480)
+    expect(calcMeubelNettoCents(meubelPrijsInput(p))).toBe(61256 + 5200)
+    expect(meubelKort(p)).toBe('L 1400 × D 480 × dikte 70 mm')
+    expect(indelingTekst(p.model, 0, null, 0, p)).toBe('2 handdoekhouders type B · Roll')
+    expect(p.tekeningOntbreekt).toBe(false)
+    const a = leesMeubel({ shape: 'meubel', meubel: { modelId: 'waskom-ceramic-raw', lengte: 0, lades: 0, houtkleur: 'old-grey', variant: 'WTMWK40RO' }, quantity: 2 })!
+    expect(calcMeubelNettoCents(meubelPrijsInput(a))).toBe(31096)
+    expect(meubelKort(a)).toBe('Round Rust · art. WTMWK40RO')
+    expect(meubelAfmeting(a.model, a.lengte)).toBe('Ø 40 cm, hoogte 15 cm')
+    expect(a.houtkleurNaam).toBe('')
+    expect(a.tekeningOntbreekt).toBe(false)
   })
 })

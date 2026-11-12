@@ -266,10 +266,10 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                 <>
                   <ModalRow label="Model" value={meubel.model.naam} />
                   <ModalRow label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
-                  <ModalRow label={indelingLabel(meubel.model)} value={indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)} />
+                  <ModalRow label={indelingLabel(meubel.model)} value={indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte, meubel)} />
                   {meubel.waskomVorm && <ModalRow label="Waskom" value={waskomTekst(meubel)} />}
                   {meubel.regaalBreedte > 0 && <ModalRow label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
-                  <ModalRow label={kleurLabel(meubel.model)} value={meubel.houtkleurNaam} />
+                  <ModalRow label={kleurLabel(meubel.model)} value={meubel.houtkleurNaam || 'Geen'} />
                   <ModalRow label="Opties" value={meubelOptiesTekst(meubel)} />
                   {meubel.attachmentUrl && (
                     <a href={meubel.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block py-2.5 text-[12.5px] font-semibold text-lx-cta hover:underline border-b border-lx-divider">Maattekening uitsparingen openen</a>

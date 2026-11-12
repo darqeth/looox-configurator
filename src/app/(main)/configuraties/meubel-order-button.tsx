@@ -138,12 +138,12 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
 
                 <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1 min-h-0">
                   <div className="bg-lx-panel-bg rounded-xl px-4 py-3 text-[12.5px] text-lx-text-primary leading-relaxed">
-                    <p className="font-semibold">{meubel.model.naam} · {meubel.houtkleurNaam}</p>
+                    <p className="font-semibold">{[meubel.model.naam, meubel.houtkleurNaam].filter(Boolean).join(' · ')}</p>
                     <p className="text-lx-text-secondary">
                       {meubelAfmeting(meubel.model, meubel.lengte)}
                     </p>
                     <p className="text-lx-text-secondary">
-                      {indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)}
+                      {indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte, meubel)}
                     </p>
                   </div>
 

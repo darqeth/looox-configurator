@@ -76,9 +76,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           >
             <Download size={15} /> Offerte
           </a>
-          {!besteld && meubelToegang && (
+          {!besteld && (
             <Link
-              href={`/configurator/meubel?project=${id}`}
+              href={`/configurator/nieuw?project=${id}`}
               className="inline-flex items-center gap-1.5 border border-black/10 bg-white hover:bg-lx-panel-bg text-lx-text-primary text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors"
             >
               <Plus size={15} /> Product toevoegen

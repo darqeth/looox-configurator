@@ -22,6 +22,8 @@ interface StepSamenvattingProps {
   verpakkingPerStuk: boolean
   quantity: number
   projectName: string
+  /** Regel van een project: de naam volgt het project */
+  projectVast?: boolean
   saving: boolean
   onVerpakkingChange: (v: boolean) => void
   onQuantityChange: (v: number) => void
@@ -44,7 +46,7 @@ function Row({ label, value, onEdit }: { label: string; value: string; onEdit: (
 
 export default function StepSamenvatting({
   lengte, hoogte, glasdikte, ophanging, voormonteren,
-  verpakkingPerStuk, quantity, projectName, saving,
+  verpakkingPerStuk, quantity, projectName, projectVast = false, saving,
   onVerpakkingChange, onQuantityChange, onProjectNameChange,
   onGoToStep, onSave,
 }: StepSamenvattingProps) {
@@ -193,6 +195,7 @@ export default function StepSamenvatting({
             type="text"
             value={projectName}
             onChange={(e) => onProjectNameChange(e.target.value)}
+            disabled={projectVast}
             placeholder="Bijv. Badkamer renovatie De Vries"
             className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
           />

@@ -6,10 +6,15 @@ import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { DEFAULT_PRODUCT_ID, generateArticleNumber, buildSelectedOptionsJson, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
 import { z } from 'zod'
+import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
 import { parseOrThrow, configInputSchema } from '@/lib/validation'
 
 const saveConfigSchema = configInputSchema.extend({
   status: z.enum(['draft', 'saved']),
+  /** Toevoegen aan een bestaand project (winkelmandje) */
+  projectId: z.string().uuid().nullish(),
+  /** Opslaan als eerste regel van een nieuw project */
+  nieuwProject: z.boolean().optional(),
 })
 const updateConfigSchema = saveConfigSchema.extend({
   configId: z.string().uuid(),
@@ -38,6 +43,8 @@ type SaveConfigInput = {
   quantity: number
   mmsQuantity?: number
   status: 'draft' | 'saved'
+  projectId?: string | null
+  nieuwProject?: boolean
   attachmentUrl?: string | null
   solMeubelHoogte?: number
   solOnderkant?: number
@@ -67,7 +74,7 @@ async function assertConfiguratorAccess(
   }
 }
 
-export async function saveConfiguration(rawInput: SaveConfigInput) {
+export async function saveConfiguration(rawInput: SaveConfigInput): Promise<{ projectId: string | null }> {
   const input = parseOrThrow(saveConfigSchema, rawInput) as SaveConfigInput
   assertSolLunaMaat(input)
   assertKraangat(input)
@@ -107,21 +114,27 @@ export async function saveConfiguration(rawInput: SaveConfigInput) {
 
   const selectedOptionsJson = buildSelectedOptionsJson(input, { isInternational })
 
+  // Project (winkelmandje): naam en referentie volgen dan het project
+  const doel = await bepaalProjectDoel(supabase, { projectId: input.projectId, nieuwProject: input.nieuwProject, naam: input.projectName, referentie: input.reference })
+
   const { error } = await supabase.from('configurations').insert({
     user_id: user.id,
     product_id: DEFAULT_PRODUCT_ID,
-    name: input.projectName,
+    name: doel?.naam ?? input.projectName,
     ...resolveStoredDims(input),
-    selected_options: selectedOptionsJson,
+    selected_options: doel ? { ...selectedOptionsJson, reference: doel.referentie } : selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: input.status,
     article_number: generateArticleNumber(),
+    project_id: doel?.projectId ?? null,
   })
 
   if (error) throw new Error(error.message)
 
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
+  if (doel) revalidatePath(`/projecten/${doel.projectId}`)
+  return { projectId: doel?.projectId ?? null }
 }
 
 export async function deleteConfiguration(configId: string) {
@@ -285,9 +298,13 @@ export type SaveProjectspiegelInput = {
   quantity: number
   projectName: string
   reference: string
+  /** Toevoegen aan een bestaand project (winkelmandje) */
+  projectId?: string | null
+  /** Opslaan als eerste regel van een nieuw project */
+  nieuwProject?: boolean
 }
 
-export async function saveProjectspiegelConfiguration(input: SaveProjectspiegelInput) {
+export async function saveProjectspiegelConfiguration(input: SaveProjectspiegelInput): Promise<{ projectId: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
@@ -322,20 +339,26 @@ export async function saveProjectspiegelConfiguration(input: SaveProjectspiegelI
     attachmentUrl: null,
   }
 
+  const projectId = input.projectId && z.string().uuid().safeParse(input.projectId).success ? input.projectId : null
+  const doel = await bepaalProjectDoel(supabase, { projectId, nieuwProject: input.nieuwProject === true, naam: input.projectName, referentie: input.reference })
+
   const { error } = await supabase.from('configurations').insert({
     user_id: user.id,
     product_id: DEFAULT_PRODUCT_ID,
-    name: input.projectName,
+    name: doel?.naam ?? input.projectName,
     width: input.lengte,
     height: input.hoogte,
-    selected_options: selectedOptionsJson,
+    selected_options: doel ? { ...selectedOptionsJson, reference: doel.referentie } : selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: 'saved',
     article_number: generateArticleNumber(),
+    project_id: doel?.projectId ?? null,
   })
 
   if (error) throw new Error(error.message)
 
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
+  if (doel) revalidatePath(`/projecten/${doel.projectId}`)
+  return { projectId: doel?.projectId ?? null }
 }

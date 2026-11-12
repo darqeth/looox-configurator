@@ -68,9 +68,11 @@ function TypeSelector({ onMaatwerk, onProject, onMeubel, onClose }: {
   )
 }
 
-export function ConfiguratorTypeChooser({ wizard, project, meubel = false }: {
+export function ConfiguratorTypeChooser({ wizard, project, meubel = false, projectId = null }: {
   wizard?: ReactNode
   project?: ReactNode
+  /** Product komt bij dit project (winkelmandje): doorgeven aan de Tailor-Made pagina */
+  projectId?: string | null
   /** Toont de keuze Meubel (Tailor-Made); die heeft een eigen pagina */
   meubel?: boolean
 }) {
@@ -82,9 +84,11 @@ export function ConfiguratorTypeChooser({ wizard, project, meubel = false }: {
   const [draftType, setDraftType] = useState<'maatwerk' | 'project' | null>(null)
 
   useEffect(() => {
+    // Binnen een project begin je altijd een nieuw product; een oud concept hoort daar niet bij
+    if (projectId) return
     const draft = loadDraft()
     if (draft) setDraftType(draft.type)
-  }, [])
+  }, [projectId])
 
   // resumeDraft-prop injecteren zodat het gekozen scherm direct herstelt
   const withResume = (node: ReactNode) =>
@@ -126,8 +130,8 @@ export function ConfiguratorTypeChooser({ wizard, project, meubel = false }: {
     <TypeSelector
       onMaatwerk={wizard ? () => setType('maatwerk') : undefined}
       onProject={project ? () => setType('project') : undefined}
-      onMeubel={meubel ? () => router.push('/configurator/meubel') : undefined}
-      onClose={() => router.push('/configuraties')}
+      onMeubel={meubel ? () => router.push(projectId ? `/configurator/meubel?project=${projectId}` : '/configurator/meubel') : undefined}
+      onClose={() => router.push(projectId ? `/projecten/${projectId}` : '/configuraties')}
     />
   )
 }

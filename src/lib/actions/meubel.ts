@@ -10,7 +10,7 @@ import {
   MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, getMeubelHoogte, getMeubelModel, valideerMeubelConfig,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
-import { projectKop } from '@/lib/project'
+import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
 
 const meubelInputSchema = z.object({
   modelId: z.string().max(40),
@@ -106,25 +106,10 @@ export async function saveMeubelConfiguration(rawInput: SaveMeubelInput): Promis
   const { supabase, userId, rij, input } = await bouwRij(rawInput)
 
   // Project (winkelmandje): een regel erbij in een bestaand project, of de eerste regel van een nieuw
-  let projectId: string | null = null
-  let naam = rij.name
-  let opties = rij.selected_options
-  if (input.projectId) {
-    // RLS bepaalt of de aanroeper dit project mag zien; naam en referentie volgen het project
-    const { data: regels } = await supabase
-      .from('configurations')
-      .select('id, name, total_price, status, width, height, selected_options')
-      .eq('project_id', input.projectId)
-      .order('created_at')
-    if (!regels || regels.length === 0) throw new Error('Project niet gevonden')
-    if (regels.some((r) => r.status === 'ordered')) throw new Error('Dit project is al besteld; er kan geen regel meer bij')
-    const kop = projectKop(regels)
-    projectId = input.projectId
-    naam = kop.naam
-    opties = { ...opties, reference: kop.referentie }
-  } else if (input.nieuwProject) {
-    projectId = crypto.randomUUID()
-  }
+  const doel = await bepaalProjectDoel(supabase, { projectId: input.projectId, nieuwProject: input.nieuwProject, naam: rij.name, referentie: input.reference })
+  const projectId = doel?.projectId ?? null
+  const naam = doel?.naam ?? rij.name
+  const opties = doel ? { ...rij.selected_options, reference: doel.referentie } : rij.selected_options
 
   const { data, error } = await supabase.from('configurations').insert({
     ...rij,

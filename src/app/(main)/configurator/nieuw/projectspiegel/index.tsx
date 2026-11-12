@@ -30,7 +30,7 @@ interface InitialConfig {
   reference: string
 }
 
-export default function ProjectspiegelConfigurator({ initialConfig, resumeDraft = false }: { initialConfig?: InitialConfig; resumeDraft?: boolean }) {
+export default function ProjectspiegelConfigurator({ initialConfig, resumeDraft = false, project = null }: { initialConfig?: InitialConfig; resumeDraft?: boolean; /** Project (winkelmandje) waar deze regel bij komt of al bij hoort */ project?: { id: string; naam: string; referentie: string } | null }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -44,7 +44,7 @@ export default function ProjectspiegelConfigurator({ initialConfig, resumeDraft 
   const [voormonteren, setVoormonteren] = useState(initialConfig?.voormonteren ?? true)
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [verpakkingPerStuk, setVerpakkingPerStuk] = useState(initialConfig?.verpakkingPerStuk ?? true)
-  const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
+  const [projectName, setProjectName] = useState(project?.naam ?? initialConfig?.projectName ?? '')
 
   // ── Gedeelde draft (één save-state met de maatwerk-wizard) ──
   const [draftAvailable, setDraftAvailable] = useState(false)
@@ -104,15 +104,16 @@ export default function ProjectspiegelConfigurator({ initialConfig, resumeDraft 
         verpakkingPerStuk: effectiveVerpakking,
         quantity,
         projectName,
-        reference: initialConfig?.reference ?? '',
+        reference: project?.referentie ?? initialConfig?.reference ?? '',
       }
       if (isEditing) {
         await updateProjectspiegelConfiguration(initialConfig.id, payload)
       } else {
-        await saveProjectspiegelConfiguration(payload)
+        await saveProjectspiegelConfiguration({ ...payload, projectId: project?.id ?? null })
       }
       clearDraft()
-      router.push('/configuraties')
+      // Een regel van een project gaat terug naar het project
+      router.push(project ? `/projecten/${project.id}` : '/configuraties')
     })
   }
 
@@ -217,6 +218,7 @@ export default function ProjectspiegelConfigurator({ initialConfig, resumeDraft 
                 verpakkingPerStuk={effectiveVerpakking}
                 quantity={quantity}
                 projectName={projectName}
+                projectVast={!!project}
                 saving={isPending}
                 onVerpakkingChange={setVerpakkingPerStuk}
                 onQuantityChange={handleQuantityChange}

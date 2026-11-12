@@ -97,10 +97,15 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   // Routeren op het TYPE van de configuratie, niet op de accountstand —
   // een 'beide'-account moet beide typen kunnen bewerken (sprint 2)
   const isProjectConfig = (opts.shape as string | undefined) === 'projectspiegel'
+  // Regel van een project (winkelmandje): na opslaan terug naar het project
+  const project = config.project_id
+    ? { id: config.project_id as string, naam: config.name ?? '', referentie: (opts.reference as string) ?? '' }
+    : null
 
   if (isProjectConfig) {
     return (
       <ProjectspiegelConfigurator
+        project={project}
         initialConfig={{
           id: config.id,
           lengte: config.width ?? 120,
@@ -120,6 +125,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   return (
     <ConfiguratorWizard
       initialConfig={initialConfig}
+      project={project}
       korting={korting}
       canOrder={canOrder}
       isInternational={isInternational}

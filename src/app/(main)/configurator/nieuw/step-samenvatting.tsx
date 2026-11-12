@@ -52,6 +52,8 @@ interface StepSamenvattingProps {
   korting?: number
   onProjectNameChange: (v: string) => void
   onReferenceChange: (v: string) => void
+  /** Regel van een project: naam en referentie volgen het project en zijn hier niet te wijzigen */
+  projectVast?: boolean
   onQuantityChange: (n: number) => void
   onMmsQuantityChange: (n: number) => void
   onSchunineZijdenFileChange: (f: File | null) => void
@@ -113,7 +115,7 @@ export default function StepSamenvatting({
   lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   projectName, reference, quantity, mmsQuantity,
-  saving, schunineZijdenFile, opAanvraagFile, existingAttachmentUrl, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange,
+  saving, schunineZijdenFile, opAanvraagFile, existingAttachmentUrl, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange, projectVast = false,
   onQuantityChange, onMmsQuantityChange, onSchunineZijdenFileChange, onOpAanvraagFileChange,
   onGoToStep, onSave, onOrder: _onOrder, canOrder: _canOrder = true,
 }: StepSamenvattingProps) {
@@ -346,6 +348,9 @@ export default function StepSamenvatting({
       {/* Project details */}
       <div className="space-y-3">
         <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary">Projectgegevens</p>
+        {projectVast && (
+          <p className="text-[12px] text-lx-text-secondary bg-lx-panel-bg rounded-xl px-3.5 py-2.5">Deze spiegel hoort bij een project. Naam en referentie wijzig je op de projectpagina.</p>
+        )}
 
         <div>
           <label className="text-[12px] font-semibold text-lx-text-secondary mb-1.5 block">
@@ -355,6 +360,7 @@ export default function StepSamenvatting({
             type="text"
             value={projectName}
             onChange={(e) => onProjectNameChange(e.target.value)}
+            disabled={projectVast}
             placeholder="Bijv. Badkamer renovatie De Vries"
             className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
           />
@@ -366,6 +372,7 @@ export default function StepSamenvatting({
             type="text"
             value={reference}
             onChange={(e) => onReferenceChange(e.target.value)}
+            disabled={projectVast}
             placeholder="Bijv. PO-2026-0042"
             className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
           />

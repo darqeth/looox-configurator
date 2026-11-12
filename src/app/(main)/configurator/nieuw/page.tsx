@@ -5,10 +5,13 @@ import { ConfiguratorTypeChooser } from './type-selector'
 import { getExtraOptionTooltips, getControlTooltips } from '@/lib/actions/admin'
 import { parseConfiguratorAccess } from '@/lib/configurator-access'
 import { hasMeubelAccess } from '@/lib/meubel-access'
+import { isUuid, projectKop } from '@/lib/project'
+import { redirect } from 'next/navigation'
 
 export const metadata = { title: 'Nieuwe configuratie | LoooX Configurator' }
 
-export default async function NieuweConfiguratiePage() {
+export default async function NieuweConfiguratiePage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+  const { project: projectParam } = await searchParams
   const supabase = await createClient()
   // Leespad: lokale JWT-verificatie (middleware bewaakt de sessie, RLS de data)
   const { data: claimsData } = await supabase.auth.getClaims()
@@ -43,10 +46,23 @@ export default async function NieuweConfiguratiePage() {
     korting = profile?.korting ?? 50
   }
 
+  // ?project=<id>: het nieuwe product komt als regel bij dit project (RLS bepaalt of dat mag)
+  let project: { id: string; naam: string; referentie: string } | null = null
+  if (user && isUuid(projectParam)) {
+    const { data: regels } = await supabase
+      .from('configurations')
+      .select('id, name, total_price, status, width, height, selected_options')
+      .eq('project_id', projectParam)
+      .order('created_at')
+    if (!regels || regels.length === 0 || regels.some((r) => r.status === 'ordered')) redirect('/projecten')
+    const kop = projectKop(regels)
+    project = { id: projectParam, naam: kop.naam, referentie: kop.referentie }
+  }
+
   if (access === 'project') {
     // Met meubeltoegang eerst kiezen tussen projectspiegel en meubel
-    if (meubel) return <ConfiguratorTypeChooser project={<ProjectspiegelConfigurator />} meubel />
-    return <ProjectspiegelConfigurator />
+    if (meubel) return <ConfiguratorTypeChooser project={<ProjectspiegelConfigurator project={project} />} meubel projectId={project?.id} />
+    return <ProjectspiegelConfigurator project={project} />
   }
 
   const wizard = (
@@ -56,14 +72,15 @@ export default async function NieuweConfiguratiePage() {
       isInternational={isInternational}
       optionTooltips={optionTooltips}
       controlTooltips={controlTooltips}
+      project={project}
     />
   )
 
   // 'beide': eerst typekeuze (besluit B2); maatwerk-stand direct de wizard
   if (access === 'beide') {
-    return <ConfiguratorTypeChooser wizard={wizard} project={<ProjectspiegelConfigurator />} meubel={meubel} />
+    return <ConfiguratorTypeChooser wizard={wizard} project={<ProjectspiegelConfigurator project={project} />} meubel={meubel} projectId={project?.id} />
   }
-  if (meubel) return <ConfiguratorTypeChooser wizard={wizard} meubel />
+  if (meubel) return <ConfiguratorTypeChooser wizard={wizard} meubel projectId={project?.id} />
 
   return wizard
 }

@@ -253,7 +253,7 @@ export function ConfiguratiesContent({
                             canEdit={permissions.canConfigure}
                             canDelete={canDelete}
                           projectId={config.project_id}
-                          kanProject={meubelToegang}
+                          kanProject
                           />
                         </div>
                       </div>
@@ -314,7 +314,7 @@ export function ConfiguratiesContent({
                           canEdit={permissions.canConfigure}
                           canDelete={canDelete}
                           projectId={config.project_id}
-                          kanProject={meubelToegang}
+                          kanProject
                         />
                       </div>
                     </div>

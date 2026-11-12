@@ -120,7 +120,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
   )
 })
 
-export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrder = true, isInternational = false, resumeDraft = false, optionTooltips = {}, controlTooltips = {} }: { initialConfig?: InitialConfig; korting?: number; canOrder?: boolean; isInternational?: boolean; resumeDraft?: boolean; optionTooltips?: Record<string, string>; controlTooltips?: Record<string, string> }) {
+export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrder = true, isInternational = false, resumeDraft = false, optionTooltips = {}, controlTooltips = {}, project = null }: { initialConfig?: InitialConfig; korting?: number; canOrder?: boolean; isInternational?: boolean; resumeDraft?: boolean; optionTooltips?: Record<string, string>; controlTooltips?: Record<string, string>; /** Project (winkelmandje) waar deze spiegel bij komt of al bij hoort */ project?: { id: string; naam: string; referentie: string } | null }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const isEditing = !!initialConfig
@@ -151,8 +151,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [optionSubChoices, setOptionSubChoices] = useState<Record<string, string>>(initialConfig?.optionSubChoices ?? {})
 
   // Step 4: save info
-  const [projectName, setProjectName] = useState(initialConfig?.projectName ?? '')
-  const [reference, setReference] = useState(initialConfig?.reference ?? '')
+  const [projectName, setProjectName] = useState(project?.naam ?? initialConfig?.projectName ?? '')
+  const [reference, setReference] = useState(project?.referentie ?? initialConfig?.reference ?? '')
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [mmsQuantity, setMmsQuantity] = useState(initialConfig?.mmsQuantity ?? 0)
   const [schunineZijdenFile, setSchunineZijdenFile] = useState<File | null>(null)
@@ -395,11 +395,12 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       if (isEditing && initialConfig) {
         await updateConfiguration({ ...payload, configId: initialConfig.id })
       } else {
-        await saveConfiguration(payload)
+        await saveConfiguration({ ...payload, projectId: project?.id ?? null })
       }
       setSaved(true)
       clearDraft()
-      router.push('/configuraties')
+      // Een regel van een project gaat terug naar het project, een losse configuratie naar de lijst
+      router.push(project ? `/projecten/${project.id}` : '/configuraties')
       // background: sidebar/dashboard counts bijwerken
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
@@ -776,6 +777,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       selectedOptions={selectedOptions}
                       optionSubChoices={optionSubChoices}
                       projectName={projectName} reference={reference}
+                      projectVast={!!project}
                       quantity={quantity}
                       mmsQuantity={mmsQuantity}
                       saving={saving}

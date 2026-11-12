@@ -39,8 +39,8 @@ const styles = StyleSheet.create({
   infoLabel: { width: 90, color: GRAY, fontSize: 8.5 },
   infoValue: { flex: 1, fontSize: 8.5, fontFamily: 'Helvetica-Bold' },
   table: { borderWidth: 1, borderColor: DIVIDER, borderRadius: 4, overflow: 'hidden' },
-  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingHorizontal: 10, paddingVertical: 6 },
-  tableRowLast: { flexDirection: 'row', paddingHorizontal: 10, paddingVertical: 6 },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: DIVIDER, paddingHorizontal: 10, paddingVertical: 4.5 },
+  tableRowLast: { flexDirection: 'row', paddingHorizontal: 10, paddingVertical: 4.5 },
   tableLabel: { width: 130, color: GRAY, fontSize: 8.5 },
   tableValue: { flex: 1, fontSize: 8.5 },
   pricingBox: { backgroundColor: BRAND_LIGHT, borderRadius: 4, padding: 10 },
@@ -53,8 +53,8 @@ const styles = StyleSheet.create({
   totalValue: { fontFamily: 'Helvetica-Bold', fontSize: 14, color: BRAND },
   notesBox: { borderWidth: 1, borderColor: DIVIDER, borderRadius: 4, padding: 10 },
   notesText: { fontSize: 8.5, color: DARK, lineHeight: 1.5 },
-  noticeBox: { borderWidth: 1, borderColor: DIVIDER, borderRadius: 4, padding: 10, backgroundColor: '#F9FAFB' },
-  noticeText: { fontSize: 8, color: GRAY, lineHeight: 1.6 },
+  // Voorwaarden als losse tekst zonder kader: zo past de offerte met zes specificatieregels en een opmerking op één pagina
+  noticeText: { fontSize: 7.5, color: GRAY, lineHeight: 1.5 },
   caption: { fontSize: 7.5, color: GRAY, marginTop: 4, textAlign: 'center' },
   footer: {
     position: 'absolute', bottom: 28, left: 40, right: 40, borderTopWidth: 1, borderTopColor: DIVIDER,
@@ -349,16 +349,11 @@ export default function MeubelDocument({
         )}
 
         {!isOrder && (
-          <View style={styles.section} wrap={false}>
-            <Text style={styles.sectionTitle}>Voorwaarden</Text>
-            <View style={styles.noticeBox}>
-              <Text style={styles.noticeText}>
-                {opAanvraag
-                  ? 'Dit meubel is groter dan de standaardmaten en wordt op aanvraag gemaakt. De prijs volgt na beoordeling van de aanvraag. De levertijd van maatwerkmeubels is 8 tot 12 weken.'
-                  : 'Deze offerte is 30 dagen geldig. Prijzen zijn excl. btw, tenzij anders vermeld. Het totaalbedrag is inclusief 21% btw. Onder voorbehoud van beschikbaarheid. De levertijd van maatwerkmeubels is 8 tot 12 weken.'}
-              </Text>
-            </View>
-          </View>
+          <Text style={styles.noticeText}>
+            {opAanvraag
+              ? 'Dit meubel is groter dan de standaardmaten en wordt op aanvraag gemaakt. De prijs volgt na beoordeling van de aanvraag. De levertijd van maatwerkmeubels is 8 tot 12 weken.'
+              : 'Deze offerte is 30 dagen geldig. Prijzen zijn excl. btw, tenzij anders vermeld. Het totaalbedrag is inclusief 21% btw. Onder voorbehoud van beschikbaarheid. De levertijd van maatwerkmeubels is 8 tot 12 weken.'}
+          </Text>
         )}
 
         <View style={styles.footer} fixed>

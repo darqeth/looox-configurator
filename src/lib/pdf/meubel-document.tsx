@@ -2,7 +2,7 @@ import React from 'react'
 import { Document, Page, View, Text, StyleSheet, Svg, Rect, Line, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
-import { getLadeBreedtes, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
+import { formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
@@ -172,6 +172,8 @@ export default function MeubelDocument({
   const subtotaal = Math.round(unitPrice * quantity * 100) / 100
   const btw = Math.round(subtotaal * 21) / 100
   const inclBtw = Math.round((subtotaal + btw) * 100) / 100
+  // Order: bruto, korting en netto, net als bij spiegels. Bruto volgt uit de factor van de offerte.
+  const opbouw = getMeubelOrderOpbouw(Math.round(unitPrice * 100), meubel.factor)
   const footerLinks = isOrder ? 'LoooX' : `${dealer.company ?? dealer.name ?? ''} - ${dealer.email}`
   const footerRechts = isOrder ? `${docTitle} ${orderNumber ?? ''}` : `Offerte ${projectName ?? ''} - ${today}`
 
@@ -278,7 +280,7 @@ export default function MeubelDocument({
 
         {/* Prijs */}
         <View style={styles.section} wrap={false}>
-          <Text style={styles.sectionTitle}>{isOrder ? 'Prijs' : 'Prijsoverzicht'}</Text>
+          <Text style={styles.sectionTitle}>{!isOrder ? 'Prijsoverzicht' : opAanvraag ? 'Prijs' : 'Prijsoverzicht (excl. BTW)'}</Text>
           <View style={styles.pricingBox}>
             {opAanvraag ? (
               <>
@@ -287,13 +289,16 @@ export default function MeubelDocument({
               </>
             ) : isOrder ? (
               <>
-                <Prijs label="Netto per stuk (excl. btw)" value={euro(unitPrice)} />
+                <Prijs label="Bruto ex. BTW" value={euro(opbouw.brutoCents / 100)} grijs />
+                <Prijs label={`Dealer korting (${formatPct(opbouw.kortingPct)})`} value={`-${euro(opbouw.kortingCents / 100)}`} grijs />
+                <Prijs label="Netto ex. BTW" value={euro(unitPrice)} />
                 <Prijs label="Aantal" value={`${quantity}×`} />
                 <View style={styles.pricingDivider} />
                 <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Totaal netto excl. btw</Text>
+                  <Text style={styles.totalLabel}>Totaal</Text>
                   <Text style={styles.totalValue}>{euro(subtotaal)}</Text>
                 </View>
+                <Text style={{ fontSize: 7.5, color: GRAY, marginTop: 4, textAlign: 'right' }}>Alle prijzen excl. BTW</Text>
               </>
             ) : (
               <>
@@ -360,11 +365,11 @@ function Info({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Prijs({ label, value }: { label: string; value: string }) {
+function Prijs({ label, value, grijs = false }: { label: string; value: string; grijs?: boolean }) {
   return (
     <View style={styles.pricingRow}>
       <Text style={styles.pricingLabel}>{label}</Text>
-      <Text style={styles.pricingValue}>{value}</Text>
+      <Text style={grijs ? [styles.pricingValue, { color: GRAY }] : styles.pricingValue}>{value}</Text>
     </View>
   )
 }

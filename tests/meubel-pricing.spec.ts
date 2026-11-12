@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   calcMeubelNettoCents, calcMeubelBrutoCents, getLadeOpties, getMeubelModel,
   getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT, getMeubelPrijsOpbouw,
-  getAanvraagBereik, getAanvraagLadeOpties,
+  getAanvraagBereik, getAanvraagLadeOpties, getMeubelOrderOpbouw, formatPct,
   verdeelGelijk, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
 } from '../src/lib/meubel-config'
 
@@ -205,5 +205,19 @@ test.describe('Meubel: staffelgrenzen in mm', () => {
   test('1 lade kan niet meer boven 1200 mm', () => {
     expect(p(1200, 1)).toBe(98176)
     expect(p(1201, 1)).toBeNull()
+  })
+})
+
+test.describe('Meubel: prijsopbouw bij de bestelling', () => {
+  test('bruto, korting en netto tellen op; factor 2 is 50% korting', () => {
+    expect(getMeubelOrderOpbouw(98176, 2)).toEqual({ brutoCents: 196352, kortingCents: 98176, kortingPct: 50, nettoCents: 98176 })
+  })
+
+  test('andere factor: netto blijft de tabelprijs', () => {
+    const o = getMeubelOrderOpbouw(98176, 2.35)
+    expect(o.brutoCents - o.kortingCents).toBe(98176)
+    expect(o.kortingPct).toBe(57.4)
+    expect(formatPct(o.kortingPct)).toBe('57,4%')
+    expect(getMeubelOrderOpbouw(98176, 1).kortingCents).toBe(0)
   })
 })

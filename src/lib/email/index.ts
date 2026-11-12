@@ -141,7 +141,7 @@ export type OrderEmailDetails = {
   mmsQuantity?: number
   mmsNetto?: number
   /** Tailor-Made meubel: eigen specificatieregels; unitPrice is dan de nettoprijs per stuk */
-  meubel?: { regels: [label: string, waarde: string][]; opAanvraag: boolean }
+  meubel?: { regels: [label: string, waarde: string][]; opAanvraag: boolean; brutoUnitPrice?: number; kortingLabel?: string }
 }
 
 /** Offerteaanvraag in plaats van bestelling: spiegel op aanvraag of meubel op aanvraag */
@@ -163,7 +163,12 @@ function buildOrderRows(d: OrderEmailDetails) {
       row('Aantal', `${d.quantity}×`),
       ...(d.meubel.opAanvraag
         ? [slot('Prijs', 'Op aanvraag')]
-        : [row('Netto p/st', fmt(d.unitPrice)), slot('Totaal netto excl. btw', fmt(d.totalPrice))]),
+        : [
+            d.meubel.brutoUnitPrice ? row('Bruto p/st', fmt(d.meubel.brutoUnitPrice)) : '',
+            d.meubel.kortingLabel ? row('Dealerkorting', `−${esc(d.meubel.kortingLabel)}`) : '',
+            row('Netto p/st', fmt(d.unitPrice)),
+            slot('Totaal netto excl. btw', fmt(d.totalPrice)),
+          ]),
     ].join('')
   }
   const dimensions = formatDimensions(d.shape, d.width, d.height, d.diameter, d.organicSizeKey)

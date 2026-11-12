@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
-import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
+import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
 // Bestelmodal voor een Tailor-Made meubel. Dit is de enige plek waar de dealer
@@ -37,6 +37,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   const nettoCents = opAanvraag ? null : calcMeubelNettoCents({
     modelId: meubel.model.id, lengte: meubel.lengte, lades: meubel.lades, houtkleur: meubel.houtkleur,
   })
+  const opbouw = nettoCents !== null ? getMeubelOrderOpbouw(nettoCents, meubel.factor) : null
   // Staat het meubel niet meer in de prijslijst, dan kan het niet besteld worden
   const bestelbaar = opAanvraag || nettoCents !== null
   const altOk = !altShipping || (alt.straat.trim() !== '' && alt.woonplaats.trim() !== '')
@@ -177,6 +178,14 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                     </div>
                   ) : nettoCents !== null ? (
                     <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
+                      <div className="flex justify-between text-[12.5px]">
+                        <span className="text-lx-text-secondary">Bruto per stuk</span>
+                        <span className="text-lx-text-secondary tabular-nums">{formatCents(opbouw!.brutoCents)}</span>
+                      </div>
+                      <div className="flex justify-between text-[12.5px]">
+                        <span className="text-lx-text-secondary">Dealer korting ({formatPct(opbouw!.kortingPct)})</span>
+                        <span className="text-lx-text-secondary tabular-nums">-{formatCents(opbouw!.kortingCents)}</span>
+                      </div>
                       <div className="flex justify-between text-[12.5px]">
                         <span className="text-lx-text-secondary">Netto per stuk</span>
                         <span className="text-lx-text-primary font-semibold tabular-nums">{formatCents(nettoCents)}</span>

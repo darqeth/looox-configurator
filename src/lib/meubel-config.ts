@@ -295,3 +295,30 @@ export function getAanvraagLadeOpties(lengte: number): number[] {
   }
   return opties
 }
+
+// ─── Prijsopbouw bij de bestelling ──────────────────────────────────────────
+// Zelfde opbouw als bij spiegels: bruto, korting, netto. Bruto is netto × de
+// factor van de offerte; de korting is het verschil. Netto blijft de tabelprijs.
+
+export interface MeubelOrderOpbouw {
+  brutoCents: number
+  kortingCents: number
+  /** Korting als percentage van bruto, op één decimaal */
+  kortingPct: number
+  nettoCents: number
+}
+
+export function getMeubelOrderOpbouw(nettoCents: number, factor: number): MeubelOrderOpbouw {
+  const brutoCents = Math.round(nettoCents * parseMeubelFactor(factor))
+  const kortingCents = brutoCents - nettoCents
+  return {
+    brutoCents,
+    kortingCents,
+    kortingPct: brutoCents > 0 ? Math.round((kortingCents / brutoCents) * 1000) / 10 : 0,
+    nettoCents,
+  }
+}
+
+export function formatPct(pct: number): string {
+  return `${pct.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}%`
+}

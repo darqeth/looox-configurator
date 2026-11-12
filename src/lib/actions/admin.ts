@@ -29,6 +29,15 @@ export async function setConfiguratorAccess(userId: string, access: 'maatwerk' |
   if (error) throw new Error(error.message)
 }
 
+// Tailor-Made meubels per account (configurator 2.0). Geen revalidatePath, zie hierboven.
+export async function setMeubelAccess(userId: string, value: boolean): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !await isAdmin(supabase, user.id)) throw new Error('Geen toegang')
+  const { error } = await supabase.from('profiles').update({ meubel_access: value === true }).eq('id', userId)
+  if (error) throw new Error(error.message)
+}
+
 export async function updateKorting(userId: string, korting: number): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

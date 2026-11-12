@@ -29,7 +29,7 @@ export default async function GebruikersPage({
   const { page: pageParam, q, status } = await searchParams
   const currentPage = Math.max(1, parseInt(pageParam ?? '1', 10))
 
-  const [{ data: rawProfiles }, { data: pendingColleagues }, { data: companies }, { data: streaks }] = await Promise.all([
+  const [{ data: rawProfiles }, { data: pendingColleagues }, { data: companies }, { data: streaks }, { data: meubelRows }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name, email, company, phone, tier, approval_status, created_at, korting, company_id, is_international, is_groothandel, configurator_access, is_admin, is_sub_admin, company_members(role, can_order, can_configure, own_configs_only)')
@@ -47,7 +47,10 @@ export default async function GebruikersPage({
       .not('company_id', 'is', null),
     supabase.from('companies').select('id, name').order('name'),
     supabase.from('login_streaks').select('user_id, total_days, last_login_date'),
+    // Losse query: faalt stil zolang meubels-migration.sql niet is gedraaid
+    supabase.from('profiles').select('id').eq('meubel_access', true),
   ])
+  const meubelIds = new Set((meubelRows ?? []).map(r => r.id))
 
   const streakMap: Record<string, { totalDays: number; lastLogin: string | null }> = {}
   for (const s of streaks ?? []) streakMap[s.user_id] = { totalDays: s.total_days ?? 0, lastLogin: s.last_login_date ?? null }
@@ -70,6 +73,7 @@ export default async function GebruikersPage({
       configurator_access: (p as typeof p & { configurator_access?: string | null }).configurator_access ?? null,
       is_admin: (p as typeof p & { is_admin?: boolean }).is_admin ?? false,
       is_sub_admin: (p as typeof p & { is_sub_admin?: boolean }).is_sub_admin ?? false,
+      meubel_access: meubelIds.has(p.id),
       company_id: p.company_id,
       member: rawP.company_members?.[0] ?? null,
     }

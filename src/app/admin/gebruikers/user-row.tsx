@@ -25,6 +25,7 @@ export type UserRowProfile = {
   is_international: boolean | null
   is_groothandel: boolean | null
   configurator_access: string | null
+  meubel_access?: boolean
   is_admin: boolean
   is_sub_admin: boolean
   company_id: string | null

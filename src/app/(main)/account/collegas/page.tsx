@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CollegasPanel from './collegas-panel'
 import { TabNav } from '../tab-nav'
+import MeubelFactorCard from './meubel-factor-card'
+import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 
 export default async function CollegasPage() {
   const supabase = await createClient()
@@ -31,6 +33,11 @@ export default async function CollegasPage() {
 
   const isManager = myMember.role === 'manager'
   const activeCompanyId = myMember.company_id
+
+  // Factor meubels: alleen voor een manager met meubeltoegang
+  const meubelFactor = isManager && await hasMeubelAccess(supabase, userId)
+    ? await getMeubelFactor(supabase, userId)
+    : null
 
   // Haal alle leden op
   const { data: members } = await supabase
@@ -90,6 +97,7 @@ export default async function CollegasPage() {
         invites={inviteList}
         companyId={activeCompanyId}
       />
+      {meubelFactor !== null && <MeubelFactorCard factor={meubelFactor} />}
     </div>
   )
 }

@@ -8,6 +8,7 @@ import {
   updateKorting,
   toggleInternational,
   setConfiguratorAccess,
+  setMeubelAccess,
   linkUserToCompany,
   createCompanyForUser,
   updateMemberPermissions,
@@ -45,6 +46,7 @@ export function UserEditModal({
   // Internationaal
   const [isInternational, setIsInternational] = useState(profile.is_international ?? false)
   const [configuratorAccess, setConfiguratorAccessState] = useState(parseConfiguratorAccess(profile.configurator_access))
+  const [meubelAccess, setMeubelAccessState] = useState(profile.meubel_access === true)
 
   // Bedrijfskoppeling
   const matchedCompany = companies.find(c => c.name.toLowerCase() === (profile.company ?? '').toLowerCase())
@@ -117,6 +119,18 @@ export function UserEditModal({
         console.error(e)
         setConfiguratorAccessState(prev)
         toast('Stand wijzigen mislukt. Probeer het opnieuw.')
+      })
+  }
+
+  function handleToggleMeubel() {
+    const next = !meubelAccess
+    setMeubelAccessState(next)
+    setMeubelAccess(profile.id, next)
+      .then(() => router.refresh())
+      .catch((e) => {
+        console.error(e)
+        setMeubelAccessState(!next)
+        toast('Meubels wijzigen mislukt. Probeer het opnieuw.')
       })
   }
 
@@ -390,6 +404,25 @@ export function UserEditModal({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Tailor-Made meubels (configurator 2.0) */}
+            <div className="mt-4 pt-4 border-t border-lx-divider flex items-center justify-between">
+              <div>
+                <p className="text-[13px] font-medium text-lx-text-primary">Meubels (Tailor-Made)</p>
+                <p className="text-[11.5px] text-lx-text-secondary">
+                  {isInternational ? 'Niet beschikbaar voor accounts met buitenlandtoeslag' : 'Mag maatwerk meubels samenstellen en bestellen'}
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={meubelAccess}
+                aria-label="Meubels (Tailor-Made)"
+                onClick={handleToggleMeubel}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer ${meubelAccess ? 'bg-lx-cta' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${meubelAccess ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
             </div>
           </div>
 

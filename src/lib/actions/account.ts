@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { MEUBEL_FACTOR_MAX } from '@/lib/meubel-config'
 
 export async function updateProfile(formData: FormData) {
   const supabase = await createClient()
@@ -80,4 +81,32 @@ export async function updatePassword(formData: FormData) {
 
   const { error } = await supabase.auth.updateUser({ password })
   if (error) throw new Error(error.message)
+}
+
+// Brutofactor voor Tailor-Made meubels: alleen de manager van het bedrijf.
+export async function updateMeubelFactor(value: string): Promise<{ success: boolean; error?: string; factor?: number }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Niet ingelogd' }
+
+  const factor = Math.round(Number(String(value).replace(',', '.')) * 100) / 100
+  if (!Number.isFinite(factor) || factor <= 0 || factor > MEUBEL_FACTOR_MAX) {
+    return { success: false, error: `Vul een factor in tussen 0,01 en ${MEUBEL_FACTOR_MAX}.` }
+  }
+
+  const { data: member } = await supabase
+    .from('company_members')
+    .select('role, company_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!member?.company_id || member.role !== 'manager') {
+    return { success: false, error: 'Alleen de manager kan de factor aanpassen.' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('companies').update({ meubel_factor: factor }).eq('id', member.company_id)
+  if (error) return { success: false, error: 'Opslaan mislukt. Probeer het opnieuw.' }
+
+  revalidatePath('/account/collegas')
+  return { success: true, factor }
 }

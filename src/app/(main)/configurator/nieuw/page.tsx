@@ -4,6 +4,7 @@ import ProjectspiegelConfigurator from './projectspiegel/index'
 import { ConfiguratorTypeChooser } from './type-selector'
 import { getExtraOptionTooltips, getControlTooltips } from '@/lib/actions/admin'
 import { parseConfiguratorAccess } from '@/lib/configurator-access'
+import { hasMeubelAccess } from '@/lib/meubel-access'
 
 export const metadata = { title: 'Nieuwe spiegel — LoooX Configurator' }
 
@@ -23,11 +24,13 @@ export default async function NieuweConfiguratiePage() {
     controlTooltips,
     profileResult,
     memberResult,
+    meubel,
   ] = await Promise.all([
     getExtraOptionTooltips(),
     getControlTooltips(),
     user ? supabase.from('profiles').select('is_international, configurator_access, korting').eq('id', user.id).single() : Promise.resolve({ data: null }),
     user ? supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
+    user ? hasMeubelAccess(supabase, user.id) : Promise.resolve(false),
   ])
 
   if (user) {
@@ -41,6 +44,8 @@ export default async function NieuweConfiguratiePage() {
   }
 
   if (access === 'project') {
+    // Met meubeltoegang eerst kiezen tussen projectspiegel en meubel
+    if (meubel) return <ConfiguratorTypeChooser project={<ProjectspiegelConfigurator />} meubel />
     return <ProjectspiegelConfigurator />
   }
 
@@ -56,8 +61,9 @@ export default async function NieuweConfiguratiePage() {
 
   // 'beide': eerst typekeuze (besluit B2); maatwerk-stand direct de wizard
   if (access === 'beide') {
-    return <ConfiguratorTypeChooser wizard={wizard} project={<ProjectspiegelConfigurator />} />
+    return <ConfiguratorTypeChooser wizard={wizard} project={<ProjectspiegelConfigurator />} meubel={meubel} />
   }
+  if (meubel) return <ConfiguratorTypeChooser wizard={wizard} meubel />
 
   return wizard
 }

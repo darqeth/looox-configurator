@@ -100,14 +100,15 @@ function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
   return model.staffels.find((s) => lengte >= s.min && lengte <= s.max) ?? null
 }
 
-/** Aantal lades (kolommen) dat bij deze lengte te bestellen is. */
+/**
+ * Aantal lades (kolommen) dat bij deze lengte te bestellen is.
+ * De prijslijst is leidend (Mark, 12 nov): elke combinatie die erin staat mag,
+ * ook als een gelijke verdeling buiten 30 tot 120 cm per lade valt.
+ */
 export function getLadeOpties(model: MeubelModel, lengte: number): number[] {
   const staffel = findStaffel(model, lengte)
   if (!staffel) return []
-  return Object.keys(staffel.prijzen)
-    .map(Number)
-    .filter((n) => lengte / n >= LADE_MIN_CM && lengte / n <= LADE_MAX_CM)
-    .sort((a, b) => a - b)
+  return Object.keys(staffel.prijzen).map(Number).sort((a, b) => a - b)
 }
 
 export function ladeLabel(model: MeubelModel, kolommen: number): string {

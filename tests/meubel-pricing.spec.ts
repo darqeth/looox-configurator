@@ -7,19 +7,19 @@ import {
 // Prijslijst Tailor-Made juli 2026 (netto). Rij: [lengte, lades, euro].
 // Per staffel de onder- en bovengrens, zodat een verschoven grens opvalt.
 const FACET: [number, number, number][] = [
-  [50, 1, 981.76], [120, 1, 981.76], [60, 2, 1153.36], [120, 2, 1153.36],
+  [50, 1, 981.76], [120, 1, 981.76], [50, 2, 1153.36], [120, 2, 1153.36],
   [121, 2, 1226.16], [129, 2, 1226.16],
   [130, 2, 1558.96], [190, 2, 1558.96], [130, 3, 1798.16], [190, 3, 1798.16],
   [191, 2, 1694.16], [210, 2, 1694.16], [191, 3, 1964.56], [210, 3, 1964.56], [191, 4, 2224.56], [210, 4, 2224.56],
-  [211, 2, 1922.96], [240, 2, 1922.96], [211, 3, 2141.36], [260, 3, 2141.36], [211, 4, 2494.96], [260, 4, 2494.96],
+  [211, 2, 1922.96], [260, 2, 1922.96], [211, 3, 2141.36], [260, 3, 2141.36], [211, 4, 2494.96], [260, 4, 2494.96],
 ]
 
 const FACET_DOUBLE: [number, number, number][] = [
-  [50, 1, 1423.76], [120, 1, 1423.76], [60, 2, 1751.36], [120, 2, 1751.36],
+  [50, 1, 1423.76], [120, 1, 1423.76], [50, 2, 1751.36], [120, 2, 1751.36],
   [121, 2, 1870.96], [129, 2, 1870.96],
   [130, 2, 2266.16], [190, 2, 2266.16], [130, 3, 2640.56], [190, 3, 2640.56],
   [191, 2, 2302.56], [210, 2, 2302.56], [191, 3, 2858.96], [210, 3, 2858.96],
-  [211, 2, 2489.76], [240, 2, 2489.76], [211, 3, 3046.16], [260, 3, 3046.16],
+  [211, 2, 2489.76], [260, 2, 2489.76], [211, 3, 3046.16], [260, 3, 3046.16],
   [261, 3, 3233.36], [290, 3, 3233.36],
 ]
 
@@ -56,12 +56,12 @@ test.describe('Meubel: opties en grenzen', () => {
     expect(calcMeubelNettoCents({ modelId: 'facet', lengte: 100, lades: 1, ...basis, uitsparingen: -1 })).toBeNull()
   })
 
-  test('lade smaller dan 30 cm of breder dan 120 cm is niet te kiezen', () => {
+  test('prijslijst is leidend voor het aantal lades', () => {
     const facet = getMeubelModel('facet')!
-    expect(getLadeOpties(facet, 55)).toEqual([1])
-    expect(getLadeOpties(facet, 60)).toEqual([1, 2])
-    expect(getLadeOpties(facet, 250)).toEqual([3, 4])
-    expect(getLadeOpties(facet, 240)).toEqual([2, 3, 4])
+    expect(getLadeOpties(facet, 50)).toEqual([1, 2])
+    expect(getLadeOpties(facet, 125)).toEqual([2])
+    expect(getLadeOpties(facet, 250)).toEqual([2, 3, 4])
+    expect(getLadeOpties(getMeubelModel('facet-double')!, 270)).toEqual([3])
   })
 
   test('lengtebereik per model', () => {

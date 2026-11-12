@@ -42,6 +42,8 @@ export type ConfigurationsData = {
   currentUserId: string
 }
 
+// Configuraties toont alleen losse configuraties. Regels die bij een project
+// (winkelmandje) horen staan onder Projecten, zodat elk product op één plek staat.
 export async function fetchConfigurations(params: {
   filter: string
   view: string
@@ -88,7 +90,7 @@ export async function fetchConfigurations(params: {
     const memberUserIds = (rawMembers ?? []).map(m => m.user_id as string)
 
     const { data: memberConfigRows } = memberUserIds.length > 0
-      ? await supabase.from('configurations').select('user_id').in('user_id', memberUserIds).eq('status', 'saved')
+      ? await supabase.from('configurations').select('user_id').in('user_id', memberUserIds).eq('status', 'saved').is('project_id', null)
       : { data: [] as { user_id: string }[] }
 
     const memberConfigCounts = (memberConfigRows ?? []).reduce<Record<string, number>>((acc, row) => {
@@ -114,16 +116,16 @@ export async function fetchConfigurations(params: {
         .from('configurations')
         .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, user_id, project_id', { count: 'exact' })
         .eq('user_id', viewUserId)
-        .eq('status', 'saved')
+        .eq('status', 'saved').is('project_id', null)
       const gefilterd = soort === 'meubels'
         ? q.eq('selected_options->>shape', 'meubel')
         : soort === 'spiegels' ? q.neq('selected_options->>shape', 'meubel') : q
       return gefilterd.order('updated_at', { ascending: false }).range(from, to)
     })(),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved').eq('selected_options->>shape', 'meubel'),
-    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved'),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved').is('project_id', null).eq('selected_options->>shape', 'meubel'),
+    supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', viewUserId).eq('status', 'saved').is('project_id', null),
     isManager
-      ? supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'saved')
+      ? supabase.from('configurations').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'saved').is('project_id', null)
       : Promise.resolve({ count: 0 }),
   ])
 

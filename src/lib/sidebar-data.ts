@@ -115,18 +115,21 @@ export async function fetchSidebarData(
     fetchProjectMenu(supabase, userId),
   ])
   const basis = !error && rpc ? buildFromRpc(rpc as SidebarRpcResult) : await fetchSidebarDataLegacy(supabase, userId)
-  return { ...basis, ...projecten }
+  // Configuraties telt alleen losse configuraties; regels van een project staan onder Projecten
+  const { projectRegelCount, ...menu } = projecten
+  return { ...basis, ...menu, configCount: Math.max(0, basis.configCount - projectRegelCount) }
 }
 
 // Open projecten (winkelmandjes) voor het menu. Faalt stil: het menu blijft dan gewoon zonder dit item.
-async function fetchProjectMenu(supabase: SupabaseClient, userId: string): Promise<{ projectCount: number; toonProjecten: boolean }> {
+async function fetchProjectMenu(supabase: SupabaseClient, userId: string): Promise<{ projectCount: number; toonProjecten: boolean; projectRegelCount: number }> {
   const [{ data: regels }, { data: profiel }] = await Promise.all([
-    supabase.from('configurations').select('project_id').eq('user_id', userId).eq('status', 'saved').not('project_id', 'is', null).limit(500),
+    // Zonder gebruikersfilter: RLS geeft dezelfde regels die de teller van Configuraties meetelt (eigen, en als manager die van collega's)
+    supabase.from('configurations').select('project_id, user_id').eq('status', 'saved').not('project_id', 'is', null).limit(1000),
     supabase.from('profiles').select('meubel_access, is_international').eq('id', userId).maybeSingle(),
   ])
-  const projectCount = new Set((regels ?? []).map((r) => r.project_id as string)).size
+  const projectCount = new Set((regels ?? []).filter((r) => r.user_id === userId).map((r) => r.project_id as string)).size
   const tailorMade = profiel?.meubel_access === true && profiel?.is_international !== true
-  return { projectCount, toonProjecten: tailorMade || projectCount > 0 }
+  return { projectCount, toonProjecten: tailorMade || projectCount > 0, projectRegelCount: (regels ?? []).length }
 }
 
 function buildFromRpc(rpc: SidebarRpcResult): SidebarData {

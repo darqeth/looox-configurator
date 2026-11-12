@@ -344,7 +344,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
     getProfile(userId),
     supabase.from('configurations')
       .select('id, name, article_number, total_price, status, created_at, updated_at, width, height, selected_options, project_id')
-      .eq('user_id', userId).order('updated_at', { ascending: false }).limit(5),
+      .eq('user_id', userId).is('project_id', null).order('updated_at', { ascending: false }).limit(5),
   ])
 
   if (!configs || configs.length === 0) {

@@ -127,7 +127,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
               const isOpAanvraag = shape === 'op-aanvraag' || (shape === 'meubel' && (order.config?.selected_options as { meubel?: { opAanvraag?: boolean } })?.meubel?.opAanvraag === true)
               const priceLabel = isOpAanvraag ? 'Op offerte' : formatEuro(Number(order.total_price))
               return (
-                <div key={order.id} className={`transition-colors ${isProjectspiegel ? 'border-l-[3px] border-l-violet-500 bg-violet-50/30 hover:bg-violet-50/50' : isOpAanvraag ? 'border-l-[3px] border-l-amber-400 bg-amber-50/30 hover:bg-amber-50/50' : 'hover:bg-lx-panel-bg/40'}`}>
+                <div key={order.id} onClick={() => setDetail(order)} className={`cursor-pointer transition-colors ${isProjectspiegel ? 'border-l-[3px] border-l-violet-500 bg-violet-50/30 hover:bg-violet-50/50' : isOpAanvraag ? 'border-l-[3px] border-l-amber-400 bg-amber-50/30 hover:bg-amber-50/50' : 'hover:bg-lx-panel-bg/40'}`}>
                   {/* Mobile */}
                   <div className="lg:hidden px-4 py-3.5 flex gap-3">
                     <div className="w-8 h-8 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -136,10 +136,10 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <div>
-                          <p className="text-[12.5px] font-bold text-lx-text-primary font-mono"><button type="button" onClick={() => setDetail(order)} className="hover:text-lx-cta hover:underline cursor-pointer" title="Details en PDF">{order.order_number}</button>{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
+                          <p className="text-[12.5px] font-bold text-lx-text-primary font-mono"><button type="button" onClick={(e) => { e.stopPropagation(); setDetail(order) }} className="hover:text-lx-cta hover:underline cursor-pointer" title="Details en PDF">{order.order_number}</button>{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
                           <p className="text-[11px] text-lx-text-secondary">{formatDate(order.created_at)}</p>
                         </div>
-                        <OrderStatusSelect orderId={order.id} currentStatus={order.status} />
+                        <div onClick={(e) => e.stopPropagation()}><OrderStatusSelect orderId={order.id} currentStatus={order.status} /></div>
                       </div>
                       <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{order.profile?.company ?? order.profile?.full_name ?? '—'}</p>
                       <div className="flex items-center justify-between mt-0.5">
@@ -155,7 +155,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                       <ShapeIcon shape={shape} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[12.5px] font-bold text-lx-text-primary font-mono truncate"><button type="button" onClick={() => setDetail(order)} className="hover:text-lx-cta hover:underline cursor-pointer" title="Details en PDF">{order.order_number}</button>{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
+                      <p className="text-[12.5px] font-bold text-lx-text-primary font-mono truncate"><button type="button" onClick={(e) => { e.stopPropagation(); setDetail(order) }} className="hover:text-lx-cta hover:underline cursor-pointer" title="Details en PDF">{order.order_number}</button>{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
                       <p className="text-[11px] text-lx-text-secondary mt-0.5">{formatDate(order.created_at)} · {order.config?.name ?? '—'}</p>
                     </div>
                     <div className="min-w-0">
@@ -172,7 +172,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                       )}
                     </div>
                     <div className="flex justify-center">
-                      <OrderStatusSelect orderId={order.id} currentStatus={order.status} />
+                      <div onClick={(e) => e.stopPropagation()}><OrderStatusSelect orderId={order.id} currentStatus={order.status} /></div>
                     </div>
                   </div>
                 </div>

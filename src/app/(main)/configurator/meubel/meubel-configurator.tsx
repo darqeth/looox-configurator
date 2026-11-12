@@ -16,7 +16,7 @@ import {
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
-  getMeubelDiepte, getKastHoogteBereik, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
+  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
 
@@ -243,6 +243,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
   const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, hoogte: model.hoogte, diepte: model.diepte, regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
+  const magUitsparing = kanUitsparing(model)
   const tekeningNodig = tekeningVerplicht(model, uitsparingen)
   const tekeningOntbreekt = tekeningNodig && !tekeningBestand && !bestaandeTekening
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
@@ -287,7 +288,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
     if (!geldig || !projectName.trim() || !model) return
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
-      logo: logo && !model.geenHout, uitsparingen,
+      logo: logo && !model.geenHout, uitsparingen: magUitsparing ? uitsparingen : 0,
       ...(model.kast && { diepte: model.diepte }),
       ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
       ...(model.waskom && { waskomVorm, waskomAantal }),
@@ -536,10 +537,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               )}
 
-              {!isDuo && !model.zonderLades && !(model.kast && opties.length < 2) && (
+              {!isDuo && !model.zonderLades && !model.kast && (
                 <div>
-                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">{model.kast ? 'Deuren' : 'Lades'}</p>
-                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={model.kast ? 'Aantal deuren' : 'Aantal lades'}>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lades</p>
+                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Aantal lades">
                     {opties.map((n) => (
                       <button
                         key={n}
@@ -558,7 +559,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     ))}
                   </div>
                   <p className="text-[12px] text-lx-text-muted mt-1.5">
-                    {model.kast ? 'Twee deuren zitten boven elkaar. Of één deur kan, hangt af van de hoogte; LoooX controleert dit bij de bestelling.' : 'Welke indelingen kunnen, hangt af van de lengte.'}
+                    Welke indelingen kunnen, hangt af van de lengte.
                     {model.rand ? ` De rand van ${model.rand} mm aan beide zijden gaat er eerst af.` : ''}
                   </p>
 
@@ -711,7 +712,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
                   </label>}
 
-                  <div className={model.geenHout ? '' : 'pt-4 border-t border-lx-divider'}>
+                  {magUitsparing && <div className={model.geenHout ? '' : 'pt-4 border-t border-lx-divider'}>
                     <div className="flex items-center justify-between gap-4">
                       <span>
                         <span id="meubel-uitsparingen-label" className="block text-[13px] font-medium text-lx-text-primary">Uitsparingen of boorgaten</span>
@@ -733,11 +734,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                         >+</button>
                       </div>
                     </div>
-                  </div>
+                  </div>}
                 </div>
               </div>
 
-              <div>
+              {magUitsparing && <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Maattekening{!tekeningNodig && <span className="font-normal text-lx-text-secondary"> (optioneel)</span>}</p>
                 <label className="block cursor-pointer">
                   <input
@@ -762,7 +763,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     : `Teken hierop de plaats van de waskom, kraan en afvoer${uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.`}
                 </p>
                 {tekeningOntbreekt && <TekeningNodig />}
-              </div>
+              </div>}
 
               {model.opmerking && (
                 <p className="text-[12px] text-lx-text-secondary leading-relaxed" role="note">{model.opmerking}</p>

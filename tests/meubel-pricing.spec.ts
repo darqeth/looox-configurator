@@ -463,7 +463,8 @@ test.describe('Solid Surface: tabelprijzen', () => {
   test('categorie-indeling', () => {
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'solid-surface')).toHaveLength(10)
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'wastafelmeubels')).toHaveLength(16)
-    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'kasten')).toHaveLength(9)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'kasten')).toHaveLength(6)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'toiletmeubels')).toHaveLength(3)
   })
 
   test('waskom: alleen bij modellen met ingebouwde waskom, vorm en aantal verplicht', () => {
@@ -498,7 +499,7 @@ test.describe('Solid Washbasin Solo en kasten', () => {
   })
 
   test('Cabinet: hoogtestaffel, breedte en diepte uit de lijst', () => {
-    const c = { modelId: 'cabinet', houtkleur: 'old-grey', lengte: 400, lades: 2, diepte: 300 }
+    const c = { modelId: 'cabinet', houtkleur: 'old-grey', lengte: 400, lades: 0, diepte: 300 }
     expect(calcMeubelNettoCents({ ...c, hoogte: 1360 })).toBe(130936)
     expect(calcMeubelNettoCents({ ...c, hoogte: 1750 })).toBe(130936)
     expect(calcMeubelNettoCents({ ...c, hoogte: 1751 })).toBe(144456)
@@ -507,7 +508,8 @@ test.describe('Solid Washbasin Solo en kasten', () => {
     expect(calcMeubelNettoCents({ ...c, hoogte: 1359 })).toBeNull()
     expect(calcMeubelNettoCents({ ...c, hoogte: 1800, lengte: 380 })).toBeNull()
     expect(calcMeubelNettoCents({ ...c, hoogte: 1800, diepte: 320 })).toBeNull()
-    expect(calcMeubelNettoCents({ ...c, hoogte: 1800, lades: 3 })).toBeNull()
+    // Het aantal deuren volgt uit de hoogte: de dealer kiest het niet
+    expect(calcMeubelNettoCents({ ...c, hoogte: 1800, lades: 2 })).toBeNull()
     // Houtkleur met de meerprijs van meubels
     expect(calcMeubelNettoCents({ ...c, hoogte: 1800, houtkleur: 'white' })).toBe(144456 + 4160)
   })
@@ -518,7 +520,7 @@ test.describe('Solid Washbasin Solo en kasten', () => {
     expect(calcMeubelNettoCents({ modelId: 'cabinet-facet-stripes', houtkleur: 'old-grey', lengte: 400, lades: 2, hoogte: 2000, diepte: 350 })).toBe(168896)
     expect(calcMeubelNettoCents({ modelId: 'cabinet-facet-stripes', houtkleur: 'old-grey', lengte: 400, lades: 1, hoogte: 2000, diepte: 350 })).toBeNull()
     expect(calcMeubelNettoCents({ modelId: 'cabinet-facet-stripes', houtkleur: 'white', lengte: 400, lades: 2, hoogte: 2000, diepte: 350 })).toBeNull()
-    expect(calcMeubelNettoCents({ modelId: 'cabinet-facet', houtkleur: 'old-grey', lengte: 400, lades: 1, hoogte: 1400, diepte: 350 })).toBe(140296)
+    expect(calcMeubelNettoCents({ modelId: 'cabinet-facet', houtkleur: 'old-grey', lengte: 400, lades: 0, hoogte: 1400, diepte: 350 })).toBe(140296)
     expect(calcMeubelNettoCents({ modelId: 'cabinet-facet-regaal', houtkleur: 'old-grey', lengte: 400, lades: 0, hoogte: 2000, diepte: 350 })).toBe(129896)
   })
 
@@ -536,28 +538,32 @@ test.describe('Solid Washbasin Solo en kasten', () => {
   })
 
   test('Kast: geen aanvraag, geen lade-indeling, tekening alleen bij uitsparingen', () => {
-    const kast = { ...basis, modelId: 'cabinet', lengte: 400, lades: 2, hoogte: 1800, diepte: 300 }
+    const kast = { ...basis, modelId: 'cabinet', lengte: 400, lades: 0, hoogte: 1800, diepte: 300 }
     expect(valideerMeubelConfig(kast)).toBeNull()
     expect(valideerMeubelConfig({ ...kast, opAanvraag: true })).not.toBeNull()
     expect(valideerMeubelConfig({ ...kast, ladeBreedtes: [200, 200] })).not.toBeNull()
     expect(valideerMeubelConfig({ ...kast, hoogte: 3000 })).not.toBeNull()
+    // Uitsparing kan alleen in de toiletmeubels
+    expect(valideerMeubelConfig({ ...kast, uitsparingen: 1 })).not.toBeNull()
+    expect(valideerMeubelConfig({ ...basis, modelId: 'cabinet-facet-mini', lengte: 425, lades: 0, uitsparingen: 1 })).toBeNull()
     const model = getMeubelModel('cabinet')!
     expect(tekeningVerplicht(model, 0)).toBe(false)
     expect(tekeningVerplicht(model, 1)).toBe(true)
     expect(tekeningVerplicht(getMeubelModel('facet')!, 0)).toBe(true)
     expect(meubelAfmeting({ ...model, hoogte: 1800, diepte: 300 }, 400)).toBe('B 400 × H 1800 × D 300 mm')
-    expect(indelingTekst(model, 2, null, 400)).toBe('2 deuren')
+    expect(indelingTekst(model, 0, null, 400)).toBe('1 of 2 deuren, afhankelijk van de hoogte')
+    expect(indelingTekst(getMeubelModel('cabinet-facet-stripes')!, 2, null, 400)).toBe('2 deuren')
     expect(indelingTekst(getMeubelModel('solid-washbasin-solo')!, 0, null, 1200)).toBe('Zonder lades')
   })
 
   test('Opgeslagen kast leest terug met gekozen maten', () => {
-    const m = leesMeubel({ shape: 'meubel', meubel: { modelId: 'cabinet-facet', lengte: 350, lades: 1, hoogte: 1500, diepte: 250, houtkleur: 'pure', factor: 2 }, quantity: 1 })!
+    const m = leesMeubel({ shape: 'meubel', meubel: { modelId: 'cabinet-facet', lengte: 350, lades: 0, hoogte: 1500, diepte: 250, houtkleur: 'pure', factor: 2 }, quantity: 1 })!
     expect(m.model.hoogte).toBe(1500)
     expect(m.model.diepte).toBe(250)
-    expect(m.lades).toBe(1)
+    expect(m.lades).toBe(0)
     expect(m.tekeningOntbreekt).toBe(false)
     expect(calcMeubelNettoCents(meubelPrijsInput(m))).toBe(140296 + 4160)
-    expect(meubelKort(m)).toBe('B 350 × H 1500 × D 250 mm · 1 deur')
+    expect(meubelKort(m)).toBe('B 350 × H 1500 × D 250 mm')
     const solo = leesMeubel({ shape: 'meubel', meubel: { modelId: 'solid-washbasin-solo', lengte: 1500, lades: 0, houtkleur: 'old-grey', waskomVorm: 'ovaal', waskomAantal: 2 }, quantity: 1 })!
     expect(solo.lades).toBe(0)
     expect(solo.tekeningOntbreekt).toBe(true)

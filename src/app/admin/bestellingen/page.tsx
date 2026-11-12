@@ -28,6 +28,7 @@ export default async function AdminBestellingenPage() {
     .select(`
       id,
       order_number,
+      order_group,
       quantity,
       unit_price,
       total_price,
@@ -57,6 +58,7 @@ export default async function AdminBestellingenPage() {
   const mappedOrders: AdminOrder[] = sorted.map(o => ({
     id: o.id,
     order_number: o.order_number,
+    order_group: (o as { order_group?: string | null }).order_group ?? null,
     quantity: o.quantity,
     unit_price: o.unit_price,
     total_price: o.total_price,

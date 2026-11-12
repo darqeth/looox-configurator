@@ -68,7 +68,7 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 id={titelId} className="text-[15px] font-bold text-lx-text-primary font-mono leading-snug">{order.order_number}</h2>
-              <p className="text-[12px] text-lx-text-muted mt-0.5">{isOfferte ? 'Offerteaanvraag' : 'Bestelling'} · {datum}</p>
+              <p className="text-[12px] text-lx-text-muted mt-0.5">{isOfferte ? 'Offerteaanvraag' : 'Bestelling'}{order.order_group ? ` · regel van project ${order.order_group}` : ''} · {datum}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-lx-panel-bg text-lx-text-secondary">{statusLabel}</span>
@@ -134,6 +134,9 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
               <a href={`/api/pdf/offerte/${order.config.id}`} download className={pdfKnop}>Klantofferte</a>
               <a href={`/api/pdf/order/by-config/${order.config.id}`} download className={pdfKnop}>{isOfferte ? 'Offerteaanvraag' : 'Orderbevestiging'}</a>
             </div>
+          )}
+          {order.order_group && (
+            <a href={`/api/pdf/order/groep/${order.order_group}`} download className={`${pdfKnop} mb-3`}>Hele projectorder {order.order_group}</a>
           )}
           <div className="flex items-baseline justify-end">
             <span className="text-[18px] font-bold text-lx-cta">{isOfferte ? 'Op aanvraag' : formatEuro(Number(order.total_price))}</span>

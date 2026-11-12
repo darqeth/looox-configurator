@@ -9,7 +9,7 @@ import { computeOrderTotals, type OrderDiscount } from '@/lib/order-pricing'
 import { runAfterResponse } from '@/lib/after-response'
 import { parseOrThrow, placeOrderInputSchema, orderFromConfigSchema } from '@/lib/validation'
 import { sendOrderConfirmationEmail, sendInternalOrderEmail, sendProjectOrderConfirmationEmail, sendInternalProjectOrderEmail, type OrderEmailDetails, type ProjectOrderEmail } from '@/lib/email'
-import { projectKop, type ProjectRegel } from '@/lib/project'
+import { projectKop } from '@/lib/project'
 import { berekenProjectOrderRegel, type ProjectOrderRegel } from '@/lib/project-order'
 import { getNotificationEmails } from '@/lib/actions/settings'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
@@ -786,46 +786,26 @@ export async function placeProjectOrder(
       address: p?.address ?? null,
       shippingAddress: altShippingAddress ?? p?.shipping_address ?? null,
     }
-    // Voorblad met netto regels, daarna de orderbevestiging per regel: één PDF
-    const nettoRegels: ProjectRegel[] = regels.map((r) => ({
-      ...r.regel,
-      netto: true,
-      totaalCents: Math.round(r.totalPrice * 100),
-      stukCents: Math.round((r.totalPrice / r.quantity) * 100),
-    }))
     const totaal = regels.reduce((som, r) => som + Math.round(r.totalPrice * 100), 0) / 100
 
-    const pdfBuffer = await (async () => {
-      const [{ renderOrderPDF }, { renderToBuffer }, React, { default: ProjectVoorblad }, { voegPdfsSamen }] = await Promise.all([
-        import('@/lib/pdf/render-order'),
-        import('@react-pdf/renderer'),
-        import('react'),
-        import('@/lib/pdf/project-voorblad'),
-        import('@/lib/pdf/samenvoegen'),
-      ])
-      const voorblad = await renderToBuffer(React.createElement(ProjectVoorblad, {
-        variant: 'order', projectNaam: kop.naam, referentie: kop.referentie, orderNummer: groep, datum: orderDate, dealer, regels: nettoRegels,
-      }) as Parameters<typeof renderToBuffer>[0])
-      const perRegel: Buffer[] = []
-      for (const [i, config] of configs.entries()) {
-        const r = regels[i]
-        const opts = { ...(config.selected_options as ConfigOptions), ...patch(r) } as ConfigOptions
-        perRegel.push(await renderOrderPDF({
-          orderNumber: orderNummers.get(config.id) ?? groep,
-          orderDate,
-          articleNumber: config.article_number,
-          status: 'pending',
-          dealer,
-          config: { name: config.name, width: config.width, height: config.height, options: opts },
-          unitPrice: r.unitPrice,
-          korting: r.korting,
-          quantity: r.quantity,
-          notes: notes || null,
-          attachmentUrl: (opts.attachmentUrl as string | null) ?? null,
-        }))
-      }
-      return voegPdfsSamen([voorblad, ...perRegel])
-    })().catch((e) => {
+    // PDF-renderer pas laden als hij nodig is (zie sendOrderEmails)
+    const pdfBuffer = await import('@/lib/pdf/render-project-order').then(({ renderProjectOrderPdf }) => renderProjectOrderPdf({
+      groep,
+      datum: orderDate,
+      projectNaam: kop.naam,
+      referentie: kop.referentie,
+      notes: notes || null,
+      dealer,
+      regels: configs.map((config, i) => ({
+        config: { ...config, selected_options: { ...(config.selected_options as Record<string, unknown>), ...patch(regels[i]) } },
+        orderNumber: orderNummers.get(config.id) ?? groep,
+        quantity: regels[i].quantity,
+        unitPrice: regels[i].unitPrice,
+        totalPrice: regels[i].totalPrice,
+        korting: regels[i].korting,
+        status: 'pending',
+      })),
+    })).catch((e) => {
       console.error('[project-order-pdf]', groep, e)
       return undefined
     })

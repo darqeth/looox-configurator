@@ -145,7 +145,11 @@ export function BestellingenContent({ page, view }: { page: string; view: string
         </div>
 
         <div className="divide-y divide-lx-divider">
-          {orders.map((order) => {
+          {orders.map((order, orderIndex) => {
+            // Projectorder: kopregel met het gezamenlijke nummer boven de eerste regel
+            const groep = order.order_group
+            const groepRegels = groep ? orders.filter((o) => o.order_group === groep) : []
+            const eersteVanGroep = !!groep && orders[orderIndex - 1]?.order_group !== groep
             const config = (Array.isArray(order.configurations)
               ? order.configurations[0]
               : order.configurations) as {
@@ -172,6 +176,18 @@ export function BestellingenContent({ page, view }: { page: string; view: string
 
             return (
               <div key={order.id} className="hover:bg-lx-panel-bg/50 transition-colors">
+                {eersteVanGroep && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 sm:px-5 py-2.5 bg-lx-icon-bg border-b border-lx-divider">
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white text-lx-cta">Project</span>
+                    <span className="text-[12.5px] font-bold text-lx-text-primary font-mono tracking-wide">{groep}</span>
+                    <span className="text-[12px] text-lx-text-secondary flex-1 min-w-0 truncate">
+                      {groepRegels.length} {groepRegels.length === 1 ? 'regel' : 'regels'} · totaal {formatEuro(groepRegels.reduce((som, o) => som + Math.round(Number(o.total_price) * 100), 0) / 100)} netto
+                    </span>
+                    <a href={`/api/pdf/order/groep/${groep}`} download className="text-[12px] font-semibold text-lx-cta hover:underline whitespace-nowrap">
+                      Projectorder downloaden
+                    </a>
+                  </div>
+                )}
 
                 {/* Mobile layout */}
                 <div className="flex gap-3 px-4 py-3.5 sm:hidden">

@@ -9,6 +9,8 @@ type TeamMember = { userId: string; name: string; count: number }
 export type OrderRow = {
   id: string
   order_number: string
+  /** Gezamenlijk ordernummer van een projectorder; null bij een losse bestelling */
+  order_group: string | null
   quantity: number
   unit_price: number
   total_price: number
@@ -95,6 +97,7 @@ export async function fetchOrders(params: { view: string; page: number }): Promi
       .select(`
         id,
         order_number,
+        order_group,
         quantity,
         unit_price,
         total_price,
@@ -116,6 +119,8 @@ export async function fetchOrders(params: { view: string; page: number }): Promi
       `, { count: 'exact' })
       .eq('user_id', viewUserId)
       .order('created_at', { ascending: false })
+      // Regels van één projectorder hebben hetzelfde tijdstip: op nummer houden ze hun volgorde
+      .order('order_number', { ascending: true })
       .range(from, to),
     isManager
       ? supabase.from('orders').select('*', { count: 'exact', head: true }).eq('user_id', userId)

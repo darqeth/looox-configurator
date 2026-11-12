@@ -32,6 +32,8 @@ function formatDate(iso: string) {
 export type AdminOrder = {
   id: string
   order_number: string
+  /** Gezamenlijk ordernummer van een projectorder */
+  order_group?: string | null
   quantity: number
   unit_price: number
   total_price: number

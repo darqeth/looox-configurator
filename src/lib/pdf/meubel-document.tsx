@@ -335,8 +335,8 @@ export default function MeubelDocument({
             <View style={styles.noticeBox}>
               <Text style={styles.noticeText}>
                 {opAanvraag
-                  ? 'Dit meubel is groter dan de standaardmaten en wordt op aanvraag gemaakt. De prijs volgt na beoordeling van de aanvraag.'
-                  : 'Deze offerte is 30 dagen geldig. Prijzen zijn excl. btw, tenzij anders vermeld. Het totaalbedrag is inclusief 21% btw. Onder voorbehoud van beschikbaarheid.'}
+                  ? 'Dit meubel is groter dan de standaardmaten en wordt op aanvraag gemaakt. De prijs volgt na beoordeling van de aanvraag. De levertijd van maatwerkmeubels is 8 tot 12 weken.'
+                  : 'Deze offerte is 30 dagen geldig. Prijzen zijn excl. btw, tenzij anders vermeld. Het totaalbedrag is inclusief 21% btw. Onder voorbehoud van beschikbaarheid. De levertijd van maatwerkmeubels is 8 tot 12 weken.'}
               </Text>
             </View>
           </View>

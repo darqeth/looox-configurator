@@ -13,9 +13,9 @@ import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
 
 const meubelInputSchema = z.object({
   modelId: z.string().max(40),
-  lengte: z.number().int().min(1).max(1000),
+  lengte: z.number().int().min(1).max(10000),
   lades: z.number().int().min(1).max(10),
-  ladeBreedtes: z.array(z.number().int().min(1).max(1000)).max(10).nullable(),
+  ladeBreedtes: z.array(z.number().int().min(1).max(10000)).max(10).nullable(),
   houtkleur: z.string().max(40),
   opAanvraag: z.boolean().optional(),
   quantity: z.number().int().min(1).max(MEUBEL_AANTAL_MAX),
@@ -48,8 +48,9 @@ async function bouwRij(rawInput: SaveMeubelInput) {
     userId: user.id,
     rij: {
       name: input.projectName,
-      width: input.lengte,
-      height: model.hoogte,
+      // De kolommen zijn in cm, zoals bij spiegels; de exacte mm staan in de opties
+      width: Math.round(input.lengte / 10),
+      height: Math.round(model.hoogte / 10),
       // Bruto per stuk, net als bij maatwerk spiegels; het aantal staat in de opties.
       total_price: (brutoCents / 100).toFixed(2),
       selected_options: {
@@ -57,6 +58,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
         // De factor van dit moment hoort bij de offerte: wijzigt de manager hem
         // later, dan verandert een bestaande offerte niet stilletjes mee.
         meubel: {
+          eenheid: 'mm',
           modelId: input.modelId,
           lengte: input.lengte,
           lades: input.lades,

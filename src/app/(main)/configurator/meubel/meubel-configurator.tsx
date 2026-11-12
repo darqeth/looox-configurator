@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Maximize2, X } from 'lucide-react'
 import { toast } from '@/components/toast'
 import {
-  MEUBEL_MODELLEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_CM, LADE_MAX_CM, MEUBEL_AANTAL_MAX,
+  MEUBEL_MODELLEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_MM, LADE_MAX_MM, MEUBEL_AANTAL_MAX,
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   getAanvraagBereik, getAanvraagLadeOpties,
@@ -44,9 +44,9 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
     () => MEUBEL_MODELLEN.find((m) => m.id === initialConfig?.modelId) ?? null,
   )
   const [step, setStep] = useState(model ? 1 : 0)
-  const [lengteTekst, setLengteTekst] = useState(String(initialConfig?.lengte ?? 120))
+  const [lengteTekst, setLengteTekst] = useState(String(initialConfig?.lengte ?? 1200))
   // Laatste geldige lengte: tekening en opties blijven staan terwijl je typt
-  const [laatsteLengte, setLaatsteLengte] = useState(initialConfig?.lengte ?? 120)
+  const [laatsteLengte, setLaatsteLengte] = useState(initialConfig?.lengte ?? 1200)
   const [lades, setLades] = useState(initialConfig?.lades ?? 2)
   const [eigenBreedtes, setEigenBreedtes] = useState<LadeBreedtes>(initialConfig?.ladeBreedtes ?? null)
   const [houtkleur, setHoutkleur] = useState(initialConfig?.houtkleur || HOUTKLEUR_DEFAULT)
@@ -90,7 +90,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                     <p className="font-semibold text-lx-text-primary text-[15px]">{m.naam}</p>
                     <p className="text-[13px] text-lx-text-secondary mt-0.5">{m.omschrijving}</p>
                     <p className="text-[12px] text-lx-text-muted mt-2">
-                      Lengte {b.min} tot {b.max} cm · hoogte {m.hoogte} cm · diepte {m.diepte} cm
+                      Lengte {b.min} tot {b.max} mm · hoogte {m.hoogte} mm · diepte {m.diepte} mm
                     </p>
                   </div>
                 </button>
@@ -137,7 +137,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   // De laatste lade krijgt wat overblijft, zodat het totaal altijd de lengte is
   function zetBreedte(index: number, tekst: string) {
     if (!breedtes) return
-    const waarde = Number(tekst.replace(/\D/g, '').slice(0, 3)) || 0
+    const waarde = Number(tekst.replace(/\D/g, '').slice(0, 4)) || 0
     const nieuw = breedtes.map((b, i) => (i === index ? waarde : b))
     nieuw[nieuw.length - 1] = tekenLengte - nieuw.slice(0, -1).reduce((som, b) => som + b, 0)
     setEigenBreedtes(nieuw)
@@ -174,7 +174,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-[18px] font-bold text-lx-text-primary tracking-tight">{model.naam}</h1>
-                  <p className="text-[12.5px] text-lx-text-secondary mt-0.5">Hoogte {model.hoogte} cm · diepte {model.diepte} cm</p>
+                  <p className="text-[12.5px] text-lx-text-secondary mt-0.5">Hoogte {model.hoogte} mm · diepte {model.diepte} mm</p>
                   <button onClick={() => setStep(0)} className="text-[12.5px] font-semibold text-lx-cta hover:underline cursor-pointer mt-1">
                     Ander model
                   </button>
@@ -188,20 +188,20 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                     id="meubel-lengte"
                     inputMode="numeric"
                     value={lengteTekst}
-                    onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                    onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 4))}
                     aria-invalid={!lengteOk}
                     aria-describedby="meubel-lengte-hulp"
                     className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
                   />
-                  <span className="text-[13px] text-lx-text-secondary">cm</span>
+                  <span className="text-[13px] text-lx-text-secondary">mm</span>
                 </div>
                 <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
-                  Hele centimeters, van {bereik.min} tot {bereik.max} cm.
+                  Hele millimeters, van {bereik.min} tot {bereik.max} mm.
                 </p>
 
                 <label className="mt-3 flex items-center justify-between gap-4 bg-lx-panel-bg rounded-xl p-4 cursor-pointer select-none">
                   <span>
-                    <span className="block text-[13px] font-medium text-lx-text-primary">Groter dan {standaardBereik.max} cm</span>
+                    <span className="block text-[13px] font-medium text-lx-text-primary">Groter dan {standaardBereik.max} mm</span>
                     <span className="block text-[11.5px] text-lx-text-secondary">
                       Buiten de standaardmaten is dit meubel altijd op aanvraag, zonder prijs vooraf.
                     </span>
@@ -239,7 +239,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                       <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
                     </svg>
                     <p className="text-[12px] text-amber-800 leading-relaxed">
-                      <strong>Let op:</strong> dit model heeft een rand van {model.rand} cm. Houd daar rekening mee bij de ladeverdeling.
+                      <strong>Let op:</strong> dit model heeft een rand van {model.rand} mm. Houd daar rekening mee bij de ladeverdeling.
                     </p>
                   </div>
                 )}
@@ -250,7 +250,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                       <span>
                         <span className="block text-[13px] font-medium text-lx-text-primary">Breedtes zelf instellen</span>
                         <span className="block text-[11.5px] text-lx-text-secondary">
-                          Standaard zijn de lades even breed. Per lade {LADE_MIN_CM} tot {LADE_MAX_CM} cm.
+                          Standaard zijn de lades even breed. Per lade {LADE_MIN_MM} tot {LADE_MAX_MM} mm.
                         </span>
                       </span>
                       <input
@@ -267,7 +267,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                         <div className="flex flex-wrap items-end gap-2.5 mt-4">
                           {breedtes.map((b, i) => {
                             const laatste = i === breedtes.length - 1
-                            const fout = b < LADE_MIN_CM || b > LADE_MAX_CM
+                            const fout = b < LADE_MIN_MM || b > LADE_MAX_MM
                             return (
                               <div key={i}>
                                 <label htmlFor={`meubel-lade-${i}`} className="block text-[11.5px] font-medium text-lx-text-secondary mb-1">
@@ -287,10 +287,10 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                               </div>
                             )
                           })}
-                          <span className="text-[13px] text-lx-text-secondary pb-2.5">cm</span>
+                          <span className="text-[13px] text-lx-text-secondary pb-2.5">mm</span>
                         </div>
                         <p className={`text-[12px] mt-2 ${ladeFout ? 'text-red-600' : 'text-lx-text-muted'}`} role={ladeFout ? 'alert' : undefined}>
-                          {ladeFout ?? `De laatste lade krijgt wat overblijft van ${tekenLengte} cm.`}
+                          {ladeFout ?? `De laatste lade krijgt wat overblijft van ${tekenLengte} mm.`}
                         </p>
                       </>
                     )}
@@ -339,7 +339,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
               <div className="bg-lx-panel-bg rounded-2xl p-4">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
                 <Rij label="Model" waarde={model.naam} onEdit={() => setStep(0)} />
-                <Rij label="Afmeting" waarde={`${lengte} cm lang · ${model.hoogte} cm hoog · ${model.diepte} cm diep${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(1)} />
+                <Rij label="Afmeting" waarde={`${lengte} mm lang · ${model.hoogte} mm hoog · ${model.diepte} mm diep${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(1)} />
                 <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, lengte, gekozen)}`} onEdit={() => setStep(1)} />
                 <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(1)} />
               </div>
@@ -450,7 +450,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
             houtkleur={houtkleur}
             toonHout={toonHout}
           />
-          <p className="text-[11px] text-lx-text-secondary text-center">Vooraanzicht, maten in cm · diepte {model.diepte} cm</p>
+          <p className="text-[11px] text-lx-text-secondary text-center">Vooraanzicht, maten in mm · diepte {model.diepte} mm</p>
           <button
             onClick={() => setTekeningGroot(true)}
             aria-label="Tekening groot bekijken"
@@ -463,7 +463,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
 
         {tekeningGroot && (
           <TekeningPopup
-            titel={`${model.naam} · ${tekenLengte} cm · ${ladeLabel(model, gekozen)}`}
+            titel={`${model.naam} · ${tekenLengte} mm · ${ladeLabel(model, gekozen)}`}
             onClose={() => setTekeningGroot(false)}
           >
             <MeubelTekening
@@ -474,7 +474,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
               toonHout={toonHout}
             />
             <p className="text-[12px] text-lx-text-secondary text-center mt-1">
-              Vooraanzicht, maten in cm · hoogte {model.hoogte} cm · diepte {model.diepte} cm
+              Vooraanzicht, maten in mm · hoogte {model.hoogte} mm · diepte {model.diepte} mm
             </p>
           </TekeningPopup>
         )}

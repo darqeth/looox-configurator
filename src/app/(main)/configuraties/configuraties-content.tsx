@@ -136,7 +136,7 @@ export function ConfiguratiesContent({
                 const indirect = opts?.indirectLight as { position: string; control?: string | null } | null
 
                 let dimensionLabel = ''
-                if (meubel) dimensionLabel = `${meubel.lengte} cm · ${ladeLabel(meubel.model, meubel.lades)} · ${meubel.houtkleurNaam}`
+                if (meubel) dimensionLabel = `${meubel.lengte} mm · ${ladeLabel(meubel.model, meubel.lades)} · ${meubel.houtkleurNaam}`
                 else if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`

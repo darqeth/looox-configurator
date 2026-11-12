@@ -1,16 +1,19 @@
 // Tailor-Made meubels (configurator 2.0).
 // Bron: inkoopprijslijst Tailor-Made, geldig vanaf 1 juli 2026 (netto, excl. btw).
-// Alle bedragen in centen. In beeld en op de offerte staat altijd bruto
+// Alle bedragen in centen, alle maten in hele millimeters. In beeld en op de offerte staat altijd bruto
 // (netto × factor van het bedrijf); netto is alleen voor de bestelstap.
 
 export const MEUBEL_FACTOR_DEFAULT = 2
 export const MEUBEL_FACTOR_MAX = 10
-export const LADE_MIN_CM = 30
-export const LADE_MAX_CM = 120
+export const LADE_MIN_MM = 300
+export const LADE_MAX_MM = 1200
 export const UITSPARING_NETTO_CENTS = 1040
 export const UITSPARING_MAX = 10
 
-// Staffel: lengtebereik in hele cm met de prijs per aantal lades naast elkaar.
+// Staffel: lengtebereik in cm, letterlijk zoals in de prijslijst, met de prijs per
+// aantal lades naast elkaar. De configurator rekent in mm: een lengte valt in de
+// eerste staffel waarvan de bovengrens niet wordt overschreden (1201 mm is dus
+// de staffel 121 tot 129 cm, 1291 mm de staffel 130 tot 190 cm).
 // Bij dubbele modellen (2 rijen) is de sleutel het aantal kolommen: 2 = "2×2".
 interface Staffel {
   min: number
@@ -23,11 +26,13 @@ export interface MeubelModel {
   naam: string
   omschrijving: string
   afbeelding: string
+  /** Diepte in mm */
   diepte: number
+  /** Hoogte in mm */
   hoogte: number
   /** Aantal laderijen boven elkaar */
   rijen: number
-  /** Rand van het frame in cm (U-Floor 4, U-Frame en Full-Frame 5); de dealer krijgt een melding bij de ladeverdeling */
+  /** Rand van het frame in mm (U-Floor 40, U-Frame en Full-Frame 50); de dealer krijgt een melding bij de ladeverdeling */
   rand?: number
   staffels: Staffel[]
 }
@@ -38,8 +43,8 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     naam: 'Facet',
     omschrijving: 'Greeploos ladenmeubel met facetrand.',
     afbeelding: '/images/meubels/model-facet.webp',
-    diepte: 46,
-    hoogte: 30,
+    diepte: 460,
+    hoogte: 300,
     rijen: 1,
     staffels: [
       { min: 50,  max: 120, prijzen: { 1: 98176, 2: 115336 } },
@@ -54,8 +59,8 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     naam: 'Facet Double',
     omschrijving: 'Facet met twee laderijen boven elkaar.',
     afbeelding: '/images/meubels/model-facet-double.webp',
-    diepte: 46,
-    hoogte: 60,
+    diepte: 460,
+    hoogte: 600,
     rijen: 2,
     staffels: [
       { min: 50,  max: 120, prijzen: { 1: 142376, 2: 175136 } },
@@ -96,22 +101,25 @@ export function getMeubelModel(id: string): MeubelModel | null {
   return MEUBEL_MODELLEN.find((m) => m.id === id) ?? null
 }
 
+/** Standaardbereik van de lengte in mm. */
 export function getLengteBereik(model: MeubelModel): { min: number; max: number } {
   return {
-    min: Math.min(...model.staffels.map((s) => s.min)),
-    max: Math.max(...model.staffels.map((s) => s.max)),
+    min: Math.min(...model.staffels.map((s) => s.min)) * 10,
+    max: Math.max(...model.staffels.map((s) => s.max)) * 10,
   }
 }
 
 function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
-  if (!Number.isInteger(lengte)) return null
-  return model.staffels.find((s) => lengte >= s.min && lengte <= s.max) ?? null
+  const bereik = getLengteBereik(model)
+  if (!Number.isInteger(lengte) || lengte < bereik.min || lengte > bereik.max) return null
+  // Staffels staan oplopend: de eerste waarvan de bovengrens niet wordt overschreden
+  return model.staffels.find((s) => lengte <= s.max * 10) ?? null
 }
 
 /**
  * Aantal lades (kolommen) dat bij deze lengte te bestellen is.
  * De prijslijst is leidend (Mark, 12 nov): elke combinatie die erin staat mag,
- * ook als een gelijke verdeling buiten 30 tot 120 cm per lade valt.
+ * ook als een gelijke verdeling buiten 300 tot 1200 mm per lade valt.
  */
 export function getLadeOpties(model: MeubelModel, lengte: number): number[] {
   const staffel = findStaffel(model, lengte)
@@ -185,14 +193,14 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
   const basis = totaal - extra.reduce((som, r) => som + r.cents, 0)
   return {
-    regels: [{ label: `${model.naam} ${input.lengte} cm · ${ladeLabel(model, input.lades)}`, cents: basis }, ...extra],
+    regels: [{ label: `${model.naam} ${input.lengte} mm · ${ladeLabel(model, input.lades)}`, cents: basis }, ...extra],
     totaal,
   }
 }
 
 // ─── Lade-indeling ──────────────────────────────────────────────────────────
 // Standaard zijn de lades gelijk verdeeld (ladeBreedtes = null). Past de dealer
-// de breedtes aan, dan zijn het hele centimeters van 30 tot 120 cm die samen
+// de breedtes aan, dan zijn het hele millimeters van 300 tot 1200 mm die samen
 // de lengte van het meubel vormen. Bij dubbele modellen gelden de breedtes
 // voor beide rijen.
 
@@ -202,36 +210,42 @@ export type LadeBreedtes = number[] | null
 export function valideerLadeBreedtes(breedtes: LadeBreedtes, lengte: number, lades: number): string | null {
   if (breedtes === null) return null
   if (!Array.isArray(breedtes) || breedtes.length !== lades) return 'Het aantal breedtes klopt niet met het aantal lades.'
-  if (breedtes.some((b) => !Number.isInteger(b))) return 'Vul hele centimeters in.'
-  if (breedtes.some((b) => b < LADE_MIN_CM || b > LADE_MAX_CM)) return `Elke lade moet tussen ${LADE_MIN_CM} en ${LADE_MAX_CM} cm breed zijn.`
-  if (breedtes.reduce((som, b) => som + b, 0) !== lengte) return `De lades moeten samen ${lengte} cm zijn.`
+  if (breedtes.some((b) => !Number.isInteger(b))) return 'Vul hele millimeters in.'
+  if (breedtes.some((b) => b < LADE_MIN_MM || b > LADE_MAX_MM)) return `Elke lade moet tussen ${LADE_MIN_MM} en ${LADE_MAX_MM} mm breed zijn.`
+  if (breedtes.reduce((som, b) => som + b, 0) !== lengte) return `De lades moeten samen ${lengte} mm zijn.`
   return null
+}
+
+/**
+ * Gelijke verdeling in hele mm. Komt de lengte niet precies uit, dan zijn de
+ * eerste lades 1 mm breder (2000 mm over 3 lades: 667, 667, 666).
+ */
+export function verdeelGelijk(lengte: number, lades: number): number[] {
+  const basis = Math.floor(lengte / lades)
+  const rest = lengte - basis * lades
+  return Array.from({ length: lades }, (_, i) => basis + (i < rest ? 1 : 0))
 }
 
 /** Breedte per lade voor tekening en samenvatting. */
 export function getLadeBreedtes(breedtes: LadeBreedtes, lengte: number, lades: number): number[] {
   if (breedtes && valideerLadeBreedtes(breedtes, lengte, lades) === null) return breedtes
-  return Array.from({ length: lades }, () => lengte / lades)
+  return verdeelGelijk(lengte, lades)
 }
 
-/** Startpunt voor zelf aanpassen: hele centimeters, de rest komt bij de laatste lade. */
+/** Startpunt voor zelf aanpassen: de gelijke verdeling. */
 export function startLadeBreedtes(lengte: number, lades: number): number[] {
-  const basis = Math.floor(lengte / lades)
-  return Array.from({ length: lades }, (_, i) => (i === lades - 1 ? lengte - basis * (lades - 1) : basis))
+  return verdeelGelijk(lengte, lades)
 }
 
-/** Kan deze lengte met dit aantal lades handmatig worden ingedeeld (elke lade 30 tot 120 cm)? */
+/** Kan deze lengte met dit aantal lades handmatig worden ingedeeld (elke lade 300 tot 1200 mm)? */
 export function kanLadesAanpassen(lengte: number, lades: number): boolean {
-  return lades > 1 && lengte >= lades * LADE_MIN_CM && lengte <= lades * LADE_MAX_CM
-}
-
-export function formatCm(n: number): string {
-  return n.toLocaleString('nl-NL', { maximumFractionDigits: 1 })
+  return lades > 1 && lengte >= lades * LADE_MIN_MM && lengte <= lades * LADE_MAX_MM
 }
 
 export function ladeBreedtesTekst(breedtes: LadeBreedtes, lengte: number, lades: number): string {
   const b = getLadeBreedtes(breedtes, lengte, lades)
-  return breedtes && b === breedtes ? `${b.map(formatCm).join(' + ')} cm` : `Gelijk verdeeld, ${formatCm(lengte / lades)} cm per lade`
+  if (breedtes && b === breedtes) return `${b.join(' + ')} mm`
+  return b.every((x) => x === b[0]) ? `Gelijk verdeeld, ${b[0]} mm per lade` : `Gelijk verdeeld, ${b.join(' + ')} mm`
 }
 
 export const MEUBEL_AANTAL_MAX = 99
@@ -248,7 +262,7 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
     const model = getMeubelModel(c.modelId)
     if (!model || !HOUTKLEUREN.some((k) => k.id === c.houtkleur)) return 'Dit model of deze houtkleur bestaat niet.'
     const bereik = getAanvraagBereik(model)
-    if (!Number.isInteger(c.lengte) || c.lengte < bereik.min || c.lengte > bereik.max) return `Op aanvraag kan van ${bereik.min} tot ${bereik.max} cm.`
+    if (!Number.isInteger(c.lengte) || c.lengte < bereik.min || c.lengte > bereik.max) return `Op aanvraag kan van ${bereik.min} tot ${bereik.max} mm.`
     if (!getAanvraagLadeOpties(c.lengte).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
   } else if (calcMeubelNettoCents(c) === null) {
     return 'Deze combinatie van model, lengte, lades en houtkleur bestaat niet.'
@@ -263,18 +277,18 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
 // De dealer kan bewust een lengte boven het bereik van het model kiezen. Zo'n
 // meubel heeft geen tabelprijs en is altijd op aanvraag.
 
-export const MEUBEL_AANVRAAG_MAX_CM = 400
+export const MEUBEL_AANVRAAG_MAX_MM = 3500
 export const MEUBEL_AANVRAAG_LADES_MAX = 6
 
 export function getAanvraagBereik(model: MeubelModel): { min: number; max: number } {
-  return { min: getLengteBereik(model).max + 1, max: MEUBEL_AANVRAAG_MAX_CM }
+  return { min: getLengteBereik(model).max + 1, max: MEUBEL_AANVRAAG_MAX_MM }
 }
 
-/** Aantal lades naast elkaar waarbij elke lade bij gelijke verdeling 30 tot 120 cm is. */
+/** Aantal lades naast elkaar waarbij elke lade bij gelijke verdeling 300 tot 1200 mm is. */
 export function getAanvraagLadeOpties(lengte: number): number[] {
   const opties: number[] = []
   for (let n = 1; n <= MEUBEL_AANVRAAG_LADES_MAX; n++) {
-    if (lengte / n >= LADE_MIN_CM && lengte / n <= LADE_MAX_CM) opties.push(n)
+    if (lengte / n >= LADE_MIN_MM && lengte / n <= LADE_MAX_MM) opties.push(n)
   }
   return opties
 }

@@ -146,7 +146,7 @@ export function DashboardContent({ data }: { data: DashboardData }) {
                   optionSubChoices: opts?.optionSubChoices as Record<string, string> | undefined,
                 } : undefined
                 let dimensionLabel = ''
-                if (meubel) dimensionLabel = `${meubel.lengte} cm · ${ladeLabel(meubel.model, meubel.lades)} · ${meubel.houtkleurNaam}`
+                if (meubel) dimensionLabel = `${meubel.lengte} mm · ${ladeLabel(meubel.model, meubel.lades)} · ${meubel.houtkleurNaam}`
                 else if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`

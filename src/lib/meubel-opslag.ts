@@ -5,6 +5,7 @@ import {
 
 // Een meubel staat in dezelfde tabel als de spiegels (configurations), herkenbaar
 // aan selected_options.shape = 'meubel' met de keuzes onder selected_options.meubel.
+// Maten staan daar in mm; de kolommen width en height houden cm aan, net als bij spiegels.
 
 export const MEUBEL_SHAPE = 'meubel'
 
@@ -51,7 +52,7 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
   }
 }
 
-/** Korte omschrijving voor lijsten: "Facet Double · 200 cm · 3 × 2 lades · White". */
+/** Korte omschrijving voor lijsten: "Facet Double · 2000 mm · 3 × 2 lades · White". */
 export function meubelSamenvatting(m: OpgeslagenMeubel): string {
-  return [m.model.naam, `${m.lengte} cm`, ladeLabel(m.model, m.lades), m.houtkleurNaam].filter(Boolean).join(' · ')
+  return [m.model.naam, `${m.lengte} mm`, ladeLabel(m.model, m.lades), m.houtkleurNaam].filter(Boolean).join(' · ')
 }

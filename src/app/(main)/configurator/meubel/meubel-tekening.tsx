@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useId } from 'react'
-import { HOUTKLEUREN, formatCm, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
+import { HOUTKLEUREN, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
 
 // Schematisch vooraanzicht op schaal, in dezelfde stijl als de spiegeltekening:
 // zachte vulling, dunne lijnen en maatlijnen. Volgt lengte, lades en houtkleur.
@@ -20,7 +20,7 @@ const MAAT = 'var(--lx-text-secondary)'
 export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout = true }: {
   model: MeubelModel
   lengte: number
-  /** Breedte per lade in cm, van links naar rechts; samen de lengte */
+  /** Breedte per lade in mm, van links naar rechts; samen de lengte */
   breedtes: number[]
   houtkleur: string
   /** Uit = kale lijntekening zonder houtkleur */
@@ -50,7 +50,7 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
       viewBox={`0 0 ${W} ${H}`}
       className="w-full h-auto"
       role="img"
-      aria-label={`Vooraanzicht ${model.naam}, ${lengte} cm lang, ${model.hoogte} cm hoog, ${lades * model.rijen} lades`}
+      aria-label={`Vooraanzicht ${model.naam}, ${lengte} mm lang, ${model.hoogte} mm hoog, ${lades * model.rijen} lades`}
     >
       <defs>
         {/* Vier gespiegelde tegels, zodat de naden van het houtstaal niet opvallen */}
@@ -81,7 +81,7 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
         <line x1={x + w} y1={y - 21} x2={x + w} y2={y - 6} />
       </g>
       <text x={x + w / 2} y={y - 21} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--lx-text-primary)">
-        {lengte} cm
+        {lengte}
       </text>
 
       {/* Maatlijn hoogte (rechts) */}
@@ -103,7 +103,7 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
       </g>
       {toonLadeMaat && Array.from({ length: lades }, (_, i) => (
         <text key={i} x={(grenzen[i] + grenzen[i + 1]) / 2} y={y + h + 31} textAnchor="middle" fontSize="10" fontWeight="500" fill={MAAT}>
-          {formatCm(breedtes[i])}
+          {breedtes[i]}
         </text>
       ))}
     </svg>

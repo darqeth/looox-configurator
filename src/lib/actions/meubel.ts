@@ -51,10 +51,10 @@ async function bouwRij(rawInput: SaveMeubelInput) {
   if (fout) throw new Error(fout)
   const model = getMeubelModel(input.modelId)!
 
-  // Bij elk meubel hoort een maattekening (waskom, kraan, afvoer, uitsparingen): zonder tekening niet opslaan
+  // Maattekening (waskom, kraan, afvoer, uitsparingen): een offerte opslaan kan zonder,
+  // bestellen niet. Die controle zit in de bestelstap (project-order.ts en placeMeubelOrder).
   const uitsparingen = input.uitsparingen ?? 0
   const attachmentUrl = assertValidAttachmentUrl(input.attachmentUrl)
-  if (!attachmentUrl) throw new Error('Voeg een maattekening toe.')
 
   const factor = await getMeubelFactor(supabase, user.id)
   // Op aanvraag heeft geen prijs vanuit de configurator: 0 opslaan, net als bij een spiegel op aanvraag

@@ -66,3 +66,25 @@ export function tekenIndeling(opties: {
     onder: y + h - (model.randOnder ? rand : 0),
   }
 }
+
+// ─── Bovenaanzicht van het Solid Surface blad ───────────────────────────────
+
+export interface TekenWaskom {
+  /** Midden van de waskom in mm vanaf de linkerkant en vanaf de achterkant van het blad */
+  cx: number
+  cy: number
+  /** Buitenmaat in mm */
+  b: number
+  d: number
+}
+
+/**
+ * Waskommen in het blad, gelijk verdeeld over de lengte. De plaats is indicatief:
+ * de echte plaats staat op de maattekening van de dealer.
+ */
+export function tekenWaskommen(lengte: number, diepte: number, aantal: number): TekenWaskom[] {
+  const n = aantal === 2 ? 2 : 1
+  const b = Math.min(520, (lengte / n) * 0.62)
+  const d = Math.min(360, diepte * 0.7)
+  return Array.from({ length: n }, (_, i) => ({ cx: (lengte / n) * (i + 0.5), cy: diepte * 0.52, b, d }))
+}

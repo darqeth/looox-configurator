@@ -92,7 +92,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   // Logo staat standaard aan (Mark, 12 nov); bij bewerken geldt wat is opgeslagen
   const [logo, setLogo] = useState(initialConfig ? initialConfig.logo === true : true)
   const [uitsparingen, setUitsparingen] = useState(initialConfig?.uitsparingen ?? 0)
-  // Maattekening: bij elk meubel verplicht (plaats van waskom, kraan, afvoer en uitsparingen).
+  // Maattekening: bij elk meubel nodig om te bestellen (plaats van waskom, kraan, afvoer en uitsparingen).
+  // Een offerte opslaan kan zonder; de bestelstap houdt het tegen.
   // Nieuw gekozen bestand, of de al opgeslagen bijlage
   const [tekeningBestand, setTekeningBestand] = useState<File | null>(null)
   const bestaandeTekening = initialConfig?.attachmentUrl ?? null
@@ -219,9 +220,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
   const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
-  // Zonder maattekening kan LoooX het meubel niet maken: zonder tekening niet verder
+  // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
   const tekeningOntbreekt = !tekeningBestand && !bestaandeTekening
-  const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null) && !tekeningOntbreekt
+  const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
 
   async function uploadTekening(): Promise<string | null> {
     if (!tekeningBestand) return bestaandeTekening
@@ -664,7 +665,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
               </div>
 
               <div>
-                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Maattekening <span className="text-red-400">*</span></p>
+                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Maattekening</p>
                 <label className="block cursor-pointer">
                   <input
                     id="meubel-tekening"
@@ -683,8 +684,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                   </span>
                 </label>
                 <p id="meubel-tekening-hulp" className="text-[12px] text-lx-text-muted mt-1.5 leading-relaxed">
-                  Verplicht bij elk meubel. Teken hierop de plaats van de waskom, kraan en afvoer{uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.
+                  Teken hierop de plaats van de waskom, kraan en afvoer{uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.
                 </p>
+                {tekeningOntbreekt && <TekeningNodig />}
               </div>
 
               {model.opmerking && (
@@ -698,9 +700,6 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
               >
                 Verder naar samenvatting
               </button>
-              {tekeningOntbreekt && lengteOk && regaalOk && !ladeFout && (
-                <p className="text-[11.5px] text-lx-text-secondary text-center -mt-3">Voeg een maattekening toe om verder te gaan</p>
-              )}
             </div>
           )}
 
@@ -812,6 +811,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               </div>
 
+              {tekeningOntbreekt && <TekeningNodig />}
+
               <button
                 onClick={() => handleSave()}
                 disabled={!projectName.trim() || isPending}
@@ -846,8 +847,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
             houtkleur={houtkleur}
             toonHout={toonHout}
             regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
+            waskom={model.waskom ? { vorm: waskomVorm, aantal: waskomAantal } : null}
           />
-          <p className="text-[11px] text-lx-text-secondary text-center">Vooraanzicht, maten in mm · diepte {model.diepte} mm</p>
+          <p className="text-[11px] text-lx-text-secondary text-center">{model.categorie === 'solid-surface' ? 'Bovenaanzicht en vooraanzicht, maten in mm' : `Vooraanzicht, maten in mm · diepte ${model.diepte} mm`}</p>
           <button
             onClick={() => setTekeningGroot(true)}
             aria-label="Tekening groot bekijken"
@@ -870,6 +872,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
               houtkleur={houtkleur}
               toonHout={toonHout}
               regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
+            waskom={model.waskom ? { vorm: waskomVorm, aantal: waskomAantal } : null}
             />
             <p className="text-[12px] text-lx-text-secondary text-center mt-1">
               Vooraanzicht, maten in mm · hoogte {model.hoogte} mm · diepte {model.diepte} mm
@@ -911,6 +914,20 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
         </div>
       </div>
     </Kader>
+  )
+}
+
+// Melding met uitroepteken: opslaan kan zonder maattekening, bestellen niet
+function TekeningNodig() {
+  return (
+    <div className="mt-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3" role="note">
+      <svg className="flex-shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" />
+      </svg>
+      <p className="text-[12px] text-amber-800 leading-relaxed">
+        <strong>Nog geen maattekening.</strong> Opslaan als offerte kan zonder, maar om te bestellen is een maattekening verplicht. Je kunt hem later toevoegen door de configuratie te bewerken.
+      </p>
+    </div>
   )
 }
 

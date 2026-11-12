@@ -1,10 +1,10 @@
 import React from 'react'
-import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Text as SvgText } from '@react-pdf/renderer'
+import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Ellipse, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
 import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
-import { tekenIndeling } from '@/lib/meubel-tekening'
+import { tekenIndeling, tekenWaskommen } from '@/lib/meubel-tekening'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
 //   offerte: voor de klant van de dealer, met de brutoprijs (netto × factor)
@@ -99,9 +99,14 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   const schaal = Math.min(ruimteB / lengte, MAX_H / model.hoogte)
   const w = lengte * schaal
   const h = model.hoogte * schaal
-  const H = PAD_TOP + h + PAD_BOTTOM
+  // Solid Surface: bovenaanzicht van het blad boven het vooraanzicht
+  const heeftBlad = model.categorie === 'solid-surface'
+  const bladD = heeftBlad ? model.diepte * schaal : 0
+  const yBlad = PAD_TOP
   const x = (W - 30 - w) / 2
-  const y = PAD_TOP
+  const y = PAD_TOP + (heeftBlad ? bladD + 22 : 0)
+  const H = y + h + PAD_BOTTOM
+  const yMaat = heeftBlad ? yBlad : y
   // Zelfde indeling als de tekening op het scherm
   const { vakken, links, rechts, boven, onder, scheidingen } = tekenIndeling({
     model, breedtes, x, y, w, h, schaal,
@@ -115,6 +120,22 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
 
   return (
     <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+      {/* Bovenaanzicht: Solid Surface blad met de waskommen (plaats indicatief) */}
+      {heeftBlad && <Rect x={x} y={yBlad} width={w} height={bladD} fill="#FBFAF7" stroke="#26282B" strokeWidth={1.2} />}
+      {heeftBlad && meubel.waskomVorm && tekenWaskommen(lengte, model.diepte, meubel.waskomAantal).map((k, i) => (
+        meubel.waskomVorm === 'ovaal'
+          ? <Ellipse key={`w${i}`} cx={x + k.cx * schaal} cy={yBlad + k.cy * schaal} rx={(k.b / 2) * schaal} ry={(k.d / 2) * schaal} fill="#EDEAE3" stroke="#26282B" strokeWidth={0.7} />
+          : <Rect key={`w${i}`} x={x + (k.cx - k.b / 2) * schaal} y={yBlad + (k.cy - k.d / 2) * schaal} width={k.b * schaal} height={k.d * schaal} rx={40 * schaal} ry={40 * schaal} fill="#EDEAE3" stroke="#26282B" strokeWidth={0.7} />
+      ))}
+      {heeftBlad && (
+        <>
+          <Line x1={x + w + 11} y1={yBlad} x2={x + w + 11} y2={yBlad + bladD} {...maat} />
+          <Line x1={x + w + 5} y1={yBlad} x2={x + w + 15} y2={yBlad} {...maat} />
+          <Line x1={x + w + 5} y1={yBlad + bladD} x2={x + w + 15} y2={yBlad + bladD} {...maat} />
+          <SvgText x={x + w + 17} y={yBlad + bladD / 2 + 3} style={{ ...tekst, fontFamily: 'Helvetica-Bold' }}>{String(model.diepte)}</SvgText>
+          <SvgText x={x} y={yBlad + bladD + 9} style={{ ...tekst, fontSize: 6.5, fill: GRAY }}>{`Bovenaanzicht${meubel.waskomVorm ? ', plaats waskom indicatief' : ''}`}</SvgText>
+        </>
+      )}
       <Rect x={x} y={y} width={w} height={h} fill="#F6F4EF" stroke="#26282B" strokeWidth={1.2} />
       {vakken.filter((v) => v.soort === 'regaal').map((v, i) => (
         <React.Fragment key={`g${i}`}>
@@ -130,10 +151,10 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
       {model.randOnder && heeftRand && <Line x1={links} y1={onder} x2={rechts} y2={onder} {...lijn} />}
 
       {/* Lengte */}
-      <Line x1={x} y1={y - 12} x2={x + w} y2={y - 12} {...maat} />
-      <Line x1={x} y1={y - 16} x2={x} y2={y - 5} {...maat} />
-      <Line x1={x + w} y1={y - 16} x2={x + w} y2={y - 5} {...maat} />
-      <SvgText x={x + w / 2} y={y - 16} textAnchor="middle" style={{ ...tekst, fontFamily: 'Helvetica-Bold' }}>{String(lengte)}</SvgText>
+      <Line x1={x} y1={yMaat - 12} x2={x + w} y2={yMaat - 12} {...maat} />
+      <Line x1={x} y1={yMaat - 16} x2={x} y2={yMaat - 5} {...maat} />
+      <Line x1={x + w} y1={yMaat - 16} x2={x + w} y2={yMaat - 5} {...maat} />
+      <SvgText x={x + w / 2} y={yMaat - 16} textAnchor="middle" style={{ ...tekst, fontFamily: 'Helvetica-Bold' }}>{String(lengte)}</SvgText>
 
       {/* Hoogte */}
       <Line x1={x + w + 11} y1={y} x2={x + w + 11} y2={y + h} {...maat} />
@@ -281,7 +302,7 @@ export default function MeubelDocument({
         {/* Tekening */}
         <View style={[styles.section, { alignItems: 'center' }]} wrap={false}>
           <PdfMeubelTekening meubel={meubel} />
-          <Text style={styles.caption}>Vooraanzicht, maten in mm</Text>
+          <Text style={styles.caption}>{meubel.model.categorie === 'solid-surface' ? 'Bovenaanzicht en vooraanzicht, maten in mm' : 'Vooraanzicht, maten in mm'}</Text>
         </View>
 
         {/* Specificatie */}

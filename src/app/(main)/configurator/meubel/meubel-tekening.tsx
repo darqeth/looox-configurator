@@ -2,7 +2,7 @@
 
 import { memo, useId } from 'react'
 import { HOUTKLEUREN, formatMm, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
-import { tekenIndeling, type RegaalZijde } from '@/lib/meubel-tekening'
+import { tekenIndeling, tekenWaskommen, type RegaalZijde } from '@/lib/meubel-tekening'
 
 // Schematisch vooraanzicht op schaal, in dezelfde stijl als de spiegeltekening:
 // zachte vulling, dunne lijnen en maatlijnen. Volgt lengte, lades en houtkleur.
@@ -18,7 +18,7 @@ const LIJN_OP_DONKER = '#F4F1EA'
 const VLAK_ZONDER_HOUT = '#F6F4EF'
 const MAAT = 'var(--lx-text-secondary)'
 
-export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout = true, regaal = null }: {
+export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout = true, regaal = null, waskom = null }: {
   model: MeubelModel
   lengte: number
   /** Breedte per lade in mm, van links naar rechts */
@@ -28,6 +28,8 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   toonHout?: boolean
   /** Open regaalkast naast of tussen de lades (Regal-modellen) */
   regaal?: { breedte: number; zijde: RegaalZijde } | null
+  /** Ingebouwde waskom in het Solid Surface blad: vorm en aantal */
+  waskom?: { vorm: 'ovaal' | 'vierkant'; aantal: number } | null
 }) {
   const donker = toonHout && HOUTKLEUREN.find((k) => k.id === houtkleur)?.donker === true
   const LIJN = donker ? LIJN_OP_DONKER : LIJN_OP_LICHT
@@ -35,10 +37,16 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   const schaal = Math.min(ruimteB / lengte, MAX_H / model.hoogte)
   const w = lengte * schaal
   const h = model.hoogte * schaal
-  // De hoogte van de tekening volgt het meubel, zodat er geen lege ruimte overblijft
-  const H = PAD_TOP + h + PAD_BOTTOM
+  // Solid Surface: bovenaanzicht van het blad boven het vooraanzicht
+  const heeftBlad = model.categorie === 'solid-surface'
+  const bladD = heeftBlad ? model.diepte * schaal : 0
+  const yBlad = PAD_TOP
   const x = (W - 22 - w) / 2
-  const y = PAD_TOP
+  const y = PAD_TOP + (heeftBlad ? bladD + 30 : 0)
+  // De hoogte van de tekening volgt het meubel, zodat er geen lege ruimte overblijft
+  const H = y + h + PAD_BOTTOM
+  // De lengtemaat staat boven het bovenste aanzicht
+  const yMaat = heeftBlad ? yBlad : y
   // Lades en regaalkast van links naar rechts, binnen de rand van het frame
   const { vakken, links, rechts, boven, onder, scheidingen } = tekenIndeling({ model, breedtes, regaal, x, y, w, h, schaal })
   const heeftRand = (model.rand ?? 0) > 0
@@ -63,6 +71,25 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
           <image href={houtkleurAfbeelding(houtkleur)} width="91" height="91" preserveAspectRatio="none" transform="translate(180 180) scale(-1 -1)" />
         </pattern>
       </defs>
+
+      {/* Bovenaanzicht: Solid Surface blad met de waskommen (plaats indicatief) */}
+      {heeftBlad && (
+        <g>
+          <rect x={x} y={yBlad} width={w} height={bladD} rx="1.5" fill="#FBFAF7" stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
+          {waskom && tekenWaskommen(lengte, model.diepte, waskom.aantal).map((k) => (
+            waskom.vorm === 'ovaal'
+              ? <ellipse key={k.cx} cx={x + k.cx * schaal} cy={yBlad + k.cy * schaal} rx={(k.b / 2) * schaal} ry={(k.d / 2) * schaal} fill="#EDEAE3" stroke={LIJN_OP_LICHT} strokeWidth="1" />
+              : <rect key={k.cx} x={x + (k.cx - k.b / 2) * schaal} y={yBlad + (k.cy - k.d / 2) * schaal} width={k.b * schaal} height={k.d * schaal} rx={40 * schaal} fill="#EDEAE3" stroke={LIJN_OP_LICHT} strokeWidth="1" />
+          ))}
+          <g stroke={MAAT} strokeWidth="0.8" fill="none">
+            <line x1={x + w + 14} y1={yBlad} x2={x + w + 14} y2={yBlad + bladD} />
+            <line x1={x + w + 5} y1={yBlad} x2={x + w + 19} y2={yBlad} />
+            <line x1={x + w + 5} y1={yBlad + bladD} x2={x + w + 19} y2={yBlad + bladD} />
+          </g>
+          <text x={x + w + 20} y={yBlad + bladD / 2 + 4} fontSize="11" fontWeight="600" fill="var(--lx-text-primary)">{model.diepte}</text>
+          <text x={x} y={yBlad + bladD + 12} fontSize="9" fill={MAAT}>Bovenaanzicht{waskom ? ', plaats waskom indicatief' : ''}</text>
+        </g>
+      )}
 
       {/* Korpus */}
       <rect x={x} y={y} width={w} height={h} rx="1.5" fill={toonHout ? `url(#${patroon})` : VLAK_ZONDER_HOUT} />
@@ -89,11 +116,11 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
 
       {/* Maatlijn lengte (boven) */}
       <g stroke={MAAT} strokeWidth="0.8" fill="none">
-        <line x1={x} y1={y - 16} x2={x + w} y2={y - 16} />
-        <line x1={x} y1={y - 21} x2={x} y2={y - 6} />
-        <line x1={x + w} y1={y - 21} x2={x + w} y2={y - 6} />
+        <line x1={x} y1={yMaat - 16} x2={x + w} y2={yMaat - 16} />
+        <line x1={x} y1={yMaat - 21} x2={x} y2={yMaat - 6} />
+        <line x1={x + w} y1={yMaat - 21} x2={x + w} y2={yMaat - 6} />
       </g>
-      <text x={x + w / 2} y={y - 21} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--lx-text-primary)">
+      <text x={x + w / 2} y={yMaat - 21} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--lx-text-primary)">
         {lengte}
       </text>
 

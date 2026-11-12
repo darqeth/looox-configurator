@@ -170,7 +170,8 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
 
                   {tekeningOntbreekt && (
                     <p role="alert" className="text-[12.5px] text-red-600 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
-                      De maattekening ontbreekt. Open de configuratie en voeg hem toe; daarna kun je bestellen.
+                      De maattekening ontbreekt en is verplicht om te bestellen.{' '}
+                      <a href={`/configurator/${configId}`} className="font-semibold underline">Configuratie openen en tekening toevoegen</a>
                     </p>
                   )}
 

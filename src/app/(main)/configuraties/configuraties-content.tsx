@@ -225,7 +225,7 @@ export function ConfiguratiesContent({
                             {isProjectspiegel && <ProjectBadge className="ml-1.5" />}
                           </p>
                           <p className="text-[13px] font-bold text-lx-text-primary flex-shrink-0">
-                            {shape === 'op-aanvraag' ? 'Op offerte' : `€${displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
+                            {shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : `€${displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
                           </p>
                         </div>
                         <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">
@@ -281,9 +281,9 @@ export function ConfiguratiesContent({
                       {/* Col: Price */}
                       <div className="w-[92px] flex-shrink-0 text-right">
                         <p className="text-[13px] font-bold text-lx-text-primary">
-                          {shape === 'op-aanvraag' ? 'Op offerte' : `€${displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
+                          {shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : `€${displayPrice.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}`}
                         </p>
-                        {shape !== 'op-aanvraag' && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>}
+                        {shape !== 'op-aanvraag' && !meubel?.opAanvraag && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>}
                       </div>
 
                       {/* Col: Bestellen / Aanvragen CTA */}

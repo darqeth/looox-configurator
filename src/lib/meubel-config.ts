@@ -27,6 +27,8 @@ export interface MeubelModel {
   hoogte: number
   /** Aantal laderijen boven elkaar */
   rijen: number
+  /** Rand van het frame in cm (U-Floor 4, U-Frame en Full-Frame 5); de dealer krijgt een melding bij de ladeverdeling */
+  rand?: number
   staffels: Staffel[]
 }
 
@@ -128,12 +130,14 @@ export interface MeubelInput {
   lades: number
   houtkleur: string
   uitsparingen?: number
+  /** Groter dan de standaardmaten: geen tabelprijs, altijd op aanvraag */
+  opAanvraag?: boolean
 }
 
 /** Netto per stuk in centen, of null bij een ongeldige combinatie. Niet tonen buiten de bestelstap. */
 export function calcMeubelNettoCents(input: MeubelInput): number | null {
   const model = getMeubelModel(input.modelId)
-  if (!model) return null
+  if (!model || input.opAanvraag) return null
   if (!getLadeOpties(model, input.lengte).includes(input.lades)) return null
   const staffel = findStaffel(model, input.lengte)
   const kleur = HOUTKLEUREN.find((k) => k.id === input.houtkleur)
@@ -240,9 +244,37 @@ export interface MeubelConfig extends MeubelInput {
 
 /** Volledige controle van een configuratie (server en client). Foutmelding of null. */
 export function valideerMeubelConfig(c: MeubelConfig): string | null {
-  if (calcMeubelNettoCents(c) === null) return 'Deze combinatie van model, lengte, lades en houtkleur bestaat niet.'
+  if (c.opAanvraag) {
+    const model = getMeubelModel(c.modelId)
+    if (!model || !HOUTKLEUREN.some((k) => k.id === c.houtkleur)) return 'Dit model of deze houtkleur bestaat niet.'
+    const bereik = getAanvraagBereik(model)
+    if (!Number.isInteger(c.lengte) || c.lengte < bereik.min || c.lengte > bereik.max) return `Op aanvraag kan van ${bereik.min} tot ${bereik.max} cm.`
+    if (!getAanvraagLadeOpties(c.lengte).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
+  } else if (calcMeubelNettoCents(c) === null) {
+    return 'Deze combinatie van model, lengte, lades en houtkleur bestaat niet.'
+  }
   const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, c.lengte, c.lades)
   if (ladeFout) return ladeFout
   if (!Number.isInteger(c.quantity) || c.quantity < 1 || c.quantity > MEUBEL_AANTAL_MAX) return `Aantal moet tussen 1 en ${MEUBEL_AANTAL_MAX} liggen.`
   return null
+}
+
+// ─── Groter dan standaard: op aanvraag ──────────────────────────────────────
+// De dealer kan bewust een lengte boven het bereik van het model kiezen. Zo'n
+// meubel heeft geen tabelprijs en is altijd op aanvraag.
+
+export const MEUBEL_AANVRAAG_MAX_CM = 400
+export const MEUBEL_AANVRAAG_LADES_MAX = 6
+
+export function getAanvraagBereik(model: MeubelModel): { min: number; max: number } {
+  return { min: getLengteBereik(model).max + 1, max: MEUBEL_AANVRAAG_MAX_CM }
+}
+
+/** Aantal lades naast elkaar waarbij elke lade bij gelijke verdeling 30 tot 120 cm is. */
+export function getAanvraagLadeOpties(lengte: number): number[] {
+  const opties: number[] = []
+  for (let n = 1; n <= MEUBEL_AANVRAAG_LADES_MAX; n++) {
+    if (lengte / n >= LADE_MIN_CM && lengte / n <= LADE_MAX_CM) opties.push(n)
+  }
+  return opties
 }

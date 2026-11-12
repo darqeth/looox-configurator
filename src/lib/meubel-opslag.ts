@@ -16,6 +16,8 @@ export interface OpgeslagenMeubel {
   houtkleur: string
   houtkleurNaam: string
   factor: number
+  /** Groter dan standaard: geen prijs, altijd op aanvraag */
+  opAanvraag: boolean
   quantity: number
   reference: string
   description: string
@@ -42,6 +44,7 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     houtkleur: kleur?.id ?? '',
     houtkleurNaam: kleur?.naam ?? '',
     factor: m.factor === undefined ? MEUBEL_FACTOR_DEFAULT : parseMeubelFactor(m.factor),
+    opAanvraag: m.opAanvraag === true,
     quantity: Math.max(1, Math.floor(Number(opts.quantity) || 1)),
     reference: typeof opts.reference === 'string' ? opts.reference : '',
     description: typeof opts.description === 'string' ? opts.description : '',

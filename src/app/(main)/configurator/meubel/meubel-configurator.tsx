@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useId, useRef, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { Maximize2, X } from 'lucide-react'
 import { toast } from '@/components/toast'
 import {
   MEUBEL_MODELLEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_CM, LADE_MAX_CM, MEUBEL_AANTAL_MAX,
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
+  getAanvraagBereik, getAanvraagLadeOpties,
   type MeubelModel, type LadeBreedtes,
 } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
@@ -25,6 +28,7 @@ export interface MeubelInitialConfig {
   lades: number
   ladeBreedtes: LadeBreedtes
   houtkleur: string
+  opAanvraag?: boolean
   quantity: number
   projectName: string
   reference: string
@@ -46,6 +50,9 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   const [lades, setLades] = useState(initialConfig?.lades ?? 2)
   const [eigenBreedtes, setEigenBreedtes] = useState<LadeBreedtes>(initialConfig?.ladeBreedtes ?? null)
   const [houtkleur, setHoutkleur] = useState(initialConfig?.houtkleur || HOUTKLEUR_DEFAULT)
+  // Groter dan de standaardmaten: geen prijs, het meubel is dan altijd op aanvraag
+  const [opAanvraag, setOpAanvraag] = useState(initialConfig?.opAanvraag === true)
+  const [tekeningGroot, setTekeningGroot] = useState(false)
   // Alleen weergave, wordt niet opgeslagen
   const [toonHout, setToonHout] = useState(true)
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
@@ -69,7 +76,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                     // Ander model: lengte en indeling die daar niet bestaan vervallen
                     if (m.id !== model?.id) {
                       const l = Math.min(Math.max(laatsteLengte, b.min), b.max)
-                      setLengteTekst(String(l)); setLaatsteLengte(l); setEigenBreedtes(null)
+                      setLengteTekst(String(l)); setLaatsteLengte(l); setEigenBreedtes(null); setOpAanvraag(false)
                     }
                     setModel(m); setStep(1)
                   }}
@@ -95,7 +102,8 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
     )
   }
 
-  const bereik = getLengteBereik(model)
+  const standaardBereik = getLengteBereik(model)
+  const bereik = opAanvraag ? getAanvraagBereik(model) : standaardBereik
   const lengte = /^\d+$/.test(lengteTekst) ? Number(lengteTekst) : NaN
   const lengteOk = lengte >= bereik.min && lengte <= bereik.max
   if (lengteOk && lengte !== laatsteLengte) {
@@ -104,15 +112,22 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   }
   const tekenLengte = lengteOk ? lengte : laatsteLengte
 
-  const opties = getLadeOpties(model, tekenLengte)
+  const opties = opAanvraag ? getAanvraagLadeOpties(tekenLengte) : getLadeOpties(model, tekenLengte)
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
   const gekozen = opties.includes(lades) ? lades : opties[0]
   const breedtes = eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
   const ladeFout = valideerLadeBreedtes(breedtes, tekenLengte, gekozen)
   const magAanpassen = kanLadesAanpassen(tekenLengte, gekozen)
   const kleurNaam = HOUTKLEUREN.find((k) => k.id === houtkleur)?.naam ?? ''
-  const opbouw = lengteOk ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur }, factor) : null
-  const geldig = lengteOk && !ladeFout && opbouw !== null
+  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur }, factor) : null
+  const geldig = lengteOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
+
+  function wisselAanvraag(aan: boolean) {
+    // Lengte meteen binnen het nieuwe bereik zetten, zodat er nooit een ongeldige tussenstand is
+    const l = aan ? standaardBereik.max + 1 : standaardBereik.max
+    setOpAanvraag(aan)
+    setLengteTekst(String(l)); setLaatsteLengte(l); setEigenBreedtes(null)
+  }
 
   function kiesLades(n: number) {
     setLades(n)
@@ -131,7 +146,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
   function handleSave() {
     if (!geldig || !projectName.trim() || !model) return
     const payload = {
-      modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur,
+      modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag,
       quantity, projectName: projectName.trim(), reference, description,
     }
     startTransition(async () => {
@@ -183,6 +198,17 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                 <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
                   Hele centimeters, van {bereik.min} tot {bereik.max} cm.
                 </p>
+
+                <label className="mt-3 flex items-center justify-between gap-4 bg-lx-panel-bg rounded-xl p-4 cursor-pointer select-none">
+                  <span>
+                    <span className="block text-[13px] font-medium text-lx-text-primary">Groter dan {standaardBereik.max} cm</span>
+                    <span className="block text-[11.5px] text-lx-text-secondary">
+                      Buiten de standaardmaten is dit meubel altijd op aanvraag, zonder prijs vooraf.
+                    </span>
+                  </span>
+                  <input type="checkbox" checked={opAanvraag} onChange={(e) => wisselAanvraag(e.target.checked)} className="sr-only peer" />
+                  <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
+                </label>
               </div>
 
               <div>
@@ -206,6 +232,17 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                   ))}
                 </div>
                 <p className="text-[12px] text-lx-text-muted mt-1.5">Welke indelingen kunnen, hangt af van de lengte.</p>
+
+                {model.rand && (
+                  <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3" role="note">
+                    <svg className="flex-shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+                    </svg>
+                    <p className="text-[12px] text-amber-800 leading-relaxed">
+                      <strong>Let op:</strong> dit model heeft een rand van {model.rand} cm. Houd daar rekening mee bij de ladeverdeling.
+                    </p>
+                  </div>
+                )}
 
                 {magAanpassen && (
                   <div className="mt-4 bg-lx-panel-bg rounded-xl p-4">
@@ -295,14 +332,14 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
             </div>
           )}
 
-          {step === 2 && opbouw && (
+          {step === 2 && geldig && (
             <div className="space-y-5">
               <h1 className="text-[16px] font-semibold text-lx-text-primary">Samenvatting</h1>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
                 <Rij label="Model" waarde={model.naam} onEdit={() => setStep(0)} />
-                <Rij label="Afmeting" waarde={`${lengte} cm lang · ${model.hoogte} cm hoog · ${model.diepte} cm diep`} onEdit={() => setStep(1)} />
+                <Rij label="Afmeting" waarde={`${lengte} cm lang · ${model.hoogte} cm hoog · ${model.diepte} cm diep${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(1)} />
                 <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, lengte, gekozen)}`} onEdit={() => setStep(1)} />
                 <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(1)} />
               </div>
@@ -330,13 +367,22 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                 </div>
               </div>
 
-              <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
-                <p className="text-[12px] text-lx-text-secondary tabular-nums">{quantity} × {formatCents(opbouw.totaal)}</p>
-                <div className="flex items-center justify-between border-t border-lx-divider pt-1.5">
-                  <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal bruto ex. BTW</span>
-                  <span className="text-[18px] font-bold text-lx-cta tabular-nums">{formatCents(opbouw.totaal * quantity)}</span>
+              {opbouw ? (
+                <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
+                  <p className="text-[12px] text-lx-text-secondary tabular-nums">{quantity} × {formatCents(opbouw.totaal)}</p>
+                  <div className="flex items-center justify-between border-t border-lx-divider pt-1.5">
+                    <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal bruto ex. BTW</span>
+                    <span className="text-[18px] font-bold text-lx-cta tabular-nums">{formatCents(opbouw.totaal * quantity)}</span>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-lx-panel-bg rounded-xl px-4 py-3">
+                  <p className="text-[15px] font-bold text-lx-cta">Op aanvraag</p>
+                  <p className="text-[12px] text-lx-text-secondary mt-0.5 leading-relaxed">
+                    Dit meubel is groter dan de standaardmaten. LoooX bepaalt de prijs na beoordeling van je aanvraag.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-3">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary">Projectgegevens</p>
@@ -384,7 +430,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
                 disabled={!projectName.trim() || isPending}
                 className="w-full h-11 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
-                {isPending ? 'Opslaan…' : isEditing ? 'Wijzigingen opslaan' : 'Opslaan als offerte'}
+                {isPending ? 'Opslaan…' : isEditing ? 'Wijzigingen opslaan' : opAanvraag ? 'Opslaan als aanvraag' : 'Opslaan als offerte'}
               </button>
               {!projectName.trim() && (
                 <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>
@@ -396,7 +442,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
 
       {/* Rechts: tekening en prijs */}
       <div className="w-full lg:w-[400px] lg:flex-shrink-0 lg:sticky lg:top-[68px] space-y-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-4">
+        <div className="relative bg-white rounded-2xl shadow-sm border border-black/8 p-4">
           <MeubelTekening
             model={model}
             lengte={tekenLengte}
@@ -405,7 +451,33 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
             toonHout={toonHout}
           />
           <p className="text-[11px] text-lx-text-secondary text-center">Vooraanzicht, maten in cm · diepte {model.diepte} cm</p>
+          <button
+            onClick={() => setTekeningGroot(true)}
+            aria-label="Tekening groot bekijken"
+            title="Groot bekijken"
+            className="absolute top-2.5 right-2.5 w-8 h-8 rounded-lg bg-white/90 border border-black/8 text-lx-text-secondary hover:text-lx-text-primary hover:border-black/20 flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <Maximize2 size={14} />
+          </button>
         </div>
+
+        {tekeningGroot && (
+          <TekeningPopup
+            titel={`${model.naam} · ${tekenLengte} cm · ${ladeLabel(model, gekozen)}`}
+            onClose={() => setTekeningGroot(false)}
+          >
+            <MeubelTekening
+              model={model}
+              lengte={tekenLengte}
+              breedtes={getLadeBreedtes(breedtes, tekenLengte, gekozen)}
+              houtkleur={houtkleur}
+              toonHout={toonHout}
+            />
+            <p className="text-[12px] text-lx-text-secondary text-center mt-1">
+              Vooraanzicht, maten in cm · hoogte {model.hoogte} cm · diepte {model.diepte} cm
+            </p>
+          </TekeningPopup>
+        )}
 
         {/* Weergave-toggle onder de kaart, net als bij de spiegels */}
         <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
@@ -418,9 +490,11 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">Bruto ex. BTW</p>
             <p className="text-[28px] font-bold text-lx-text-primary tabular-nums" aria-live="polite">
-              {opbouw ? formatCents(opbouw.totaal) : 'Geen prijs'}
+              {opbouw ? formatCents(opbouw.totaal) : opAanvraag ? 'Op aanvraag' : 'Geen prijs'}
             </p>
-            <p className="text-[11px] text-lx-text-secondary mt-0.5">{opbouw ? 'Per stuk, excl. btw' : 'Vul een geldige lengte in.'}</p>
+            <p className="text-[11px] text-lx-text-secondary mt-0.5 leading-relaxed">
+              {opbouw ? 'Per stuk, excl. btw' : opAanvraag ? 'Groter dan de standaardmaten. De prijs volgt na beoordeling door LoooX.' : 'Vul een geldige lengte in.'}
+            </p>
           </div>
           {opbouw && (
             <div className="space-y-1.5 border-t border-lx-divider pt-3">
@@ -439,6 +513,45 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
         </div>
       </div>
     </Kader>
+  )
+}
+
+// Grote weergave van de tekening. Sluit met Escape, de knop of een klik naast het venster.
+function TekeningPopup({ titel, onClose, children }: { titel: string; onClose: () => void; children: React.ReactNode }) {
+  const titelId = useId()
+  const sluitRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    sluitRef.current?.focus()
+    const opToets = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', opToets)
+    return () => document.removeEventListener('keydown', opToets)
+  }, [onClose])
+
+  // Via een portal: de kolom met de tekening is sticky en zou het venster anders onder het menu houden
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titelId}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[92vh] overflow-auto p-5 sm:p-7"
+      >
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <h2 id={titelId} className="text-[15px] font-semibold text-lx-text-primary">{titel}</h2>
+          <button
+            ref={sluitRef}
+            onClick={onClose}
+            aria-label="Sluiten"
+            className="w-9 h-9 rounded-lg text-lx-text-muted hover:text-lx-text-primary hover:bg-lx-panel-bg flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>,
+    document.body,
   )
 }
 

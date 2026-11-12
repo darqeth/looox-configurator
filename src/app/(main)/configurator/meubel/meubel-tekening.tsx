@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useId } from 'react'
 import { HOUTKLEUREN, formatCm, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
 
 // Schematisch vooraanzicht op schaal, in dezelfde stijl als de spiegeltekening:
@@ -40,7 +40,8 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   // Linkerrand van elke lade, plus de rechterrand van de laatste
   const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x])
   const rijH = h / model.rijen
-  const patroon = `hout-${houtkleur}`
+  // Uniek per tekening: in de popup staat dezelfde tekening een tweede keer op de pagina
+  const patroon = `hout-${houtkleur}-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   // Maat per lade alleen tonen als de tekst in de lade past
   const toonLadeMaat = Math.min(...breedtes) * schaal > 30
 

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   calcMeubelNettoCents, calcMeubelBrutoCents, getLadeOpties, getMeubelModel,
   getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT, getMeubelPrijsOpbouw,
+  getAanvraagBereik, getAanvraagLadeOpties,
   valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
 } from '../src/lib/meubel-config'
 
@@ -143,5 +144,38 @@ test.describe('Meubel: lade-indeling', () => {
     expect(valideerMeubelConfig({ ...ok, quantity: 0 })).toContain('Aantal')
     expect(valideerMeubelConfig({ ...ok, lades: 5 })).toContain('combinatie')
     expect(valideerMeubelConfig({ ...ok, ladeBreedtes: [60, 80, 70] })).toContain('samen 200')
+  })
+})
+
+test.describe('Meubel: groter dan standaard is altijd op aanvraag', () => {
+  const basisAanvraag = { modelId: 'facet', lengte: 300, lades: 3, houtkleur: 'white', ladeBreedtes: null, quantity: 1, opAanvraag: true }
+
+  test('nooit een prijs, ook niet bij een lengte die wel in de tabel staat', () => {
+    expect(calcMeubelNettoCents(basisAanvraag)).toBeNull()
+    expect(calcMeubelBrutoCents({ ...basisAanvraag, lengte: 200 }, 2)).toBeNull()
+    expect(getMeubelPrijsOpbouw(basisAanvraag, 2)).toBeNull()
+  })
+
+  test('bereik begint boven het maximum van het model', () => {
+    expect(getAanvraagBereik(getMeubelModel('facet')!)).toEqual({ min: 261, max: 400 })
+    expect(getAanvraagBereik(getMeubelModel('facet-double')!)).toEqual({ min: 291, max: 400 })
+  })
+
+  test('lades: gelijke verdeling binnen 30 tot 120 cm', () => {
+    expect(getAanvraagLadeOpties(300)).toEqual([3, 4, 5, 6])
+    expect(getAanvraagLadeOpties(400)).toEqual([4, 5, 6])
+  })
+
+  test('validatie', () => {
+    expect(valideerMeubelConfig(basisAanvraag)).toBeNull()
+    expect(valideerMeubelConfig({ ...basisAanvraag, lengte: 260 })).toContain('Op aanvraag kan van 261')
+    expect(valideerMeubelConfig({ ...basisAanvraag, lengte: 401 })).toContain('Op aanvraag')
+    expect(valideerMeubelConfig({ ...basisAanvraag, lades: 2 })).toContain('lades')
+    expect(valideerMeubelConfig({ ...basisAanvraag, ladeBreedtes: [100, 100, 100] })).toBeNull()
+    expect(valideerMeubelConfig({ ...basisAanvraag, houtkleur: 'roze' })).toContain('bestaat niet')
+  })
+
+  test('zonder de schakelaar blijft een te grote lengte ongeldig', () => {
+    expect(valideerMeubelConfig({ ...basisAanvraag, opAanvraag: false })).toContain('combinatie')
   })
 })

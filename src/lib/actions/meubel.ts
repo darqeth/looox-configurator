@@ -17,6 +17,7 @@ const meubelInputSchema = z.object({
   lades: z.number().int().min(1).max(10),
   ladeBreedtes: z.array(z.number().int().min(1).max(1000)).max(10).nullable(),
   houtkleur: z.string().max(40),
+  opAanvraag: z.boolean().optional(),
   quantity: z.number().int().min(1).max(MEUBEL_AANTAL_MAX),
   projectName: z.string().trim().min(1, 'Projectnaam is verplicht').max(200),
   reference: z.string().max(200),
@@ -38,7 +39,9 @@ async function bouwRij(rawInput: SaveMeubelInput) {
   const model = getMeubelModel(input.modelId)!
 
   const factor = await getMeubelFactor(supabase, user.id)
-  const brutoCents = calcMeubelBrutoCents(input, factor)!
+  // Op aanvraag heeft geen prijs vanuit de configurator: 0 opslaan, net als bij een spiegel op aanvraag
+  const opAanvraag = input.opAanvraag === true
+  const brutoCents = opAanvraag ? 0 : calcMeubelBrutoCents(input, factor)!
 
   return {
     supabase,
@@ -60,6 +63,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           ladeBreedtes: input.ladeBreedtes,
           houtkleur: input.houtkleur,
           factor,
+          opAanvraag,
         },
         quantity: input.quantity,
         reference: input.reference,

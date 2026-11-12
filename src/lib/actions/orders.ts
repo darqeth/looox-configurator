@@ -14,7 +14,7 @@ import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { z } from 'zod'
 import { hasMeubelAccess } from '@/lib/meubel-access'
 import { leesMeubel } from '@/lib/meubel-opslag'
-import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
+import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting } from '@/lib/meubel-config'
 
 type LightConfig = {
   position: string
@@ -671,7 +671,7 @@ export async function placeMeubelOrder(
       }),
       regels: [
         ['Model', meubel.model.naam],
-        ['Afmeting', `${meubel.lengte} mm lang · ${meubel.model.hoogte} mm hoog · ${meubel.model.diepte} mm diep`],
+        ['Afmeting', meubelAfmeting(meubel.model, meubel.lengte)],
         ['Lades', `${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.lengte, meubel.lades)}`],
         ['Houtkleur', meubel.houtkleurNaam],
       ],

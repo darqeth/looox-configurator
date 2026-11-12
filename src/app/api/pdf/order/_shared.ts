@@ -29,7 +29,9 @@ export async function buildOrderPDFResponse(
   userEmail: string,
   order: OrderRow
 ): Promise<NextResponse> {
-  const { data: profile } = await supabase.from('profiles').select('full_name, company, phone, address, korting').eq('id', userId).single()
+  // userId is de besteller. Admin en collega's downloaden de order van iemand anders;
+  // op de PDF horen dan de gegevens en de korting van de besteller te staan.
+  const { data: profile } = await supabase.from('profiles').select('full_name, company, phone, address, shipping_address, korting').eq('id', userId).single()
 
   const config = (Array.isArray(order.configurations)
     ? order.configurations[0]
@@ -50,6 +52,7 @@ export async function buildOrderPDFResponse(
       email: userEmail,
       phone: profile?.phone ?? null,
       address: profile?.address ?? null,
+      shippingAddress: ((opts as Record<string, unknown>).altShippingAddress as string | undefined) ?? profile?.shipping_address ?? null,
     },
     config: {
       name: config.name ?? null,

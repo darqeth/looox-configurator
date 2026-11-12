@@ -1,7 +1,7 @@
 'use client'
 
 import { leesMeubel } from '@/lib/meubel-opslag'
-import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
+import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel, meubelAfmeting } from '@/lib/meubel-config'
 import { useState } from 'react'
 import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
@@ -265,7 +265,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
               {meubel ? (
                 <>
                   <ModalRow label="Model" value={meubel.model.naam} />
-                  <ModalRow label="Afmeting" value={`${meubel.lengte} mm lang · ${meubel.model.hoogte} mm hoog · ${meubel.model.diepte} mm diep`} />
+                  <ModalRow label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
                   <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.lengte, meubel.lades)}`} />
                   <ModalRow label="Houtkleur" value={meubel.houtkleurNaam} />
                   <ModalRow label="Aantal" value={`${meubel.quantity}×`} />
@@ -313,17 +313,20 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                   </svg>
                   Klantofferte
                 </a>
-                <a
-                  href={`/api/pdf/order/by-config/${config.id}`}
-                  download
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 flex items-center justify-center gap-2 h-9 rounded-xl border border-black/10 text-lx-text-secondary hover:text-lx-cta hover:border-lx-cta/30 hover:bg-white text-[12px] font-medium transition-colors"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                  Orderbevestiging
-                </a>
+                {/* Een orderbevestiging bestaat pas als de configuratie besteld is */}
+                {config.status === 'ordered' && (
+                  <a
+                    href={`/api/pdf/order/by-config/${config.id}`}
+                    download
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 flex items-center justify-center gap-2 h-9 rounded-xl border border-black/10 text-lx-text-secondary hover:text-lx-cta hover:border-lx-cta/30 hover:bg-white text-[12px] font-medium transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Orderbevestiging
+                  </a>
+                )}
               </div>
               {/* Prijs + verwijderen */}
               <div className="flex items-center justify-between">

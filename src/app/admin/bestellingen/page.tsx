@@ -32,8 +32,9 @@ export default async function AdminBestellingenPage() {
       unit_price,
       total_price,
       status,
+      notes,
       created_at,
-      configurations(id, name, width, height, selected_options),
+      configurations(id, name, article_number, width, height, selected_options),
       profiles(id, full_name, company, email)
     `)
     .order('created_at', { ascending: false })
@@ -60,6 +61,7 @@ export default async function AdminBestellingenPage() {
     unit_price: o.unit_price,
     total_price: o.total_price,
     status: o.status,
+    notes: (o as { notes?: string | null }).notes ?? null,
     created_at: o.created_at,
     config: (Array.isArray(o.configurations) ? o.configurations[0] : o.configurations) as AdminOrder['config'],
     profile: (Array.isArray(o.profiles) ? o.profiles[0] : o.profiles) as AdminOrder['profile'],

@@ -325,3 +325,8 @@ export function getMeubelOrderOpbouw(nettoCents: number, factor: number): Meubel
 export function formatPct(pct: number): string {
   return `${pct.toLocaleString('nl-NL', { maximumFractionDigits: 1 })}%`
 }
+
+/** Afmeting in één regel, zelfde notatie als bij spiegels: "L 2000 × H 600 × D 460 mm". */
+export function meubelAfmeting(model: MeubelModel, lengte: number): string {
+  return `L ${lengte} × H ${model.hoogte} × D ${model.diepte} mm`
+}

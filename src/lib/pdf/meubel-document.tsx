@@ -2,7 +2,7 @@ import React from 'react'
 import { Document, Page, View, Text, StyleSheet, Svg, Rect, Line, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
-import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel } from '@/lib/meubel-config'
+import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
@@ -179,7 +179,7 @@ export default function MeubelDocument({
 
   const specs: [string, string][] = [
     ['Model', model.naam],
-    ['Afmeting', `${meubel.lengte} mm lang · ${model.hoogte} mm hoog · ${model.diepte} mm diep`],
+    ['Afmeting', meubelAfmeting(model, meubel.lengte)],
     ['Lades', `${ladeLabel(model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.lengte, meubel.lades)}`],
     ['Houtkleur', meubel.houtkleurNaam || '—'],
     ...(opAanvraag ? [['Bijzonderheid', 'Groter dan de standaardmaten, op aanvraag'] as [string, string]] : []),

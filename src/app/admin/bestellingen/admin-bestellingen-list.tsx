@@ -5,6 +5,7 @@ import { OrderStatusSelect } from './order-status-row'
 import { AdminPagination } from '@/components/admin-pagination'
 import { OfferteBadge } from '@/components/project-badge'
 import { formatEuro } from '@/lib/mms'
+import OrderDetailModal from './order-detail-modal'
 
 const PAGE_SIZE = 20
 
@@ -35,14 +36,17 @@ export type AdminOrder = {
   unit_price: number
   total_price: number
   status: string
+  notes?: string | null
   created_at: string
-  config: { id: string; name: string | null; width: number | null; height: number | null; selected_options: Record<string, unknown> } | null
+  config: { id: string; name: string | null; article_number?: string | null; width: number | null; height: number | null; selected_options: Record<string, unknown> } | null
   profile: { full_name: string | null; company: string | null; email: string | null } | null
 }
 
 export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
   const [query, setQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  // Bestelling waarvan het detailvenster open staat
+  const [detail, setDetail] = useState<AdminOrder | null>(null)
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim()
@@ -132,7 +136,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <div>
-                          <p className="text-[12.5px] font-bold text-lx-text-primary font-mono">{order.order_number}{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
+                          <p className="text-[12.5px] font-bold text-lx-text-primary font-mono"><button type="button" onClick={() => setDetail(order)} className="hover:text-lx-cta hover:underline cursor-pointer" title="Details en PDF">{order.order_number}</button>{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
                           <p className="text-[11px] text-lx-text-secondary">{formatDate(order.created_at)}</p>
                         </div>
                         <OrderStatusSelect orderId={order.id} currentStatus={order.status} />
@@ -151,7 +155,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                       <ShapeIcon shape={shape} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[12.5px] font-bold text-lx-text-primary font-mono truncate">{order.order_number}{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
+                      <p className="text-[12.5px] font-bold text-lx-text-primary font-mono truncate"><button type="button" onClick={() => setDetail(order)} className="hover:text-lx-cta hover:underline cursor-pointer" title="Details en PDF">{order.order_number}</button>{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>
                       <p className="text-[11px] text-lx-text-secondary mt-0.5">{formatDate(order.created_at)} · {order.config?.name ?? '—'}</p>
                     </div>
                     <div className="min-w-0">
@@ -176,6 +180,10 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
             })}
           </div>
         </div>
+      )}
+
+      {detail && (
+        <OrderDetailModal order={detail} statusLabel={STATUS_LABELS[detail.status] ?? detail.status} onClose={() => setDetail(null)} />
       )}
 
       <AdminPagination

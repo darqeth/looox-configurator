@@ -17,6 +17,7 @@ export async function GET(
     .from('orders')
     .select(`
       id,
+      user_id,
       order_number,
       quantity,
       unit_price,
@@ -40,5 +41,13 @@ export async function GET(
 
   if (error || !order) return new NextResponse('Not found', { status: 404 })
 
-  return buildOrderPDFResponse(supabase, user.id, user.email ?? '', order)
+  // De order kan van een collega of (voor admin) van een dealer zijn
+  const bestellerId = (order as { user_id?: string }).user_id ?? user.id
+  let bestellerEmail = user.email ?? ''
+  if (bestellerId !== user.id) {
+    const { data: besteller } = await supabase.from('profiles').select('email').eq('id', bestellerId).maybeSingle()
+    bestellerEmail = besteller?.email ?? ''
+  }
+
+  return buildOrderPDFResponse(supabase, bestellerId, bestellerEmail, order)
 }

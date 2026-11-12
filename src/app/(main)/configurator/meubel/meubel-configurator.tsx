@@ -11,8 +11,7 @@ import {
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   getAanvraagBereik, getAanvraagLadeOpties,
-  type MeubelModel, type LadeBreedtes,
-} from '@/lib/meubel-config'
+  type MeubelModel, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
 
@@ -339,7 +338,7 @@ export default function MeubelConfigurator({ factor, initialConfig }: { factor: 
               <div className="bg-lx-panel-bg rounded-2xl p-4">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
                 <Rij label="Model" waarde={model.naam} onEdit={() => setStep(0)} />
-                <Rij label="Afmeting" waarde={`${lengte} mm lang · ${model.hoogte} mm hoog · ${model.diepte} mm diep${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(1)} />
+                <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(1)} />
                 <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, lengte, gekozen)}`} onEdit={() => setStep(1)} />
                 <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(1)} />
               </div>

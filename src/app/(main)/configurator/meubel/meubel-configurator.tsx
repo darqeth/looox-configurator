@@ -12,7 +12,7 @@ import {
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
-  getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte,
+  getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
@@ -32,6 +32,8 @@ export interface MeubelInitialConfig {
   opAanvraag?: boolean
   hoogte?: number
   logo?: boolean
+  regaalBreedte?: number
+  regaalZijde?: 'links' | 'rechts'
   uitsparingen?: number
   attachmentUrl?: string | null
   quantity: number
@@ -71,6 +73,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   // Groter dan de standaardmaten: geen prijs, het meubel is dan altijd op aanvraag
   const [opAanvraag, setOpAanvraag] = useState(initialConfig?.opAanvraag === true)
   const [tekeningGroot, setTekeningGroot] = useState(false)
+  // Regaalkast bij Regal-modellen: kant en breedte
+  const [regaalTekst, setRegaalTekst] = useState(String(initialConfig?.regaalBreedte || REGAAL_STANDAARD_MM))
+  const [regaalZijde, setRegaalZijde] = useState<'links' | 'rechts'>(initialConfig?.regaalZijde ?? 'rechts')
   // Opties uit de tabel "Opties meubels": logo is gratis, een uitsparing kost per stuk
   // Logo staat standaard aan (Mark, 12 nov); bij bewerken geldt wat is opgeslagen
   const [logo, setLogo] = useState(initialConfig ? initialConfig.logo === true : true)
@@ -175,8 +180,12 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const tekenLengte = lengteOk ? lengte : laatsteLengte
 
   // Lades verdelen de lengte min de rand van het frame aan beide zijden
-  const ruimte = ladeRuimte(model, tekenLengte)
-  const opties = opAanvraag ? getAanvraagLadeOpties(ruimte) : getLadeOpties(model, tekenLengte)
+  // Regaalkast: bij een ongeldige breedte blijft de tekening op de standaard staan
+  const regaalInvoer = /^\d+$/.test(regaalTekst) ? Number(regaalTekst) : NaN
+  const regaalOk = !model.regaal || (regaalInvoer >= model.regaal.min && regaalInvoer <= model.regaal.max)
+  const regaalMm = model.regaal ? (regaalOk ? regaalInvoer : REGAAL_STANDAARD_MM) : 0
+  const ruimte = ladeRuimte(model, tekenLengte, regaalMm)
+  const opties = opAanvraag ? getAanvraagLadeOpties(ruimte) : getLadeOpties(model, tekenLengte, regaalMm)
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
   const gekozen = opties.includes(lades) ? lades : opties[0]
   const breedtes = eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
@@ -186,10 +195,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const kleuren = getHoutkleuren(model)
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
-  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen }, factor) : null
+  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, regaalBreedte: regaalMm || undefined }, factor) : null
   // Uitsparingen worden volgens een maattekening gemaakt: zonder tekening niet verder
   const tekeningOntbreekt = uitsparingen > 0 && !tekeningBestand && !bestaandeTekening
-  const geldig = lengteOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null) && !tekeningOntbreekt
+  const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null) && !tekeningOntbreekt
 
   async function uploadTekening(): Promise<string | null> {
     if (uitsparingen === 0) return null
@@ -232,6 +241,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
       logo, uitsparingen,
+      ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde }),
       quantity, projectName: projectName.trim(), reference, description,
     }
     startTransition(async () => {
@@ -329,6 +339,48 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                   </label>
                 )}
               </div>
+
+              {model.regaal && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Regaalkast</p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <div className="flex gap-2" role="radiogroup" aria-label="Kant van de regaalkast">
+                      {(['links', 'rechts'] as const).map((zijde) => (
+                        <button
+                          key={zijde}
+                          type="button"
+                          role="radio"
+                          aria-checked={regaalZijde === zijde}
+                          onClick={() => setRegaalZijde(zijde)}
+                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                            regaalZijde === zijde
+                              ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                              : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                          }`}
+                        >
+                          {zijde === 'links' ? 'Links' : 'Rechts'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="meubel-regaal" className="text-[12.5px] text-lx-text-secondary">Breedte</label>
+                      <input
+                        id="meubel-regaal"
+                        inputMode="numeric"
+                        value={regaalTekst}
+                        onChange={(e) => { setRegaalTekst(e.target.value.replace(/\D/g, '').slice(0, 3)); setEigenBreedtes(null) }}
+                        aria-invalid={!regaalOk}
+                        aria-describedby="meubel-regaal-hulp"
+                        className={`w-20 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${regaalOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
+                      />
+                      <span className="text-[13px] text-lx-text-secondary">mm</span>
+                    </div>
+                  </div>
+                  <p id="meubel-regaal-hulp" className={`text-[12px] mt-1.5 ${regaalOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                    Open vak naast de lades, {model.regaal.min} tot {model.regaal.max} mm breed. De lengte is inclusief de regaalkast.
+                  </p>
+                </div>
+              )}
 
               {model.hoogtes && (
                 <div>
@@ -553,7 +605,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
                 <Rij label="Model" waarde={model.naam} onEdit={() => setStep(1)} />
                 <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(2)} />
-                <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte), gekozen)}`} onEdit={() => setStep(2)} />
+                <Rij label="Lades" waarde={`${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte, regaalMm), gekozen)}`} onEdit={() => setStep(2)} />
+                {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${regaalZijde}`} onEdit={() => setStep(2)} />}
                 <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />
                 <Rij label="Opties" waarde={meubelOptiesTekst({ logo, uitsparingen })} onEdit={() => setStep(2)} />
               </div>
@@ -684,6 +737,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
             breedtes={getLadeBreedtes(breedtes, ruimte, gekozen)}
             houtkleur={houtkleur}
             toonHout={toonHout}
+            regaal={model.regaal ? { breedte: regaalMm, zijde: regaalZijde } : null}
           />
           <p className="text-[11px] text-lx-text-secondary text-center">Vooraanzicht, maten in mm · diepte {model.diepte} mm</p>
           <button
@@ -707,6 +761,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
               breedtes={getLadeBreedtes(breedtes, ruimte, gekozen)}
               houtkleur={houtkleur}
               toonHout={toonHout}
+              regaal={model.regaal ? { breedte: regaalMm, zijde: regaalZijde } : null}
             />
             <p className="text-[12px] text-lx-text-secondary text-center mt-1">
               Vooraanzicht, maten in mm · hoogte {model.hoogte} mm · diepte {model.diepte} mm

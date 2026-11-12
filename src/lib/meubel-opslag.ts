@@ -1,5 +1,5 @@
 import {
-  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelModel, ladeLabel, parseMeubelFactor,
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
   type LadeBreedtes, type MeubelInput, type MeubelModel,
 } from '@/lib/meubel-config'
 
@@ -24,6 +24,11 @@ export interface OpgeslagenMeubel {
   /** Aantal uitsparingen of boorgaten; maattekening staat in attachmentUrl */
   uitsparingen: number
   attachmentUrl: string | null
+  /** Regaalkast (Regal-modellen): breedte in mm, 0 bij een model zonder */
+  regaalBreedte: number
+  regaalZijde: 'links' | 'rechts'
+  /** Breedte die de lades samen innemen: lengte min rand en regaalkast */
+  ladeRuimte: number
   quantity: number
   reference: string
   description: string
@@ -44,9 +49,14 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
   const model = { ...basisModel, hoogte: getMeubelHoogte(basisModel, m.hoogte == null ? null : Number(m.hoogte)) }
   const kleur = HOUTKLEUREN.find((k) => k.id === m.houtkleur)
   const breedtes = Array.isArray(m.ladeBreedtes) ? m.ladeBreedtes.map(Number) : null
+  const lengte = Number(m.lengte) || 0
+  const regaalBreedte = getRegaalBreedte(model, m.regaalBreedte == null ? null : Number(m.regaalBreedte))
   return {
     model,
-    lengte: Number(m.lengte) || 0,
+    lengte,
+    regaalBreedte,
+    regaalZijde: m.regaalZijde === 'links' ? 'links' : 'rechts',
+    ladeRuimte: ladeRuimte(model, lengte, regaalBreedte),
     lades: Number(m.lades) || 1,
     ladeBreedtes: breedtes,
     houtkleur: kleur?.id ?? '',
@@ -64,10 +74,10 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
 
 /** Korte omschrijving voor lijsten: "Facet Double · 2000 mm · 3 × 2 lades · White". */
 export function meubelSamenvatting(m: OpgeslagenMeubel): string {
-  return [m.model.naam, `${m.lengte} mm`, ladeLabel(m.model, m.lades), m.houtkleurNaam].filter(Boolean).join(' · ')
+  return [m.model.naam, `${m.lengte} mm`, ladeLabel(m.model, m.lades), m.regaalBreedte ? `regaal ${m.regaalZijde}` : '', m.houtkleurNaam].filter(Boolean).join(' · ')
 }
 
 /** Invoer voor de prijsmotor uit een opgeslagen meubel: één plek, zodat geen optie wordt vergeten. */
 export function meubelPrijsInput(m: OpgeslagenMeubel): MeubelInput {
-  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, houtkleur: m.houtkleur, uitsparingen: m.uitsparingen }
+  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde }
 }

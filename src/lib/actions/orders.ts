@@ -669,7 +669,8 @@ export async function placeMeubelOrder(
       regels: [
         ['Model', meubel.model.naam],
         ['Afmeting', meubelAfmeting(meubel.model, meubel.lengte)],
-        ['Lades', `${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}`],
+        ['Lades', `${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}`],
+        ...(meubel.regaalBreedte > 0 ? [['Regaalkast', `${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`] as [string, string]] : []),
         ['Houtkleur', meubel.houtkleurNaam],
         ['Opties', meubelOptiesTekst(meubel)],
       ],

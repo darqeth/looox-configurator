@@ -100,7 +100,8 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
               <>
                 <Rij label="Model" value={meubel.model.naam} />
                 <Rij label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
-                <Rij label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}`} />
+                <Rij label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}`} />
+                {meubel.regaalBreedte > 0 && <Rij label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
                 <Rij label="Houtkleur" value={meubel.houtkleurNaam} />
                 <Rij label="Opties" value={meubelOptiesTekst(meubel)} />
                 {meubel.attachmentUrl && (

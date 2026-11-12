@@ -4,6 +4,7 @@ import {
   getLengteBereik, parseMeubelFactor, MEUBEL_FACTOR_DEFAULT, getMeubelPrijsOpbouw,
   getAanvraagBereik, getAanvraagLadeOpties, getMeubelOrderOpbouw, formatPct,
   MEUBEL_MODELLEN, getHoutkleuren, getMeubelHoogte, ladeRuimte, meubelOptiesTekst,
+  getRegaalBreedte,
   formatMm, ladeBreedtesTekst, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
 } from '../src/lib/meubel-config'
 
@@ -255,7 +256,8 @@ test.describe('Fase 4: tabelprijzen overige houten modellen', () => {
   test('elk model heeft bij elke staffelgrens minstens één ladekeuze', () => {
     for (const model of MEUBEL_MODELLEN.filter((m) => !m.vasteLengtes)) {
       for (const staffel of model.staffels) {
-        expect(getLadeOpties(model, staffel.max * 10).length, `${model.id} ${staffel.max} cm`).toBeGreaterThan(0)
+        // Regal-modellen met de standaardbreedte van de regaalkast
+        expect(getLadeOpties(model, staffel.max * 10, getRegaalBreedte(model, null)).length, `${model.id} ${staffel.max} cm`).toBeGreaterThan(0)
       }
     }
   })
@@ -333,5 +335,65 @@ test.describe('Meubel: vaste maten en opties', () => {
     const cfg = { modelId: 'facet', lengte: 3000, lades: 3, houtkleur: 'old-grey', ladeBreedtes: null, quantity: 1, opAanvraag: true }
     expect(valideerMeubelConfig({ ...cfg, uitsparingen: 4 })).toBeNull()
     expect(valideerMeubelConfig({ ...cfg, uitsparingen: 11 })).toContain('Uitsparingen')
+  })
+})
+
+test.describe('Regal-modellen: regaalkast', () => {
+  const regal = { modelId: 'facet-regal', houtkleur: 'old-grey', regaalBreedte: 400, regaalZijde: 'rechts' as const }
+  const facetRegal = getMeubelModel('facet-regal')!
+  const ffRegal = getMeubelModel('full-frame-regal')!
+
+  // Prijslijst: totale lengte in mm, lades, euro
+  const FACET_REGAL: [number, number, number][] = [
+    [800, 1, 1558.96], [1290, 1, 1558.96], [1500, 1, 1673.36], [1500, 2, 1870.96],
+    [1900, 2, 1922.96], [2100, 2, 2078.96], [2100, 3, 2130.96], [2600, 2, 2110.16], [2600, 3, 2318.16],
+  ]
+  for (const [lengte, lades, euro] of FACET_REGAL) {
+    test(`facet-regal ${lengte} mm, ${lades} lade(s) = € ${euro}`, () => {
+      expect(calcMeubelNettoCents({ ...regal, lengte, lades })).toBe(Math.round(euro * 100))
+    })
+  }
+
+  test('full-frame-regal tabelprijzen', () => {
+    const ff = { modelId: 'full-frame-regal', houtkleur: 'old-grey', regaalBreedte: 400, regaalZijde: 'links' as const }
+    expect(calcMeubelNettoCents({ ...ff, lengte: 1200, lades: 1 })).toBe(163176)
+    expect(calcMeubelNettoCents({ ...ff, lengte: 1750, lades: 2 })).toBe(195416)
+    expect(calcMeubelNettoCents({ ...ff, lengte: 2250, lades: 2 })).toBe(197496)
+    expect(calcMeubelNettoCents({ ...ff, lengte: 2700, lades: 2 })).toBe(213096)
+  })
+
+  test('lades verdelen de lengte min de regaalkast (en min de rand)', () => {
+    expect(ladeRuimte(facetRegal, 2000, 400)).toBe(1600)
+    expect(ladeRuimte(ffRegal, 2000, 400)).toBe(1500)
+    // model zonder regaalkast negeert de breedte
+    expect(ladeRuimte(getMeubelModel('facet')!, 2000, 400)).toBe(2000)
+  })
+
+  test('ladekeuze hangt af van de breedte van de regaalkast', () => {
+    // 1500 mm: met een regaal van 300 blijft 1200 over (1 lade kan), met 500 blijft 1000 over
+    expect(getLadeOpties(facetRegal, 1500, 300)).toEqual([1, 2])
+    // 2 lades van 350 mm vraagt 700 mm: bij 1500 − 500 = 1000 kan dat, bij 1300 − 500 = 800 ook
+    expect(getLadeOpties(facetRegal, 1300, 500)).toEqual([1, 2])
+    // 1300 mm met regaal 300: 1000 mm voor 1 lade, prijslijst kent bij 1300 ook 2 lades
+    expect(getLadeOpties(facetRegal, 1290, 300)).toEqual([1])
+  })
+
+  test('breedte en kant zijn verplicht en begrensd', () => {
+    const cfg = { ...regal, lengte: 1500, lades: 2, ladeBreedtes: null, quantity: 1 }
+    expect(valideerMeubelConfig(cfg)).toBeNull()
+    expect(valideerMeubelConfig({ ...cfg, regaalBreedte: 299 })).toContain('regaalkast')
+    expect(valideerMeubelConfig({ ...cfg, regaalBreedte: 501 })).toContain('regaalkast')
+    expect(valideerMeubelConfig({ ...cfg, regaalBreedte: undefined })).toContain('regaalkast')
+    expect(valideerMeubelConfig({ ...cfg, regaalZijde: undefined })).toContain('kant')
+    // eigen indeling telt op tot lengte min regaalkast
+    expect(valideerMeubelConfig({ ...cfg, ladeBreedtes: [500, 600] })).toBeNull()
+    expect(valideerMeubelConfig({ ...cfg, ladeBreedtes: [700, 800] })).toContain('samen 1100')
+  })
+
+  test('standaardbreedte bij ontbrekende of ongeldige waarde', () => {
+    expect(getRegaalBreedte(facetRegal, null)).toBe(400)
+    expect(getRegaalBreedte(facetRegal, 350)).toBe(350)
+    expect(getRegaalBreedte(facetRegal, 900)).toBe(400)
+    expect(getRegaalBreedte(getMeubelModel('facet')!, 350)).toBe(0)
   })
 })

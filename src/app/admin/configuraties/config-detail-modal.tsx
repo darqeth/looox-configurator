@@ -266,7 +266,8 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                 <>
                   <ModalRow label="Model" value={meubel.model.naam} />
                   <ModalRow label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
-                  <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}`} />
+                  <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}`} />
+                  {meubel.regaalBreedte > 0 && <ModalRow label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
                   <ModalRow label="Houtkleur" value={meubel.houtkleurNaam} />
                   <ModalRow label="Opties" value={meubelOptiesTekst(meubel)} />
                   {meubel.attachmentUrl && (

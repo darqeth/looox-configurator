@@ -21,6 +21,8 @@ const meubelInputSchema = z.object({
   opAanvraag: z.boolean().optional(),
   hoogte: z.number().int().min(1).max(3000).optional(),
   logo: z.boolean().optional(),
+  regaalBreedte: z.number().int().min(1).max(2000).optional(),
+  regaalZijde: z.enum(['links', 'rechts']).optional(),
   uitsparingen: z.number().int().min(0).max(UITSPARING_MAX).optional(),
   attachmentUrl: z.string().max(1000).nullish(),
   /** Toevoegen aan een bestaand project (winkelmandje) */
@@ -83,6 +85,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           factor,
           opAanvraag,
           logo: input.logo === true,
+          ...(model.regaal && { regaalBreedte: input.regaalBreedte, regaalZijde: input.regaalZijde }),
           uitsparingen,
         },
         quantity: input.quantity,

@@ -140,7 +140,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                       {meubelAfmeting(meubel.model, meubel.lengte)}
                     </p>
                     <p className="text-lx-text-secondary">
-                      {ladeLabel(meubel.model, meubel.lades)} · {ladeBreedtesTekst(meubel.ladeBreedtes, ladeRuimte(meubel.model, meubel.lengte), meubel.lades)}
+                      {ladeLabel(meubel.model, meubel.lades)} · {ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}
                     </p>
                   </div>
 

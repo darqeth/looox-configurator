@@ -17,7 +17,7 @@ const LIJN_OP_DONKER = '#F4F1EA'
 const VLAK_ZONDER_HOUT = '#F6F4EF'
 const MAAT = 'var(--lx-text-secondary)'
 
-export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout = true }: {
+export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout = true, regaal = null }: {
   model: MeubelModel
   lengte: number
   /** Breedte per lade in mm, van links naar rechts; samen de lengte */
@@ -25,6 +25,8 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   houtkleur: string
   /** Uit = kale lijntekening zonder houtkleur */
   toonHout?: boolean
+  /** Open regaalkast naast de lades (Regal-modellen) */
+  regaal?: { breedte: number; zijde: 'links' | 'rechts' } | null
 }) {
   const donker = toonHout && HOUTKLEUREN.find((k) => k.id === houtkleur)?.donker === true
   const LIJN = donker ? LIJN_OP_DONKER : LIJN_OP_LICHT
@@ -40,13 +42,16 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   // Linkerrand van elke lade, plus de rechterrand van de laatste
   // De lades beginnen na de rand van het frame (U-Floor, U-Frame, Full-Frame)
   const rand = (model.rand ?? 0) * schaal
-  const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x + rand])
+  // Een regaalkast links schuift de lades op; rechts sluit hij aan op de laatste lade
+  const regaalB = (regaal?.breedte ?? 0) * schaal
+  const grenzen = breedtes.reduce<number[]>((acc, b) => [...acc, acc[acc.length - 1] + b * schaal], [x + rand + (regaal?.zijde === 'links' ? regaalB : 0)])
   // Het vlak met de lades: binnen het frame, dat boven en soms ook onder doorloopt
   const boven = y + (model.randBoven ? rand : 0)
   const onder = y + h - (model.randOnder ? rand : 0)
   const links = grenzen[0]
   const rechts = grenzen[grenzen.length - 1]
   const rijH = (onder - boven) / model.rijen
+  const regaalX = regaal ? (regaal.zijde === 'links' ? x + rand : rechts) : 0
   // Uniek per tekening: in de popup staat dezelfde tekening een tweede keer op de pagina
   const patroon = `hout-${houtkleur}-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   // Maat per lade alleen tonen als de tekst in de lade past
@@ -74,15 +79,23 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
       <rect x={x} y={y} width={w} height={h} rx="1.5" fill="none" stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
 
       {/* Ladefronten */}
-      {(rand > 0 ? grenzen : grenzen.slice(1, -1)).map((gx, i) => (
+      {(rand > 0 || regaal ? grenzen : grenzen.slice(1, -1)).map((gx, i) => (
         <line key={`k${i}`} x1={gx} y1={boven} x2={gx} y2={onder} stroke={LIJN} strokeWidth="1.3" />
       ))}
       {Array.from({ length: model.rijen - 1 }, (_, i) => (
         <line key={`r${i}`} x1={links} y1={boven + rijH * (i + 1)} x2={rechts} y2={boven + rijH * (i + 1)} stroke={LIJN} strokeWidth="1.3" />
       ))}
 
-      {model.randBoven && rand > 0 && <line x1={links} y1={boven} x2={rechts} y2={boven} stroke={LIJN} strokeWidth="1.3" />}
-      {model.randOnder && rand > 0 && <line x1={links} y1={onder} x2={rechts} y2={onder} stroke={LIJN} strokeWidth="1.3" />}
+      {/* Regaalkast: open vak, donkerder dan de fronten, met een binnenrand */}
+      {regaal && (
+        <g>
+          <rect x={regaalX} y={boven} width={regaalB} height={onder - boven} fill="#000" fillOpacity={toonHout ? 0.38 : 0.1} />
+          <rect x={regaalX + 3} y={boven + 3} width={Math.max(0, regaalB - 6)} height={Math.max(0, onder - boven - 6)} fill="none" stroke={toonHout ? LIJN_OP_DONKER : LIJN_OP_LICHT} strokeWidth="0.8" strokeOpacity="0.7" />
+        </g>
+      )}
+
+      {model.randBoven && rand > 0 && <line x1={Math.min(links, regaal ? regaalX : links)} y1={boven} x2={Math.max(rechts, regaal ? regaalX + regaalB : rechts)} y2={boven} stroke={LIJN} strokeWidth="1.3" />}
+      {model.randOnder && rand > 0 && <line x1={Math.min(links, regaal ? regaalX : links)} y1={onder} x2={Math.max(rechts, regaal ? regaalX + regaalB : rechts)} y2={onder} stroke={LIJN} strokeWidth="1.3" />}
 
       {/* Maatlijn lengte (boven) */}
       <g stroke={MAAT} strokeWidth="0.8" fill="none">
@@ -106,7 +119,8 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
 
       {/* Maatlijn per lade (onder) */}
       <g stroke={MAAT} strokeWidth="0.8" fill="none">
-        <line x1={grenzen[0]} y1={y + h + 14} x2={grenzen[grenzen.length - 1]} y2={y + h + 14} />
+        <line x1={Math.min(links, regaal ? regaalX : links)} y1={y + h + 14} x2={Math.max(rechts, regaal ? regaalX + regaalB : rechts)} y2={y + h + 14} />
+        {regaal && <line x1={regaal.zijde === 'links' ? regaalX : regaalX + regaalB} y1={y + h + 6} x2={regaal.zijde === 'links' ? regaalX : regaalX + regaalB} y2={y + h + 19} />}
         {Array.from({ length: lades + 1 }, (_, i) => (
           <line key={i} x1={grenzen[i]} y1={y + h + 6} x2={grenzen[i]} y2={y + h + 19} />
         ))}
@@ -116,6 +130,11 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
           {formatMm(breedtes[i])}
         </text>
       ))}
+      {regaal && regaalB > 24 && (
+        <text x={regaalX + regaalB / 2} y={y + h + 31} textAnchor="middle" fontSize="10" fontWeight="500" fill={MAAT}>
+          {regaal.breedte}
+        </text>
+      )}
     </svg>
   )
 })

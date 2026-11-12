@@ -57,6 +57,11 @@ export interface MeubelModel {
   randBoven?: boolean
   /** De rand loopt ook onder langs: frame rondom (Full-Frame) */
   randOnder?: boolean
+  /**
+   * Open regaalkast naast de lades (Regal-modellen): de dealer kiest links of rechts
+   * en een breedte binnen dit bereik in mm. De lengte in de prijslijst is de totale lengte.
+   */
+  regaal?: { min: number; max: number }
   /** Meerdere hoogtes zonder prijsverschil (Full-Frame, U-Frame); `hoogte` is de standaard */
   hoogtes?: number[]
   /** Houtkleuren die bij dit model niet kunnen (Stripes: geen White) */
@@ -104,6 +109,24 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
       { min: 191, max: 210, prijzen: { 2: 230256, 3: 285896 } },
       { min: 211, max: 260, prijzen: { 2: 248976, 3: 304616 } },
       { min: 261, max: 290, prijzen: { 3: 323336 } },
+    ],
+  },
+  {
+    id: 'facet-regal',
+    categorie: 'wastafelmeubels',
+    naam: 'Facet Regal',
+    omschrijving: 'Facet met een open regaalkast links of rechts.',
+    afbeelding: '/images/meubels/model-facet-regal.webp',
+    diepte: 460,
+    hoogte: 300,
+    rijen: 1,
+    regaal: { min: 300, max: 500 },
+    staffels: [
+      { min: 80, max: 129, prijzen: { 1: 155896 } },
+      { min: 130, max: 150, prijzen: { 1: 167336, 2: 187096 } },
+      { min: 151, max: 190, prijzen: { 2: 192296 } },
+      { min: 191, max: 210, prijzen: { 2: 207896, 3: 213096 } },
+      { min: 211, max: 260, prijzen: { 2: 211016, 3: 231816 } },
     ],
   },
   {
@@ -194,6 +217,27 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
       { min: 121, max: 175, prijzen: { 2: 170456, 3: 192296 } },
       { min: 176, max: 225, prijzen: { 2: 195416, 3: 213096 } },
       { min: 226, max: 270, prijzen: { 2: 226096, 3: 242216 } },
+    ],
+  },
+  {
+    id: 'full-frame-regal',
+    categorie: 'wastafelmeubels',
+    naam: 'Full-Frame Regal',
+    omschrijving: 'Full-Frame met een open regaalkast links of rechts.',
+    afbeelding: '/images/meubels/model-full-frame-regal.webp',
+    diepte: 460,
+    hoogte: 300,
+    rijen: 1,
+    hoogtes: [300, 350, 400],
+    rand: 50,
+    randBoven: true,
+    randOnder: true,
+    regaal: { min: 300, max: 500 },
+    staffels: [
+      { min: 80, max: 120, prijzen: { 1: 163176 } },
+      { min: 121, max: 175, prijzen: { 1: 166296, 2: 195416 } },
+      { min: 176, max: 225, prijzen: { 2: 197496 } },
+      { min: 226, max: 270, prijzen: { 2: 213096 } },
     ],
   },
   {
@@ -362,18 +406,26 @@ function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
  * Aantal lades (kolommen) dat bij deze lengte te bestellen is: de combinaties
  * uit de prijslijst, zolang een lade bij gelijke verdeling 350 tot 1200 mm is.
  */
-export function getLadeOpties(model: MeubelModel, lengte: number): number[] {
+export function getLadeOpties(model: MeubelModel, lengte: number, regaalBreedte = 0): number[] {
   const staffel = findStaffel(model, lengte)
   if (!staffel) return []
   return Object.keys(staffel.prijzen)
     .map(Number)
-    .filter((n) => ladeRuimte(model, lengte) / n >= LADE_MIN_MM && ladeRuimte(model, lengte) / n <= LADE_MAX_MM)
+    .filter((n) => ladeRuimte(model, lengte, regaalBreedte) / n >= LADE_MIN_MM && ladeRuimte(model, lengte, regaalBreedte) / n <= LADE_MAX_MM)
     .sort((a, b) => a - b)
 }
 
-/** Breedte die de lades samen innemen: de lengte min de rand aan beide zijden. */
-export function ladeRuimte(model: MeubelModel, lengte: number): number {
-  return lengte - 2 * (model.rand ?? 0)
+/** Breedte die de lades samen innemen: de lengte min de rand aan beide zijden en min de regaalkast. */
+export function ladeRuimte(model: MeubelModel, lengte: number, regaalBreedte = 0): number {
+  return lengte - 2 * (model.rand ?? 0) - (model.regaal ? regaalBreedte : 0)
+}
+
+export const REGAAL_STANDAARD_MM = 400
+
+/** Gekozen breedte van de regaalkast, of 0 bij een model zonder. Ongeldige waarden vallen terug op de standaard. */
+export function getRegaalBreedte(model: MeubelModel, breedte?: number | null): number {
+  if (!model.regaal) return 0
+  return breedte != null && Number.isInteger(breedte) && breedte >= model.regaal.min && breedte <= model.regaal.max ? breedte : REGAAL_STANDAARD_MM
 }
 
 /** Houtkleuren die bij dit model te kiezen zijn. */
@@ -401,13 +453,17 @@ export interface MeubelInput {
   opAanvraag?: boolean
   /** Gekozen hoogte in mm bij modellen met meerdere hoogtes; geen invloed op de prijs */
   hoogte?: number
+  /** Breedte van de regaalkast in mm (Regal-modellen); geen invloed op de prijs, wel op de ladeverdeling */
+  regaalBreedte?: number
+  /** Kant van de regaalkast */
+  regaalZijde?: 'links' | 'rechts'
 }
 
 /** Netto per stuk in centen, of null bij een ongeldige combinatie. Niet tonen buiten de bestelstap. */
 export function calcMeubelNettoCents(input: MeubelInput): number | null {
   const model = getMeubelModel(input.modelId)
   if (!model || input.opAanvraag) return null
-  if (!getLadeOpties(model, input.lengte).includes(input.lades)) return null
+  if (!getLadeOpties(model, input.lengte, getRegaalBreedte(model, input.regaalBreedte)).includes(input.lades)) return null
   const staffel = findStaffel(model, input.lengte)
   const kleur = getHoutkleuren(model).find((k) => k.id === input.houtkleur)
   if (!staffel || !kleur) return null
@@ -529,12 +585,16 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
     if (!model || model.geenAanvraag || !getHoutkleuren(model).some((k) => k.id === c.houtkleur)) return 'Dit model of deze houtkleur bestaat niet.'
     const bereik = getAanvraagBereik(model)
     if (!Number.isInteger(c.lengte) || c.lengte < bereik.min || c.lengte > bereik.max) return `Op aanvraag kan van ${bereik.min} tot ${bereik.max} mm.`
-    if (!getAanvraagLadeOpties(ladeRuimte(model, c.lengte)).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
+    if (!getAanvraagLadeOpties(ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte))).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
   } else if (calcMeubelNettoCents(c) === null) {
     return 'Deze combinatie van model, lengte, lades en houtkleur bestaat niet.'
   }
   const model = getMeubelModel(c.modelId)!
-  const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, ladeRuimte(model, c.lengte), c.lades)
+  if (model.regaal) {
+    if (c.regaalBreedte == null || getRegaalBreedte(model, c.regaalBreedte) !== c.regaalBreedte) return `De regaalkast moet tussen ${model.regaal.min} en ${model.regaal.max} mm breed zijn.`
+    if (c.regaalZijde !== 'links' && c.regaalZijde !== 'rechts') return 'Kies de kant van de regaalkast.'
+  }
+  const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte)), c.lades)
   if (ladeFout) return ladeFout
   if (c.hoogte != null && getMeubelHoogte(model, c.hoogte) !== c.hoogte) return 'Deze hoogte bestaat niet bij dit model.'
   const uitsparingen = c.uitsparingen ?? 0

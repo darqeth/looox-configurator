@@ -1,5 +1,5 @@
 import {
-  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
   type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm,
 } from '@/lib/meubel-config'
 
@@ -24,6 +24,8 @@ export interface OpgeslagenMeubel {
   /** Aantal uitsparingen of boorgaten; maattekening staat in attachmentUrl */
   uitsparingen: number
   attachmentUrl: string | null
+  /** Maattekening is nodig om te bestellen en ontbreekt nog (bij een kast alleen nodig met uitsparingen) */
+  tekeningOntbreekt: boolean
   /** Waskom in het Solid Surface blad; null bij een model zonder ingebouwde waskom */
   waskomVorm: WaskomVorm | null
   waskomAantal: number
@@ -49,10 +51,16 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
   const basisModel = getMeubelModel(String(m.modelId ?? ''))
   if (!basisModel) return null
   // Bij modellen met meerdere hoogtes geldt de gekozen hoogte overal waar het model wordt getoond
-  const model = { ...basisModel, hoogte: getMeubelHoogte(basisModel, m.hoogte == null ? null : Number(m.hoogte)) }
+  const model = {
+    ...basisModel,
+    hoogte: getMeubelHoogte(basisModel, m.hoogte == null ? null : Number(m.hoogte)),
+    diepte: getMeubelDiepte(basisModel, m.diepte == null ? null : Number(m.diepte)),
+  }
   const kleur = HOUTKLEUREN.find((k) => k.id === m.houtkleur)
   const breedtes = Array.isArray(m.ladeBreedtes) ? m.ladeBreedtes.map(Number) : null
   const lengte = Number(m.lengte) || 0
+  const uitsparingen = Math.min(UITSPARING_MAX, Math.max(0, Math.floor(Number(m.uitsparingen) || 0)))
+  const attachmentUrl = typeof opts.attachmentUrl === 'string' && opts.attachmentUrl ? opts.attachmentUrl : null
   const regaalBreedte = getRegaalBreedte(model, m.regaalBreedte == null ? null : Number(m.regaalBreedte))
   return {
     model,
@@ -62,15 +70,17 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     regaalBreedte,
     regaalZijde: m.regaalZijde === 'links' || m.regaalZijde === 'midden' ? m.regaalZijde : 'rechts',
     ladeRuimte: ladeRuimte(model, lengte, regaalBreedte),
-    lades: Number(m.lades) || 1,
+    // Een kast of los blad heeft geen lades: daar is 0 een geldige waarde
+    lades: model.kast || model.zonderLades ? Math.max(0, Number(m.lades) || 0) : Number(m.lades) || 1,
     ladeBreedtes: breedtes,
     houtkleur: kleur?.id ?? '',
-    houtkleurNaam: kleur?.naam ?? '',
+    houtkleurNaam: model.geenHout ? 'Solid Surface' : kleur?.naam ?? '',
     factor: m.factor === undefined ? MEUBEL_FACTOR_DEFAULT : parseMeubelFactor(m.factor),
     opAanvraag: m.opAanvraag === true,
     logo: m.logo === true,
-    uitsparingen: Math.min(UITSPARING_MAX, Math.max(0, Math.floor(Number(m.uitsparingen) || 0))),
-    attachmentUrl: typeof opts.attachmentUrl === 'string' && opts.attachmentUrl ? opts.attachmentUrl : null,
+    uitsparingen,
+    attachmentUrl,
+    tekeningOntbreekt: tekeningVerplicht(model, uitsparingen) && !attachmentUrl,
     quantity: Math.max(1, Math.floor(Number(opts.quantity) || 1)),
     reference: typeof opts.reference === 'string' ? opts.reference : '',
     description: typeof opts.description === 'string' ? opts.description : '',
@@ -79,10 +89,16 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
 
 /** Korte omschrijving voor lijsten: "Facet Double · 2000 mm · 3 × 2 lades · White". */
 export function meubelSamenvatting(m: OpgeslagenMeubel): string {
-  return [m.model.naam, `${m.lengte} mm`, ladeLabel(m.model, m.lades), m.regaalBreedte ? `regaal ${m.regaalZijde}` : '', m.houtkleurNaam].filter(Boolean).join(' · ')
+  return [m.model.naam, meubelKort(m), m.regaalBreedte ? `regaal ${m.regaalZijde}` : '', m.houtkleurNaam].filter(Boolean).join(' · ')
+}
+
+/** Maat en indeling voor een lijstregel: "2000 mm · 3 lades", of bij een kast de drie maten. */
+export function meubelKort(m: OpgeslagenMeubel): string {
+  if (m.model.kast) return [meubelAfmeting(m.model, m.lengte), m.model.kast.deuren ? ladeLabel(m.model, m.lades) : ''].filter(Boolean).join(' · ')
+  return `${m.lengte} mm · ${ladeLabel(m.model, m.lades)}`
 }
 
 /** Invoer voor de prijsmotor uit een opgeslagen meubel: één plek, zodat geen optie wordt vergeten. */
 export function meubelPrijsInput(m: OpgeslagenMeubel): MeubelInput {
-  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
+  return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, hoogte: m.model.hoogte, diepte: m.model.diepte, houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
 }

@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { setMeubelTekening } from '@/lib/actions/meubel'
 import { toast } from '@/components/toast'
+import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 
 const MAX_MB = 10
 
@@ -23,8 +24,9 @@ export default function TekeningUpload({ configId, onKlaar, groot = false }: {
   const inputRef = useRef<HTMLInputElement>(null)
   const [bezig, setBezig] = useState(false)
 
-  async function kies(bestand: File | undefined) {
-    if (!bestand) return
+  async function kies(origineel: File | undefined) {
+    if (!origineel) return
+    const bestand = await comprimeerAfbeelding(origineel)
     if (bestand.size > MAX_MB * 1024 * 1024) {
       toast(`Het bestand is te groot. Maximaal ${MAX_MB} MB.`)
       return

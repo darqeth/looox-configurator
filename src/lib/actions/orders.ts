@@ -16,7 +16,7 @@ import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { z } from 'zod'
 import { hasMeubelAccess } from '@/lib/meubel-access'
 import { leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
-import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
+import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 
 type LightConfig = {
   position: string
@@ -620,7 +620,7 @@ export async function placeMeubelOrder(
 
   const meubel = leesMeubel(config.selected_options)
   if (!meubel) throw new Error('Dit is geen meubelconfiguratie')
-  if (!meubel.attachmentUrl) throw new Error('De maattekening ontbreekt. Open de configuratie en voeg hem toe.')
+  if (meubel.tekeningOntbreekt) throw new Error('De maattekening ontbreekt. Voeg hem toe en probeer het opnieuw.')
 
   const isOfferte = meubel.opAanvraag
   const nettoCents = isOfferte ? 0 : calcMeubelNettoCents(meubelPrijsInput(meubel))
@@ -670,10 +670,10 @@ export async function placeMeubelOrder(
       regels: [
         ['Model', meubel.model.naam],
         ['Afmeting', meubelAfmeting(meubel.model, meubel.lengte)],
-        ['Lades', `${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}`],
+        [indelingLabel(meubel.model), indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)],
         ...(meubel.waskomVorm ? [['Waskom', waskomTekst(meubel)] as [string, string]] : []),
         ...(meubel.regaalBreedte > 0 ? [['Regaalkast', `${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`] as [string, string]] : []),
-        ['Houtkleur', meubel.houtkleurNaam],
+        [kleurLabel(meubel.model), meubel.houtkleurNaam],
         ['Opties', meubelOptiesTekst(meubel)],
       ],
     },

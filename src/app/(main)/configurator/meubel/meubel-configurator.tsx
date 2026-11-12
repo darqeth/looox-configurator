@@ -1,5 +1,6 @@
 'use client'
 
+import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createPortal } from 'react-dom'
@@ -14,7 +15,8 @@ import {
   UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
-  type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting } from '@/lib/meubel-config'
+  type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
+  getMeubelDiepte, getKastHoogteBereik, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
 
@@ -41,6 +43,7 @@ export interface MeubelInitialConfig {
   waskomAantal?: number
   uitsparingen?: number
   attachmentUrl?: string | null
+  diepte?: number | null
   quantity: number
   projectName: string
   reference: string
@@ -65,7 +68,17 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   // Gekozen hoogte bij modellen met meerdere hoogtes (Full-Frame, U-Frame); geen prijsverschil
   const [hoogteKeuze, setHoogteKeuze] = useState<number | null>(initialConfig?.hoogte ?? null)
   // Overal waar het model getoond wordt geldt de gekozen hoogte
-  const model = basisModel ? { ...basisModel, hoogte: getMeubelHoogte(basisModel, hoogteKeuze) } : null
+  // Kast: de diepte uit de lijst en de hoogte uit de lijst of vrij binnen de staffel
+  const [diepteKeuze, setDiepteKeuze] = useState<number | null>(initialConfig?.diepte ?? null)
+  const [kastHoogteTekst, setKastHoogteTekst] = useState(String(initialConfig?.hoogte ?? basisModel?.hoogte ?? 1800))
+  const kastHoogteBereik = basisModel ? getKastHoogteBereik(basisModel) : null
+  const kastHoogteInvoer = /^\d+$/.test(kastHoogteTekst) ? Number(kastHoogteTekst) : NaN
+  const kastHoogteOk = !kastHoogteBereik || (kastHoogteInvoer >= kastHoogteBereik.min && kastHoogteInvoer <= kastHoogteBereik.max)
+  const model = basisModel ? {
+    ...basisModel,
+    hoogte: getMeubelHoogte(basisModel, kastHoogteBereik ? (kastHoogteOk ? kastHoogteInvoer : null) : hoogteKeuze),
+    diepte: getMeubelDiepte(basisModel, diepteKeuze),
+  } : null
   const [categorie, setCategorie] = useState<MeubelCategorieId | null>(basisModel?.categorie ?? null)
   // 0 categorie, 1 model, 2 samenstellen, 3 samenvatting
   const [step, setStep] = useState(model ? 2 : 0)
@@ -156,8 +169,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                   onClick={() => {
                     // Ander model: lengte en indeling die daar niet bestaan vervallen
                     if (m.id !== model?.id) {
-                      const l = m.vasteLengtes ? (m.vasteLengtes.includes(laatsteLengte) ? laatsteLengte : m.vasteLengtes[0]) : Math.min(Math.max(laatsteLengte, b.min), b.max)
+                      const vast = m.kast?.breedtes ?? m.vasteLengtes
+                      const l = vast ? (vast.includes(laatsteLengte) ? laatsteLengte : vast[0]) : Math.min(Math.max(laatsteLengte, b.min), b.max)
                       setLengteTekst(String(l)); setLaatsteLengte(l); setEigenBreedtes(null); setOpAanvraag(false); setHoogteKeuze(null)
+                      setDiepteKeuze(null); setKastHoogteTekst(String(m.hoogte))
                     }
                     setModel(m); setStep(2)
                   }}
@@ -171,7 +186,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     <p className="font-semibold text-lx-text-primary text-[15px]">{m.naam}</p>
                     <p className="text-[13px] text-lx-text-secondary mt-0.5">{m.omschrijving}</p>
                     <p className="text-[12px] text-lx-text-muted mt-2">
-                      Lengte {b.min} tot {b.max} mm · hoogte {m.hoogtes ? m.hoogtes.join(' / ') : m.hoogte} mm · diepte {m.diepte} mm
+                      {m.kast
+                        ? `Breedte ${m.kast.breedtes.join(' / ')} mm · hoogte ${m.kast.hoogtes ? m.kast.hoogtes.join(' / ') : `${getKastHoogteBereik(m)?.min} tot ${getKastHoogteBereik(m)?.max}`} mm · diepte ${m.kast.dieptes.join(' / ')} mm`
+                        : `Lengte ${b.min} tot ${b.max} mm · hoogte ${m.hoogtes ? m.hoogtes.join(' / ') : m.hoogte} mm · diepte ${m.diepte} mm`}
                     </p>
                   </div>
                 </button>
@@ -200,6 +217,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const lengte = isDuo ? duoBreedtes[0] + duoBreedtes[1] + regaalMm : /^\d+$/.test(lengteTekst) ? Number(lengteTekst) : NaN
   const lengteOk = isDuo
     ? duoOk
+    : model.kast
+    ? model.kast.breedtes.includes(lengte) && kastHoogteOk
     : lengte >= bereik.min && lengte <= bereik.max && (opAanvraag || !model.vasteLengtes || model.vasteLengtes.includes(lengte))
   if (!isDuo && lengteOk && lengte !== laatsteLengte) {
     setLaatsteLengte(lengte)
@@ -209,7 +228,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
 
   // Lades verdelen de lengte min de rand van het frame en min de regaalkast
   const ruimte = ladeRuimte(model, tekenLengte, regaalMm)
-  const opties = opAanvraag ? getAanvraagLadeOpties(ruimte) : getLadeOpties(model, tekenLengte, regaalMm)
+  const opties = opAanvraag ? (model.zonderLades ? [0] : getAanvraagLadeOpties(ruimte)) : getLadeOpties(model, tekenLengte, regaalMm)
+  // Vaste maten waaruit de dealer kiest: breedtes van een kast of de standaardlengtes van een model
+  const vasteMaten = model.kast?.breedtes ?? model.vasteLengtes
+  const hoogteKeuzes = model.kast ? model.kast.hoogtes : model.hoogtes
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
   const gekozen = opties.includes(lades) ? lades : opties[0]
   const breedtes = isDuo ? duoBreedtes : eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
@@ -219,17 +241,19 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const kleuren = getHoutkleuren(model)
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
-  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
+  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, hoogte: model.hoogte, diepte: model.diepte, regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
-  const tekeningOntbreekt = !tekeningBestand && !bestaandeTekening
+  const tekeningNodig = tekeningVerplicht(model, uitsparingen)
+  const tekeningOntbreekt = tekeningNodig && !tekeningBestand && !bestaandeTekening
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
 
   async function uploadTekening(): Promise<string | null> {
     if (!tekeningBestand) return bestaandeTekening
     const supabase = createClient()
-    const ext = tekeningBestand.name.split('.').pop() ?? 'bin'
+    const bestand = await comprimeerAfbeelding(tekeningBestand)
+    const ext = bestand.name.split('.').pop() ?? 'bin'
     const pad = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('attachments').upload(pad, tekeningBestand, { upsert: false })
+    const { error } = await supabase.storage.from('attachments').upload(pad, bestand, { upsert: false })
     if (error) {
       console.error('[upload] maattekening', error)
       throw new Error('Uploaden van de maattekening is mislukt. Probeer het opnieuw.')
@@ -263,7 +287,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
     if (!geldig || !projectName.trim() || !model) return
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
-      logo, uitsparingen,
+      logo: logo && !model.geenHout, uitsparingen,
+      ...(model.kast && { diepte: model.diepte }),
       ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
       ...(model.waskom && { waskomVorm, waskomAantal }),
       quantity, projectName: projectName.trim(), reference, description,
@@ -333,11 +358,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               ) : (
                 <div>
-                  {model.vasteLengtes ? (
+                  {vasteMaten ? (
                     <>
-                      <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lengte</p>
-                      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Lengte">
-                        {model.vasteLengtes.map((l) => (
+                      <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">{model.kast ? 'Breedte' : 'Lengte'}</p>
+                      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={model.kast ? 'Breedte' : 'Lengte'}>
+                        {vasteMaten.map((l) => (
                           <button
                             key={l}
                             type="button"
@@ -354,9 +379,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                           </button>
                         ))}
                       </div>
-                      <p className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
-                        Dit model is alleen in deze standaardmaten te bestellen.
-                      </p>
+                      {!model.kast && (
+                        <p className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                          Dit model is alleen in deze standaardmaten te bestellen.
+                        </p>
+                      )}
                     </>
                   ) : (
                     <>
@@ -438,11 +465,32 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               )}
 
-              {model.hoogtes && (
+              {kastHoogteBereik && (
+                <div>
+                  <label htmlFor="meubel-kast-hoogte" className="block text-[13px] font-medium text-lx-text-primary mb-1.5">Hoogte</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="meubel-kast-hoogte"
+                      inputMode="numeric"
+                      value={kastHoogteTekst}
+                      onChange={(e) => setKastHoogteTekst(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      aria-invalid={!kastHoogteOk}
+                      aria-describedby="meubel-kast-hoogte-hulp"
+                      className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${kastHoogteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
+                    />
+                    <span className="text-[13px] text-lx-text-secondary">mm</span>
+                  </div>
+                  <p id="meubel-kast-hoogte-hulp" className={`text-[12px] mt-1.5 ${kastHoogteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
+                    Hele millimeters, van {kastHoogteBereik.min} tot {kastHoogteBereik.max} mm.
+                  </p>
+                </div>
+              )}
+
+              {hoogteKeuzes && hoogteKeuzes.length > 1 && (
                 <div>
                   <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Hoogte</p>
                   <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Hoogte">
-                    {model.hoogtes.map((hgt) => (
+                    {hoogteKeuzes.map((hgt) => (
                       <button
                         key={hgt}
                         type="button"
@@ -459,14 +507,39 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                       </button>
                     ))}
                   </div>
-                  <p className="text-[12px] text-lx-text-muted mt-1.5">De hoogte heeft geen invloed op de prijs.</p>
+                  {!model.kast && <p className="text-[12px] text-lx-text-muted mt-1.5">De hoogte heeft geen invloed op de prijs.</p>}
                 </div>
               )}
 
-              {!isDuo && (
+              {model.kast && model.kast.dieptes.length > 1 && (
                 <div>
-                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lades</p>
-                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Aantal lades">
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Diepte</p>
+                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Diepte">
+                    {model.kast.dieptes.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        role="radio"
+                        aria-checked={model.diepte === d}
+                        onClick={() => setDiepteKeuze(d)}
+                        className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                          model.diepte === d
+                            ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
+                            : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                        }`}
+                      >
+                        {d} mm
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">De diepte heeft geen invloed op de prijs.</p>
+                </div>
+              )}
+
+              {!isDuo && !model.zonderLades && !(model.kast && opties.length < 2) && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">{model.kast ? 'Deuren' : 'Lades'}</p>
+                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={model.kast ? 'Aantal deuren' : 'Aantal lades'}>
                     {opties.map((n) => (
                       <button
                         key={n}
@@ -485,7 +558,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     ))}
                   </div>
                   <p className="text-[12px] text-lx-text-muted mt-1.5">
-                    Welke indelingen kunnen, hangt af van de lengte.
+                    {model.kast ? 'Twee deuren zitten boven elkaar. Of één deur kan, hangt af van de hoogte; LoooX controleert dit bij de bestelling.' : 'Welke indelingen kunnen, hangt af van de lengte.'}
                     {model.rand ? ` De rand van ${model.rand} mm aan beide zijden gaat er eerst af.` : ''}
                   </p>
 
@@ -602,7 +675,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               )}
 
-              <div>
+              {!model.geenHout && <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">
                   Houtkleur <span className="font-normal text-lx-text-secondary">· {kleurNaam}</span>
                 </p>
@@ -624,21 +697,21 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     </button>
                   ))}
                 </div>
-              </div>
+              </div>}
 
               <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Opties</p>
                 <div className="bg-lx-panel-bg rounded-xl p-4 space-y-4">
-                  <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
+                  {!model.geenHout && <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
                     <span>
                       <span className="block text-[13px] font-medium text-lx-text-primary">Met logo</span>
                       <span className="block text-[11.5px] text-lx-text-secondary">LoooX-logo op het front. Zonder meerprijs.</span>
                     </span>
                     <input type="checkbox" checked={logo} onChange={(e) => setLogo(e.target.checked)} className="sr-only peer" />
                     <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
-                  </label>
+                  </label>}
 
-                  <div className="pt-4 border-t border-lx-divider">
+                  <div className={model.geenHout ? '' : 'pt-4 border-t border-lx-divider'}>
                     <div className="flex items-center justify-between gap-4">
                       <span>
                         <span id="meubel-uitsparingen-label" className="block text-[13px] font-medium text-lx-text-primary">Uitsparingen of boorgaten</span>
@@ -665,7 +738,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
               </div>
 
               <div>
-                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Maattekening</p>
+                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Maattekening{!tekeningNodig && <span className="font-normal text-lx-text-secondary"> (optioneel)</span>}</p>
                 <label className="block cursor-pointer">
                   <input
                     id="meubel-tekening"
@@ -684,7 +757,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                   </span>
                 </label>
                 <p id="meubel-tekening-hulp" className="text-[12px] text-lx-text-muted mt-1.5 leading-relaxed">
-                  Teken hierop de plaats van de waskom, kraan en afvoer{uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.
+                  {model.kast
+                    ? (uitsparingen > 0 ? 'Teken hierop de plaats en maat van elke uitsparing.' : 'Alleen nodig als er uitsparingen in de kast moeten.')
+                    : `Teken hierop de plaats van de waskom, kraan en afvoer${uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.`}
                 </p>
                 {tekeningOntbreekt && <TekeningNodig />}
               </div>
@@ -711,11 +786,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
                 <Rij label="Model" waarde={model.naam} onEdit={() => setStep(1)} />
                 <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(2)} />
-                <Rij label={isDuo ? 'Kasten' : 'Lades'} waarde={isDuo ? `Links ${duoBreedtes[0]} mm, rechts ${duoBreedtes[1]} mm, elk 1 lade` : `${ladeLabel(model, gekozen)} · ${ladeBreedtesTekst(breedtes, ladeRuimte(model, lengte, regaalMm), gekozen)}`} onEdit={() => setStep(2)} />
+                <Rij label={isDuo ? 'Kasten' : indelingLabel(model)} waarde={isDuo ? `Links ${duoBreedtes[0]} mm, rechts ${duoBreedtes[1]} mm, elk 1 lade` : indelingTekst(model, gekozen, breedtes, ladeRuimte(model, lengte, regaalMm))} onEdit={() => setStep(2)} />
                 {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${isDuo ? 'in het midden' : regaalZijde}`} onEdit={() => setStep(2)} />}
                 {model.waskom && <Rij label="Waskom" waarde={waskomTekst({ waskomVorm, waskomAantal })} onEdit={() => setStep(2)} />}
-                <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />
-                <Rij label="Opties" waarde={meubelOptiesTekst({ logo, uitsparingen })} onEdit={() => setStep(2)} />
+                {!model.geenHout && <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />}
+                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && !model.geenHout, uitsparingen })} onEdit={() => setStep(2)} />
               </div>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">
@@ -843,7 +918,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
           <MeubelTekening
             model={model}
             lengte={tekenLengte}
-            breedtes={getLadeBreedtes(breedtes, ruimte, gekozen)}
+            breedtes={model.kast ? [] : getLadeBreedtes(breedtes, ruimte, gekozen)}
+            deuren={gekozen}
             houtkleur={houtkleur}
             toonHout={toonHout}
             regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
@@ -862,13 +938,14 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
 
         {tekeningGroot && (
           <TekeningPopup
-            titel={`${model.naam} · ${tekenLengte} mm · ${ladeLabel(model, gekozen)}`}
+            titel={`${model.naam} · ${model.kast ? meubelAfmeting(model, tekenLengte) : `${tekenLengte} mm · ${ladeLabel(model, gekozen)}`}`}
             onClose={() => setTekeningGroot(false)}
           >
             <MeubelTekening
               model={model}
               lengte={tekenLengte}
-              breedtes={getLadeBreedtes(breedtes, ruimte, gekozen)}
+              breedtes={model.kast ? [] : getLadeBreedtes(breedtes, ruimte, gekozen)}
+              deuren={gekozen}
               houtkleur={houtkleur}
               toonHout={toonHout}
               regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
@@ -881,11 +958,11 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
         )}
 
         {/* Weergave-toggle onder de kaart, net als bij de spiegels */}
-        <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
+        {!model.geenHout && <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
           <input type="checkbox" checked={toonHout} onChange={(e) => setToonHout(e.target.checked)} className="sr-only peer" />
           <span className="w-8 h-[18px] rounded-full bg-black/15 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:w-[14px] after:h-[14px] after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-[14px]" />
           <span className="text-[12px] text-lx-text-secondary font-medium">Houtkleur in tekening</span>
-        </label>
+        </label>}
 
         <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-5 space-y-4">
           <div>

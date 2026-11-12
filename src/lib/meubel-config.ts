@@ -83,7 +83,40 @@ export interface MeubelModel {
   vasteLengtes?: number[]
   /** Bijzonderheid uit de prijslijst, getoond bij het samenstellen */
   opmerking?: string
+  /** Alleen een blad, zonder lades (Solid Washbasin Solo): de staffel heeft één prijs onder 0 lades */
+  zonderLades?: boolean
+  /** Geen hout aan dit product: geen houtkleur en geen logo (Solid Washbasin Solo) */
+  geenHout?: boolean
+  /** Kast in plaats van ladenmeubel: breedte, hoogte en diepte uit vaste keuzes; `staffels` blijft leeg */
+  kast?: KastOpbouw
   staffels: Staffel[]
+}
+
+/**
+ * Een kast heeft geen lengte met lades. De dealer kiest breedte en diepte uit een lijst
+ * en de hoogte uit een lijst of vrij binnen de hoogtestaffel. In de opslag staat de
+ * breedte in `lengte` en het aantal deuren in `lades` (0 = open kast of geen keuze).
+ */
+export interface KastOpbouw {
+  /** Breedtes in mm; één waarde is een vaste maat */
+  breedtes: number[]
+  /** Dieptes in mm */
+  dieptes: number[]
+  /** Vaste hoogtes in mm; leeg bij een vrije hoogte binnen `hoogteStaffels` */
+  hoogtes?: number[]
+  /** Vrije hoogte: staffels in cm zoals in de prijslijst, met de prijs in centen */
+  hoogteStaffels?: { min: number; max: number; prijs: number }[]
+  /** Prijs per breedte of per hoogte in mm, bij vaste maten */
+  prijsPerBreedte?: Record<number, number>
+  prijsPerHoogte?: Record<number, number>
+  /** Eén vaste prijs */
+  prijs?: number
+  /** Aantal deuren waaruit de dealer kiest; leeg bij een open kast of een vaste uitvoering */
+  deuren?: number[]
+  /** Hoe de voorkant getekend wordt */
+  front: 'deuren' | 'open' | 'spiegel'
+  /** Valt onder "Opties accessoires": lagere meerprijs voor de houtkleur */
+  accessoire?: boolean
 }
 
 export const MEUBEL_MODELLEN: MeubelModel[] = [
@@ -552,6 +585,105 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
       { min: 241, max: 260, prijzen: { 3: 311900 } },
     ],
   },
+  {
+    id: 'solid-washbasin-solo',
+    categorie: 'solid-surface',
+    naam: 'Solid Washbasin Solo',
+    omschrijving: 'Los Solid Surface blad met ingebouwde waskom, zonder lades.',
+    afbeelding: '/images/meubels/model-solid-washbasin-solo.webp',
+    diepte: 460,
+    hoogte: 90,
+    rijen: 1,
+    waskom: true,
+    zonderLades: true,
+    geenHout: true,
+    staffels: [
+      { min: 71, max: 120, prijzen: { 0: 114296 } },
+      { min: 121, max: 140, prijzen: { 0: 138216 } },
+      { min: 141, max: 180, prijzen: { 0: 146536 } },
+      { min: 181, max: 210, prijzen: { 0: 166296 } },
+      { min: 211, max: 260, prijzen: { 0: 180336 } },
+    ],
+  },
+  // ─── Kasten ───────────────────────────────────────────────────────────────
+  {
+    id: 'mirror-cabinet',
+    categorie: 'kasten',
+    naam: 'Mirror Cabinet',
+    omschrijving: 'Spiegelkast met houten korpus. Verlichting is apart verkrijgbaar.',
+    afbeelding: '/images/meubels/model-mirror-cabinet.webp',
+    diepte: 140,
+    hoogte: 600,
+    rijen: 1,
+    geenAanvraag: true,
+    opmerking: 'De Mirror Cabinet kan alleen besteld worden in de standaardmaten.',
+    kast: {
+      breedtes: [400, 500, 600, 700, 800], dieptes: [140], hoogtes: [600], front: 'spiegel',
+      prijsPerBreedte: { 400: 47736, 500: 49816, 600: 50856, 700: 52936, 800: 59176 },
+    },
+    staffels: [],
+  },
+  ...([
+    { id: 'cabinet', naam: 'Cabinet', omschrijving: 'Hoge kast met deuren.', front: 'deuren', deuren: [1, 2], laag: 130936, hoog: 144456 },
+    { id: 'cabinet-regaal', naam: 'Cabinet Regaal', omschrijving: 'Hoge open kast met legplanken.', front: 'open', laag: 109096, hoog: 117416 },
+    { id: 'cabinet-facet', naam: 'Cabinet Facet', omschrijving: 'Hoge kast met deuren en facetrand.', front: 'deuren', deuren: [1, 2], laag: 140296, hoog: 145496 },
+    { id: 'cabinet-facet-regaal', naam: 'Cabinet Facet Regaal', omschrijving: 'Hoge open kast met facetrand en legplanken.', front: 'open', laag: 121576, hoog: 129896 },
+    { id: 'cabinet-facet-stripes', naam: 'Cabinet Facet Stripes', omschrijving: 'Hoge kast met gefreesde Stripes-deuren.', front: 'deuren', deuren: [2], laag: 150696, hoog: 168896, geenKleuren: ['white'], opmerking: 'De Cabinet Facet Stripes is alleen met 2 deuren beschikbaar.' },
+  ] as const).map((k): MeubelModel => ({
+    id: k.id,
+    categorie: 'kasten',
+    naam: k.naam,
+    omschrijving: k.omschrijving,
+    afbeelding: `/images/meubels/model-${k.id}.webp`,
+    diepte: 300,
+    hoogte: 1800,
+    rijen: 1,
+    geenAanvraag: true,
+    ...('geenKleuren' in k && { geenKleuren: [...k.geenKleuren] }),
+    opmerking: 'opmerking' in k ? k.opmerking : 'deuren' in k ? 'Afhankelijk van de hoogte ook met één deur beschikbaar.' : undefined,
+    kast: {
+      breedtes: [350, 400], dieptes: [250, 300, 350], front: k.front,
+      ...('deuren' in k && { deuren: [...k.deuren] }),
+      hoogteStaffels: [{ min: 136, max: 175, prijs: k.laag }, { min: 176, max: 225, prijs: k.hoog }],
+    },
+    staffels: [],
+  })),
+  {
+    id: 'basic-cube-mini',
+    categorie: 'kasten',
+    naam: 'Basic Cube Mini',
+    omschrijving: 'Compact kastje met open vak aan de zijkant.',
+    afbeelding: '/images/meubels/model-basic-cube-mini.webp',
+    diepte: 230,
+    hoogte: 300,
+    rijen: 1,
+    geenAanvraag: true,
+    opmerking: 'De Basic Cube Mini kan alleen besteld worden in de standaardmaten.',
+    kast: {
+      breedtes: [395], dieptes: [230], hoogtes: [300, 600], front: 'deuren', accessoire: true,
+      prijsPerHoogte: { 300: 19656, 600: 26936 },
+    },
+    staffels: [],
+  },
+  ...([
+    { id: 'cabinet-facet-mini', naam: 'Cabinet Facet Mini', omschrijving: 'Klein hangkastje met facetrand.', prijs: 33696 },
+    { id: 'cabinet-facet-stripes-mini', naam: 'Cabinet Facet Stripes Mini', omschrijving: 'Klein hangkastje met gefreesde Stripes-deur.', prijs: 36296, geenKleuren: ['white'] },
+  ] as const).map((k): MeubelModel => ({
+    id: k.id,
+    categorie: 'kasten',
+    naam: k.naam,
+    omschrijving: k.omschrijving,
+    afbeelding: `/images/meubels/model-${k.id}.webp`,
+    // Maten uit de montagehandleiding (425 × 600 × 225); staan niet in de prijslijst
+    diepte: 225,
+    hoogte: 600,
+    rijen: 1,
+    geenAanvraag: true,
+    ...('geenKleuren' in k && { geenKleuren: [...k.geenKleuren] }),
+    opmerking: `De ${k.naam} kan alleen besteld worden in de standaardmaat.`,
+    kast: { breedtes: [425], dieptes: [225], hoogtes: [600], front: 'deuren', accessoire: true, prijs: k.prijs },
+    staffels: [],
+  })),
 ]
 
 export interface Houtkleur {
@@ -584,6 +716,7 @@ export function getMeubelModel(id: string): MeubelModel | null {
 
 /** Standaardbereik van de lengte in mm. */
 export function getLengteBereik(model: MeubelModel): { min: number; max: number } {
+  if (model.kast) return { min: Math.min(...model.kast.breedtes), max: Math.max(...model.kast.breedtes) }
   if (model.duo) {
     // Twee kasten plus de regaalkast ertussen
     const regaal = model.regaal ?? { min: 0, max: 0 }
@@ -613,8 +746,10 @@ function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
 export function getLadeOpties(model: MeubelModel, lengte: number, regaalBreedte = 0): number[] {
   // Duo: altijd twee kasten met elk één lade
   if (model.duo) return [2]
+  if (model.kast) return model.kast.deuren ?? [0]
   const staffel = findStaffel(model, lengte)
   if (!staffel) return []
+  if (model.zonderLades) return [0]
   return Object.keys(staffel.prijzen)
     .map(Number)
     .filter((n) => ladeRuimte(model, lengte, regaalBreedte) / n >= LADE_MIN_MM && ladeRuimte(model, lengte, regaalBreedte) / n <= LADE_MAX_MM)
@@ -651,17 +786,89 @@ export function getRegaalBreedte(model: MeubelModel, breedte?: number | null): n
   return breedte != null && Number.isInteger(breedte) && breedte >= model.regaal.min && breedte <= model.regaal.max ? breedte : REGAAL_STANDAARD_MM
 }
 
-/** Houtkleuren die bij dit model te kiezen zijn. */
+/** Houtkleuren die bij dit model te kiezen zijn. Zonder hout blijft alleen de standaard over, zonder meerprijs. */
 export function getHoutkleuren(model: MeubelModel): Houtkleur[] {
+  if (model.geenHout) return HOUTKLEUREN.filter((k) => k.id === HOUTKLEUR_DEFAULT)
   return HOUTKLEUREN.filter((k) => !model.geenKleuren?.includes(k.id))
+}
+
+export const KLEUR_MEERPRIJS_ACCESSOIRE = 2080
+
+/** Meerprijs van de houtkleur in centen netto: accessoires hebben een lagere meerprijs dan meubels. */
+export function kleurMeerprijs(model: MeubelModel, kleur: Houtkleur): number {
+  return kleur.meerprijs > 0 && model.kast?.accessoire ? KLEUR_MEERPRIJS_ACCESSOIRE : kleur.meerprijs
+}
+
+/** Bereik van een vrije kasthoogte in mm, of null bij vaste hoogtes. */
+export function getKastHoogteBereik(model: MeubelModel): { min: number; max: number } | null {
+  const st = model.kast?.hoogteStaffels
+  if (!st || st.length === 0) return null
+  return { min: st[0].min * 10, max: st[st.length - 1].max * 10 }
 }
 
 /** Gekozen hoogte, of de standaard van het model als de keuze niet (meer) bestaat. */
 export function getMeubelHoogte(model: MeubelModel, hoogte?: number | null): number {
-  return hoogte != null && model.hoogtes?.includes(hoogte) ? hoogte : model.hoogte
+  if (hoogte == null || !Number.isInteger(hoogte)) return model.hoogte
+  if (model.kast) {
+    const bereik = getKastHoogteBereik(model)
+    const ok = model.kast.hoogtes?.includes(hoogte) || (bereik !== null && hoogte >= bereik.min && hoogte <= bereik.max)
+    return ok ? hoogte : model.hoogte
+  }
+  return model.hoogtes?.includes(hoogte) ? hoogte : model.hoogte
+}
+
+/** Gekozen diepte bij een kast met meerdere dieptes, anders de diepte van het model. */
+export function getMeubelDiepte(model: MeubelModel, diepte?: number | null): number {
+  return diepte != null && model.kast?.dieptes.includes(diepte) ? diepte : model.diepte
+}
+
+/** Netto basisprijs van een kast in centen, of null als de maten niet bestaan. */
+export function getKastPrijs(model: MeubelModel, input: { lengte: number; lades: number; hoogte?: number; diepte?: number }): number | null {
+  const k = model.kast
+  if (!k) return null
+  const hoogte = input.hoogte ?? model.hoogte
+  const diepte = input.diepte ?? model.diepte
+  if (!k.breedtes.includes(input.lengte) || !k.dieptes.includes(diepte)) return null
+  if (getMeubelHoogte(model, hoogte) !== hoogte) return null
+  if (!(k.deuren ?? [0]).includes(input.lades)) return null
+  if (k.prijsPerBreedte) return k.prijsPerBreedte[input.lengte] ?? null
+  if (k.prijsPerHoogte) return k.prijsPerHoogte[hoogte] ?? null
+  // Zelfde grensregel als bij de lengtestaffels: boven de bovengrens geldt de volgende staffel
+  if (k.hoogteStaffels) return k.hoogteStaffels.find((s) => hoogte <= s.max * 10)?.prijs ?? null
+  return k.prijs ?? null
+}
+
+/** Label van de kleurregel: een los Solid Surface blad heeft geen houtkleur. */
+export function kleurLabel(model: MeubelModel): string {
+  return model.geenHout ? 'Materiaal' : 'Houtkleur'
+}
+
+/** Wat er in plaats van "Lades" boven de indeling staat. */
+export function indelingLabel(model: MeubelModel): string {
+  return model.kast ? 'Uitvoering' : 'Lades'
+}
+
+/**
+ * Indeling in één regel voor samenvatting, PDF en mail: lades met hun breedtes,
+ * of bij een kast het aantal deuren.
+ */
+export function indelingTekst(model: MeubelModel, lades: number, breedtes: LadeBreedtes, ruimte: number): string {
+  if (model.kast || model.zonderLades) return ladeLabel(model, lades)
+  return `${ladeLabel(model, lades)} · ${ladeBreedtesTekst(breedtes, ruimte, lades)}`
+}
+
+/** Is een maattekening nodig om te bestellen? Bij een kast alleen als er uitsparingen in moeten. */
+export function tekeningVerplicht(model: MeubelModel, uitsparingen = 0): boolean {
+  return !model.kast || uitsparingen > 0
 }
 
 export function ladeLabel(model: MeubelModel, kolommen: number): string {
+  if (model.kast) {
+    if (model.kast.front === 'open') return 'Open kast'
+    if (model.kast.front === 'spiegel') return 'Spiegeldeuren'
+    return kolommen === 2 ? '2 deuren' : kolommen === 1 ? '1 deur' : 'Standaard uitvoering'
+  }
+  if (model.zonderLades) return 'Zonder lades'
   if (model.rijen > 1) return `${kolommen} × ${model.rijen} lades`
   return kolommen === 1 ? '1 lade' : `${kolommen} lades`
 }
@@ -686,8 +893,10 @@ export interface MeubelInput {
   uitsparingen?: number
   /** Groter dan de standaardmaten: geen tabelprijs, altijd op aanvraag */
   opAanvraag?: boolean
-  /** Gekozen hoogte in mm bij modellen met meerdere hoogtes; geen invloed op de prijs */
+  /** Gekozen hoogte in mm: bij meubels zonder invloed op de prijs, bij een kast bepaalt hij de staffel */
   hoogte?: number
+  /** Gekozen diepte in mm bij een kast met meerdere dieptes; geen invloed op de prijs */
+  diepte?: number
   /** Breedte van de regaalkast in mm (Regal-modellen); geen invloed op de prijs, wel op de ladeverdeling */
   regaalBreedte?: number
   /** Waskom in het Solid Surface blad: vorm en aantal, zonder prijsverschil */
@@ -707,13 +916,15 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
   const uitsparingen = input.uitsparingen ?? 0
   if (!kleur || !Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX) return null
   // Duo (Drawer Box Regal): prijs volgt uit de twee kastbreedtes, niet uit een lengtestaffel
-  const basis = model.duo
+  const basis = model.kast
+    ? getKastPrijs(model, input)
+    : model.duo
     ? getDuoPrijs(model, input.ladeBreedtes)
     : getLadeOpties(model, input.lengte, getRegaalBreedte(model, input.regaalBreedte)).includes(input.lades)
       ? findStaffel(model, input.lengte)?.prijzen[input.lades] ?? null
       : null
   if (basis === null) return null
-  return basis + kleur.meerprijs + uitsparingen * UITSPARING_NETTO_CENTS
+  return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS
 }
 
 export function parseMeubelFactor(v: unknown): number {
@@ -749,12 +960,17 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   if (totaal === null || !model || !kleur) return null
   const f = parseMeubelFactor(factor)
   const extra: MeubelPrijsRegel[] = []
-  if (kleur.meerprijs > 0) extra.push({ label: `Houtkleur · ${kleur.naam}`, cents: Math.round(kleur.meerprijs * f) })
+  if (kleurMeerprijs(model, kleur) > 0) extra.push({ label: `Houtkleur · ${kleur.naam}`, cents: Math.round(kleurMeerprijs(model, kleur) * f) })
   const uitsparingen = input.uitsparingen ?? 0
   if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
   const basis = totaal - extra.reduce((som, r) => som + r.cents, 0)
   return {
-    regels: [{ label: `${model.naam} ${input.lengte} mm · ${ladeLabel(model, input.lades)}`, cents: basis }, ...extra],
+    regels: [{
+      label: model.kast
+        ? `${model.naam} · B ${input.lengte} × H ${getMeubelHoogte(model, input.hoogte)} mm`
+        : `${model.naam} ${input.lengte} mm · ${ladeLabel(model, input.lades)}`,
+      cents: basis,
+    }, ...extra],
     totaal,
   }
 }
@@ -788,6 +1004,7 @@ export function formatMm(n: number): string {
  * de komma (2000 mm over 3 lades: 666,7 per lade).
  */
 export function getLadeBreedtes(breedtes: LadeBreedtes, lengte: number, lades: number): number[] {
+  if (lades < 1) return []
   if (breedtes && valideerLadeBreedtes(breedtes, lengte, lades) === null) return breedtes
   return Array.from({ length: lades }, () => lengte / lades)
 }
@@ -824,12 +1041,22 @@ export interface MeubelConfig extends MeubelInput {
 
 /** Volledige controle van een configuratie (server en client). Foutmelding of null. */
 export function valideerMeubelConfig(c: MeubelConfig): string | null {
+  const kastModel = getMeubelModel(c.modelId)
+  if (kastModel?.kast) {
+    // Een kast heeft geen lades, lengtestaffel of aanvraag: alleen de maten uit de lijst
+    if (c.opAanvraag || c.ladeBreedtes !== null) return 'Deze kast bestaat alleen in de standaardmaten.'
+    if (calcMeubelNettoCents(c) === null) return 'Deze combinatie van maten, uitvoering en houtkleur bestaat niet.'
+    const u = c.uitsparingen ?? 0
+    if (!Number.isInteger(u) || u < 0 || u > UITSPARING_MAX) return `Uitsparingen: 0 tot ${UITSPARING_MAX}.`
+    if (!Number.isInteger(c.quantity) || c.quantity < 1 || c.quantity > MEUBEL_AANTAL_MAX) return `Aantal moet tussen 1 en ${MEUBEL_AANTAL_MAX} liggen.`
+    return null
+  }
   if (c.opAanvraag) {
     const model = getMeubelModel(c.modelId)
     if (!model || model.geenAanvraag || !getHoutkleuren(model).some((k) => k.id === c.houtkleur)) return 'Dit model of deze houtkleur bestaat niet.'
     const bereik = getAanvraagBereik(model)
     if (!Number.isInteger(c.lengte) || c.lengte < bereik.min || c.lengte > bereik.max) return `Op aanvraag kan van ${bereik.min} tot ${bereik.max} mm.`
-    if (!getAanvraagLadeOpties(ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte))).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
+    if (model.zonderLades ? c.lades !== 0 : !getAanvraagLadeOpties(ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte))).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
   } else {
     // Duo: eerst de eigen melding over de kastbreedtes, die zegt wat er wel kan
     const duoModel = getMeubelModel(c.modelId)
@@ -850,6 +1077,7 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
     if (!WASKOM_VORMEN.some((v) => v.id === c.waskomVorm)) return 'Kies de vorm van de waskom.'
     if (c.waskomAantal !== 1 && c.waskomAantal !== 2) return 'Kies één of twee waskommen.'
   }
+  if (model.zonderLades && c.ladeBreedtes !== null) return 'Dit model heeft geen lades.'
   const ladeFout = valideerLadeBreedtes(c.ladeBreedtes, ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte)), c.lades)
   if (ladeFout) return ladeFout
   if (c.hoogte != null && getMeubelHoogte(model, c.hoogte) !== c.hoogte) return 'Deze hoogte bestaat niet bij dit model.'
@@ -908,6 +1136,7 @@ export function formatPct(pct: number): string {
 
 /** Afmeting in één regel, zelfde notatie als bij spiegels: "L 2000 × H 600 × D 460 mm". */
 export function meubelAfmeting(model: MeubelModel, lengte: number): string {
+  if (model.kast) return `B ${lengte} × H ${model.hoogte} × D ${model.diepte} mm`
   return `L ${lengte} × H ${model.hoogte} × D ${model.diepte} mm`
 }
 

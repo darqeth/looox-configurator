@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
-import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte } from '@/lib/meubel-config'
+import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, indelingTekst, meubelAfmeting } from '@/lib/meubel-config'
 import { meubelPrijsInput, type OpgeslagenMeubel } from '@/lib/meubel-opslag'
 import TekeningUpload from '@/components/tekening-upload'
 
@@ -39,7 +39,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   const opbouw = nettoCents !== null ? getMeubelOrderOpbouw(nettoCents, meubel.factor) : null
   // Staat het meubel niet meer in de prijslijst, dan kan het niet besteld worden
   const [tekeningToegevoegd, setTekeningToegevoegd] = useState(false)
-  const tekeningOntbreekt = !meubel.attachmentUrl && !tekeningToegevoegd
+  const tekeningOntbreekt = meubel.tekeningOntbreekt && !tekeningToegevoegd
   const bestelbaar = (opAanvraag || nettoCents !== null) && !tekeningOntbreekt
   const altOk = !altShipping || (alt.straat.trim() !== '' && alt.woonplaats.trim() !== '')
 
@@ -143,7 +143,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                       {meubelAfmeting(meubel.model, meubel.lengte)}
                     </p>
                     <p className="text-lx-text-secondary">
-                      {ladeLabel(meubel.model, meubel.lades)} · {ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}
+                      {indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)}
                     </p>
                   </div>
 

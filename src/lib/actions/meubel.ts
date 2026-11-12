@@ -7,7 +7,7 @@ import { parseOrThrow } from '@/lib/validation'
 import { DEFAULT_PRODUCT_ID, generateArticleNumber, assertValidAttachmentUrl } from '@/lib/actions/configurator-helpers'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import {
-  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, getMeubelHoogte, getMeubelModel, valideerMeubelConfig,
+  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
 import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
@@ -15,11 +15,12 @@ import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
 const meubelInputSchema = z.object({
   modelId: z.string().max(40),
   lengte: z.number().int().min(1).max(10000),
-  lades: z.number().int().min(1).max(10),
+  lades: z.number().int().min(0).max(10),
   ladeBreedtes: z.array(z.number().int().min(1).max(10000)).max(10).nullable(),
   houtkleur: z.string().max(40),
   opAanvraag: z.boolean().optional(),
   hoogte: z.number().int().min(1).max(3000).optional(),
+  diepte: z.number().int().min(1).max(1000).optional(),
   logo: z.boolean().optional(),
   waskomVorm: z.enum(['ovaal', 'vierkant']).optional(),
   waskomAantal: z.number().int().min(1).max(2).optional(),
@@ -81,12 +82,13 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           modelId: input.modelId,
           lengte: input.lengte,
           hoogte: getMeubelHoogte(model, input.hoogte),
+          ...(model.kast && { diepte: getMeubelDiepte(model, input.diepte) }),
           lades: input.lades,
           ladeBreedtes: input.ladeBreedtes,
           houtkleur: input.houtkleur,
           factor,
           opAanvraag,
-          logo: input.logo === true,
+          logo: input.logo === true && !model.geenHout,
           ...(model.regaal && { regaalBreedte: input.regaalBreedte, regaalZijde: input.regaalZijde }),
           ...(model.waskom && { waskomVorm: input.waskomVorm, waskomAantal: input.waskomAantal }),
           uitsparingen,

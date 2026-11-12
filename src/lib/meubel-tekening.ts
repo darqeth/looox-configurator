@@ -88,3 +88,29 @@ export function tekenWaskommen(lengte: number, diepte: number, aantal: number): 
   const d = Math.min(360, diepte * 0.7)
   return Array.from({ length: n }, (_, i) => ({ cx: (lengte / n) * (i + 0.5), cy: diepte * 0.52, b, d }))
 }
+
+// ─── Vooraanzicht van een kast ──────────────────────────────────────────────
+
+export interface TekenKast {
+  /** Horizontale lijnen als deel van de hoogte (0 tot 1): deurnaad of legplanken */
+  horizontaal: number[]
+  /** Verticale lijnen als deel van de breedte */
+  verticaal: number[]
+  /** Open kast: donker binnenwerk in plaats van een front */
+  open: boolean
+  spiegel: boolean
+}
+
+/** Schematische indeling van de voorkant. Legplanken en deurnaad zijn indicatief. */
+export function tekenKast(model: MeubelModel, deuren: number): TekenKast | null {
+  const k = model.kast
+  if (!k) return null
+  if (k.front === 'open') {
+    // Ongeveer elke 40 cm een legplank
+    const vakken = Math.max(2, Math.round(model.hoogte / 400))
+    return { horizontaal: Array.from({ length: vakken - 1 }, (_, i) => (i + 1) / vakken), verticaal: [], open: true, spiegel: false }
+  }
+  if (k.front === 'spiegel') return { horizontaal: [], verticaal: [0.5], open: false, spiegel: true }
+  // Twee deuren boven elkaar
+  return { horizontaal: deuren === 2 ? [0.5] : [], verticaal: [], open: false, spiegel: false }
+}

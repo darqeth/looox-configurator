@@ -1,5 +1,6 @@
 'use client'
 
+import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -270,8 +271,9 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   }
 
   async function uploadAttachment(): Promise<string | null> {
-    const fileToUpload = shape === 'op-aanvraag' ? opAanvraagFileRef.current : schunineZijdenFileRef.current
-    if (!fileToUpload) return existingAttachmentUrl
+    const gekozenBestand = shape === 'op-aanvraag' ? opAanvraagFileRef.current : schunineZijdenFileRef.current
+    if (!gekozenBestand) return existingAttachmentUrl
+    const fileToUpload = await comprimeerAfbeelding(gekozenBestand)
     const supabase = createClient()
     const ext = fileToUpload.name.split('.').pop() ?? 'bin'
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`

@@ -50,6 +50,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
           houtkleur: meubel.houtkleur,
           opAanvraag: meubel.opAanvraag,
           hoogte: meubel.model.hoogte,
+          diepte: meubel.model.diepte,
           logo: meubel.logo,
           waskomVorm: meubel.waskomVorm,
           waskomAantal: meubel.waskomAantal,

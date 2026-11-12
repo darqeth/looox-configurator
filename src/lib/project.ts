@@ -61,7 +61,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
       omschrijving: meubelSamenvatting(meubel).split(' · ').slice(1).join(' · '),
       quantity: meubel.quantity, opAanvraag: meubel.opAanvraag,
       stukCents: stuk, totaalCents: stuk * meubel.quantity, netto: false, besteld,
-      tekeningOntbreekt: !meubel.attachmentUrl,
+      tekeningOntbreekt: meubel.tekeningOntbreekt,
     }
   }
 

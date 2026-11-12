@@ -1,7 +1,7 @@
 'use client'
 
-import { leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
-import { calcMeubelNettoCents, formatCents, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
+import { leesMeubel, meubelKort, meubelPrijsInput } from '@/lib/meubel-opslag'
+import { calcMeubelNettoCents, formatCents, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 import { useState } from 'react'
 import DeleteButton from '@/app/(main)/configuraties/delete-button'
 import {
@@ -104,7 +104,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
     .join(', ')
 
   let dimensionLabel = ''
-  if (meubel) dimensionLabel = `${meubel.lengte} mm · ${ladeLabel(meubel.model, meubel.lades)}`
+  if (meubel) dimensionLabel = meubelKort(meubel)
   else if (shape === 'rond' && diameter) dimensionLabel = `∅ ${diameter} cm`
   else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
   else if (config.width && config.height) dimensionLabel = `B ${config.width} × H ${config.height} cm`
@@ -266,10 +266,10 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
                 <>
                   <ModalRow label="Model" value={meubel.model.naam} />
                   <ModalRow label="Afmeting" value={meubelAfmeting(meubel.model, meubel.lengte)} />
-                  <ModalRow label="Lades" value={`${ladeLabel(meubel.model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}`} />
+                  <ModalRow label={indelingLabel(meubel.model)} value={indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)} />
                   {meubel.waskomVorm && <ModalRow label="Waskom" value={waskomTekst(meubel)} />}
                   {meubel.regaalBreedte > 0 && <ModalRow label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
-                  <ModalRow label="Houtkleur" value={meubel.houtkleurNaam} />
+                  <ModalRow label={kleurLabel(meubel.model)} value={meubel.houtkleurNaam} />
                   <ModalRow label="Opties" value={meubelOptiesTekst(meubel)} />
                   {meubel.attachmentUrl && (
                     <a href={meubel.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block py-2.5 text-[12.5px] font-semibold text-lx-cta hover:underline border-b border-lx-divider">Maattekening uitsparingen openen</a>

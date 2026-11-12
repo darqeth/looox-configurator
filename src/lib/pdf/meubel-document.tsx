@@ -2,9 +2,9 @@ import React from 'react'
 import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Ellipse, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
-import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, ladeBreedtesTekst, ladeLabel, meubelAfmeting, ladeRuimte, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
+import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
-import { tekenIndeling, tekenWaskommen } from '@/lib/meubel-tekening'
+import { tekenIndeling, tekenKast, tekenWaskommen } from '@/lib/meubel-tekening'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
 //   offerte: voor de klant van de dealer, met de brutoprijs (netto × factor)
@@ -95,8 +95,10 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   const MAX_H = 72
   const ruimteB = W - PAD_X * 2 - 30
   const { model, lengte } = meubel
-  const breedtes = getLadeBreedtes(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)
-  const schaal = Math.min(ruimteB / lengte, MAX_H / model.hoogte)
+  // Bij een kast staat in `lades` het aantal deuren: daar zijn geen ladevakken
+  const breedtes = model.kast ? [] : getLadeBreedtes(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)
+  const kast = tekenKast(model, meubel.lades)
+  const schaal = Math.min(ruimteB / lengte, (kast ? 150 : MAX_H) / model.hoogte)
   const w = lengte * schaal
   const h = model.hoogte * schaal
   // Solid Surface: bovenaanzicht van het blad boven het vooraanzicht
@@ -105,7 +107,8 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   const yBlad = PAD_TOP
   const x = (W - 30 - w) / 2
   const y = PAD_TOP + (heeftBlad ? bladD + 22 : 0)
-  const H = y + h + PAD_BOTTOM
+  const zonderVakken = breedtes.length === 0
+  const H = y + h + (zonderVakken ? (kast ? 20 : 8) : PAD_BOTTOM)
   const yMaat = heeftBlad ? yBlad : y
   // Zelfde indeling als de tekening op het scherm
   const { vakken, links, rechts, boven, onder, scheidingen } = tekenIndeling({
@@ -136,7 +139,12 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
           <SvgText x={x} y={yBlad + bladD + 9} style={{ ...tekst, fontSize: 6.5, fill: GRAY }}>{`Bovenaanzicht${meubel.waskomVorm ? ', plaats waskom indicatief' : ''}`}</SvgText>
         </>
       )}
-      <Rect x={x} y={y} width={w} height={h} fill="#F6F4EF" stroke="#26282B" strokeWidth={1.2} />
+      <Rect x={x} y={y} width={w} height={h} fill={model.geenHout ? '#FBFAF7' : '#F6F4EF'} stroke="#26282B" strokeWidth={1.2} />
+      {kast?.spiegel && <Rect x={x + 3} y={y + 3} width={Math.max(0, w - 6)} height={Math.max(0, h - 6)} fill="#E6ECEE" />}
+      {kast?.open && <Rect x={x + 3} y={y + 3} width={Math.max(0, w - 6)} height={Math.max(0, h - 6)} fill="#D9D5CC" stroke="#26282B" strokeWidth={0.5} />}
+      {kast?.horizontaal.map((f, i) => <Line key={`kh${i}`} x1={x + (kast.open ? 3 : 0)} y1={y + h * f} x2={x + w - (kast.open ? 3 : 0)} y2={y + h * f} stroke="#26282B" strokeWidth={kast.open ? 1.6 : 1} />)}
+      {kast?.verticaal.map((f, i) => <Line key={`kv${i}`} x1={x + w * f} y1={y + 3} x2={x + w * f} y2={y + h - 3} {...lijn} />)}
+      {kast && <SvgText x={x + w / 2} y={y + h + 14} textAnchor="middle" style={{ ...tekst, fill: GRAY }}>{`Diepte ${model.diepte} mm`}</SvgText>}
       {vakken.filter((v) => v.soort === 'regaal').map((v, i) => (
         <React.Fragment key={`g${i}`}>
           <Rect x={v.x0} y={boven} width={v.x1 - v.x0} height={onder - boven} fill="#D9D5CC" />
@@ -163,8 +171,8 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
       <SvgText x={x + w + 17} y={y + h / 2 + 3} style={{ ...tekst, fontFamily: 'Helvetica-Bold' }}>{String(model.hoogte)}</SvgText>
 
       {/* Per vak */}
-      <Line x1={links} y1={y + h + 11} x2={rechts} y2={y + h + 11} {...maat} />
-      {[links, ...vakken.map((v) => v.x1)].map((gx, i) => <Line key={`m${i}`} x1={gx} y1={y + h + 5} x2={gx} y2={y + h + 15} {...maat} />)}
+      {!zonderVakken && <Line x1={links} y1={y + h + 11} x2={rechts} y2={y + h + 11} {...maat} />}
+      {!zonderVakken && [links, ...vakken.map((v) => v.x1)].map((gx, i) => <Line key={`m${i}`} x1={gx} y1={y + h + 5} x2={gx} y2={y + h + 15} {...maat} />)}
       {vakken.filter((v) => v.x1 - v.x0 > 22).map((v, i) => (
         <SvgText key={`t${i}`} x={(v.x0 + v.x1) / 2} y={y + h + 24} textAnchor="middle" style={{ ...tekst, fill: GRAY }}>{formatMm(v.breedte)}</SvgText>
       ))}
@@ -216,11 +224,11 @@ export default function MeubelDocument({
   const specs: [string, string][] = [
     ['Model', model.naam],
     ['Afmeting', meubelAfmeting(model, meubel.lengte)],
-    ['Lades', `${ladeLabel(model, meubel.lades)} · ${ladeBreedtesTekst(meubel.ladeBreedtes, meubel.ladeRuimte, meubel.lades)}`],
+    [indelingLabel(model), indelingTekst(model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte)],
     ...(meubel.waskomVorm ? [['Waskom', waskomTekst(meubel)] as [string, string]] : []),
     ...(meubel.regaalBreedte > 0 ? [['Regaalkast', `${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`] as [string, string]] : []),
     ...(model.rand ? [['Rand', `${model.rand} mm ${model.randOnder ? 'rondom' : model.randBoven ? 'links, rechts en boven' : 'links en rechts'}`] as [string, string]] : []),
-    ['Houtkleur', meubel.houtkleurNaam || '—'],
+    [kleurLabel(model), meubel.houtkleurNaam || '—'],
     ['Opties', meubelOptiesTekst(meubel)],
     ...(opAanvraag ? [['Bijzonderheid', 'Groter dan de standaardmaten, op aanvraag'] as [string, string]] : []),
   ]

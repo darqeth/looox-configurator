@@ -1,7 +1,6 @@
 'use client'
 
-import { leesMeubel } from '@/lib/meubel-opslag'
-import { ladeLabel } from '@/lib/meubel-config'
+import { leesMeubel, meubelKort } from '@/lib/meubel-opslag'
 
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -142,7 +141,7 @@ export function ConfiguratiesContent({
                 const indirect = opts?.indirectLight as { position: string; control?: string | null } | null
 
                 let dimensionLabel = ''
-                if (meubel) dimensionLabel = `${meubel.lengte} mm · ${ladeLabel(meubel.model, meubel.lades)} · ${meubel.houtkleurNaam}`
+                if (meubel) dimensionLabel = `${meubelKort(meubel)} · ${meubel.houtkleurNaam}`
                 else if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && diameter) dimensionLabel = `∅ ${diameter} cm`
                 else if (shape === 'organic' && organicKey) dimensionLabel = formatOrganicSize(organicKey)
                 else if (config.width && config.height) dimensionLabel = `${config.width} × ${config.height} cm`
@@ -244,7 +243,7 @@ export function ConfiguratiesContent({
                           {visualisationConfig && (
                             <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
                           )}
-                          {meubel && !meubel.attachmentUrl && <TekeningUpload configId={config.id} />}
+                          {meubel?.tekeningOntbreekt && <TekeningUpload configId={config.id} />}
                           {permissions.canOrder && (
                             <OrderButton meubel={meubel} projectId={config.project_id} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
                           )}
@@ -297,7 +296,7 @@ export function ConfiguratiesContent({
                         {shape !== 'op-aanvraag' && !meubel?.opAanvraag && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>}
                       </div>
 
-                      {meubel && !meubel.attachmentUrl && <TekeningUpload configId={config.id} />}
+                      {meubel?.tekeningOntbreekt && <TekeningUpload configId={config.id} />}
 
                       {/* Col: Bestellen / Aanvragen CTA */}
                       {permissions.canOrder && (

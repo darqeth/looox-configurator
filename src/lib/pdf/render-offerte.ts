@@ -6,6 +6,7 @@ import OfferteDocument from './offerte-document'
 import MeubelDocument from './meubel-document'
 import type { ConfigOptions } from './helpers'
 import { prepareAttachmentForPdf } from './prepare-attachment'
+import { haalPdfBijlage, voegPdfBijlageToe } from './samenvoegen'
 import { leesMeubel } from '@/lib/meubel-opslag'
 
 // Eén plek die de klantofferte van een configuratie maakt: gebruikt door de
@@ -51,7 +52,7 @@ export async function renderOfferteBuffer(supabase: SupabaseClient, config: Offe
   // Meubel (configurator 2.0): eigen document met de brutoprijs van de offerte
   const meubel = leesMeubel(config.selected_options)
   if (meubel) {
-    return renderToBuffer(React.createElement(MeubelDocument, {
+    return voegPdfBijlageToe(await renderToBuffer(React.createElement(MeubelDocument, {
       variant: 'offerte',
       projectName: config.name,
       date: config.created_at,
@@ -61,7 +62,7 @@ export async function renderOfferteBuffer(supabase: SupabaseClient, config: Offe
       unitPrice: Number(config.total_price),
       quantity: meubel.quantity,
       attachmentUrl: await prepareAttachmentForPdf(meubel.attachmentUrl),
-    }) as React.ReactElement<DocumentProps>)
+    }) as React.ReactElement<DocumentProps>), await haalPdfBijlage(meubel.attachmentUrl))
   }
 
   // Aangevinkt sfeerbeeld voor deze configuratie (besluit V3, exclusief)
@@ -87,7 +88,7 @@ export async function renderOfferteBuffer(supabase: SupabaseClient, config: Offe
     : totalPrice
   const attachmentUrl = await prepareAttachmentForPdf(opts.attachmentUrl as string | null)
 
-  return renderToBuffer(React.createElement(OfferteDocument, {
+  return voegPdfBijlageToe(await renderToBuffer(React.createElement(OfferteDocument, {
     configName: config.name,
     configDate: config.created_at,
     articleNumber: config.article_number,
@@ -97,7 +98,7 @@ export async function renderOfferteBuffer(supabase: SupabaseClient, config: Offe
     quantity,
     attachmentUrl,
     visualisationUrl,
-  }) as React.ReactElement<DocumentProps>)
+  }) as React.ReactElement<DocumentProps>), await haalPdfBijlage(opts.attachmentUrl as string | null))
 }
 
 export function pdfResponseHeaders(filename: string, lengte: number): Record<string, string> {

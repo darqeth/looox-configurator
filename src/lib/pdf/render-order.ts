@@ -4,6 +4,7 @@ import React from 'react'
 import OrderDocument from './order-document'
 import type { ConfigOptions } from './helpers'
 import { prepareAttachmentForPdf } from './prepare-attachment'
+import { haalPdfBijlage, voegPdfBijlageToe } from './samenvoegen'
 import MeubelDocument from './meubel-document'
 import { leesMeubel } from '@/lib/meubel-opslag'
 
@@ -38,7 +39,7 @@ export async function renderOrderPDF(input: OrderRenderInput): Promise<Buffer> {
   // per stuk; dealerkorting en staffel bestaan bij meubels niet.
   const meubel = leesMeubel(input.config.options)
   if (meubel) {
-    return renderToBuffer(React.createElement(MeubelDocument, {
+    return voegPdfBijlageToe(await renderToBuffer(React.createElement(MeubelDocument, {
       variant: 'order',
       projectName: input.config.name,
       date: input.orderDate,
@@ -51,14 +52,14 @@ export async function renderOrderPDF(input: OrderRenderInput): Promise<Buffer> {
       quantity: input.quantity,
       notes: input.notes,
       attachmentUrl: await prepareAttachmentForPdf(meubel.attachmentUrl),
-    }) as React.ReactElement<DocumentProps>)
+    }) as React.ReactElement<DocumentProps>), await haalPdfBijlage(meubel.attachmentUrl))
   }
   const staffelKortingPct = typeof (input.config.options as Record<string, unknown>)?.staffelKortingPct === 'number'
     ? (input.config.options as Record<string, unknown>).staffelKortingPct as number
     : undefined
   // Bijlage normaliseren zodat react-pdf 'm kan insluiten (iPhone-JPEG-fix)
   const attachmentUrl = await prepareAttachmentForPdf(input.attachmentUrl)
-  return renderToBuffer(
+  return voegPdfBijlageToe(await renderToBuffer(
     React.createElement(OrderDocument, { ...input, attachmentUrl, staffelKortingPct }) as React.ReactElement<DocumentProps>
-  )
+  ), await haalPdfBijlage(input.attachmentUrl))
 }

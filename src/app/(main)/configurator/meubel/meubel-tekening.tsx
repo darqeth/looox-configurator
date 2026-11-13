@@ -74,7 +74,8 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
     >
       <defs>
         {/* Vier gespiegelde tegels, zodat de naden van het houtstaal niet opvallen */}
-        <pattern id={patroon} patternUnits="userSpaceOnUse" width="180" height="180">
+        {/* Hoge kasten: de houtnerf loopt van boven naar beneden */}
+        <pattern id={patroon} patternUnits="userSpaceOnUse" width="180" height="180" patternTransform={model.kast?.hoogteStaffels ? 'rotate(90)' : undefined}>
           <image href={houtkleurAfbeelding(houtkleur)} width="91" height="91" preserveAspectRatio="none" />
           <image href={houtkleurAfbeelding(houtkleur)} width="91" height="91" preserveAspectRatio="none" transform="translate(180 0) scale(-1 1)" />
           <image href={houtkleurAfbeelding(houtkleur)} width="91" height="91" preserveAspectRatio="none" transform="translate(0 180) scale(1 -1)" />

@@ -362,7 +362,7 @@ export default function MeubelDocument({
         {/* Uitsparingen uit de tekenmodule: plaats naar het hart, voor de werkplaats */}
         {uitsparingen.length > 0 && (
           <View style={styles.section} wrap={false}>
-            <Text style={styles.sectionTitle}>Uitsparingen (maten in mm, naar het hart)</Text>
+            <Text style={styles.sectionTitle}>Uitsparingen (maten naar het hart)</Text>
             <View style={styles.table}>
               <View style={styles.tableRow}>
                 {['Nr', 'Soort', 'X vanaf links', 'Y vanaf achterkant', 'Maat'].map((kop, k) => (
@@ -373,9 +373,9 @@ export default function MeubelDocument({
                 <View key={u.nr} style={i === uitsparingen.length - 1 ? styles.tableRowLast : styles.tableRow}>
                   <Text style={{ width: 28, fontSize: 8.5, fontFamily: 'Helvetica-Bold' }}>{String(u.nr)}</Text>
                   <Text style={{ flex: 2, fontSize: 8.5 }}>{u.soort}</Text>
-                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.x}</Text>
-                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.y}</Text>
-                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.maat}</Text>
+                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.x} mm</Text>
+                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.y} mm</Text>
+                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.maat} mm</Text>
                 </View>
               ))}
             </View>

@@ -1,5 +1,5 @@
 import { formatDimensions, formatShape, type ConfigOptions } from '@/lib/pdf/helpers'
-import { leesMeubel, meubelSamenvatting } from '@/lib/meubel-opslag'
+import { leesMeubel, meubelSamenvatting, tekenInvoer, type TekenInvoer } from '@/lib/meubel-opslag'
 import { productIcoon } from '@/lib/product-icoon'
 
 // Een project is het winkelmandje: configuraties met hetzelfde project_id vormen
@@ -42,6 +42,8 @@ export interface ProjectRegel {
   besteld: boolean
   /** Meubel zonder maattekening: kan nog niet besteld worden */
   tekeningOntbreekt?: boolean
+  /** Invoer voor het tekenvenster, als de tekening ook zelf getekend kan worden */
+  tekenen?: TekenInvoer | null
   /** Door het hulpje ingevuld en nog niet door de dealer nagelopen en opgeslagen */
   nalopen?: boolean
   /** Wat het hulpje de dealer laat nakijken; alleen zolang de regel nog nagelopen moet worden */
@@ -75,7 +77,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
       omschrijving: meubelSamenvatting(meubel).split(' · ').slice(1).join(' · '),
       quantity: meubel.quantity, opAanvraag: meubel.opAanvraag,
       stukCents: stuk, totaalCents: stuk * meubel.quantity, netto: false, besteld,
-      tekeningOntbreekt: meubel.tekeningOntbreekt, nalopen, aiNotities, icoon: productIcoon(opts),
+      tekeningOntbreekt: meubel.tekeningOntbreekt, tekenen: meubel.tekeningOntbreekt ? tekenInvoer(meubel) : null, nalopen, aiNotities, icoon: productIcoon(opts),
     }
   }
 

@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
 import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, indelingTekst, meubelAfmeting } from '@/lib/meubel-config'
-import { meubelPrijsInput, type OpgeslagenMeubel, meubelExtraPrijs } from '@/lib/meubel-opslag'
+import { meubelPrijsInput, type OpgeslagenMeubel, meubelExtraPrijs, tekenInvoer } from '@/lib/meubel-opslag'
 import TekeningUpload from '@/components/tekening-upload'
 import { foutTekst } from '@/lib/fout-tekst'
 
@@ -41,6 +41,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   // Staat het meubel niet meer in de prijslijst, dan kan het niet besteld worden
   const [tekeningToegevoegd, setTekeningToegevoegd] = useState(false)
   const tekeningOntbreekt = meubel.tekeningOntbreekt && !tekeningToegevoegd
+  const tekenen = tekeningOntbreekt ? tekenInvoer(meubel) : null
   const bestelbaar = (opAanvraag || nettoCents !== null) && !tekeningOntbreekt
   const altOk = !altShipping || (alt.straat.trim() !== '' && alt.woonplaats.trim() !== '')
 
@@ -174,9 +175,11 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                   {tekeningOntbreekt && (
                     <div role="alert" className="bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-3 space-y-2.5">
                       <p className="text-[12.5px] text-amber-800 leading-relaxed">
-                        <strong>De maattekening ontbreekt.</strong> Die is verplicht om te bestellen. Voeg hem hier toe.
+                        {tekenen?.zelf
+                          ? <><strong>De waskom staat nog niet in de tekening.</strong> Plaats hem hier om te kunnen bestellen.</>
+                          : <><strong>De maattekening ontbreekt.</strong> Die is verplicht om te bestellen. {tekenen ? 'Teken hem hier of upload je eigen tekening.' : 'Voeg hem hier toe.'}</>}
                       </p>
-                      <TekeningUpload configId={configId} groot onKlaar={() => setTekeningToegevoegd(true)} />
+                      <TekeningUpload configId={configId} groot tekenen={tekenen} onKlaar={() => setTekeningToegevoegd(true)} />
                     </div>
                   )}
 

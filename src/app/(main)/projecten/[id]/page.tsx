@@ -138,7 +138,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                   {r.quantity}×{!r.opAanvraag && r.quantity > 1 ? ` ${formatCents(r.stukCents)}` : ''}{r.opAanvraag ? '' : r.netto ? ' · netto' : ' · bruto'}
                 </p>
               </div>
-              {!besteld && r.tekeningOntbreekt && <TekeningUpload configId={r.id} />}
+              {!besteld && r.tekeningOntbreekt && <TekeningUpload configId={r.id} tekenen={r.tekenen} />}
               {!besteld && <RegelActies configId={r.id} titel={r.titel} laatste={regels.length === 1} />}
             </li>
           ))}

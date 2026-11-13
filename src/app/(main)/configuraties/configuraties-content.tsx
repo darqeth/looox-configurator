@@ -1,6 +1,6 @@
 'use client'
 
-import { leesMeubel, meubelKort } from '@/lib/meubel-opslag'
+import { leesMeubel, meubelKort, tekenInvoer } from '@/lib/meubel-opslag'
 
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -244,7 +244,7 @@ export function ConfiguratiesContent({
                           {visualisationConfig && (
                             <VisualisationButton config={visualisationConfig} configurationId={config.id} variant="icoon" />
                           )}
-                          {meubel?.tekeningOntbreekt && <TekeningUpload configId={config.id} />}
+                          {meubel?.tekeningOntbreekt && <TekeningUpload configId={config.id} tekenen={tekenInvoer(meubel)} />}
                           {permissions.canOrder && (
                             <OrderButton meubel={meubel} projectId={config.project_id} configId={config.id} configName={config.name ?? 'Naamloze configuratie'} metaSummary={metaParts.join(' · ')} price={Number(config.total_price)} korting={korting} isProjectspiegel={isProjectspiegel} projectspiegelStuks={projectspiegelStuks} configPreview={configPreview} isOpAanvraag={shape === 'op-aanvraag'} initialQuantity={savedQuantity} initialMmsQuantity={Number(opts?.mmsQuantity) || 0} mmsUnitPrice={opts?.mmsUnitPrice as number | undefined} />
                           )}
@@ -297,7 +297,7 @@ export function ConfiguratiesContent({
                         {shape !== 'op-aanvraag' && !meubel?.opAanvraag && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceLabel}</p>}
                       </div>
 
-                      {meubel?.tekeningOntbreekt && <TekeningUpload configId={config.id} />}
+                      {meubel?.tekeningOntbreekt && <TekeningUpload configId={config.id} tekenen={tekenInvoer(meubel)} />}
 
                       {/* Col: Bestellen / Aanvragen CTA */}
                       {permissions.canOrder && (

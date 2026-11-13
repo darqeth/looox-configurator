@@ -3,7 +3,7 @@ import {
   type PlankExtra, type HanddoekType, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
   type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm, gatenContext, telUitsparingen, HANDDOEK_UITSPARING_MODEL,
 } from '@/lib/meubel-config'
-import { gatenSoort, herzieGaten, kommenCompleet, type Gat, type GatenContext, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
+import { gatenSoort, herzieGaten, kommenCompleet, komMax, werkGaten, type Gat, type GatenContext, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
 
 // Een meubel staat in dezelfde tabel als de spiegels (configurations), herkenbaar
 // aan selected_options.shape = 'meubel' met de keuzes onder selected_options.meubel.
@@ -160,6 +160,23 @@ export function tekeningMelding(m: OpgeslagenMeubel): string | null {
   return m.tekenwijze === 'module'
     ? `Bij ${m.model.naam} staat de waskom nog niet in de tekening. Plaats hem met de knop bij die regel.`
     : `Bij ${m.model.naam} ontbreekt de maattekening. Voeg hem toe met de knop bij die regel.`
+}
+
+/** Wat het tekenvenster nodig heeft om de tekening van een opgeslagen meubel te maken of aan te passen. */
+export interface TekenInvoer {
+  context: GatenContext
+  gaten: Gat[]
+  titel: string
+  /** De dealer koos voor zelf tekenen: er hoort geen eigen maattekening bij */
+  zelf: boolean
+}
+
+/** Null als er bij dit meubel niet getekend kan worden, of als de gekozen waskom niet boven de lades past. */
+export function tekenInvoer(m: OpgeslagenMeubel): TekenInvoer | null {
+  const c = m.gatenContext
+  if (!c) return null
+  if (c.soort === 'solid' && (!c.kom || komMax(c.blad, c.kom) < c.komAantal)) return null
+  return { context: c, gaten: werkGaten(m.gaten, c).gaten, titel: `${m.model.naam} · ${m.lengte} mm`, zelf: m.tekenwijze === 'module' }
 }
 
 /** Korte omschrijving voor lijsten: "Facet Double · 2000 mm · 3 × 2 lades · White". */

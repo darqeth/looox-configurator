@@ -6,9 +6,9 @@ import {
   MEUBEL_MODELLEN, getHoutkleuren, getMeubelHoogte, ladeRuimte, meubelOptiesTekst,
   getRegaalBreedte, getDuoPrijs, getDuoReeksen, getLengteBereik as lengteBereik,
   formatMm, ladeBreedtesTekst, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
-  tekeningVerplicht, meubelAfmeting, indelingTekst, kanUitsparing, getDeurOpties, plankExtraPrijs, getPlankExtraArtikel,
+  tekeningVerplicht, telUitsparingen, gatenContext, waskomMax, waskomTekst, UITSPARING_NETTO_CENTS, meubelAfmeting, indelingTekst, kanUitsparing, getDeurOpties, plankExtraPrijs, getPlankExtraArtikel,
 } from '../src/lib/meubel-config'
-import { leesMeubel, meubelPrijsInput, meubelKort } from '../src/lib/meubel-opslag'
+import { leesMeubel, meubelPrijsInput, meubelKort, tekeningMelding } from '../src/lib/meubel-opslag'
 import { upsellVoorMeubels } from '../src/components/upsell-cards'
 import { maakMeubelVoorstel, meubelCatalogusTekst } from '../src/lib/meubel-ai'
 import { productIcoon } from '../src/lib/product-icoon'
@@ -334,6 +334,7 @@ test.describe('Meubel: vaste maten en opties', () => {
     expect(meubelOptiesTekst({})).toBe('Geen')
     expect(meubelOptiesTekst({ logo: true })).toBe('Met logo')
     expect(meubelOptiesTekst({ logo: true, uitsparingen: 1 })).toBe('Met logo · 1 uitsparing (volgens maattekening)')
+    expect(meubelOptiesTekst({ uitsparingen: 2, tekenwijze: 'module' })).toBe('2 uitsparingen (volgens tekening)')
     expect(meubelOptiesTekst({ uitsparingen: 3 })).toBe('3 uitsparingen (volgens maattekening)')
   })
 
@@ -559,9 +560,10 @@ test.describe('Solid Washbasin Solo en kasten', () => {
     expect(valideerMeubelConfig({ ...kast, uitsparingen: 1 })).not.toBeNull()
     expect(valideerMeubelConfig({ ...basis, modelId: 'cabinet-facet-mini', lengte: 425, lades: 0, uitsparingen: 1 })).toBeNull()
     const model = getMeubelModel('cabinet')!
-    expect(tekeningVerplicht(model, 0)).toBe(false)
-    expect(tekeningVerplicht(model, 1)).toBe(true)
-    expect(tekeningVerplicht(getMeubelModel('facet')!, 0)).toBe(true)
+    expect(tekeningVerplicht(model, { uitsparingen: 0, kommenCompleet: false })).toBe(false)
+    expect(tekeningVerplicht(model, { uitsparingen: 1, kommenCompleet: false })).toBe(true)
+    // Hout zonder gaten: de klant maakt ze zelf, een tekening is niet meer nodig
+    expect(tekeningVerplicht(getMeubelModel('facet')!, { uitsparingen: 0, kommenCompleet: false })).toBe(false)
     expect(meubelAfmeting({ ...model, hoogte: 1800, diepte: 300 }, 400)).toBe('B 400 × H 1800 × D 300 mm')
     expect(indelingTekst(model, 2, null, 400)).toBe('2 deuren')
     expect(indelingTekst(getMeubelModel('cabinet-facet-stripes')!, 2, null, 400)).toBe('2 deuren')
@@ -658,9 +660,9 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(calcMeubelNettoCents({ ...k, modelId: 'wooden-box-facet', lengte: 0, variant: 'wooden-box-facet-20', houtkleur: 'white' })).toBe(21736 + 2080)
     const m = getMeubelModel('waskom-ceramic')!
     expect(kanUitsparing(m)).toBe(false)
-    expect(tekeningVerplicht(m, 0)).toBe(false)
-    expect(tekeningVerplicht(getMeubelModel('base-shelf-solo')!, 0)).toBe(false)
-    expect(tekeningVerplicht(getMeubelModel('base-shelf-solo')!, 1)).toBe(true)
+    expect(tekeningVerplicht(m, { uitsparingen: 0, kommenCompleet: false })).toBe(false)
+    expect(tekeningVerplicht(getMeubelModel('base-shelf-solo')!, { uitsparingen: 0, kommenCompleet: false })).toBe(false)
+    expect(tekeningVerplicht(getMeubelModel('base-shelf-solo')!, { uitsparingen: 1, kommenCompleet: false })).toBe(true)
     expect(valideerMeubelConfig({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'WTMWK30W', ladeBreedtes: null, quantity: 3 })).toBeNull()
     expect(valideerMeubelConfig({ ...k, modelId: 'base-shelf-solo', lengte: 1000, diepte: 400, hoogte: 70, handdoekhouders: 1, ladeBreedtes: null, quantity: 1 })).toContain('460')
   })
@@ -806,5 +808,101 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(productIcoon({ shape: 'meubel', meubel: { modelId: 'cabinet' } })).toBe('/icons/shapes/meubel-kasten.svg')
     // Elk model heeft een icoonbestand
     for (const m of MEUBEL_MODELLEN) expect(existsSync(`public${productIcoon({ shape: 'meubel', meubel: { modelId: m.id } })}`), m.id).toBe(true)
+  })
+})
+
+test.describe('Tekenmodule: prijs, regels en opslag', () => {
+  const hout = { modelId: 'facet', lengte: 1200, lades: 2, houtkleur: 'old-grey' }
+  const solid = { modelId: 'solid-facet', lengte: 1400, lades: 2, houtkleur: 'old-grey', waskomVorm: 'vierkant' as const, waskomAantal: 1 }
+
+  test('zelf getekend: de prijs telt de gaten, niet de meegestuurde teller', () => {
+    const met = calcMeubelNettoCents({ ...hout, tekenwijze: 'module', uitsparingen: 9,
+      gaten: [{ soort: 'sifon', vak: 0, y: 240, d: 45 }, { soort: 'kraan', x: 300, y: 80, d: 35 }] })!
+    expect(met - calcMeubelNettoCents(hout)!).toBe(2 * UITSPARING_NETTO_CENTS)
+    expect(getMeubelPrijsOpbouw({ ...hout, tekenwijze: 'module', gaten: [{ soort: 'sifon', vak: 0, y: 240, d: 45 }] }, 2)!.regels.map((r) => r.label)).toContain('Uitsparing · 1×')
+  })
+
+  test('eigen tekening of geen tekenwijze: de teller telt zoals voorheen, gaten tellen niet', () => {
+    expect(calcMeubelNettoCents({ ...hout, uitsparingen: 2 })! - calcMeubelNettoCents(hout)!).toBe(2 * UITSPARING_NETTO_CENTS)
+    expect(telUitsparingen({ ...hout, tekenwijze: 'upload', uitsparingen: 1, gaten: [{ soort: 'kraan', x: 300, y: 80, d: 35 }, { soort: 'kraan', x: 600, y: 80, d: 35 }] })).toBe(1)
+  })
+
+  test('waskom kost niets, het kraangat bij de waskom wel', () => {
+    const basis = { ...solid, tekenwijze: 'module' as const }
+    const kom = calcMeubelNettoCents({ ...basis, gaten: [{ soort: 'kom', vak: 0 }] })!
+    expect(kom).toBe(calcMeubelNettoCents(solid)!)
+    expect(calcMeubelNettoCents({ ...basis, gaten: [{ soort: 'kom', vak: 0 }, { soort: 'kraan-kom', vak: 0, dx: 0, d: 34 }] })! - kom).toBe(UITSPARING_NETTO_CENTS)
+  })
+
+  test('handdoekuitsparing: één uitsparing, alleen bij de Mini Base Shelf', () => {
+    const plank = { modelId: 'mini-base-shelf', lengte: 600, lades: 0, diepte: 230, hoogte: 70, houtkleur: 'old-grey' }
+    expect(calcMeubelNettoCents(plank)).not.toBeNull()
+    expect(calcMeubelNettoCents({ ...plank, handdoekUitsparing: true })! - calcMeubelNettoCents(plank)!).toBe(UITSPARING_NETTO_CENTS)
+    expect(meubelOptiesTekst({ uitsparingen: 1, handdoekUitsparing: true })).toBe('Handdoekuitsparing')
+    expect(meubelOptiesTekst({ uitsparingen: 3, handdoekUitsparing: true, tekenwijze: 'module' })).toBe('2 uitsparingen (volgens tekening) · Handdoekuitsparing')
+    expect(valideerMeubelConfig({ ...hout, ladeBreedtes: null, quantity: 1, handdoekUitsparing: true })).toContain('Mini Base Shelf')
+    expect(telUitsparingen({ ...hout, handdoekUitsparing: true })).toBe(0)
+  })
+
+  test('tekeningVerplicht', () => {
+    const h = getMeubelModel('facet')!, s = getMeubelModel('solid-facet')!
+    expect(tekeningVerplicht(h, { tekenwijze: 'module', uitsparingen: 2, kommenCompleet: true })).toBe(false)
+    expect(tekeningVerplicht(h, { uitsparingen: 1, kommenCompleet: true })).toBe(true)
+    expect(tekeningVerplicht(s, { tekenwijze: 'module', uitsparingen: 0, kommenCompleet: false })).toBe(true)
+    expect(tekeningVerplicht(s, { tekenwijze: 'module', uitsparingen: 0, kommenCompleet: true })).toBe(false)
+    expect(tekeningVerplicht(s, { uitsparingen: 0, kommenCompleet: true })).toBe(true)
+    // Facet Deco heeft geen tekenmodule: 'module' telt daar niet
+    expect(tekeningVerplicht(getMeubelModel('facet-deco')!, { tekenwijze: 'module', uitsparingen: 1, kommenCompleet: true })).toBe(true)
+  })
+
+  test('zelf getekend wordt op de server getoetst', () => {
+    const cfg = { ...hout, ladeBreedtes: null, quantity: 1, tekenwijze: 'module' as const }
+    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', vak: 1, y: 240, d: 45 }] })).toBeNull()
+    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', vak: 5, y: 240, d: 45 }] })).not.toBeNull()
+    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'kraan', x: 10, y: 80, d: 35 }] })).toContain('30 mm')
+    expect(valideerMeubelConfig({ ...cfg, modelId: 'facet-deco', lengte: 800, lades: 1, gaten: [] })).toContain('geen tekening')
+  })
+
+  test('waskom 850 alleen rechthoekig en alleen als hij past', () => {
+    const cfg = { ...solid, ladeBreedtes: null, quantity: 1, tekenwijze: 'module' as const, gaten: [] }
+    expect(valideerMeubelConfig({ ...cfg, waskomVorm: 'ovaal', waskomMaat: 850 })).toContain('850')
+    expect(valideerMeubelConfig({ ...cfg, waskomMaat: 850 })).toContain('15 cm')
+    expect(valideerMeubelConfig({ ...cfg, lengte: 1100, lades: 1, waskomMaat: 850 })).toBeNull()
+    expect(waskomMax(solid, 'vierkant', 500)).toBe(2)
+    expect(waskomMax(solid, 'vierkant', 850)).toBe(0)
+    expect(waskomMax({ ...solid, lengte: 1200 }, 'vierkant', 500)).toBe(0)
+    expect(waskomMax({ ...solid, lengte: 1200, lades: 1 }, 'ovaal')).toBe(1)
+    expect(waskomTekst({ waskomVorm: 'vierkant', waskomAantal: 2, waskomMaat: 850, tekenwijze: 'module' })).toBe('2 waskommen, rechthoekig 850 (plaats volgens tekening)')
+    expect(waskomTekst({ waskomVorm: 'ovaal', waskomAantal: 1 })).toBe('1 waskom, ovaal (plaats volgens maattekening)')
+  })
+
+  test('gatenContext: regaalkast en dubbele rij', () => {
+    expect(gatenContext({ modelId: 'facet-double', lengte: 1800, lades: 3 })!.blad.vakken).toHaveLength(3)
+    expect(gatenContext({ modelId: 'basic-cube-mini', lengte: 395, lades: 1, diepte: 230 })!.blad).toMatchObject({ diepte: 230, los: true })
+    expect(gatenContext({ modelId: 'facet-deco', lengte: 800, lades: 1 })).toBeNull()
+  })
+
+  test('opgeslagen meubel: oude configuratie blijft een eigen tekening met eigen teller', () => {
+    const oud = leesMeubel({ shape: 'meubel', meubel: { ...hout, uitsparingen: 2, factor: 2 }, quantity: 1, attachmentUrl: 'https://x/t.jpg' })!
+    expect(oud).toMatchObject({ tekenwijze: 'upload', uitsparingen: 2, uitsparingenTeller: 2, gaten: [], tekeningOntbreekt: false, attachmentUrl: 'https://x/t.jpg' })
+    expect(leesMeubel({ shape: 'meubel', meubel: { ...hout, uitsparingen: 2 }, quantity: 1 })!.tekeningOntbreekt).toBe(true)
+    expect(leesMeubel({ shape: 'meubel', meubel: hout, quantity: 1 })!.tekeningOntbreekt).toBe(false)
+  })
+
+  test('opgeslagen meubel: zelf getekend', () => {
+    const gaten = [{ soort: 'sifon', vak: 0, y: 240, d: 45 }, { soort: 'sifon', vak: 7, y: 240, d: 45 }, { soort: 'onzin' }, null]
+    const m = leesMeubel({ shape: 'meubel', meubel: { ...hout, tekenwijze: 'module', gaten, uitsparingen: 9 }, quantity: 1, attachmentUrl: 'https://x/t.jpg' })!
+    // Wat niet te maken is valt weg; de prijs volgt wat overblijft; een oud bestand telt niet meer
+    expect(m).toMatchObject({ tekenwijze: 'module', gaten: [{ soort: 'sifon', vak: 0, y: 240, d: 45 }], uitsparingen: 1, uitsparingenTeller: 0, attachmentUrl: null, tekeningOntbreekt: false })
+    expect(calcMeubelNettoCents(meubelPrijsInput(m))! - calcMeubelNettoCents(hout)!).toBe(UITSPARING_NETTO_CENTS)
+  })
+
+  test('opgeslagen Solid Surface: bestellen kan pas als alle waskommen staan', () => {
+    const lees = (gaten: unknown[], aantal = 2) => leesMeubel({ shape: 'meubel', meubel: { ...solid, waskomAantal: aantal, tekenwijze: 'module', gaten }, quantity: 1 })!
+    expect(lees([{ soort: 'kom', vak: 0 }]).tekeningOntbreekt).toBe(true)
+    expect(tekeningMelding(lees([{ soort: 'kom', vak: 0 }]))).toContain('waskom')
+    expect(lees([{ soort: 'kom', vak: 0 }, { soort: 'kom', vak: 1 }]).tekeningOntbreekt).toBe(false)
+    expect(lees([{ soort: 'kom', vak: 0 }, { soort: 'kom', vak: 1 }]).waskomMaat).toBe(500)
+    expect(tekeningMelding(lees([{ soort: 'kom', vak: 1 }], 1))).toBeNull()
   })
 })

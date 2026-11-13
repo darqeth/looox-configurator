@@ -9,8 +9,18 @@ import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import {
   MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig,
 } from '@/lib/meubel-config'
-import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
+import { MEUBEL_SHAPE, leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
+import { betaaldeGaten, valideerGaten, type Gat } from '@/lib/meubel-gaten'
 import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
+
+const mm = z.number().finite().min(-5000).max(5000)
+const gatSchema = z.discriminatedUnion('soort', [
+  z.object({ soort: z.literal('sifon'), vak: z.number().int().min(0).max(20), y: mm, d: mm }),
+  z.object({ soort: z.literal('kraan'), x: mm, y: mm, d: mm }),
+  z.object({ soort: z.literal('kom'), vak: z.number().int().min(0).max(20) }),
+  z.object({ soort: z.literal('kraan-kom'), vak: z.number().int().min(0).max(20), dx: mm, d: mm }),
+])
+const gatenSchema = z.array(gatSchema).max(20)
 
 const meubelInputSchema = z.object({
   modelId: z.string().max(40),
@@ -35,6 +45,10 @@ const meubelInputSchema = z.object({
   regaalBreedte: z.number().int().min(1).max(2000).optional(),
   regaalZijde: z.enum(['links', 'rechts', 'midden']).optional(),
   uitsparingen: z.number().int().min(0).max(UITSPARING_MAX).optional(),
+  tekenwijze: z.enum(['module', 'upload']).optional(),
+  gaten: gatenSchema.optional(),
+  waskomMaat: z.union([z.literal(500), z.literal(850)]).optional(),
+  handdoekUitsparing: z.boolean().optional(),
   attachmentUrl: z.string().max(1000).nullish(),
   /** Door het hulpje ingevuld: bestellen kan pas nadat de dealer de regel heeft nagelopen en opgeslagen */
   nalopen: z.boolean().optional(),
@@ -53,7 +67,13 @@ export type SaveMeubelInput = z.infer<typeof meubelInputSchema>
 
 // De server rekent zelf: de client stuurt alleen de keuzes, nooit een prijs.
 async function bouwRij(rawInput: SaveMeubelInput) {
-  const input = parseOrThrow(meubelInputSchema, rawInput)
+  const ruw = parseOrThrow(meubelInputSchema, rawInput)
+  // Zelf getekend: het aantal uitsparingen komt uit de tekening, niet uit wat de client meestuurt,
+  // en een geüploade tekening telt dan niet. Eigen tekening: geen gaten.
+  const zelfGetekend = ruw.tekenwijze === 'module'
+  const input = zelfGetekend
+    ? { ...ruw, uitsparingen: 0, attachmentUrl: null }
+    : { ...ruw, tekenwijze: 'upload' as const, gaten: undefined }
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
@@ -65,7 +85,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
 
   // Maattekening (waskom, kraan, afvoer, uitsparingen): een offerte opslaan kan zonder,
   // bestellen niet. Die controle zit in de bestelstap (project-order.ts en placeMeubelOrder).
-  const uitsparingen = input.uitsparingen ?? 0
+  const uitsparingen = zelfGetekend ? betaaldeGaten(input.gaten ?? []) : input.uitsparingen ?? 0
   const attachmentUrl = assertValidAttachmentUrl(input.attachmentUrl)
 
   const factor = await getMeubelFactor(supabase, user.id)
@@ -106,8 +126,11 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           opAanvraag,
           logo: input.logo === true && kanLogo(model),
           ...(model.regaal && { regaalBreedte: input.regaalBreedte, regaalZijde: input.regaalZijde }),
-          ...(model.waskom && { waskomVorm: input.waskomVorm, waskomAantal: input.waskomAantal }),
+          ...(model.waskom && { waskomVorm: input.waskomVorm, waskomAantal: input.waskomAantal, ...(input.waskomVorm === 'vierkant' && { waskomMaat: input.waskomMaat ?? 500 }) }),
           uitsparingen,
+          tekenwijze: zelfGetekend ? 'module' : 'upload',
+          ...(zelfGetekend && { gaten: input.gaten ?? [] }),
+          ...(input.handdoekUitsparing && { handdoekUitsparing: true }),
         },
         quantity: input.quantity,
         reference: input.reference,
@@ -204,10 +227,63 @@ export async function setMeubelTekening(configId: string, rawUrl: string): Promi
 
   // Geen .eq('user_id'): RLS staat eigenaar én manager binnen het bedrijf toe.
   const { data, error } = await supabase.from('configurations')
-    .update({ selected_options: { ...opts, attachmentUrl }, updated_at: new Date().toISOString() })
+    .update({ selected_options: { ...opts, attachmentUrl, meubel: naarEigenTekening(opts) }, updated_at: new Date().toISOString() })
     .eq('id', configId)
     .select('id')
   if (error) { console.error('[meubel-tekening]', error); return { error: 'Opslaan van de maattekening is mislukt. Probeer het opnieuw.' } }
+  if (!data || data.length === 0) return { error: 'Configuratie niet gevonden of geen rechten om op te slaan' }
+
+  revalidatePath('/configuraties')
+  revalidatePath(`/configurator/${configId}`)
+  if (bestaand.project_id) revalidatePath(`/projecten/${bestaand.project_id}`)
+  return {}
+}
+
+/** Stapt over op een eigen tekening: de gaten vervallen, het aantal blijft staan als teller zodat de prijs gelijk blijft. */
+function naarEigenTekening(opts: Record<string, unknown>): Record<string, unknown> {
+  const meubel = { ...((opts.meubel ?? {}) as Record<string, unknown>) }
+  const gelezen = leesMeubel(opts)
+  if (gelezen?.tekenwijze === 'module') meubel.uitsparingen = Math.min(UITSPARING_MAX, betaaldeGaten(gelezen.gaten))
+  delete meubel.gaten
+  meubel.tekenwijze = 'upload'
+  return meubel
+}
+
+/** Slaat de tekening uit de tekenmodule op bij een bestaand meubel, zonder de configuratie te openen. */
+export async function setMeubelGaten(configId: string, rawGaten: Gat[]): Promise<{ error?: string }> {
+  if (!z.string().uuid().safeParse(configId).success) return { error: 'Ongeldige configuratie' }
+  const parsed = gatenSchema.safeParse(rawGaten)
+  if (!parsed.success) return { error: 'Ongeldige tekening' }
+  const gaten = parsed.data
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd' }
+  if (!await hasMeubelAccess(supabase, user.id)) return { error: 'Dit account heeft geen toegang tot Tailor-Made. Neem contact op met LoooX.' }
+
+  const { data: bestaand } = await supabase.from('configurations').select('selected_options, status, project_id').eq('id', configId).maybeSingle()
+  const opts = (bestaand?.selected_options ?? {}) as Record<string, unknown>
+  const meubel = bestaand ? leesMeubel(opts) : null
+  if (!bestaand || !meubel) return { error: 'Configuratie niet gevonden' }
+  if (bestaand.status === 'ordered') return { error: 'Een bestelde configuratie kan niet meer worden aangepast' }
+  if (!meubel.gatenContext) return { error: 'Bij dit product kan geen tekening gemaakt worden.' }
+  const fout = valideerGaten(gaten, meubel.gatenContext)
+  if (fout) return { error: fout }
+
+  // De prijs volgt de tekening; de factor van de offerte blijft zoals hij was opgeslagen
+  const brutoCents = meubel.opAanvraag ? 0 : calcMeubelBrutoCents({
+    ...meubelPrijsInput(meubel), uitsparingen: 0, tekenwijze: 'module', gaten, handdoekUitsparing: meubel.handdoekUitsparing,
+  }, meubel.factor)
+  if (brutoCents === null) return { error: 'De prijs kon niet berekend worden. Open de configuratie en sla hem opnieuw op.' }
+
+  const { data, error } = await supabase.from('configurations')
+    .update({
+      total_price: (brutoCents / 100).toFixed(2),
+      selected_options: { ...opts, attachmentUrl: null, meubel: { ...((opts.meubel ?? {}) as Record<string, unknown>), tekenwijze: 'module', gaten, uitsparingen: betaaldeGaten(gaten) } },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', configId)
+    .select('id')
+  if (error) { console.error('[meubel-gaten]', error); return { error: 'Opslaan van de tekening is mislukt. Probeer het opnieuw.' } }
   if (!data || data.length === 0) return { error: 'Configuratie niet gevonden of geen rechten om op te slaan' }
 
   revalidatePath('/configuraties')

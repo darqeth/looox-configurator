@@ -3,6 +3,8 @@
 // Alle bedragen in centen, alle maten in hele millimeters. In beeld en op de offerte staat altijd bruto
 // (netto × factor van het bedrijf); netto is alleen voor de bestelstap.
 
+import { betaaldeGaten, gatenSoort, getKom, komMax, kommenCompleet, maakBlad, valideerGaten, type Gat, type GatenContext, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
+
 export const MEUBEL_FACTOR_DEFAULT = 2
 export const MEUBEL_FACTOR_MAX = 10
 // Een lade is 350 tot 1200 mm breed (Mark, 12 nov). Harde grenzen, ook bij gelijke verdeling.
@@ -909,7 +911,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     zonderLades: true,
     geenAanvraag: true,
     accessoireKleur: true,
-    opmerking: 'Een handdoekuitsparing is 18 × 3 cm en telt als uitsparing. Is de gewenste diepte groter dan 28 cm, kies dan de Base Shelf.',
+    opmerking: 'Een handdoekuitsparing is 18 × 3 cm en zit in de voorkant. Is de gewenste diepte groter dan 28 cm, kies dan de Base Shelf.',
     plank: {
       lengte: { min: 300, max: 1250 }, dieptes: [200, 230, 250, 280], diktes: [70], extras: true,
       rijen: [{ maxL: 600, prijzen: [19136] }, { maxL: 1000, prijzen: [25376] }, { maxL: 1250, prijzen: [26936] }],
@@ -1296,10 +1298,16 @@ export function kanUitsparing(model: MeubelModel): boolean {
   return !model.kast || model.kast.uitsparing === true
 }
 
-/** Is een maattekening nodig om te bestellen? Bij een kast alleen als er uitsparingen in moeten. */
-export function tekeningVerplicht(model: MeubelModel, uitsparingen = 0): boolean {
+/**
+ * Moet er nog iets gebeuren aan de tekening voor er besteld kan worden?
+ * Zelf getekend: alleen bij Solid Surface, tot alle waskommen geplaatst zijn; bij hout mag
+ * het zonder gaten. Eigen tekening: nodig bij Solid Surface en zodra er uitsparingen zijn.
+ * `uitsparingen` is hier de teller van de dealer, zonder de handdoekuitsparing.
+ */
+export function tekeningVerplicht(model: MeubelModel, o: { tekenwijze?: Tekenwijze | null; uitsparingen: number; kommenCompleet: boolean }): boolean {
   if (model.artikel) return false
-  return !(model.kast || model.plank) || uitsparingen > 0
+  if (o.tekenwijze === 'module' && gatenSoort(model)) return model.waskom ? !o.kommenCompleet : false
+  return !!model.waskom || o.uitsparingen > 0
 }
 
 export function ladeLabel(model: MeubelModel, kolommen: number): string {
@@ -1316,13 +1324,14 @@ export function ladeLabel(model: MeubelModel, kolommen: number): string {
 export type WaskomVorm = 'ovaal' | 'vierkant'
 export const WASKOM_VORMEN: { id: WaskomVorm; naam: string }[] = [
   { id: 'ovaal', naam: 'Ovaal' },
-  { id: 'vierkant', naam: 'Vierkant' },
+  { id: 'vierkant', naam: 'Rechthoekig' },
 ]
 
-export function waskomTekst(o: { waskomVorm?: WaskomVorm | null; waskomAantal?: number | null }): string {
+export function waskomTekst(o: { waskomVorm?: WaskomVorm | null; waskomAantal?: number | null; waskomMaat?: KomMaat | null; tekenwijze?: Tekenwijze | null }): string {
   const vorm = WASKOM_VORMEN.find((v) => v.id === o.waskomVorm)
   if (!vorm) return ''
-  return `${o.waskomAantal === 2 ? '2 waskommen' : '1 waskom'}, ${vorm.naam.toLowerCase()} (plaats volgens maattekening)`
+  const maat = vorm.id === 'vierkant' ? ` ${o.waskomMaat === 850 ? 850 : 500}` : ''
+  return `${o.waskomAantal === 2 ? '2 waskommen' : '1 waskom'}, ${vorm.naam.toLowerCase()}${maat} (plaats volgens ${o.tekenwijze === 'module' ? 'tekening' : 'maattekening'})`
 }
 
 export interface MeubelInput {
@@ -1330,7 +1339,16 @@ export interface MeubelInput {
   lengte: number
   lades: number
   houtkleur: string
+  /** Teller van de dealer bij een eigen tekening. Bij zelf tekenen telt `gaten`; zie telUitsparingen */
   uitsparingen?: number
+  /** Zelf getekend in de configurator, of een eigen tekening geüpload (ook: ontbreekt, oude configuraties) */
+  tekenwijze?: Tekenwijze
+  /** Gaten en waskommen uit de tekenmodule; telt alleen bij tekenwijze 'module' */
+  gaten?: Gat[]
+  /** Maat van de rechthoekige waskom; ontbreekt is 500 */
+  waskomMaat?: KomMaat
+  /** Mini Base Shelf: uitsparing van 18 × 3 cm in de voorkant, telt als één uitsparing */
+  handdoekUitsparing?: boolean
   /** Groter dan de standaardmaten: geen tabelprijs, altijd op aanvraag */
   opAanvraag?: boolean
   /** Gekozen hoogte in mm: bij meubels zonder invloed op de prijs, bij een kast bepaalt hij de staffel */
@@ -1361,13 +1379,68 @@ export interface MeubelInput {
   divider?: string | null
 }
 
+export const HANDDOEK_UITSPARING_MODEL = 'mini-base-shelf'
+
+/**
+ * Aantal uitsparingen waarvoor betaald wordt. Zelf getekend: de gaten uit de tekening (een
+ * waskom kost niets). Eigen tekening: de teller. De handdoekuitsparing telt er altijd bij.
+ */
+export function telUitsparingen(c: Pick<MeubelInput, 'modelId' | 'uitsparingen' | 'tekenwijze' | 'gaten' | 'handdoekUitsparing'>): number {
+  const basis = c.tekenwijze === 'module' ? betaaldeGaten(c.gaten ?? []) : c.uitsparingen ?? 0
+  return basis + (c.handdoekUitsparing && c.modelId === HANDDOEK_UITSPARING_MODEL ? 1 : 0)
+}
+
+/** Blad, snapvakken en waskom van deze configuratie, voor de tekenmodule; null als het model die niet heeft. */
+export function gatenContext(c: Pick<MeubelInput, 'modelId' | 'lengte' | 'lades' | 'diepte' | 'regaalBreedte' | 'regaalZijde' | 'waskomVorm' | 'waskomMaat' | 'waskomAantal' | 'ladeBreedtes'>): GatenContext | null {
+  const model = getMeubelModel(c.modelId)
+  const soort = model ? gatenSoort(model) : null
+  if (!model || !soort || !(c.lengte > 0)) return null
+  const regaalBreedte = getRegaalBreedte(model, c.regaalBreedte)
+  const zonderLades = !!(model.kast || model.plank || model.zonderLades) || !(c.lades > 0)
+  const breedtes = zonderLades ? [] : getLadeBreedtes(c.ladeBreedtes ?? null, ladeRuimte(model, c.lengte, regaalBreedte), c.lades)
+  const komAantal = soort === 'solid' ? (c.waskomAantal === 2 ? 2 : 1) : 0
+  return {
+    soort,
+    kom: soort === 'solid' ? getKom(c.waskomVorm ?? 'ovaal', c.waskomMaat) : null,
+    komAantal,
+    blad: maakBlad({
+      model, lengte: c.lengte, diepte: getMeubelDiepte(model, c.diepte), breedtes, komAantal,
+      regaal: model.regaal ? { breedte: regaalBreedte, zijde: c.regaalZijde ?? (model.duo ? 'midden' : 'rechts') } : null,
+    }),
+  }
+}
+
+/** Hoeveel waskommen van deze vorm en maat er in het blad passen (0, 1 of 2). */
+export function waskomMax(c: Parameters<typeof gatenContext>[0], vorm: WaskomVorm, maat?: KomMaat | null): 0 | 1 | 2 {
+  const ctx = gatenContext({ ...c, waskomVorm: vorm, waskomMaat: maat ?? undefined, waskomAantal: 2 })
+  return ctx?.kom ? komMax(ctx.blad, ctx.kom) : 0
+}
+
+/** Controle van de tekening en wat daarbij hoort; foutmelding of null. */
+function valideerTekening(c: MeubelInput, model: MeubelModel): string | null {
+  if (c.handdoekUitsparing && model.id !== HANDDOEK_UITSPARING_MODEL) return 'Een handdoekuitsparing kan alleen bij de Mini Base Shelf.'
+  if (c.waskomMaat === 850 && c.waskomVorm !== 'vierkant') return 'De maat 850 bestaat alleen bij de rechthoekige waskom.'
+  if (telUitsparingen(c) > UITSPARING_MAX + 1) return `Uitsparingen: 0 tot ${UITSPARING_MAX}.`
+  if (c.tekenwijze !== 'module') return null
+  const ctx = gatenContext(c)
+  if (!ctx) return 'Bij dit product kan geen tekening gemaakt worden.'
+  if (ctx.kom && komMax(ctx.blad, ctx.kom) < ctx.komAantal) return 'Deze waskom past niet boven de lades. De lade moet minstens 15 cm breder zijn dan de waskom.'
+  return valideerGaten(c.gaten ?? [], ctx)
+}
+
+/** Staan alle gekozen waskommen in de tekening? Voor de bestelstap. */
+export function tekeningCompleet(c: MeubelInput): boolean {
+  const ctx = c.tekenwijze === 'module' ? gatenContext(c) : null
+  return ctx ? kommenCompleet(c.gaten ?? [], ctx) : false
+}
+
 /** Netto per stuk in centen, of null bij een ongeldige combinatie. Niet tonen buiten de bestelstap. */
 export function calcMeubelNettoCents(input: MeubelInput): number | null {
   const model = getMeubelModel(input.modelId)
   if (!model || input.opAanvraag) return null
   const kleur = getHoutkleuren(model).find((k) => k.id === input.houtkleur)
-  const uitsparingen = input.uitsparingen ?? 0
-  if (!kleur || !Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX) return null
+  const uitsparingen = telUitsparingen(input)
+  if (!kleur || !Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX + 1) return null
   // Duo (Drawer Box Regal): prijs volgt uit de twee kastbreedtes, niet uit een lengtestaffel
   if (uitsparingen > 0 && !kanUitsparing(model)) return null
   const houders = input.handdoekhouders ?? 0
@@ -1437,7 +1510,7 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   const f = parseMeubelFactor(factor)
   const extra: MeubelPrijsRegel[] = []
   if (kleurMeerprijs(model, kleur) > 0) extra.push({ label: `Houtkleur · ${kleur.naam}`, cents: Math.round(kleurMeerprijs(model, kleur) * f) })
-  const uitsparingen = input.uitsparingen ?? 0
+  const uitsparingen = telUitsparingen(input)
   if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
   const houders = input.handdoekhouders ?? 0
   if (houders > 0) extra.push({ label: `Handdoekhouder · ${houders}×`, cents: Math.round(houders * (model.plank?.handdoekhouder?.prijs ?? 0) * f) })
@@ -1542,7 +1615,7 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
     if (u > 0 && !kanUitsparing(kastModel)) return 'In dit product kan geen uitsparing.'
     if (!Number.isInteger(u) || u < 0 || u > UITSPARING_MAX) return `Uitsparingen: 0 tot ${UITSPARING_MAX}.`
     if (!Number.isInteger(c.quantity) || c.quantity < 1 || c.quantity > MEUBEL_AANTAL_MAX) return `Aantal moet tussen 1 en ${MEUBEL_AANTAL_MAX} liggen.`
-    return null
+    return valideerTekening(c, kastModel)
   }
   if (c.opAanvraag) {
     const model = getMeubelModel(c.modelId)
@@ -1577,7 +1650,7 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
   const uitsparingen = c.uitsparingen ?? 0
   if (!Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX) return `Uitsparingen: 0 tot ${UITSPARING_MAX}.`
   if (!Number.isInteger(c.quantity) || c.quantity < 1 || c.quantity > MEUBEL_AANTAL_MAX) return `Aantal moet tussen 1 en ${MEUBEL_AANTAL_MAX} liggen.`
-  return null
+  return valideerTekening(c, model)
 }
 
 // ─── Groter dan standaard: op aanvraag ──────────────────────────────────────
@@ -1661,10 +1734,16 @@ export function ladeAccessoireTekst(o: { organizer?: string | null; divider?: st
 }
 
 /** Opties uit de tabel "Opties meubels" in één regel, of een streepje als er geen zijn. */
-export function meubelOptiesTekst(o: { logo?: boolean; uitsparingen?: number; organizer?: string | null; divider?: string | null }): string {
+/**
+ * `uitsparingen` is het aantal waarvoor betaald wordt (telUitsparingen), dus met de
+ * handdoekuitsparing erbij als die aan staat; die krijgt hier een eigen vermelding.
+ */
+export function meubelOptiesTekst(o: { logo?: boolean; uitsparingen?: number; tekenwijze?: Tekenwijze | null; handdoekUitsparing?: boolean; organizer?: string | null; divider?: string | null }): string {
+  const gaten = (o.uitsparingen ?? 0) - (o.handdoekUitsparing ? 1 : 0)
   const delen = [
     o.logo ? 'Met logo' : '',
-    o.uitsparingen ? `${o.uitsparingen} ${o.uitsparingen === 1 ? 'uitsparing' : 'uitsparingen'} (volgens maattekening)` : '',
+    gaten > 0 ? `${gaten} ${gaten === 1 ? 'uitsparing' : 'uitsparingen'} (volgens ${o.tekenwijze === 'module' ? 'tekening' : 'maattekening'})` : '',
+    o.handdoekUitsparing ? 'Handdoekuitsparing' : '',
     ...ladeAccessoireTekst(o),
   ].filter(Boolean)
   return delen.length > 0 ? delen.join(' · ') : 'Geen'

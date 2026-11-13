@@ -318,7 +318,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
     ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
   const magUitsparing = kanUitsparing(model)
-  const tekeningNodig = tekeningVerplicht(model, uitsparingen)
+  const tekeningNodig = tekeningVerplicht(model, { uitsparingen, kommenCompleet: false })
   const tekeningOntbreekt = tekeningNodig && !tekeningBestand && !bestaandeTekening
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
 

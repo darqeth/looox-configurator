@@ -620,7 +620,7 @@ export async function placeMeubelOrder(
 
   const meubel = leesMeubel(config.selected_options)
   if (!meubel) throw new Error('Dit is geen meubelconfiguratie')
-  if (meubel.tekeningOntbreekt) throw new Error('De maattekening ontbreekt. Voeg hem toe en probeer het opnieuw.')
+  if (meubel.tekeningOntbreekt) throw new Error(meubel.tekenwijze === 'module' ? 'De waskom staat nog niet in de tekening. Plaats hem en probeer het opnieuw.' : 'De maattekening ontbreekt. Voeg hem toe en probeer het opnieuw.')
   if (moetNalopen(config.selected_options)) throw new Error('Deze configuratie is door het hulpje ingevuld. Open hem, controleer de keuzes en sla hem op.')
 
   const isOfferte = meubel.opAanvraag

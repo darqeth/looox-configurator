@@ -104,8 +104,13 @@ test.describe('Project: prijs bij bestellen', () => {
 })
 
 test.describe('Project: maattekening verplicht bij meubels', () => {
-  test('meubel zonder maattekening is niet te bestellen', () => {
+  test('houten meubel zonder gaten is te bestellen zonder tekening', () => {
     const r = berekenProjectOrderRegel({ ...basis, total_price: '5801.12', selected_options: meubelOpts({}, { attachmentUrl: null }) }, 50)
+    expect(r.fout).toBeNull()
+  })
+
+  test('eigen tekening met uitsparingen maar zonder bestand is niet te bestellen', () => {
+    const r = berekenProjectOrderRegel({ ...basis, total_price: '5801.12', selected_options: meubelOpts({ uitsparingen: 2 }, { attachmentUrl: null }) }, 50)
     expect(r.fout).toContain('maattekening')
     expect(r.totalPrice).toBe(0)
   })

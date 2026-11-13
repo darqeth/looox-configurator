@@ -2,7 +2,7 @@ import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { clampMmsQuantity, isMmsAllowed, resolveMmsUnitPrice } from '@/lib/mms'
 import { computeOrderTotals } from '@/lib/order-pricing'
 import { calcMeubelNettoCents } from '@/lib/meubel-config'
-import { leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
+import { leesMeubel, tekeningMelding, meubelPrijsInput } from '@/lib/meubel-opslag'
 import { projectRegel, type ProjectConfigRij, type ProjectRegel } from '@/lib/project'
 
 // Wat een projectregel kost bij bestellen. Eén functie voor de bestelmodal
@@ -38,9 +38,10 @@ export function berekenProjectOrderRegel(config: ProjectConfigRij, dealerKorting
 
   const meubel = leesMeubel(opts)
   if (meubel) {
-    // Regel van 12 nov: bij elk meubel hoort een maattekening. Oudere offertes zonder tekening eerst aanvullen.
+    // Solid Surface: de waskom moet een plaats hebben (getekend of op een eigen maattekening).
+    // Hout: alleen bij een eigen tekening met uitsparingen; zonder gaten bestellen mag.
     if (meubel.tekeningOntbreekt) {
-      return { ...basis, quantity: meubel.quantity, korting: 0, unitPrice: 0, totalPrice: 0, fout: `Bij ${meubel.model.naam} ontbreekt de maattekening. Voeg hem toe met de knop bij die regel.` }
+      return { ...basis, quantity: meubel.quantity, korting: 0, unitPrice: 0, totalPrice: 0, fout: tekeningMelding(meubel) }
     }
     const nettoCents = meubel.opAanvraag ? 0 : calcMeubelNettoCents(meubelPrijsInput(meubel))
     if (nettoCents === null) {

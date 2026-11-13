@@ -25,7 +25,7 @@ export type UpsellSoort = 'waskom' | 'spiegel'
 
 /** Waar de dealer het product samenstelt, als regel van dit project. */
 export function upsellHref(soort: UpsellSoort, projectId: string): string {
-  return soort === 'waskom' ? `/configurator/meubel?project=${projectId}&categorie=waskommen` : `/configurator/nieuw?project=${projectId}`
+  return soort === 'waskom' ? `/configurator/meubel?project=${projectId}&categorie=waskommen` : `/configurator/nieuw?project=${projectId}&type=maatwerk`
 }
 
 /**

@@ -10,8 +10,8 @@ import { redirect } from 'next/navigation'
 
 export const metadata = { title: 'Nieuwe configuratie | LoooX Configurator' }
 
-export default async function NieuweConfiguratiePage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
-  const { project: projectParam } = await searchParams
+export default async function NieuweConfiguratiePage({ searchParams }: { searchParams: Promise<{ project?: string; type?: string }> }) {
+  const { project: projectParam, type } = await searchParams
   const supabase = await createClient()
   // Leespad: lokale JWT-verificatie (middleware bewaakt de sessie, RLS de data)
   const { data: claimsData } = await supabase.auth.getClaims()
@@ -75,6 +75,9 @@ export default async function NieuweConfiguratiePage({ searchParams }: { searchP
       project={project}
     />
   )
+
+  // ?type=maatwerk (bijverkoop bij een meubel): geen typekeuze, direct de keuze tussen zelf samenstellen en het hulpje
+  if (type === 'maatwerk') return wizard
 
   // 'beide': eerst typekeuze (besluit B2); maatwerk-stand direct de wizard
   if (access === 'beide') {

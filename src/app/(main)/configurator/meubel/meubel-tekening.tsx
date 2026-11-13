@@ -2,7 +2,9 @@
 
 import { memo, useId } from 'react'
 import { HOUTKLEUREN, formatMm, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
-import { tekenIndeling, tekenKast, tekenWaskommen, type RegaalZijde, spiegelGlans } from '@/lib/meubel-tekening'
+import { tekenIndeling, tekenKast, tekenGaten, tekenKommenIndicatief, type RegaalZijde, spiegelGlans } from '@/lib/meubel-tekening'
+import type { Gat, GatenContext } from '@/lib/meubel-gaten'
+import { GatVorm } from './blad-gaten'
 
 // Schematisch vooraanzicht op schaal, in dezelfde stijl als de spiegeltekening:
 // zachte vulling, dunne lijnen en maatlijnen. Volgt lengte, lades en houtkleur.
@@ -19,7 +21,7 @@ const LIJN_OP_DONKER = '#F4F1EA'
 const VLAK_ZONDER_HOUT = '#F6F4EF'
 const MAAT = 'var(--lx-text-secondary)'
 
-export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout: houtAan = true, regaal = null, waskom = null, deuren = 0 }: {
+export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout: houtAan = true, regaal = null, blad = null, deuren = 0 }: {
   model: MeubelModel
   lengte: number
   /** Breedte per lade in mm, van links naar rechts */
@@ -29,8 +31,12 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   toonHout?: boolean
   /** Open regaalkast naast of tussen de lades (Regal-modellen) */
   regaal?: { breedte: number; zijde: RegaalZijde } | null
-  /** Ingebouwde waskom in het Solid Surface blad: vorm en aantal */
-  waskom?: { vorm: 'ovaal' | 'vierkant'; aantal: number } | null
+  /**
+   * Bovenaanzicht van het blad met de gaten en waskommen. `indicatief`: bij een eigen
+   * maattekening staan de waskommen gelijk verdeeld, als aanduiding. Geef een vast object
+   * mee (useMemo), anders tekent de tekening bij elke render opnieuw.
+   */
+  blad?: { context: GatenContext; gaten: Gat[]; indicatief: boolean } | null
   /** Aantal deuren bij een kast */
   deuren?: number
 }) {
@@ -45,7 +51,8 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
   const w = lengte * schaal
   const h = model.hoogte * schaal
   // Solid Surface: bovenaanzicht van het blad boven het vooraanzicht
-  const heeftBlad = model.categorie === 'solid-surface' || !!model.plank
+  const heeftBlad = !!blad || model.categorie === 'solid-surface' || !!model.plank
+  const bladGaten = blad ? (blad.indicatief ? tekenKommenIndicatief(blad.context) : tekenGaten(blad.gaten, blad.context)) : []
   const bladD = heeftBlad ? model.diepte * schaal : 0
   const yBlad = PAD_TOP
   const x = (W - 22 - w) / 2
@@ -83,22 +90,22 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
         </pattern>
       </defs>
 
-      {/* Bovenaanzicht: Solid Surface blad met de waskommen (plaats indicatief) */}
+      {/* Bovenaanzicht: het blad met de gaten en waskommen */}
       {heeftBlad && (
         <g>
-          <rect x={x} y={yBlad} width={w} height={bladD} rx="1.5" fill={model.plank ? (toonHout ? `url(#${patroon})` : VLAK_ZONDER_HOUT) : '#FBFAF7'} stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
-          {waskom && tekenWaskommen(lengte, model.diepte, waskom.aantal).map((k) => (
-            waskom.vorm === 'ovaal'
-              ? <ellipse key={k.cx} cx={x + k.cx * schaal} cy={yBlad + k.cy * schaal} rx={(k.b / 2) * schaal} ry={(k.d / 2) * schaal} fill="#EDEAE3" stroke={LIJN_OP_LICHT} strokeWidth="1" />
-              : <rect key={k.cx} x={x + (k.cx - k.b / 2) * schaal} y={yBlad + (k.cy - k.d / 2) * schaal} width={k.b * schaal} height={k.d * schaal} rx={40 * schaal} fill="#EDEAE3" stroke={LIJN_OP_LICHT} strokeWidth="1" />
+          <rect x={x} y={yBlad} width={w} height={bladD} rx="1.5" fill={model.categorie === 'solid-surface' ? '#FBFAF7' : toonHout ? `url(#${patroon})` : VLAK_ZONDER_HOUT} stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
+          {/* Ladevakken als stippellijn: daarboven kan een sifongat of waskom */}
+          {blad && !blad.context.blad.los && blad.context.blad.vakken.flatMap((v) => [v.x0, v.x1]).filter((gx, i, alle) => gx > 0.5 && gx < lengte - 0.5 && alle.indexOf(gx) === i).map((gx) => (
+            <line key={`bv${gx}`} x1={x + gx * schaal} y1={yBlad} x2={x + gx * schaal} y2={yBlad + bladD} stroke={model.categorie === 'solid-surface' ? LIJN_OP_LICHT : LIJN} strokeWidth="0.6" strokeDasharray="3 3" strokeOpacity="0.55" />
           ))}
+          {bladGaten.map((g) => <GatVorm key={`${g.soort}${g.nr}`} gat={g} x0={x} y0={yBlad} schaal={schaal} lijn={LIJN_OP_LICHT} />)}
           <g stroke={MAAT} strokeWidth="0.8" fill="none">
             <line x1={x + w + 14} y1={yBlad} x2={x + w + 14} y2={yBlad + bladD} />
             <line x1={x + w + 5} y1={yBlad} x2={x + w + 19} y2={yBlad} />
             <line x1={x + w + 5} y1={yBlad + bladD} x2={x + w + 19} y2={yBlad + bladD} />
           </g>
           <text x={x + w + 20} y={yBlad + bladD / 2 + 4} fontSize="11" fontWeight="600" fill="var(--lx-text-primary)">{model.diepte}</text>
-          <text x={x} y={yBlad + bladD + 12} fontSize="9" fill={MAAT}>Bovenaanzicht{waskom ? ', plaats waskom indicatief' : ''}</text>
+          <text x={x} y={yBlad + bladD + 12} fontSize="9" fill={MAAT}>Bovenaanzicht{blad?.indicatief && bladGaten.length > 0 ? ', plaats waskom indicatief' : ''}</text>
         </g>
       )}
 

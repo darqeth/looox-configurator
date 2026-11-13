@@ -1,4 +1,5 @@
-import type { MeubelModel } from '@/lib/meubel-config'
+import { formatMm, type MeubelModel } from '@/lib/meubel-config'
+import { plaatsGat, type Gat, type GatenContext } from '@/lib/meubel-gaten'
 
 // Indeling van het vooraanzicht, gedeeld door de tekening op het scherm en in de
 // PDF: de vakken (lades en regaalkast) van links naar rechts, in tekeneenheden.
@@ -67,26 +68,70 @@ export function tekenIndeling(opties: {
   }
 }
 
-// ─── Bovenaanzicht van het Solid Surface blad ───────────────────────────────
+// ─── Bovenaanzicht van het blad met gaten en waskommen ──────────────────────
 
-export interface TekenWaskom {
-  /** Midden van de waskom in mm vanaf de linkerkant en vanaf de achterkant van het blad */
-  cx: number
-  cy: number
-  /** Buitenmaat in mm */
-  b: number
+export interface TekenGat {
+  soort: Gat['soort']
+  /** Volgnummer in de tekening en in de tabel, vanaf 1 */
+  nr: number
+  /** Plaats van het gat in de lijst die de dealer bewerkt; -1 bij een indicatieve waskom */
+  index: number
+  /** Hart in mm: vanaf de linkerkant en vanaf de achterkant van het blad */
+  x: number
+  y: number
+  /** Diameter in mm; 0 bij een waskom */
   d: number
+  /** Waskom: buitenmaat, hoekradius en afvoer */
+  b?: number
+  h?: number
+  radius?: number
+  ovaal?: boolean
+  afvoer?: number
+}
+
+/** Alle gaten met absolute maten in mm, klaar om te tekenen: waskommen eerst, dan van links naar rechts. */
+export function tekenGaten(gaten: Gat[], c: GatenContext): TekenGat[] {
+  const uit: Omit<TekenGat, 'nr'>[] = []
+  gaten.forEach((g, index) => {
+    const p = plaatsGat(g, c)
+    if (!p) return
+    uit.push(g.soort === 'kom' && c.kom
+      ? { soort: 'kom', index, x: p.x, y: p.y, d: 0, b: c.kom.b, h: c.kom.d, radius: c.kom.radius, ovaal: c.kom.ovaal, afvoer: c.kom.afvoer }
+      : { soort: g.soort, index, x: p.x, y: p.y, d: p.d })
+  })
+  uit.sort((a, b) => Number(a.soort !== 'kom') - Number(b.soort !== 'kom') || a.x - b.x || a.y - b.y)
+  return uit.map((g, i) => ({ ...g, nr: i + 1 }))
 }
 
 /**
- * Waskommen in het blad, gelijk verdeeld over de lengte. De plaats is indicatief:
- * de echte plaats staat op de maattekening van de dealer.
+ * Waskommen bij een eigen maattekening: gelijk verdeeld over de lengte. De plaats is
+ * indicatief; de echte plaats staat op de tekening van de dealer.
  */
-export function tekenWaskommen(lengte: number, diepte: number, aantal: number): TekenWaskom[] {
-  const n = aantal === 2 ? 2 : 1
-  const b = Math.min(520, (lengte / n) * 0.62)
-  const d = Math.min(360, diepte * 0.7)
-  return Array.from({ length: n }, (_, i) => ({ cx: (lengte / n) * (i + 0.5), cy: diepte * 0.52, b, d }))
+export function tekenKommenIndicatief(c: GatenContext): TekenGat[] {
+  if (!c.kom) return []
+  const n = c.komAantal === 2 ? 2 : 1
+  // Past de zichtmaat niet naast elkaar, dan kleiner getekend: het is alleen een aanduiding
+  const b = Math.min(c.kom.b, (c.blad.lengte / n) * 0.7)
+  return Array.from({ length: n }, (_, i) => ({
+    soort: 'kom' as const, nr: i + 1, index: -1, x: (c.blad.lengte / n) * (i + 0.5), y: c.kom!.cy, d: 0,
+    b, h: c.kom!.d, radius: c.kom!.radius, ovaal: c.kom!.ovaal, afvoer: c.kom!.afvoer,
+  }))
+}
+
+const SOORT_NAAM: Record<Exclude<Gat['soort'], 'kom'>, string> = { sifon: 'Sifongat', kraan: 'Kraangat', 'kraan-kom': 'Kraangat' }
+
+/** Naam van een gat voor de dealer en de werkplaats: "Sifongat", "Waskom rechthoekig 500". */
+export function gatNaam(g: Pick<TekenGat, 'soort' | 'ovaal' | 'b'>): string {
+  if (g.soort !== 'kom') return SOORT_NAAM[g.soort]
+  return g.ovaal ? 'Waskom ovaal' : `Waskom rechthoekig ${g.b}`
+}
+
+/** Regels voor de tabel onder de tekening: plaats naar het hart, in mm. */
+export function gatenTabel(gaten: Gat[], c: GatenContext): { nr: number; soort: string; x: string; y: string; maat: string }[] {
+  return tekenGaten(gaten, c).map((g) => ({
+    nr: g.nr, soort: gatNaam(g), x: formatMm(g.x), y: formatMm(g.y),
+    maat: g.soort === 'kom' ? `${g.b} × ${g.h}` : `Ø ${formatMm(g.d)}`,
+  }))
 }
 
 // ─── Vooraanzicht van een kast ──────────────────────────────────────────────

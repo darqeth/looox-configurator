@@ -292,6 +292,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
     setEigenBreedtes(null) // een eigen indeling hoort bij één lengte
   }
   const tekenLengte = isDuo || lengteOk ? lengte : laatsteLengte
+  const tekenBlad = null // TIJDELIJK: volgt in de ombouw van de configurator
 
   // Lades verdelen de lengte min de rand van het frame en min de regaalkast
   const ruimte = ladeRuimte(model, tekenLengte, regaalMm)
@@ -1272,7 +1273,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
             houtkleur={houtkleur}
             toonHout={toonHout}
             regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
-            waskom={model.waskom ? { vorm: waskomVorm, aantal: waskomAantal } : null}
+            blad={tekenBlad}
           />
           )}
           <p className="text-[11px] text-lx-text-secondary text-center">{model.artikel ? `${variant?.naam ?? ''} · ${variant?.afmeting ?? ''}` : model.categorie === 'solid-surface' || model.plank ? 'Bovenaanzicht en vooraanzicht, maten in mm' : `Vooraanzicht, maten in mm · diepte ${model.diepte} mm`}</p>
@@ -1320,7 +1321,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
               houtkleur={houtkleur}
               toonHout={toonHout}
               regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
-            waskom={model.waskom ? { vorm: waskomVorm, aantal: waskomAantal } : null}
+            blad={tekenBlad}
             />
             <p className="text-[12px] text-lx-text-secondary text-center mt-1">
               Vooraanzicht, maten in mm · hoogte {model.hoogte} mm · diepte {model.diepte} mm

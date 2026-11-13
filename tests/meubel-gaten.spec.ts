@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { getMeubelModel } from '../src/lib/meubel-config'
+import { gatenTabel, tekenGaten, tekenKommenIndicatief } from '../src/lib/meubel-tekening'
 import {
   maakBlad, snappunten, valideerGaten, klemGat, getKom, komMax, plaatsGat, herzieGaten,
   betaaldeGaten, kommenCompleet, gatenSoort, startGaten, type GatenContext,
@@ -148,4 +149,27 @@ test('gatenSoort per model', () => {
   for (const id of ['facet', 'solid-base-drawer-box', 'mini-base-shelf', 'base-shelf-solo', 'base-shelf-deco', 'basic-cube-mini', 'cabinet-facet-mini']) expect(gatenSoort(getMeubelModel(id)!), id).toBe('hout')
   expect(gatenSoort(solid)).toBe('solid')
   expect(gatenSoort(getMeubelModel('solid-washbasin-solo')!)).toBe('solid')
+})
+
+test('gatenTabel: plaats naar het hart in mm, waskommen eerst', () => {
+  expect(gatenTabel([{ soort: 'sifon', vak: 1, y: 240, d: 45 }], hout(1200, [600, 600]))).toEqual([{ nr: 1, soort: 'Sifongat', x: '900', y: '240', maat: 'Ø 45' }])
+  const c: GatenContext = { soort: 'solid', blad: blad(1400, [700, 700]), kom: getKom('vierkant', 500), komAantal: 2 }
+  expect(gatenTabel([{ soort: 'kraan-kom', vak: 1, dx: -100, d: 34 }, { soort: 'kom', vak: 1 }, { soort: 'kom', vak: 0 }], c)).toEqual([
+    { nr: 1, soort: 'Waskom rechthoekig 500', x: '350', y: '240', maat: '500 × 298' },
+    { nr: 2, soort: 'Waskom rechthoekig 500', x: '1050', y: '240', maat: '500 × 298' },
+    { nr: 3, soort: 'Kraangat', x: '950', y: '45,5', maat: 'Ø 34' },
+  ])
+  expect(gatenTabel([{ soort: 'kom', vak: 0 }], { ...c, kom: getKom('ovaal') })[0].soort).toBe('Waskom ovaal')
+})
+
+test('tekenGaten onthoudt welk gat het is, ook na sorteren', () => {
+  const g = tekenGaten([{ soort: 'kraan', x: 900, y: 80, d: 35 }, { soort: 'sifon', vak: 0, y: 240, d: 45 }], hout(1200, [600, 600]))
+  expect(g.map((t) => [t.nr, t.index, t.x])).toEqual([[1, 1, 300], [2, 0, 900]])
+})
+
+test('tekenKommenIndicatief verdeelt de waskommen over de lengte', () => {
+  const c: GatenContext = { soort: 'solid', blad: blad(1200, [600, 600]), kom: getKom('vierkant', 500), komAantal: 2 }
+  expect(tekenKommenIndicatief(c).map((k) => [k.x, k.b])).toEqual([[300, 420], [900, 420]])
+  expect(tekenKommenIndicatief({ ...c, komAantal: 1 }).map((k) => [k.x, k.b])).toEqual([[600, 500]])
+  expect(tekenKommenIndicatief(hout(1200, [600, 600]))).toEqual([])
 })

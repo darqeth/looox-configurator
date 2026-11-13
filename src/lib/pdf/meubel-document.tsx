@@ -1,11 +1,11 @@
 import React from 'react'
 import { meubelExtraPrijs } from '@/lib/meubel-opslag'
-import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Ellipse, Polygon, Text as SvgText } from '@react-pdf/renderer'
+import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Ellipse, Polygon, Circle, G, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
 import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
-import { spiegelGlans, tekenIndeling, tekenKast, tekenWaskommen } from '@/lib/meubel-tekening'
+import { gatenTabel, spiegelGlans, tekenGaten, tekenIndeling, tekenKast, tekenKommenIndicatief } from '@/lib/meubel-tekening'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
 //   offerte: voor de klant van de dealer, met de brutoprijs (netto × factor)
@@ -104,7 +104,11 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
   const w = lengte * schaal
   const h = model.hoogte * schaal
   // Solid Surface: bovenaanzicht van het blad boven het vooraanzicht
-  const heeftBlad = model.categorie === 'solid-surface' || !!model.plank
+  const ctx = meubel.gatenContext
+  const getekend = meubel.tekenwijze === 'module'
+  const heeftBlad = !!ctx || model.categorie === 'solid-surface' || !!model.plank
+  // Zelf getekend: de gaten op hun plaats, genummerd zoals in de tabel. Eigen tekening: waskommen als aanduiding.
+  const bladGaten = !ctx ? [] : getekend ? tekenGaten(meubel.gaten, ctx) : tekenKommenIndicatief(ctx)
   const bladD = heeftBlad ? model.diepte * schaal : 0
   const yBlad = PAD_TOP
   const x = (W - 30 - w) / 2
@@ -127,18 +131,40 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
     <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       {/* Bovenaanzicht: Solid Surface blad met de waskommen (plaats indicatief) */}
       {heeftBlad && <Rect x={x} y={yBlad} width={w} height={bladD} fill={model.plank ? '#F6F4EF' : '#FBFAF7'} stroke="#26282B" strokeWidth={1.2} />}
-      {heeftBlad && meubel.waskomVorm && tekenWaskommen(lengte, model.diepte, meubel.waskomAantal).map((k, i) => (
-        meubel.waskomVorm === 'ovaal'
-          ? <Ellipse key={`w${i}`} cx={x + k.cx * schaal} cy={yBlad + k.cy * schaal} rx={(k.b / 2) * schaal} ry={(k.d / 2) * schaal} fill="#EDEAE3" stroke="#26282B" strokeWidth={0.7} />
-          : <Rect key={`w${i}`} x={x + (k.cx - k.b / 2) * schaal} y={yBlad + (k.cy - k.d / 2) * schaal} width={k.b * schaal} height={k.d * schaal} rx={40 * schaal} ry={40 * schaal} fill="#EDEAE3" stroke="#26282B" strokeWidth={0.7} />
+      {heeftBlad && ctx && !ctx.blad.los && ctx.blad.vakken.flatMap((v) => [v.x0, v.x1]).filter((gx, i, alle) => gx > 0.5 && gx < lengte - 0.5 && alle.indexOf(gx) === i).map((gx, i) => (
+        <Line key={`bv${i}`} x1={x + gx * schaal} y1={yBlad} x2={x + gx * schaal} y2={yBlad + bladD} stroke={GRAY} strokeWidth={0.4} strokeDasharray="2 2" />
       ))}
+      {heeftBlad && bladGaten.map((g) => {
+        const cx = x + g.x * schaal, cy = yBlad + g.y * schaal
+        if (g.soort === 'kom') {
+          const b = (g.b ?? 0) * schaal, h = (g.h ?? 0) * schaal
+          return (
+            <G key={`g${g.nr}`}>
+              {g.ovaal
+                ? <Ellipse cx={cx} cy={cy} rx={b / 2} ry={h / 2} fill="#EDEAE3" stroke="#26282B" strokeWidth={0.7} />
+                : <Rect x={cx - b / 2} y={cy - h / 2} width={b} height={h} rx={(g.radius ?? 0) * schaal} ry={(g.radius ?? 0) * schaal} fill="#EDEAE3" stroke="#26282B" strokeWidth={0.7} />}
+              <Circle cx={cx} cy={cy} r={((g.afvoer ?? 0) / 2) * schaal} fill="#ffffff" stroke="#26282B" strokeWidth={0.5} />
+              {getekend && <SvgText x={cx - b / 2 + 3} y={cy - h / 2 + 8} style={{ ...tekst, fontSize: 6.5, fontFamily: 'Helvetica-Bold' }}>{String(g.nr)}</SvgText>}
+            </G>
+          )
+        }
+        const r = Math.max(1.2, (g.d / 2) * schaal)
+        return (
+          <G key={`g${g.nr}`}>
+            <Circle cx={cx} cy={cy} r={r} fill="#ffffff" stroke="#26282B" strokeWidth={0.7} />
+            <Line x1={cx - r - 2} y1={cy} x2={cx + r + 2} y2={cy} stroke="#26282B" strokeWidth={0.4} />
+            <Line x1={cx} y1={cy - r - 2} x2={cx} y2={cy + r + 2} stroke="#26282B" strokeWidth={0.4} />
+            <SvgText x={cx + r + 3} y={cy - r - 1} style={{ ...tekst, fontSize: 6.5, fontFamily: 'Helvetica-Bold' }}>{String(g.nr)}</SvgText>
+          </G>
+        )
+      })}
       {heeftBlad && (
         <>
           <Line x1={x + w + 11} y1={yBlad} x2={x + w + 11} y2={yBlad + bladD} {...maat} />
           <Line x1={x + w + 5} y1={yBlad} x2={x + w + 15} y2={yBlad} {...maat} />
           <Line x1={x + w + 5} y1={yBlad + bladD} x2={x + w + 15} y2={yBlad + bladD} {...maat} />
           <SvgText x={x + w + 17} y={yBlad + bladD / 2 + 3} style={{ ...tekst, fontFamily: 'Helvetica-Bold' }}>{String(model.diepte)}</SvgText>
-          <SvgText x={x} y={yBlad + bladD + 9} style={{ ...tekst, fontSize: 6.5, fill: GRAY }}>{`Bovenaanzicht${meubel.waskomVorm ? ', plaats waskom indicatief' : ''}`}</SvgText>
+          <SvgText x={x} y={yBlad + bladD + 9} style={{ ...tekst, fontSize: 6.5, fill: GRAY }}>{`Bovenaanzicht${!getekend && bladGaten.length > 0 ? ', plaats waskom indicatief' : getekend && bladGaten.length > 0 ? ', nummers zie tabel Uitsparingen' : ''}`}</SvgText>
         </>
       )}
       <Rect x={x} y={y} width={w} height={h} fill={model.geenHout ? '#FBFAF7' : '#F6F4EF'} stroke="#26282B" strokeWidth={1.2} />
@@ -225,6 +251,8 @@ export default function MeubelDocument({
   const opbouw = getMeubelOrderOpbouw(Math.round(unitPrice * 100), meubel.factor, meubelExtraPrijs(meubel))
   const footerLinks = isOrder ? 'LoooX' : `${dealer.company ?? dealer.name ?? ''} - ${dealer.email}`
   const footerRechts = isOrder ? `${docTitle} ${orderNumber ?? ''}` : `Offerte ${projectName ?? ''} - ${today}`
+
+  const uitsparingen = meubel.tekenwijze === 'module' && meubel.gatenContext ? gatenTabel(meubel.gaten, meubel.gatenContext) : []
 
   const specs: [string, string][] = [
     ['Model', model.naam],
@@ -315,7 +343,7 @@ export default function MeubelDocument({
         {/* Tekening */}
         <View style={[styles.section, { alignItems: 'center' }]} wrap={false}>
           {!meubel.model.artikel && <PdfMeubelTekening meubel={meubel} />}
-          {!meubel.model.artikel && <Text style={styles.caption}>{meubel.model.categorie === 'solid-surface' || meubel.model.plank ? 'Bovenaanzicht en vooraanzicht, maten in mm' : 'Vooraanzicht, maten in mm'}</Text>}
+          {!meubel.model.artikel && <Text style={styles.caption}>{meubel.gatenContext || meubel.model.categorie === 'solid-surface' || meubel.model.plank ? 'Bovenaanzicht en vooraanzicht, maten in mm' : 'Vooraanzicht, maten in mm'}</Text>}
         </View>
 
         {/* Specificatie */}
@@ -330,6 +358,29 @@ export default function MeubelDocument({
             ))}
           </View>
         </View>
+
+        {/* Uitsparingen uit de tekenmodule: plaats naar het hart, voor de werkplaats */}
+        {uitsparingen.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionTitle}>Uitsparingen (maten in mm, naar het hart)</Text>
+            <View style={styles.table}>
+              <View style={styles.tableRow}>
+                {['Nr', 'Soort', 'X vanaf links', 'Y vanaf achterkant', 'Maat'].map((kop, k) => (
+                  <Text key={kop} style={{ ...(k === 0 ? { width: 28 } : k === 1 ? { flex: 2 } : { flex: 1 }), color: GRAY, fontSize: 7.5 }}>{kop}</Text>
+                ))}
+              </View>
+              {uitsparingen.map((u, i) => (
+                <View key={u.nr} style={i === uitsparingen.length - 1 ? styles.tableRowLast : styles.tableRow}>
+                  <Text style={{ width: 28, fontSize: 8.5, fontFamily: 'Helvetica-Bold' }}>{String(u.nr)}</Text>
+                  <Text style={{ flex: 2, fontSize: 8.5 }}>{u.soort}</Text>
+                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.x}</Text>
+                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.y}</Text>
+                  <Text style={{ flex: 1, fontSize: 8.5 }}>{u.maat}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Prijs */}
         <View style={styles.section} wrap={false}>

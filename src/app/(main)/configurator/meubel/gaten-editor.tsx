@@ -311,7 +311,10 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
           </svg>
         </div>
 
-        {melding && <p role="alert" className="mt-2 text-[12.5px] text-red-700 bg-red-50 rounded-lg px-3 py-2">{melding}</p>}
+        {/* Vaste ruimte voor de melding: verschijnt hij tijdens het slepen, dan mag het blad niet verspringen */}
+        <div className="mt-2 min-h-[54px] sm:min-h-[36px]">
+          {melding && <p role="alert" className="text-[12.5px] text-red-700 bg-red-50 rounded-lg px-3 py-2">{melding}</p>}
+        </div>
 
         {/* Maten van het gekozen gat */}
         <div className="mt-3 min-h-[76px]">

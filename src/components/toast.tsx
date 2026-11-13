@@ -46,7 +46,7 @@ export function Toaster() {
           key={item.id}
           role="status"
           className={`pointer-events-auto flex items-center gap-2.5 max-w-md w-fit px-4 py-3 rounded-xl shadow-lg text-[13px] font-medium text-white ${
-            item.type === 'error' ? 'bg-red-600' : 'bg-lx-text-primary'
+            item.type === 'error' ? 'bg-red-600' : 'bg-lx-cta'
           }`}
         >
           {item.type === 'error' ? (

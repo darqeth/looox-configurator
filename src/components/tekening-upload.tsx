@@ -43,7 +43,7 @@ export default function TekeningUpload({ configId, onKlaar, groot = false }: {
       onKlaar?.(url)
       queryClient.invalidateQueries({ queryKey: ['configurations'] })
       router.refresh()
-      toast('Maattekening toegevoegd.')
+      toast('Maattekening toegevoegd.', 'success')
     } catch (e) {
       console.error('[upload] maattekening', e)
       toast(e instanceof Error ? e.message : 'Uploaden mislukt. Probeer het opnieuw.')

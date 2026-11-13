@@ -16,7 +16,7 @@ import {
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
-  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo,
+  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelModel, LADE_ACCESSOIRES, type LadeAccessoire,
   type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
@@ -50,6 +50,8 @@ export interface MeubelInitialConfig {
   extra?: PlankExtra | null
   extraArtikel?: string | null
   lampen?: number
+  organizer?: string | null
+  divider?: string | null
   variant?: string | null
   quantity: number
   projectName: string
@@ -90,6 +92,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const [extra, setExtra] = useState<PlankExtra | null>(initialConfig?.extra ?? null)
   const [extraArtikelKeuze, setExtraArtikel] = useState<string | null>(initialConfig?.extraArtikel ?? null)
   const [lampen, setLampen] = useState(Math.min(1, initialConfig?.lampen ?? 0))
+  const [ladeAcc, setLadeAcc] = useState<Record<LadeAccessoire, string | null>>({ organizer: initialConfig?.organizer ?? null, divider: initialConfig?.divider ?? null })
   // Met een handdoekhouder moet de plank diep genoeg zijn
   const houderMinDiepte = basisModel?.plank?.handdoekhouder && handdoekhouders > 0 ? basisModel.plank.handdoekhouder.minDiepte : 0
   const plankDiepteOk = !plankDiepteBereik || (plankDiepteInvoer >= Math.max(plankDiepteBereik.min, houderMinDiepte) && plankDiepteInvoer <= plankDiepteBereik.max)
@@ -267,6 +270,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const hoogteKeuzes = model.kast ? model.kast.hoogtes : model.plank ? model.plank.diktes : model.hoogtes
   const diepteKeuzes = model.kast?.dieptes ?? model.plank?.dieptes
   const magExtra = heeftExtras(model, variant?.id)
+  const magLadeAcc = kanLadeAccessoire(model)
+  const ladeAccKeuze = magLadeAcc ? ladeAcc : { organizer: null, divider: null }
   const extraArtikel = magExtra ? getPlankExtraArtikel(extra, extraArtikelKeuze) : null
   const plankKeuzes = { handdoekhouders, handdoekType, extra: magExtra ? extra : null, extraArtikel: extraArtikel?.id, variant: variant?.id, lampen: model.lamp ? lampen : 0 }
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
@@ -279,7 +284,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
   const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, hoogte: model.hoogte, diepte: model.diepte,
-    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
+    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
   const magUitsparing = kanUitsparing(model)
   const tekeningNodig = tekeningVerplicht(model, uitsparingen)
@@ -331,6 +336,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
       ...(model.plank?.handdoekhouder && { handdoekhouders, handdoekType }),
       ...(magExtra && { extra, extraArtikel: extraArtikel?.id ?? null }),
       ...(model.lamp && { lampen }),
+      ...(magLadeAcc && ladeAccKeuze),
       ...(variant && { variant: variant.id }),
       ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
       ...(model.waskom && { waskomVorm, waskomAantal }),
@@ -934,6 +940,49 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               </div>}
 
+              {magLadeAcc && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Voor in de lade</p>
+                  <div className="space-y-2">
+                    {LADE_ACCESSOIRES.map((soort) => {
+                      const acc = getMeubelModel(soort)
+                      if (!acc?.artikel) return null
+                      return (
+                        <div key={soort} className="flex items-center gap-4 rounded-xl border border-black/10 p-3">
+                          <span className="relative w-20 h-[60px] flex-shrink-0">
+                            <Image src={acc.afbeelding} alt="" fill sizes="80px" className="object-contain" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[13px] font-semibold text-lx-text-primary">{acc.naam}</span>
+                            <span className="block text-[11.5px] text-lx-text-secondary">{acc.omschrijving}</span>
+                            <span className="block text-[11.5px] text-lx-text-secondary">
+                              {acc.artikel.varianten.map((v) => `${v.naam} ${formatCents(Math.round(v.prijs * parseMeubelFactor(factor)))}`).join(' · ')}
+                            </span>
+                          </span>
+                          <div className="flex gap-2 flex-shrink-0" role="radiogroup" aria-label={acc.naam}>
+                            {[null, ...acc.artikel.varianten.map((v) => v.id)].map((id) => (
+                              <button
+                                key={id ?? 'geen'}
+                                type="button"
+                                role="radio"
+                                aria-checked={ladeAcc[soort] === id}
+                                onClick={() => setLadeAcc((s) => ({ ...s, [soort]: id }))}
+                                className={`px-3 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                                  ladeAcc[soort] === id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                                }`}
+                              >
+                                {id === null ? 'Geen' : acc.artikel!.varianten.find((v) => v.id === id)!.naam}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">Eén per meubel. Elke Organizer wordt geleverd met 1 Divider.</p>
+                </div>
+              )}
+
               {(kanLogo(model) || magUitsparing) && <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Opties</p>
                 <div className="bg-lx-panel-bg rounded-xl p-4 space-y-4">
@@ -1027,7 +1076,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${isDuo ? 'in het midden' : regaalZijde}`} onEdit={() => setStep(2)} />}
                 {model.waskom && <Rij label="Waskom" waarde={waskomTekst({ waskomVorm, waskomAantal })} onEdit={() => setStep(2)} />}
                 {!model.geenHout && <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />}
-                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && kanLogo(model), uitsparingen })} onEdit={() => setStep(2)} />
+                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && kanLogo(model), uitsparingen, ...ladeAccKeuze })} onEdit={() => setStep(2)} />
               </div>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">

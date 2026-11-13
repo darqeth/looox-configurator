@@ -29,7 +29,7 @@ export type MeubelCategorieId = 'wastafelmeubels' | 'solid-surface' | 'kasten' |
 export const MEUBEL_CATEGORIEEN: { id: MeubelCategorieId; naam: string; omschrijving: string }[] = [
   { id: 'wastafelmeubels', naam: 'Wastafelmeubels', omschrijving: 'Houten ladenmeubels op maat.' },
   { id: 'solid-surface', naam: 'Solid Surface', omschrijving: 'Meubels met een Solid Surface blad en waskom.' },
-  { id: 'kasten', naam: 'Kasten', omschrijving: 'Hoge kasten, regalen en de spiegelkast.' },
+  { id: 'kasten', naam: 'Kasten', omschrijving: 'Hoge kasten, regalen, de spiegelkast en de Wooden Box Facet.' },
   { id: 'toiletmeubels', naam: 'Toiletmeubels', omschrijving: 'Compacte meubels en planken voor het toilet.' },
   { id: 'planken', naam: 'Planken', omschrijving: 'Base Shelf, Wall Shelf, Niche Shelf en Cover.' },
   { id: 'waskommen', naam: 'Waskommen', omschrijving: 'Keramiek, Solid Surface en vrijstaande zuilen.' },
@@ -323,7 +323,7 @@ const ARTIKEL_GROEPEN: { id: string; categorie: MeubelCategorieId; naam: string;
     ['WDIV218', 'M', 'Maat M', 936],
     ['WDIV242', 'L', 'Maat L', 936],
   ] },
-  { id: 'wooden-box-facet', categorie: 'accessoires', naam: 'Wooden Box Facet', omschrijving: 'Open houten box, mooi naast de Mirror Cabinet.', hout: true, opmerking: 'De Wooden Box Facet kan alleen besteld worden in de standaardmaat.', varianten: [
+  { id: 'wooden-box-facet', categorie: 'kasten', naam: 'Wooden Box Facet', omschrijving: 'Open houten box, mooi naast de Mirror Cabinet.', hout: true, opmerking: 'De Wooden Box Facet kan alleen besteld worden in de standaardmaat.', varianten: [
     ['wooden-box-facet-20', 'Standaard', 'Breedte 20 cm', 21736],
   ] },
 ]
@@ -1026,6 +1026,11 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     staffels: [],
   })),
 ]
+// De Wooden Box Facet hoort bij de Mirror Cabinet: direct erna in de lijst
+{
+  const [box] = MEUBEL_MODELLEN.splice(MEUBEL_MODELLEN.findIndex((m) => m.id === 'wooden-box-facet'), 1)
+  MEUBEL_MODELLEN.splice(MEUBEL_MODELLEN.findIndex((m) => m.id === 'mirror-cabinet') + 1, 0, box)
+}
 
 export interface Houtkleur {
   id: string
@@ -1351,6 +1356,9 @@ export interface MeubelInput {
   variant?: string
   /** Kant van de regaalkast */
   regaalZijde?: 'links' | 'rechts' | 'midden'
+  /** Bijverkoop bij een meubel met lades: één Organizer en/of één Divider, op artikelnummer */
+  organizer?: string | null
+  divider?: string | null
 }
 
 /** Netto per stuk in centen, of null bij een ongeldige combinatie. Niet tonen buiten de bestelstap. */
@@ -1368,6 +1376,13 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
     // Met een handdoekhouder moet de plank diep genoeg zijn
     if (!h || !Number.isInteger(houders) || houders < 0 || houders > 2 || (input.diepte ?? model.diepte) < h.minDiepte) return null
   }
+  let ladeAcc = 0
+  for (const soort of LADE_ACCESSOIRES) {
+    if (input[soort] == null) continue
+    const v = kanLadeAccessoire(model) ? getLadeAccessoire(soort, input[soort]) : null
+    if (!v) return null
+    ladeAcc += v.prijs
+  }
   const lampen = input.lampen ?? 0
   if (lampen !== 0 && (!model.lamp || !Number.isInteger(lampen) || lampen < 0 || lampen > LAMPEN_MAX)) return null
   if (input.extra != null && (!heeftExtras(model, input.variant) || !PLANK_EXTRAS.some((e) => e.id === input.extra))) return null
@@ -1383,7 +1398,7 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
       ? findStaffel(model, input.lengte)?.prijzen[input.lades] ?? null
       : null
   if (basis === null) return null
-  return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0) + plankExtraPrijs(input).netto
+  return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0) + ladeAcc + plankExtraPrijs(input).netto
 }
 
 export function parseMeubelFactor(v: unknown): number {
@@ -1426,6 +1441,10 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
   const houders = input.handdoekhouders ?? 0
   if (houders > 0) extra.push({ label: `Handdoekhouder · ${houders}×`, cents: Math.round(houders * (model.plank?.handdoekhouder?.prijs ?? 0) * f) })
+  for (const soort of LADE_ACCESSOIRES) {
+    const v = getLadeAccessoire(soort, input[soort])
+    if (v) extra.push({ label: `${getMeubelModel(soort)!.naam} ${v.naam}`, cents: Math.round(v.prijs * f) })
+  }
   const acc = plankExtraPrijs(input)
   const lampCents = lampBruto(input)
   if (acc.bruto - lampCents > 0) extra.push({ label: plankExtraTekst(input).replace(/ \(art\. .*\)$/, ''), cents: acc.bruto - lampCents })
@@ -1617,11 +1636,36 @@ export function meubelAfmeting(model: MeubelModel, lengte: number): string {
   return `L ${lengte} × H ${model.hoogte} × D ${model.diepte} mm`
 }
 
+// ─── Bijverkoop voor in de lade ─────────────────────────────────────────────
+// Bij een meubel met lades kan er één Organizer en één Divider bij. Het zijn de
+// artikelen uit de categorie Accessoires, met dezelfde prijs (netto × factor).
+export const LADE_ACCESSOIRES = ['organizer', 'divider'] as const
+export type LadeAccessoire = typeof LADE_ACCESSOIRES[number]
+
+export function kanLadeAccessoire(model: MeubelModel): boolean {
+  return !model.kast && !model.plank && !model.artikel && !model.zonderLades
+}
+
+/** De gekozen uitvoering (M of L) van de Organizer of Divider, of null. */
+export function getLadeAccessoire(soort: LadeAccessoire, id?: string | null): ArtikelVariant | null {
+  const model = getMeubelModel(soort)
+  return model && id ? getArtikelVariant(model, id) : null
+}
+
+/** "Organizer L (art. WORG242)" per gekozen accessoire. */
+export function ladeAccessoireTekst(o: { organizer?: string | null; divider?: string | null }): string[] {
+  return LADE_ACCESSOIRES.flatMap((soort) => {
+    const v = getLadeAccessoire(soort, o[soort])
+    return v ? [`${getMeubelModel(soort)!.naam} ${v.naam} (art. ${v.id})`] : []
+  })
+}
+
 /** Opties uit de tabel "Opties meubels" in één regel, of een streepje als er geen zijn. */
-export function meubelOptiesTekst(o: { logo?: boolean; uitsparingen?: number }): string {
+export function meubelOptiesTekst(o: { logo?: boolean; uitsparingen?: number; organizer?: string | null; divider?: string | null }): string {
   const delen = [
     o.logo ? 'Met logo' : '',
     o.uitsparingen ? `${o.uitsparingen} ${o.uitsparingen === 1 ? 'uitsparing' : 'uitsparingen'} (volgens maattekening)` : '',
+    ...ladeAccessoireTekst(o),
   ].filter(Boolean)
   return delen.length > 0 ? delen.join(' · ') : 'Geen'
 }

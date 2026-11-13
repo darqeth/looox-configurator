@@ -463,11 +463,11 @@ test.describe('Solid Surface: tabelprijzen', () => {
   test('categorie-indeling', () => {
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'solid-surface')).toHaveLength(10)
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'wastafelmeubels')).toHaveLength(16)
-    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'kasten')).toHaveLength(6)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'kasten')).toHaveLength(7)
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'toiletmeubels')).toHaveLength(4)
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'planken')).toHaveLength(5)
     expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'waskommen')).toHaveLength(8)
-    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'accessoires')).toHaveLength(3)
+    expect(MEUBEL_MODELLEN.filter((m) => m.categorie === 'accessoires')).toHaveLength(2)
   })
 
   test('waskom: alleen bij modellen met ingebouwde waskom, vorm en aantal verplicht', () => {
@@ -681,6 +681,25 @@ test.describe('Planken, waskommen en accessoires', () => {
     const mini = { ...k, modelId: 'waskom-basin-free', lades: 0, lengte: 0, variant: 'TMSMBS425W' }
     expect(calcMeubelNettoCents({ ...mini, extra: 'rail' })).toBeNull()
     expect(calcMeubelNettoCents({ ...mini, variant: 'TMSWTFR35W', extra: 'rail' })).toBeNull()
+  })
+
+  test('Organizer en Divider als bijverkoop bij een meubel met lades', () => {
+    const f = { ...k, modelId: 'facet', lengte: 1000, lades: 1 }
+    const zonder = calcMeubelNettoCents(f)!
+    expect(calcMeubelNettoCents({ ...f, organizer: 'WORG242' })).toBe(zonder + 5616)
+    expect(calcMeubelNettoCents({ ...f, organizer: 'WORG218', divider: 'WDIV242' })).toBe(zonder + 5096 + 936)
+    // Net als de rest van het meubel: netto maal factor
+    expect(calcMeubelBrutoCents({ ...f, organizer: 'WORG242' }, 2.5)).toBe(Math.round((zonder + 5616) * 2.5))
+    expect(calcMeubelNettoCents({ ...f, organizer: 'bestaat-niet' })).toBeNull()
+    // Niet bij een kast of plank
+    expect(calcMeubelNettoCents({ ...k, modelId: 'cabinet', lengte: 400, lades: 2, hoogte: 1800, diepte: 300, organizer: 'WORG242' })).toBeNull()
+    expect(meubelOptiesTekst({ logo: true, organizer: 'WORG242', divider: 'WDIV218' })).toBe('Met logo · Organizer L (art. WORG242) · Divider M (art. WDIV218)')
+    const p = leesMeubel({ shape: 'meubel', meubel: { modelId: 'facet', lengte: 1000, lades: 1, houtkleur: 'old-grey', organizer: 'WORG242' }, quantity: 1 })!
+    expect(p.organizer).toBe('WORG242')
+    expect(calcMeubelNettoCents(meubelPrijsInput(p))).toBe(zonder + 5616)
+    // De Wooden Box Facet staat bij de kasten, direct na de Mirror Cabinet
+    const kasten = MEUBEL_MODELLEN.filter((m) => m.categorie === 'kasten').map((m) => m.id)
+    expect(kasten.slice(0, 2)).toEqual(['mirror-cabinet', 'wooden-box-facet'])
   })
 
   test('Mirror Cabinet: lamp erbij tegen catalogusprijs', () => {

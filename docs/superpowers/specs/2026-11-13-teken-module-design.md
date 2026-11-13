@@ -39,8 +39,17 @@ Mark laat de bouwwijze aan de bouwer; keuze 1 is de keuze van de bouwer.
 
 ### Voor welke producten
 
-- Module en bovenaanzicht: elk model waarvoor `kanUitsparing(model)` waar is en dat een blad heeft: wastafelmeubels, Solid Surface, toiletmeubels, planken, en kasten met `kast.uitsparing`.
-- Niet: losse artikelen en kasten zonder uitsparing.
+Met tekenmodule en bovenaanzicht:
+
+- Wastafelmeubels, behalve Facet Deco en Block (daar kan geen waskom op).
+- Solid Surface met ingebouwde kom (`waskom: true`): kom en kraangat.
+- Solid Base Drawer Box en Double (Solid Surface blad zonder kom): als hout.
+- Toiletmeubels Basic Cube Mini, Cabinet Facet Mini en Stripes Mini: als hout, het is een klein meubel met de uitsparing in de bovenkant.
+- Base shelves: Mini Base Shelf, Base Shelf Solo, Base Shelf Deco: als hout.
+
+Zonder tekenmodule (door Mark bepaald): Facet Deco, Block, hoge kasten en spiegelkast, Niche Shelf, Wall Shelf Free, Cover en losse artikelen. Waar deze nu een teller en upload hebben, blijft dat zoals het is (keuze van de bouwer).
+
+De handdoekuitsparing van de Mini Base Shelf (18 x 3 cm) zit in de kopse voorkant en staat los van de tekening. Die krijgt een eigen keuze "Handdoekuitsparing" bij de opties van deze plank (0 tot 2, keuze van de bouwer) en telt als betaalde uitsparing bovenop de getekende gaten.
 
 ### Soorten gaten
 
@@ -61,18 +70,30 @@ Maten zijn in mm. X vanaf de linkerkant van het blad, Y vanaf de achterkant, ste
 - Sifongat en kom alleen recht boven een lade. Geen snappunt boven een regaalkast. Bij een model met twee laderijen boven elkaar telt de kolom. Bij een plank of een meubel zonder lades: één snappunt in het midden, plus bij lengtes vanaf 1200 mm ook op een derde en twee derde (keuze van de bouwer).
 - Eén sifongat of kom per snappunt.
 - Hout: niets is verplicht. Zonder gaten bestellen mag; de klant maakt ze dan zelf.
-- Solid Surface: het aantal en de vorm van de kommen kiest de dealer in de configurator, zoals nu (1 of 2, ovaal of rechthoekig). In de tekening kiest hij boven welke lade. Zolang niet alle kommen geplaatst zijn, kan er niet besteld worden. Het kraangat per kom is optioneel (wandkraan).
+- Solid Surface: aantal, vorm en maat van de kommen kiest de dealer in de configurator (1 of 2, ovaal of rechthoekig, 500 of 850). In de tekening kiest hij boven welke lade. Zolang niet alle kommen geplaatst zijn, kan er niet besteld worden. Het kraangat per kom is optioneel (wandkraan).
 - Bij één lade en één kom staat de kom er meteen; er valt niets te kiezen.
 - Maximaal 10 betaalde uitsparingen (`UITSPARING_MAX`).
 - Verandert de lengte, diepte, het aantal lades of de regaalkast, dan worden gaten opnieuw getoetst. Sifongaten en kommen verhuizen mee naar het snappunt met hetzelfde volgnummer als dat nog bestaat; anders vervallen ze. Vrije kraangaten buiten het blad of binnen de randzone vervallen. De dealer krijgt een melding welke gaten zijn vervallen.
 
 ### Kommen Solid Surface
 
+Er zijn twee maten, 500 en 850, elk ovaal of rechthoekig. De dealer kiest in de configurator vorm, maat en aantal (1 of 2). Bij 2 kommen zijn beide dezelfde maat en vorm.
+
 Vaste maten, op één plek in de code zodat ze later aan te passen zijn:
 
-- Rechthoekig: 473 x 298 mm, hoekradius 52, hart 240 mm uit de achterkant, afvoer Ø50 in het midden. Bron: tekening Marlan 206646 (blad 800 x 460).
-- Ovaal: voorlopig 473 x 298 mm met hetzelfde hart. De echte maten zijn opgevraagd en volgen.
-- De maat hangt niet af van de bladlengte. Bij een blad waar de kom niet binnen de 30 mm randregel past, krijgt die lade geen snappunt.
+| Kom | Buitenmaat | Hart uit achterkant | Bron |
+|---|---|---|---|
+| 500 rechthoekig | 473 x 298, radius 52, afvoer Ø50 in het midden | 240 | tekening Marlan 206646 |
+| 500 ovaal | voorlopig 473 x 298 | 240 | opgevraagd |
+| 850 rechthoekig | voorlopig 823 x 298 | 240 | opgevraagd |
+| 850 ovaal | voorlopig 823 x 298 | 240 | opgevraagd |
+
+Passen:
+
+- Een kom past boven een lade als de lade minstens 150 mm breder is dan de kom (75 mm aan elke kant). Gerekend met de buitenmaat uit de tabel (keuze van de bouwer; met de naammaat 500 of 850 zou het 27 mm strenger zijn).
+- Solid Washbasin Solo heeft geen lades: daar geldt dezelfde 150 mm tegen de bladlengte, met de kom in het midden; bij 2 kommen op een kwart en driekwart als elke helft minstens 150 mm breder is dan de kom.
+- Een maat is alleen te kiezen als hij boven minstens één lade past; "2 kommen" alleen als de maat boven minstens twee lades past. Wat niet past, is uitgeschakeld met een korte uitleg.
+- Eén kom per lade.
 
 ### Scherm
 
@@ -127,6 +148,8 @@ gaten?: Array<
   | { soort: 'kraan-kom'; vak: number; dx: number; d: number } // solid: dx = afstand tot hart kom, min is links
 >
 tekenwijze?: 'module' | 'upload'
+waskomMaat?: 500 | 850          // naast de bestaande waskomVorm en waskomAantal; ontbreekt = 500
+handdoekUitsparingen?: number   // alleen Mini Base Shelf
 ```
 
 - `vak` verwijst naar het volgnummer van het snappunt, niet naar een mm-maat: zo schuift een gat mee als de lengte verandert. De absolute X wordt berekend.
@@ -153,4 +176,5 @@ tekenwijze?: 'module' | 'upload'
 
 ## Open, volgt van Mark
 
-- Echte maten van de ovale kom.
+- Echte maten van de ovale kom en van de kom 850 (beide vormen).
+- Of de kom 850 een andere prijs heeft dan de 500. Tot dat bekend is: zelfde prijs.

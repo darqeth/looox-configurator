@@ -3,7 +3,7 @@ import { getMeubelModel } from '../src/lib/meubel-config'
 import { gatenTabel, tekenGaten, tekenKommenIndicatief } from '../src/lib/meubel-tekening'
 import {
   maakBlad, snappunten, valideerGaten, klemGat, getKom, komMax, plaatsGat, herzieGaten,
-  betaaldeGaten, kommenCompleet, gatenSoort, startGaten, type GatenContext,
+  betaaldeGaten, kommenCompleet, gatenSoort, startGaten, werkGaten, type GatenContext,
 } from '../src/lib/meubel-gaten'
 
 const facet = getMeubelModel('facet')!, solid = getMeubelModel('solid-facet')!
@@ -172,4 +172,14 @@ test('tekenKommenIndicatief verdeelt de waskommen over de lengte', () => {
   expect(tekenKommenIndicatief(c).map((k) => [k.x, k.b])).toEqual([[300, 420], [900, 420]])
   expect(tekenKommenIndicatief({ ...c, komAantal: 1 }).map((k) => [k.x, k.b])).toEqual([[600, 500]])
   expect(tekenKommenIndicatief(hout(1200, [600, 600]))).toEqual([])
+})
+
+test('werkGaten: één plek, één waskom staat er vanzelf; anders kiest de dealer', () => {
+  const kom = getKom('vierkant', 500)
+  expect(werkGaten([], { soort: 'solid', blad: blad(800, [800]), kom, komAantal: 1 })).toEqual({ gaten: [{ soort: 'kom', vak: 0 }], vervallen: 0 })
+  expect(werkGaten([], { soort: 'solid', blad: blad(1400, [700, 700]), kom, komAantal: 1 }).gaten).toEqual([])
+  // Van twee lades naar één: de waskom in de vervallen lade verdwijnt, de overgebleven plek wordt gevuld
+  expect(werkGaten([{ soort: 'kom', vak: 1 }, { soort: 'kraan-kom', vak: 1, dx: 0, d: 34 }], { soort: 'solid', blad: blad(1100, [1100]), kom, komAantal: 1 }))
+    .toEqual({ gaten: [{ soort: 'kom', vak: 0 }], vervallen: 2 })
+  expect(werkGaten([{ soort: 'sifon', vak: 0, y: 240, d: 45 }], hout(1200, [600, 600]))).toEqual({ gaten: [{ soort: 'sifon', vak: 0, y: 240, d: 45 }], vervallen: 0 })
 })

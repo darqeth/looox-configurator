@@ -67,7 +67,12 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
           waskomAantal: meubel.waskomAantal,
           regaalBreedte: meubel.regaalBreedte || undefined,
           regaalZijde: meubel.regaalZijde,
-          uitsparingen: meubel.uitsparingen,
+          waskomMaat: meubel.waskomMaat,
+          uitsparingen: meubel.uitsparingenTeller,
+          // Oude configuraties zonder tekening of teller beginnen in het tekenvenster
+          tekenwijze: meubel.tekenwijze === 'module' || meubel.attachmentUrl || meubel.uitsparingenTeller > 0 ? meubel.tekenwijze : undefined,
+          gaten: meubel.gaten,
+          handdoekUitsparing: meubel.handdoekUitsparing,
           attachmentUrl: meubel.attachmentUrl,
           quantity: meubel.quantity,
           projectName: config.name ?? '',

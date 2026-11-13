@@ -270,3 +270,15 @@ export function startGaten(c: GatenContext): Gat[] {
   if (punten.length === c.komAantal) return punten.map((p) => ({ soort: 'kom' as const, vak: p.vak }))
   return []
 }
+
+/**
+ * De gaten zoals ze nu gelden: wat na een maatwijziging niet meer te maken is valt weg, en
+ * een waskom waar niets aan te kiezen valt staat er vanzelf (met zijn kraangat, als dat er was).
+ */
+export function werkGaten(gaten: Gat[], c: GatenContext): { gaten: Gat[]; vervallen: number } {
+  const herzien = herzieGaten(gaten, c)
+  const vast = startGaten(c)
+  if (vast.length === 0 || kommenCompleet(herzien.gaten, c)) return herzien
+  const kranen = herzien.gaten.filter((g) => g.soort === 'kraan-kom' && vast.some((k) => k.soort === 'kom' && k.vak === g.vak))
+  return { gaten: [...vast, ...kranen], vervallen: herzien.vervallen }
+}

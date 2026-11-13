@@ -17,7 +17,9 @@ import {
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
   getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelModel, LADE_ACCESSOIRES, type LadeAccessoire,
-  type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
+  type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht, gatenContext, waskomMax, telUitsparingen, HANDDOEK_UITSPARING_MODEL } from '@/lib/meubel-config'
+import { kommenCompleet, werkGaten, type Gat, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
+import GatenEditor from './gaten-editor'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { startProjectVanConfig } from '@/lib/actions/project'
 import { MeubelTekening } from './meubel-tekening'
@@ -52,7 +54,13 @@ export interface MeubelInitialConfig {
   regaalZijde?: 'links' | 'rechts' | 'midden'
   waskomVorm?: WaskomVorm | null
   waskomAantal?: number
+  waskomMaat?: KomMaat | null
+  /** Teller bij een eigen tekening */
   uitsparingen?: number
+  /** Zelf getekend of een eigen tekening; ontbreekt bij een nieuw meubel (dan: zelf tekenen) */
+  tekenwijze?: Tekenwijze
+  gaten?: Gat[]
+  handdoekUitsparing?: boolean
   attachmentUrl?: string | null
   diepte?: number | null
   handdoekhouders?: number
@@ -150,8 +158,16 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const [regaalTekst, setRegaalTekst] = useState(String(initialConfig?.regaalBreedte || REGAAL_STANDAARD_MM))
   const [regaalZijde, setRegaalZijde] = useState<'links' | 'rechts'>(initialConfig?.regaalZijde === 'links' ? 'links' : 'rechts')
   // Solid Surface met ingebouwde waskom: vorm en aantal, zonder prijsverschil
-  const [waskomVorm, setWaskomVorm] = useState<WaskomVorm>(initialConfig?.waskomVorm ?? 'ovaal')
-  const [waskomAantal, setWaskomAantal] = useState(initialConfig?.waskomAantal === 2 ? 2 : 1)
+  // Wat de dealer koos; wat geldt (en past boven de lades) staat verderop in waskomVorm, waskomMaat en waskomAantal
+  const [waskomVormKeuze, setWaskomVorm] = useState<WaskomVorm>(initialConfig?.waskomVorm ?? 'ovaal')
+  const [waskomAantalKeuze, setWaskomAantal] = useState(initialConfig?.waskomAantal === 2 ? 2 : 1)
+  const [waskomMaatKeuze, setWaskomMaat] = useState<KomMaat>(initialConfig?.waskomMaat === 850 ? 850 : 500)
+  // Tekening van het blad: zelf tekenen in het tekenvenster, of een eigen maattekening uploaden.
+  // Beide blijven in beeld bewaard; bij opslaan telt alleen de gekozen manier.
+  const [tekenwijzeKeuze, setTekenwijze] = useState<Tekenwijze>(initialConfig?.tekenwijze ?? 'module')
+  const [gatenKeuze, setGaten] = useState<Gat[]>(initialConfig?.gaten ?? [])
+  const [tekenvenster, setTekenvenster] = useState(false)
+  const [handdoekUitsparingKeuze, setHanddoekUitsparing] = useState(initialConfig?.handdoekUitsparing === true)
   // Duo-model (Drawer Box Regal): breedte per kast in plaats van één lengte
   const [kastTekst, setKastTekst] = useState<[string, string]>([
     String(initialConfig?.ladeBreedtes?.[0] ?? DUO_START_MM), String(initialConfig?.ladeBreedtes?.[1] ?? DUO_START_MM),
@@ -160,7 +176,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   // Logo staat standaard aan (Mark, 12 nov); bij bewerken geldt wat is opgeslagen
   const [logo, setLogo] = useState(initialConfig ? initialConfig.logo === true : true)
   const [uitsparingen, setUitsparingen] = useState(initialConfig?.uitsparingen ?? 0)
-  // Maattekening: bij elk meubel nodig om te bestellen (plaats van waskom, kraan, afvoer en uitsparingen).
+  // Eigen maattekening: nodig bij Solid Surface en zodra de dealer uitsparingen opgeeft.
   // Een offerte opslaan kan zonder; de bestelstap houdt het tegen.
   // Nieuw gekozen bestand, of de al opgeslagen bijlage
   const [tekeningBestand, setTekeningBestand] = useState<File | null>(null)
@@ -292,7 +308,6 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
     setEigenBreedtes(null) // een eigen indeling hoort bij één lengte
   }
   const tekenLengte = isDuo || lengteOk ? lengte : laatsteLengte
-  const tekenBlad = null // TIJDELIJK: volgt in de ombouw van de configurator
 
   // Lades verdelen de lengte min de rand van het frame en min de regaalkast
   const ruimte = ladeRuimte(model, tekenLengte, regaalMm)
@@ -309,18 +324,46 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
   const gekozen = opties.includes(lades) ? lades : opties[0]
   const breedtes = isDuo ? duoBreedtes : eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
+
+  // ─── Tekening van het blad ────────────────────────────────────────────────
+  const bladInvoer = {
+    modelId: model.id, lengte: tekenLengte, lades: gekozen ?? 0, diepte: model.diepte, ladeBreedtes: breedtes,
+    ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
+  }
+  const heeftTekenmodule = gatenContext(bladInvoer) !== null
+  const tekenwijze: Tekenwijze = heeftTekenmodule ? tekenwijzeKeuze : 'upload'
+  const zelfTekenen = tekenwijze === 'module'
+  // Zelf tekenen: een waskom is alleen te kiezen als hij boven een lade past. Bij een eigen tekening kiest de dealer vrij.
+  const komPast = (vorm: WaskomVorm, maat: KomMaat): number => (zelfTekenen ? waskomMax(bladInvoer, vorm, maat) : 2)
+  const KOM_KEUZES: { vorm: WaskomVorm; maat: KomMaat }[] = [{ vorm: 'ovaal', maat: 500 }, { vorm: 'vierkant', maat: 500 }, { vorm: 'vierkant', maat: 850 }]
+  const komKeuze = { vorm: waskomVormKeuze, maat: waskomVormKeuze === 'vierkant' ? waskomMaatKeuze : 500 as KomMaat }
+  const kom = komPast(komKeuze.vorm, komKeuze.maat) > 0 ? komKeuze : KOM_KEUZES.find((k) => komPast(k.vorm, k.maat) > 0) ?? komKeuze
+  const waskomVorm = kom.vorm
+  const waskomMaat = kom.maat
+  const geenKomPast = !!model.waskom && komPast(waskomVorm, waskomMaat) === 0
+  const waskomAantal = Math.max(1, Math.min(waskomAantalKeuze, komPast(waskomVorm, waskomMaat) || 1))
+  const tekenContext = gatenContext({ ...bladInvoer, ...(model.waskom && { waskomVorm, waskomMaat, waskomAantal }) })
+  // Wat na een maatwijziging niet meer te maken is, telt niet mee en verdwijnt bij opslaan
+  const tekening = tekenContext && zelfTekenen ? werkGaten(gatenKeuze, tekenContext) : { gaten: [] as Gat[], vervallen: 0 }
+  const gaten = tekening.gaten
+  const kommenStaan = !!tekenContext && kommenCompleet(gaten, tekenContext)
+  const handdoekUitsparing = handdoekUitsparingKeuze && model.id === HANDDOEK_UITSPARING_MODEL
+  const tekenBlad = tekenContext ? { context: tekenContext, gaten, indicatief: !zelfTekenen } : null
   const ladeFout = isDuo ? null : valideerLadeBreedtes(breedtes, ruimte, gekozen)
   const magAanpassen = !isDuo && kanLadesAanpassen(ruimte, gekozen)
   // Niet elke kleur kan bij elk model (Stripes: geen White); valt de keuze af, dan de standaard
   const kleuren = getHoutkleuren(model)
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
-  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, hoogte: model.hoogte, diepte: model.diepte,
+  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing, hoogte: model.hoogte, diepte: model.diepte,
     ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
   const magUitsparing = kanUitsparing(model)
-  const tekeningNodig = tekeningVerplicht(model, { uitsparingen, kommenCompleet: false })
-  const tekeningOntbreekt = tekeningNodig && !tekeningBestand && !bestaandeTekening
+  const tekeningNodig = tekeningVerplicht(model, { tekenwijze, uitsparingen: zelfTekenen ? 0 : uitsparingen, kommenCompleet: kommenStaan })
+  const tekeningOntbreekt = tekeningNodig && (zelfTekenen || (!tekeningBestand && !bestaandeTekening))
+  // Aantal waarvoor betaald wordt, voor de samenvatting
+  const uitsparingenTotaal = telUitsparingen({ modelId: model.id, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing })
+  const prijsPerUitsparing = opAanvraag ? null : formatCents(Math.round(UITSPARING_NETTO_CENTS * parseMeubelFactor(factor)))
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
 
   // Bijverkoop na opslaan: de losse configuratie wordt een project en de dealer stelt het volgende product samen
@@ -378,7 +421,8 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
     if (!geldig || !projectName.trim() || !model) return
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
-      logo: logo && kanLogo(model), uitsparingen: magUitsparing ? uitsparingen : 0,
+      logo: logo && kanLogo(model), uitsparingen: magUitsparing && !zelfTekenen ? uitsparingen : 0,
+      tekenwijze, ...(zelfTekenen && { gaten }), ...(handdoekUitsparing && { handdoekUitsparing }),
       ...((model.kast || model.plank) && { diepte: model.diepte }),
       ...(model.plank?.handdoekhouder && { handdoekhouders, handdoekType }),
       ...(magExtra && { extra, extraArtikel: extraArtikel?.id ?? null }),
@@ -386,12 +430,12 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
       ...(magLadeAcc && ladeAccKeuze),
       ...(variant && { variant: variant.id }),
       ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
-      ...(model.waskom && { waskomVorm, waskomAantal }),
+      ...(model.waskom && { waskomVorm, waskomAantal, ...(waskomVorm === 'vierkant' && { waskomMaat }) }),
       quantity, projectName: projectName.trim(), reference, description,
     }
     startTransition(async () => {
       try {
-        const payload = { ...basis, attachmentUrl: await uploadTekening() }
+        const payload = { ...basis, attachmentUrl: zelfTekenen ? null : await uploadTekening() }
         const opgeslagen = initialConfig?.id
           ? { id: initialConfig.id, ...await updateMeubelConfiguration(initialConfig.id, payload) }
           : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject })
@@ -941,17 +985,31 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                           type="button"
                           role="radio"
                           aria-checked={waskomVorm === v.id}
+                          disabled={komPast(v.id, 500) === 0 && komPast(v.id, 850) === 0}
                           onClick={() => setWaskomVorm(v.id)}
-                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
-                            waskomVorm === v.id
-                              ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
-                              : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
-                          }`}
+                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${waskomVorm === v.id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'}`}
                         >
                           {v.naam}
                         </button>
                       ))}
                     </div>
+                    {waskomVorm === 'vierkant' && (
+                      <div className="flex gap-2" role="radiogroup" aria-label="Maat van de waskom">
+                        {([500, 850] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            role="radio"
+                            aria-checked={waskomMaat === m}
+                            disabled={komPast('vierkant', m) === 0}
+                            onClick={() => setWaskomMaat(m)}
+                            className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${waskomMaat === m ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'}`}
+                          >
+                            {m} mm
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex gap-2" role="radiogroup" aria-label="Aantal waskommen">
                       {[1, 2].map((n) => (
                         <button
@@ -959,12 +1017,9 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                           type="button"
                           role="radio"
                           aria-checked={waskomAantal === n}
+                          disabled={n === 2 && komPast(waskomVorm, waskomMaat) < 2}
                           onClick={() => setWaskomAantal(n)}
-                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
-                            waskomAantal === n
-                              ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary'
-                              : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
-                          }`}
+                          className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${waskomAantal === n ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'}`}
                         >
                           {n === 1 ? '1 waskom' : '2 waskommen'}
                         </button>
@@ -972,7 +1027,10 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                     </div>
                   </div>
                   <p className="text-[12px] text-lx-text-muted mt-1.5">
-                    Ingebouwd in het Solid Surface blad, zonder meerprijs. Teken de plaats van de {waskomAantal === 2 ? 'waskommen' : 'waskom'} op de maattekening.
+                    Ingebouwd in het Solid Surface blad, zonder meerprijs.{' '}
+                    {zelfTekenen
+                      ? 'Een waskom past boven een lade die minstens 15 cm breder is. Wat niet past, is niet te kiezen.'
+                      : `Teken de plaats van de ${waskomAantal === 2 ? 'waskommen' : 'waskom'} op de maattekening.`}
                   </p>
                 </div>
               )}
@@ -1044,7 +1102,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                 </div>
               )}
 
-              {(kanLogo(model) || magUitsparing) && <div>
+              {(kanLogo(model) || (magUitsparing && !zelfTekenen) || model.id === HANDDOEK_UITSPARING_MODEL) && <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Opties</p>
                 <div className="bg-lx-panel-bg rounded-xl p-4 space-y-4">
                   {kanLogo(model) && <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
@@ -1056,7 +1114,16 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                     <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
                   </label>}
 
-                  {magUitsparing && <div className={model.geenHout ? '' : 'pt-4 border-t border-lx-divider'}>
+                  {model.id === HANDDOEK_UITSPARING_MODEL && <label className="flex items-center justify-between gap-4 cursor-pointer select-none pt-4 border-t border-lx-divider">
+                    <span>
+                      <span className="block text-[13px] font-medium text-lx-text-primary">Handdoekuitsparing</span>
+                      <span className="block text-[11.5px] text-lx-text-secondary">18 × 3 cm in de voorkant.{prijsPerUitsparing ? ` ${prijsPerUitsparing}.` : ''}</span>
+                    </span>
+                    <input type="checkbox" checked={handdoekUitsparingKeuze} onChange={(e) => setHanddoekUitsparing(e.target.checked)} className="sr-only peer" />
+                    <span className="shrink-0 w-11 h-6 rounded-full bg-gray-200 peer-checked:bg-lx-cta peer-focus-visible:ring-2 peer-focus-visible:ring-lx-cta peer-focus-visible:ring-offset-2 relative transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5" />
+                  </label>}
+
+                  {magUitsparing && !zelfTekenen && <div className={model.geenHout ? '' : 'pt-4 border-t border-lx-divider'}>
                     <div className="flex items-center justify-between gap-4">
                       <span>
                         <span id="meubel-uitsparingen-label" className="block text-[13px] font-medium text-lx-text-primary">Uitsparingen of boorgaten</span>
@@ -1083,7 +1150,51 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
               </div>}
 
               {magUitsparing && <div>
-                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Maattekening{!tekeningNodig && <span className="font-normal text-lx-text-secondary"> (optioneel)</span>}</p>
+                <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">{heeftTekenmodule ? 'Tekening van het blad' : 'Maattekening'}{!tekeningNodig && <span className="font-normal text-lx-text-secondary"> (optioneel)</span>}</p>
+                {heeftTekenmodule && (
+                  <div className="flex gap-2 mb-3" role="radiogroup" aria-label="Hoe lever je de tekening aan">
+                    {([['module', 'Zelf tekenen'], ['upload', 'Eigen tekening uploaden']] as const).map(([id, naam]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="radio"
+                        aria-checked={tekenwijze === id}
+                        onClick={() => setTekenwijze(id)}
+                        className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${tekenwijze === id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'}`}
+                      >
+                        {naam}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {zelfTekenen && tekenContext && (
+                  <div className="bg-lx-panel-bg rounded-xl p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-[13px] text-lx-text-primary">
+                        {model.waskom && <>{gaten.filter((g) => g.soort === 'kom').length} van {waskomAantal} {waskomAantal === 1 ? 'waskom' : 'waskommen'} geplaatst · </>}
+                        {uitsparingenTotaal - (handdoekUitsparing ? 1 : 0) === 0 ? 'geen gaten' : `${uitsparingenTotaal - (handdoekUitsparing ? 1 : 0)} ${uitsparingenTotaal - (handdoekUitsparing ? 1 : 0) === 1 ? 'gat' : 'gaten'}`}
+                        {prijsPerUitsparing && uitsparingenTotaal - (handdoekUitsparing ? 1 : 0) > 0 && <span className="text-lx-text-secondary">, {prijsPerUitsparing} per stuk</span>}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setTekenvenster(true)}
+                        disabled={geenKomPast || !lengteOk}
+                        className="h-10 px-4 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity cursor-pointer"
+                      >
+                        {gaten.length > 0 ? 'Tekening aanpassen' : model.waskom ? 'Waskom plaatsen' : 'Gaten tekenen'}
+                      </button>
+                    </div>
+                    <p className="text-[12px] text-lx-text-muted mt-2 leading-relaxed">
+                      {model.waskom
+                        ? 'Kies boven welke lade de waskom komt en of er een kraangat in het blad moet.'
+                        : 'Zet het gat voor de sifon en het kraangat op het bovenaanzicht. Niet verplicht: zonder gaten bestellen mag, dan maak je ze zelf.'}
+                    </p>
+                    {tekening.vervallen > 0 && !geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-2">De tekening past niet meer helemaal bij deze maten. Wat niet past, telt niet mee. Open de tekening om het opnieuw te plaatsen.</p>}
+                    {geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-2">Boven deze lades past geen waskom: een lade moet minstens 15 cm breder zijn dan de waskom. Kies minder lades of een langer meubel, of lever een eigen tekening aan.</p>}
+                    {(tekeningBestand || bestaandeTekening || uitsparingen > 0) && <p className="text-[12px] text-lx-text-muted mt-2">Bij opslaan telt deze tekening. Je eigen maattekening vervalt dan.</p>}
+                  </div>
+                )}
+                {!zelfTekenen && <>
                 <label className="block cursor-pointer">
                   <input
                     id="meubel-tekening"
@@ -1106,9 +1217,13 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                     ? (uitsparingen > 0 ? 'Teken hierop de plaats en maat van elke uitsparing.' : 'Alleen nodig als er uitsparingen in de kast moeten.')
                     : model.plank
                     ? (uitsparingen > 0 ? 'Teken hierop de plaats en maat van elke uitsparing.' : 'Alleen nodig als er uitsparingen in de plank moeten.')
-                    : `Teken hierop de plaats van de waskom, kraan en afvoer${uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.`}
+                    : model.waskom
+                    ? `Teken hierop de plaats van de waskom, kraan en afvoer${uitsparingen > 0 ? ', en de plaats en maat van elke uitsparing' : ''}.`
+                    : (uitsparingen > 0 ? 'Teken hierop de plaats en maat van elke uitsparing.' : 'Alleen nodig als er uitsparingen of boorgaten in het blad moeten.')}
                 </p>
-                {tekeningOntbreekt && <TekeningNodig />}
+                {heeftTekenmodule && gatenKeuze.length > 0 && <p className="text-[12px] text-lx-text-muted mt-1.5">Bij opslaan telt je eigen maattekening. De gaten uit het tekenvenster vervallen dan.</p>}
+                </>}
+                {tekeningOntbreekt && <TekeningNodig waskom={zelfTekenen} />}
               </div>}
 
               {model.opmerking && (
@@ -1135,9 +1250,9 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                 <Rij label="Afmeting" waarde={`${meubelAfmeting(model, lengte)}${opAanvraag ? ' · op aanvraag' : ''}`} onEdit={() => setStep(2)} />
                 <Rij label={isDuo ? 'Kasten' : indelingLabel(model)} waarde={isDuo ? `Links ${duoBreedtes[0]} mm, rechts ${duoBreedtes[1]} mm, elk 1 lade` : indelingTekst(model, gekozen, breedtes, ladeRuimte(model, lengte, regaalMm), plankKeuzes)} onEdit={() => setStep(2)} />
                 {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${isDuo ? 'in het midden' : regaalZijde}`} onEdit={() => setStep(2)} />}
-                {model.waskom && <Rij label="Waskom" waarde={waskomTekst({ waskomVorm, waskomAantal })} onEdit={() => setStep(2)} />}
+                {model.waskom && <Rij label="Waskom" waarde={waskomTekst({ waskomVorm, waskomAantal, waskomMaat, tekenwijze })} onEdit={() => setStep(2)} />}
                 {!model.geenHout && <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />}
-                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && kanLogo(model), uitsparingen, ...ladeAccKeuze })} onEdit={() => setStep(2)} />
+                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && kanLogo(model), uitsparingen: uitsparingenTotaal, tekenwijze, handdoekUitsparing, ...ladeAccKeuze })} onEdit={() => setStep(2)} />
               </div>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">
@@ -1233,7 +1348,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                 </div>
               </div>
 
-              {tekeningOntbreekt && <TekeningNodig />}
+              {tekeningOntbreekt && <TekeningNodig waskom={zelfTekenen} />}
 
               <button
                 onClick={() => handleSave()}
@@ -1276,7 +1391,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
             blad={tekenBlad}
           />
           )}
-          <p className="text-[11px] text-lx-text-secondary text-center">{model.artikel ? `${variant?.naam ?? ''} · ${variant?.afmeting ?? ''}` : model.categorie === 'solid-surface' || model.plank ? 'Bovenaanzicht en vooraanzicht, maten in mm' : `Vooraanzicht, maten in mm · diepte ${model.diepte} mm`}</p>
+          <p className="text-[11px] text-lx-text-secondary text-center">{model.artikel ? `${variant?.naam ?? ''} · ${variant?.afmeting ?? ''}` : tekenBlad || model.plank ? 'Bovenaanzicht en vooraanzicht, maten in mm' : `Vooraanzicht, maten in mm · diepte ${model.diepte} mm`}</p>
 {!model.artikel &&           <button
             onClick={() => setTekeningGroot(true)}
             aria-label="Tekening groot bekijken"
@@ -1308,6 +1423,17 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
           </div>
         )}
 
+        {tekenvenster && tekenContext && (
+          <GatenEditor
+            context={tekenContext}
+            gaten={gaten}
+            titel={`${model.naam} · ${tekenLengte} mm`}
+            prijsPerStuk={prijsPerUitsparing || undefined}
+            onKlaar={(g) => { setGaten(g); setTekenvenster(false) }}
+            onSluiten={() => setTekenvenster(false)}
+          />
+        )}
+
         {tekeningGroot && (
           <TekeningPopup
             titel={`${model.naam} · ${model.kast ? meubelAfmeting(model, tekenLengte) : `${tekenLengte} mm · ${ladeLabel(model, gekozen)}`}`}
@@ -1324,7 +1450,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
             blad={tekenBlad}
             />
             <p className="text-[12px] text-lx-text-secondary text-center mt-1">
-              Vooraanzicht, maten in mm · hoogte {model.hoogte} mm · diepte {model.diepte} mm
+              {tekenBlad ? 'Bovenaanzicht en vooraanzicht' : 'Vooraanzicht'}, maten in mm · hoogte {model.hoogte} mm · diepte {model.diepte} mm
             </p>
           </TekeningPopup>
         )}
@@ -1366,15 +1492,17 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   )
 }
 
-// Melding met uitroepteken: opslaan kan zonder maattekening, bestellen niet
-function TekeningNodig() {
+// Melding met uitroepteken: opslaan kan zonder tekening, bestellen niet
+function TekeningNodig({ waskom = false }: { waskom?: boolean }) {
   return (
     <div className="mt-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-3" role="note">
       <svg className="flex-shrink-0 mt-0.5" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" /><path d="M12 9v4M12 17h.01" />
       </svg>
       <p className="text-[12px] text-amber-800 leading-relaxed">
-        <strong>Nog geen maattekening.</strong> Opslaan als offerte kan zonder, maar om te bestellen is een maattekening verplicht. Je kunt hem later toevoegen vanuit het overzicht.
+        {waskom
+          ? <><strong>De waskom staat nog niet in de tekening.</strong> Opslaan als offerte kan zonder, maar om te bestellen moet de waskom een plaats hebben. Dat kan ook later vanuit het overzicht.</>
+          : <><strong>Nog geen maattekening.</strong> Opslaan als offerte kan zonder, maar om te bestellen is een maattekening verplicht. Je kunt hem later toevoegen vanuit het overzicht.</>}
       </p>
     </div>
   )

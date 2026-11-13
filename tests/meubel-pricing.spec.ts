@@ -572,9 +572,10 @@ test.describe('Solid Washbasin Solo en kasten', () => {
     expect(m.tekeningOntbreekt).toBe(false)
     expect(calcMeubelNettoCents(meubelPrijsInput(m))).toBe(140296 + 4160)
     expect(meubelKort(m)).toBe('B 350 × H 1500 × D 250 mm · 2 deuren')
-    // Geen logo op de spiegelkast
+    // Geen logo op de kasten, wel op de toiletmeubels
     expect(leesMeubel({ shape: 'meubel', meubel: { modelId: 'mirror-cabinet', lengte: 600, lades: 0, hoogte: 600, houtkleur: 'old-grey', logo: true }, quantity: 1 })!.logo).toBe(false)
-    expect(leesMeubel({ shape: 'meubel', meubel: { modelId: 'cabinet', lengte: 400, lades: 2, hoogte: 1800, diepte: 300, houtkleur: 'old-grey', logo: true }, quantity: 1 })!.logo).toBe(true)
+    expect(leesMeubel({ shape: 'meubel', meubel: { modelId: 'cabinet', lengte: 400, lades: 2, hoogte: 1800, diepte: 300, houtkleur: 'old-grey', logo: true }, quantity: 1 })!.logo).toBe(false)
+    expect(leesMeubel({ shape: 'meubel', meubel: { modelId: 'cabinet-facet-mini', lengte: 425, lades: 0, hoogte: 600, diepte: 225, houtkleur: 'old-grey', logo: true }, quantity: 1 })!.logo).toBe(true)
     const solo = leesMeubel({ shape: 'meubel', meubel: { modelId: 'solid-washbasin-solo', lengte: 1500, lades: 0, houtkleur: 'old-grey', waskomVorm: 'ovaal', waskomAantal: 2 }, quantity: 1 })!
     expect(solo.lades).toBe(0)
     expect(solo.tekeningOntbreekt).toBe(true)

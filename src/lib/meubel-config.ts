@@ -1280,9 +1280,9 @@ export function indelingTekst(model: MeubelModel, lades: number, breedtes: LadeB
   return `${ladeLabel(model, lades)} · ${ladeBreedtesTekst(breedtes, ruimte, lades)}`
 }
 
-/** Kan het LoooX-logo erop? Niet zonder hout, niet op een vast artikel en niet op de spiegelkast. */
+/** Kan het LoooX-logo erop? Niet zonder hout, niet op een vast artikel en niet op de kasten (hoge kasten en spiegelkast). */
 export function kanLogo(model: MeubelModel): boolean {
-  return !model.geenHout && !model.artikel && model.kast?.front !== 'spiegel'
+  return !model.geenHout && !model.artikel && model.categorie !== 'kasten'
 }
 
 /** Kan er een uitsparing of boorgat in dit model? In de hoge kasten en de Mirror Cabinet niet. */

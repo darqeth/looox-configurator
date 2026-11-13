@@ -229,11 +229,9 @@ export async function generatePasswordResetLink(email: string): Promise<{ link?:
 
   if (error || !data) return { error: error?.message ?? 'Link genereren mislukt.' }
 
-  // Supabase embeds SITE_URL (often localhost) in redirect_to — override with actual deployment URL
-  const actionLink = new URL(data.properties.action_link)
-  actionLink.searchParams.set('redirect_to', appUrl)
-
-  return { link: actionLink.toString() }
+  // Link naar onze eigen pagina; de code wordt pas verzilverd bij het opslaan van het nieuwe
+  // wachtwoord, zodat een mailscanner of linkvoorbeeld hem niet opmaakt.
+  return { link: `${appUrl}/login?reset=${encodeURIComponent(data.properties.hashed_token)}` }
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'controle_vereist' | 'goedgekeurd' | 'afgekeurd' | 'in_production' | 'shipped' | 'delivered' | 'cancelled'

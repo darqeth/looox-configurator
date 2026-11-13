@@ -186,7 +186,7 @@ export async function requestPasswordReset(
     options: { redirectTo: `${SITE_URL}/login` },
   })
 
-  if (error || !linkData?.properties?.action_link) {
+  if (error || !linkData?.properties?.hashed_token) {
     // Geef altijd succes terug (security: niet lekken of email bestaat)
     return { success: true }
   }
@@ -194,7 +194,10 @@ export async function requestPasswordReset(
   await sendPasswordResetEmail({
     to: email,
     name: profile?.full_name ?? 'Gebruiker',
-    resetLink: linkData.properties.action_link,
+    // Link naar onze eigen pagina: de code wordt pas verzilverd als de gebruiker zelf een nieuw
+    // wachtwoord opslaat. De kant-en-klare Supabase-link is eenmalig en wordt door mailscanners
+    // (o.a. Outlook Safe Links) al geopend, waarna de gebruiker op een kaal inlogscherm uitkomt.
+    resetLink: `${SITE_URL}/login?reset=${encodeURIComponent(linkData.properties.hashed_token)}`,
   }).catch(() => {})
 
   return { success: true }

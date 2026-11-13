@@ -9,6 +9,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
+function wachtwoordFout(melding: string): string {
+  if (/different from the old/i.test(melding)) return 'Kies een ander wachtwoord dan je huidige.'
+  if (/at least|weak|should contain/i.test(melding)) return 'Dit wachtwoord is niet sterk genoeg. Kies een langer wachtwoord.'
+  return 'Wachtwoord opslaan is mislukt. Probeer het opnieuw.'
+}
+
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -20,6 +26,7 @@ export default function LoginPage() {
   const [isForgot, setIsForgot] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotDone, setForgotDone] = useState(false)
+  const resetCode = useRef<string | null>(null)
   const router = useRouter()
   const supabaseRef = useRef<SupabaseClient | null>(null)
   const getSupabase = () => {
@@ -31,6 +38,21 @@ export default function LoginPage() {
     let recovered = false
 
     const clearHash = () => window.history.replaceState(null, '', window.location.pathname)
+
+    // Nieuwe resetmail: code in de querystring, pas verzilverd bij opslaan.
+    const code = new URLSearchParams(window.location.search).get('reset')
+    if (code) {
+      resetCode.current = code
+      setIsRecovery(true)
+      clearHash()
+    }
+
+    // Oude resetmail waarvan de link verlopen of al gebruikt is: zeg dat, in plaats van een kaal inlogscherm.
+    if (window.location.hash.includes('error')) {
+      setIsForgot(true)
+      setError('Deze link is verlopen of al gebruikt. Vraag hieronder een nieuwe resetlink aan.')
+      clearHash()
+    }
 
     const enterRecovery = () => {
       if (recovered) return
@@ -84,9 +106,20 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     startTransition(async () => {
+      if (resetCode.current) {
+        const { error: codeFout } = await getSupabase().auth.verifyOtp({ token_hash: resetCode.current, type: 'recovery' })
+        if (codeFout) {
+          resetCode.current = null
+          setIsRecovery(false)
+          setIsForgot(true)
+          setError('Deze link is verlopen of al gebruikt. Vraag hieronder een nieuwe resetlink aan.')
+          return
+        }
+        resetCode.current = null
+      }
       const { error } = await getSupabase().auth.updateUser({ password: newPassword })
       if (error) {
-        setError(error.message)
+        setError(wachtwoordFout(error.message))
       } else {
         setPasswordDone(true)
         router.push('/dashboard')
@@ -116,6 +149,9 @@ export default function LoginPage() {
               <>
                 <h2 className="text-lg font-semibold text-lx-text-primary mb-1">Wachtwoord vergeten</h2>
                 <p className="text-sm text-lx-text-secondary mb-6">Vul je e-mailadres in en we sturen je een resetlink.</p>
+                {error && (
+                  <p role="alert" className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2.5 mb-5">{error}</p>
+                )}
                 <form onSubmit={handleForgotPassword} className="space-y-5">
                   <div>
                     <label htmlFor="forgot-email" className="block text-sm font-semibold text-lx-text-secondary mb-1.5">E-mailadres</label>
@@ -139,7 +175,7 @@ export default function LoginPage() {
                     ) : 'Resetlink versturen'}
                   </button>
                 </form>
-                <button onClick={() => setIsForgot(false)} className="mt-4 text-sm text-lx-text-secondary hover:underline w-full text-center">Terug naar inloggen</button>
+                <button onClick={() => { setIsForgot(false); setError(null) }} className="mt-4 text-sm text-lx-text-secondary hover:underline w-full text-center">Terug naar inloggen</button>
               </>
             )
           ) : isRecovery ? (

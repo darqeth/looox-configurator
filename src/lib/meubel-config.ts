@@ -201,7 +201,8 @@ export function plankExtraPrijs(input: { modelId: string; extra?: string | null;
   return { bruto, netto: Math.round(bruto * PLANK_EXTRA_NETTO_DEEL) }
 }
 
-export const LAMPEN_MAX = 2
+// Eén lamp per kast
+export const LAMPEN_MAX = 1
 /** Catalogusprijs van de bijbestelde lampen (Mirror Cabinet), in centen. */
 export function lampBruto(input: { modelId: string; lampen?: number | null }): number {
   const lamp = getMeubelModel(input.modelId)?.lamp
@@ -210,7 +211,7 @@ export function lampBruto(input: { modelId: string; lampen?: number | null }): n
 
 /** "1 × Mirror Light (art. ML300BL)", of leeg zonder lamp. */
 export function lampTekst(model: MeubelModel, lampen?: number | null): string {
-  return model.lamp && lampen ? `${lampen} × ${model.lamp.naam} (art. ${model.lamp.id})` : ''
+  return model.lamp && lampen ? `Met ${model.lamp.naam} (art. ${model.lamp.id})` : ''
 }
 
 export const HANDDOEKHOUDER_TYPES = ['A', 'B'] as const
@@ -1412,7 +1413,7 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   const acc = plankExtraPrijs(input)
   const lampCents = lampBruto(input)
   if (acc.bruto - lampCents > 0) extra.push({ label: plankExtraTekst(input).replace(/ \(art\. .*\)$/, ''), cents: acc.bruto - lampCents })
-  if (lampCents > 0) extra.push({ label: `${model.lamp!.naam} · ${input.lampen}×`, cents: lampCents })
+  if (lampCents > 0) extra.push({ label: model.lamp!.naam, cents: lampCents })
   const basis = totaal - extra.reduce((som, r) => som + r.cents, 0)
   return {
     regels: [{

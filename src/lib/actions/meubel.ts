@@ -22,7 +22,7 @@ const meubelInputSchema = z.object({
   hoogte: z.number().int().min(0).max(3000).optional(),
   diepte: z.number().int().min(1).max(1000).optional(),
   handdoekhouders: z.number().int().min(0).max(2).optional(),
-  lampen: z.number().int().min(0).max(2).optional(),
+  lampen: z.number().int().min(0).max(1).optional(),
   handdoekType: z.enum(['A', 'B']).optional(),
   extra: z.enum(['rail', 'rail-curved', 'roll', 'roll-curved']).nullish(),
   extraArtikel: z.string().max(20).nullish(),

@@ -677,11 +677,11 @@ test.describe('Planken, waskommen en accessoires', () => {
   test('Mirror Cabinet: lamp erbij tegen catalogusprijs', () => {
     const m = { ...k, modelId: 'mirror-cabinet', lengte: 600, lades: 0, hoogte: 600 }
     expect(calcMeubelNettoCents({ ...m, lampen: 1 })).toBe(50856 + 2078)
-    expect(calcMeubelBrutoCents({ ...m, lampen: 2 }, 2.5)).toBe(Math.round(50856 * 2.5) + 8310)
-    expect(calcMeubelNettoCents({ ...m, lampen: 3 })).toBeNull()
+    expect(calcMeubelBrutoCents({ ...m, lampen: 1 }, 2.5)).toBe(Math.round(50856 * 2.5) + 4155)
+    expect(calcMeubelNettoCents({ ...m, lampen: 2 })).toBeNull()
     expect(calcMeubelNettoCents({ ...k, modelId: 'cabinet', lengte: 400, lades: 0, hoogte: 1700, lampen: 1 })).toBeNull()
     const p = leesMeubel({ shape: 'meubel', meubel: { modelId: 'mirror-cabinet', lengte: 600, lades: 0, hoogte: 600, houtkleur: 'old-grey', lampen: 1 }, quantity: 1 })!
-    expect(indelingTekst(p.model, p.lades, null, 0, p)).toContain('1 × Mirror Light (art. ML300BL)')
+    expect(indelingTekst(p.model, p.lades, null, 0, p)).toContain('Met Mirror Light (art. ML300BL)')
     expect(calcMeubelNettoCents(meubelPrijsInput(p))).toBe(50856 + 2078)
   })
 

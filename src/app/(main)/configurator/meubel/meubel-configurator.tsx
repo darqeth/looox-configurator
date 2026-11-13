@@ -89,7 +89,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const [handdoekType, setHanddoekType] = useState<HanddoekType>(initialConfig?.handdoekType ?? 'A')
   const [extra, setExtra] = useState<PlankExtra | null>(initialConfig?.extra ?? null)
   const [extraArtikelKeuze, setExtraArtikel] = useState<string | null>(initialConfig?.extraArtikel ?? null)
-  const [lampen, setLampen] = useState(initialConfig?.lampen ?? 0)
+  const [lampen, setLampen] = useState(Math.min(1, initialConfig?.lampen ?? 0))
   // Met een handdoekhouder moet de plank diep genoeg zijn
   const houderMinDiepte = basisModel?.plank?.handdoekhouder && handdoekhouders > 0 ? basisModel.plank.handdoekhouder.minDiepte : 0
   const plankDiepteOk = !plankDiepteBereik || (plankDiepteInvoer >= Math.max(plankDiepteBereik.min, houderMinDiepte) && plankDiepteInvoer <= plankDiepteBereik.max)
@@ -663,10 +663,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] font-semibold text-lx-text-primary">{model.lamp.naam}</span>
                       <span className="block text-[11.5px] text-lx-text-secondary">{model.lamp.omschrijving} · art. {model.lamp.id}</span>
-                      <span className="block text-[11.5px] text-lx-text-secondary">{formatCents(model.lamp.bruto)} per stuk</span>
+                      <span className="block text-[11.5px] text-lx-text-secondary">{formatCents(model.lamp.bruto)}</span>
                     </span>
-                    <div className="flex gap-2 flex-shrink-0" role="radiogroup" aria-label="Aantal lampen">
-                      {[0, 1, 2].map((n) => (
+                    <div className="flex gap-2 flex-shrink-0" role="radiogroup" aria-label="Lamp">
+                      {[0, 1].map((n) => (
                         <button
                           key={n}
                           type="button"
@@ -677,7 +677,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                             lampen === n ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
                           }`}
                         >
-                          {n === 0 ? 'Geen' : `${n}×`}
+                          {n === 0 ? 'Zonder' : 'Met lamp'}
                         </button>
                       ))}
                     </div>

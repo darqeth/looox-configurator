@@ -833,9 +833,9 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
 
   test('zelf getekend: de prijs telt de gaten, niet de meegestuurde teller', () => {
     const met = calcMeubelNettoCents({ ...hout, tekenwijze: 'module', uitsparingen: 9,
-      gaten: [{ soort: 'sifon', vak: 0, y: 240, d: 45 }, { soort: 'kraan', x: 300, y: 80, d: 35 }] })!
+      gaten: [{ soort: 'sifon', x: 300, y: 240, d: 45 }, { soort: 'kraan', x: 300, y: 80, d: 35 }] })!
     expect(met - calcMeubelNettoCents(hout)!).toBe(2 * UITSPARING_NETTO_CENTS)
-    expect(getMeubelPrijsOpbouw({ ...hout, tekenwijze: 'module', gaten: [{ soort: 'sifon', vak: 0, y: 240, d: 45 }] }, 2)!.regels.map((r) => r.label)).toContain('Uitsparing · 1×')
+    expect(getMeubelPrijsOpbouw({ ...hout, tekenwijze: 'module', gaten: [{ soort: 'sifon', x: 300, y: 240, d: 45 }] }, 2)!.regels.map((r) => r.label)).toContain('Uitsparing · 1×')
   })
 
   test('eigen tekening of geen tekenwijze: de teller telt zoals voorheen, gaten tellen niet', () => {
@@ -873,8 +873,8 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
 
   test('zelf getekend wordt op de server getoetst', () => {
     const cfg = { ...hout, ladeBreedtes: null, quantity: 1, tekenwijze: 'module' as const }
-    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', vak: 1, y: 240, d: 45 }] })).toBeNull()
-    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', vak: 5, y: 240, d: 45 }] })).not.toBeNull()
+    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', x: 900, y: 240, d: 45 }] })).toBeNull()
+    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', x: 600, y: 240, d: 45 }] })).toContain('tussenschot')
     expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'kraan', x: 10, y: 80, d: 35 }] })).toContain('30 mm')
     expect(valideerMeubelConfig({ ...cfg, modelId: 'facet-deco', lengte: 800, lades: 1, gaten: [] })).toContain('geen tekening')
   })
@@ -908,8 +908,8 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
   test('opgeslagen meubel: zelf getekend', () => {
     const gaten = [{ soort: 'sifon', vak: 0, y: 240, d: 45 }, { soort: 'sifon', vak: 7, y: 240, d: 45 }, { soort: 'onzin' }, null]
     const m = leesMeubel({ shape: 'meubel', meubel: { ...hout, tekenwijze: 'module', gaten, uitsparingen: 9 }, quantity: 1, attachmentUrl: 'https://x/t.jpg' })!
-    // Wat niet te maken is valt weg; de prijs volgt wat overblijft; een oud bestand telt niet meer
-    expect(m).toMatchObject({ tekenwijze: 'module', gaten: [{ soort: 'sifon', vak: 0, y: 240, d: 45 }], uitsparingen: 1, uitsparingenTeller: 0, attachmentUrl: null, tekeningOntbreekt: false })
+    // Wat niet te maken is valt weg (een oud sifongat met vak krijgt zijn X); de prijs volgt wat overblijft; een oud bestand telt niet meer
+    expect(m).toMatchObject({ tekenwijze: 'module', gaten: [{ soort: 'sifon', x: 300, y: 240, d: 45 }], uitsparingen: 1, uitsparingenTeller: 0, attachmentUrl: null, tekeningOntbreekt: false })
     expect(calcMeubelNettoCents(meubelPrijsInput(m))! - calcMeubelNettoCents(hout)!).toBe(UITSPARING_NETTO_CENTS)
   })
 

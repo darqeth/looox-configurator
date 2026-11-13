@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { setMeubelTekening, setMeubelGaten } from '@/lib/actions/meubel'
 import type { TekenInvoer } from '@/lib/meubel-opslag'
 import type { Gat } from '@/lib/meubel-gaten'
+import type { KomKeuze } from '@/lib/meubel-config'
 import { toast } from '@/components/toast'
 import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 import { foutTekst } from '@/lib/fout-tekst'
@@ -38,10 +39,10 @@ export default function TekeningUpload({ configId, onKlaar, groot = false, teken
   // Koos de dealer voor zelf tekenen, dan hoort er geen upload bij
   const alleenTekenen = !!tekenen?.zelf
 
-  async function bewaarGaten(gaten: Gat[]) {
+  async function bewaarGaten(gaten: Gat[], kom?: KomKeuze) {
     setOpslaan(true)
     try {
-      const res = await setMeubelGaten(configId, gaten)
+      const res = await setMeubelGaten(configId, gaten, kom ? { vorm: kom.vorm, maat: kom.maat } : undefined)
       if (res.error) { toast(res.error); return }
       setVenster(false)
       onKlaar?.()
@@ -119,7 +120,7 @@ export default function TekeningUpload({ configId, onKlaar, groot = false, teken
         </button>
       </>}
       {venster && tekenen && (
-        <GatenEditor context={tekenen.context} gaten={tekenen.gaten} titel={tekenen.titel} bezig={opslaan} onKlaar={bewaarGaten} onSluiten={() => setVenster(false)} />
+        <GatenEditor context={tekenen.context} gaten={tekenen.gaten} titel={tekenen.titel} komKeuzes={tekenen.komKeuzes} komKeuze={tekenen.komKeuze} bezig={opslaan} onKlaar={bewaarGaten} onSluiten={() => setVenster(false)} />
       )}
     </div>
   )

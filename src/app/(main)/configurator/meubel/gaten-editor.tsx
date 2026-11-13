@@ -3,9 +3,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trash2, X } from 'lucide-react'
-import { formatMm } from '@/lib/meubel-config'
+import { formatMm, type KomKeuze } from '@/lib/meubel-config'
 import {
-  GAT, betaaldeGaten, klemGat, plaatsGat, snappunten, valideerGaten,
+  GAT, betaaldeGaten, klemGat, komOverRand, plaatsGat, snappunten, valideerGaten, werkGaten,
   type Gat, type GatenContext,
 } from '@/lib/meubel-gaten'
 import { gatNaam, tekenGaten, type TekenGat } from '@/lib/meubel-tekening'
@@ -18,23 +18,28 @@ import { GatVorm } from './blad-gaten'
 type Soort = Gat['soort']
 
 const LEGENDA: Record<Soort, { naam: string; hulp: string }> = {
-  sifon: { naam: 'Sifongat', hulp: 'Klik op een bolletje boven een lade. Daarna kun je het gat naar voren of naar achteren slepen.' },
+  sifon: { naam: 'Sifongat', hulp: 'Het gat onder de waskom. Klik op het blad, of op een bolletje midden boven een lade. Daarna kun je het slepen of de maten typen. Tijdens het slepen zie je een waskom van 40 cm als hulplijn.' },
   kraan: { naam: 'Kraangat', hulp: 'Klik op het blad waar het kraangat moet komen. Daarna kun je het slepen of de maten typen.' },
   kom: { naam: 'Waskom', hulp: 'Klik op een bolletje om de waskom boven die lade te plaatsen.' },
   'kraan-kom': { naam: 'Kraangat', hulp: 'Klik op het plusje achter een waskom. Het gat schuift daarna naar links of rechts.' },
 }
 
-export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten, titel, prijsPerStuk = null, bezig = false }: {
+export default function GatenEditor({ context: beginContext, gaten: start, onKlaar, onSluiten, titel, prijsPerStuk = null, bezig = false, komKeuzes, komKeuze: beginKeuze = 0 }: {
   context: GatenContext
   gaten: Gat[]
-  /** De dealer is klaar: de gaten zijn te maken */
-  onKlaar: (gaten: Gat[]) => void
+  /** De dealer is klaar: de gaten zijn te maken. Bij Solid Surface gaat de gekozen waskom mee. */
+  onKlaar: (gaten: Gat[], kom?: KomKeuze) => void
+  /** Solid Surface: de waskommen waartussen in het venster gewisseld kan worden, en welke nu gekozen is */
+  komKeuzes?: KomKeuze[]
+  komKeuze?: number
   onSluiten: () => void
   titel: string
   /** Prijs van één uitsparing als tekst; null als er geen prijs getoond wordt (op aanvraag) */
   prijsPerStuk?: string | null
   bezig?: boolean
 }) {
+  const [keuze, setKeuze] = useState(beginKeuze)
+  const context = komKeuzes?.[keuze]?.context ?? beginContext
   const hout = context.soort === 'hout'
   const { lengte, diepte, vakken, los } = context.blad
   const soorten: Soort[] = hout ? ['sifon', 'kraan'] : ['kom', 'kraan-kom']
@@ -42,6 +47,8 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
   const [actief, setActief] = useState<Soort>(soorten[0])
   const [gekozen, setGekozen] = useState<number | null>(null)
   const [melding, setMelding] = useState<string | null>(null)
+  /** Index van het gat dat nu gesleept wordt, voor de hulplijn van de waskom */
+  const [sleept, setSleept] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const sleep = useRef<{ index: number; bewogen: boolean } | null>(null)
   const sluitRef = useRef<HTMLButtonElement>(null)
@@ -59,7 +66,7 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
   const px = (lengte + marge * 2) / 760
   const getekend = useMemo(() => tekenGaten(gaten, context), [gaten, context])
   const punten = useMemo(() => snappunten(context.blad, context.kom), [context])
-  const bezetVak = new Set(gaten.filter((g) => g.soort === 'sifon' || g.soort === 'kom').map((g) => (g as { vak: number }).vak))
+  const bezetVak = new Set(gaten.flatMap((g) => (g.soort === 'kom' ? [g.vak] : [])))
   const kommen = gaten.filter((g) => g.soort === 'kom')
   const gekozenGat = gekozen !== null ? gaten[gekozen] ?? null : null
   const gekozenPlaats = gekozenGat ? plaatsGat(gekozenGat, context) : null
@@ -89,8 +96,8 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
 
   function plaatsOpSnappunt(vak: number) {
     if (actief === 'sifon') {
-      const nieuw = klemGat({ soort: 'sifon', vak, y: 240, d: GAT.sifon.std }, context)
-      probeer([...gaten, nieuw], gaten.length)
+      const x = punten.find((p) => p.vak === vak)?.x ?? lengte / 2
+      probeer([...gaten, klemGat({ soort: 'sifon', x, y: 240, d: GAT.sifon.std }, context)], gaten.length)
       return
     }
     if (actief !== 'kom') return
@@ -128,8 +135,7 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
     const g = s ? gaten[s.index] : null
     if (!s || !p || !g) return
     s.bewogen = true
-    if (g.soort === 'sifon') wijzig(s.index, { ...g, y: p.y })
-    else if (g.soort === 'kraan') wijzig(s.index, { ...g, x: p.x, y: p.y })
+    if (g.soort === 'sifon' || g.soort === 'kraan') wijzig(s.index, { ...g, x: p.x, y: p.y })
     else if (g.soort === 'kraan-kom') {
       const hart = plaatsGat({ soort: 'kom', vak: g.vak }, context)?.x
       if (hart !== undefined) wijzig(s.index, { ...g, dx: p.x - hart })
@@ -137,10 +143,10 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
   }
 
   function opBlad(e: React.PointerEvent) {
-    if (actief !== 'kraan') { setGekozen(null); return }
+    if (actief !== 'kraan' && actief !== 'sifon') { setGekozen(null); return }
     const p = naarMm(e)
     if (!p) return
-    probeer([...gaten, klemGat({ soort: 'kraan', x: p.x, y: p.y, d: GAT.kraan.std }, context)], gaten.length)
+    probeer([...gaten, klemGat({ soort: actief, x: p.x, y: p.y, d: GAT[actief].std }, context)], gaten.length)
   }
 
   function opToets(e: React.KeyboardEvent, index: number) {
@@ -151,9 +157,22 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
     const dy = e.key === 'ArrowUp' ? -stap : e.key === 'ArrowDown' ? stap : 0
     if (!dx && !dy) return
     e.preventDefault()
-    if (g.soort === 'sifon' && dy) wijzig(index, { ...g, y: g.y + dy })
-    else if (g.soort === 'kraan') wijzig(index, { ...g, x: g.x + dx, y: g.y + dy })
+    if (g.soort === 'sifon' || g.soort === 'kraan') wijzig(index, { ...g, x: g.x + dx, y: g.y + dy })
     else if (g.soort === 'kraan-kom' && dx) wijzig(index, { ...g, dx: g.dx + dx })
+  }
+
+  const sleeptGat = sleept !== null ? gaten[sleept] ?? null : null
+  // De waarschuwing blijft staan zolang het gat gekozen is, ook na het loslaten
+  const overRand = !!gekozenGat && komOverRand(gekozenGat, context)
+
+  /** Andere waskom: wat blijft passen blijft staan, de rest vervalt */
+  function wisselKom(i: number) {
+    const nieuw = komKeuzes?.[i]
+    if (!nieuw || !nieuw.past || i === keuze) return
+    setKeuze(i)
+    setGaten(werkGaten(gaten, nieuw.context).gaten)
+    setGekozen(null)
+    setMelding(null)
   }
 
   const aantal = betaaldeGaten(gaten)
@@ -183,6 +202,30 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
             <X size={18} />
           </button>
         </div>
+
+        {/* Solid Surface: wisselen van waskom zonder het venster te verlaten */}
+        {komKeuzes && komKeuzes.length > 1 && (
+          <div className="mb-3">
+            <p className="text-[12px] font-medium text-lx-text-secondary mb-1.5">Waskom</p>
+            <div role="radiogroup" aria-label="Vorm en maat van de waskom" className="flex flex-wrap gap-2">
+              {komKeuzes.map((k, i) => (
+                <button
+                  key={k.naam}
+                  role="radio"
+                  aria-checked={keuze === i}
+                  disabled={!k.past}
+                  title={k.past ? undefined : 'Past niet boven deze lades: een lade moet minstens 15 cm breder zijn dan de waskom'}
+                  onClick={() => wisselKom(i)}
+                  className={`px-3.5 py-2 rounded-xl text-[13px] font-medium border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                    keuze === i ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'bg-white text-lx-text-secondary border-black/10 hover:text-lx-text-primary'
+                  }`}
+                >
+                  {k.naam}{k.maat ? ' mm' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Legenda: wat ga je plaatsen */}
         <div role="radiogroup" aria-label="Wat wil je plaatsen" className="flex flex-wrap gap-2 mb-2">
@@ -216,15 +259,15 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
             role="group"
             aria-label={`Bovenaanzicht van het blad, ${lengte} bij ${diepte} mm`}
             onPointerMove={versleep}
-            onPointerUp={() => { sleep.current = null }}
-            onPointerCancel={() => { sleep.current = null }}
+            onPointerUp={() => { sleep.current = null; setSleept(null) }}
+            onPointerCancel={() => { sleep.current = null; setSleept(null) }}
           >
             <text x={lengte / 2} y={-marge * 0.35} textAnchor="middle" fontSize={11 * px} fill="var(--lx-text-secondary)">Achterkant (muur) · {lengte} mm</text>
             <text x={lengte / 2} y={diepte + marge * 0.7} textAnchor="middle" fontSize={11 * px} fill="var(--lx-text-secondary)">Voorkant</text>
             <rect
               x={0} y={0} width={lengte} height={diepte} rx={2 * px}
               fill={hout ? '#F3EEE4' : '#FBFAF7'} stroke={lijn} strokeWidth={1.5 * px}
-              className={actief === 'kraan' ? 'cursor-crosshair' : undefined}
+              className={actief === 'kraan' || actief === 'sifon' ? 'cursor-crosshair' : undefined}
               onPointerDown={opBlad}
             />
             {/* Zone waar geen gat mag komen: 30 mm langs de rand van een houten blad */}
@@ -249,6 +292,11 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
               </g>
             )}
 
+            {/* Hulplijn tijdens het slepen van een sifongat: de gemiddelde opbouwwaskom van 40 cm */}
+            {sleeptGat?.soort === 'sifon' && (
+              <circle cx={sleeptGat.x} cy={sleeptGat.y} r={GAT.komRef / 2} fill="none" stroke={overRand ? '#B45309' : lijn} strokeOpacity={overRand ? 0.9 : 0.45} strokeWidth={1 * px} strokeDasharray={`${5 * px} ${4 * px}`} pointerEvents="none" />
+            )}
+
             {/* Geplaatste gaten en waskommen */}
             {getekend.map((g: TekenGat) => {
               const bron = gaten[g.index]
@@ -270,6 +318,7 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
                     if (bron.soort === 'kom' && actief === 'kraan-kom') { kraanBijKom(bron.vak); return }
                     if (!versleepbaar) return
                     sleep.current = { index: g.index, bewogen: false }
+                    setSleept(g.index)
                     svgRef.current?.setPointerCapture(e.pointerId)
                   }}
                 />
@@ -277,7 +326,7 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
             })}
 
             {/* Lege snappunten boven de lades */}
-            {(actief === 'sifon' || actief === 'kom') && punten.filter((p) => !bezetVak.has(p.vak)).map((p) => {
+            {(actief === 'sifon' || actief === 'kom') && punten.filter((p) => (hout ? !gaten.some((g) => g.soort === 'sifon' && Math.abs(g.x - p.x) < 1) : !bezetVak.has(p.vak))).map((p) => {
               const cy = hout ? Math.min(240, diepte / 2) : context.kom?.cy ?? diepte / 2
               return (
                 <g key={`snap${p.vak}`} role="button" tabIndex={0} aria-label={`${LEGENDA[actief].naam} plaatsen boven ${los ? 'het blad' : `lade ${p.vak + 1}`}`} className="cursor-pointer outline-none group"
@@ -313,7 +362,9 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
 
         {/* Vaste ruimte voor de melding: verschijnt hij tijdens het slepen, dan mag het blad niet verspringen */}
         <div className="mt-2 min-h-[54px] sm:min-h-[36px]">
-          {melding && <p role="alert" className="text-[12.5px] text-red-700 bg-red-50 rounded-lg px-3 py-2">{melding}</p>}
+          {melding
+            ? <p role="alert" className="text-[12.5px] text-red-700 bg-red-50 rounded-lg px-3 py-2">{melding}</p>
+            : overRand && <p role="status" className="text-[12.5px] text-amber-800 bg-amber-50 rounded-lg px-3 py-2">Let op: een waskom van 40 cm steekt hier over de rand van het blad.</p>}
         </div>
 
         {/* Maten van het gekozen gat */}
@@ -327,7 +378,7 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
               {gekozenGat.soort !== 'kom' && (
                 <MaatVeld label="Diameter" waarde={gekozenGat.d} onZet={(d) => wijzig(gekozen, { ...gekozenGat, d })} />
               )}
-              {gekozenGat.soort === 'kraan' && (
+              {(gekozenGat.soort === 'kraan' || gekozenGat.soort === 'sifon') && (
                 <MaatVeld label="X vanaf links" waarde={gekozenGat.x} onZet={(x) => wijzig(gekozen, { ...gekozenGat, x })} />
               )}
               {gekozenGat.soort === 'kraan-kom' && (
@@ -363,7 +414,7 @@ export default function GatenEditor({ context, gaten: start, onKlaar, onSluiten,
           <div className="flex items-center gap-2 ml-auto">
             {nogTePlaatsen && <span className="text-[12px] text-amber-700">Plaats nog {context.komAantal - kommen.length === 1 ? 'een waskom' : 'de waskommen'} om te kunnen bestellen.</span>}
             <button
-              onClick={() => onKlaar(gaten)}
+              onClick={() => onKlaar(gaten, komKeuzes?.[keuze])}
               disabled={bezig}
               className="h-10 px-5 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity cursor-pointer"
             >

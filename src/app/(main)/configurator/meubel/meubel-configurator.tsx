@@ -17,7 +17,7 @@ import {
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
   getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelModel, LADE_ACCESSOIRES, type LadeAccessoire,
-  type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht, gatenContext, waskomMax, telUitsparingen, HANDDOEK_UITSPARING_MODEL } from '@/lib/meubel-config'
+  type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht, gatenContext, waskomMax, komKeuzes, telUitsparingen, HANDDOEK_UITSPARING_MODEL } from '@/lib/meubel-config'
 import { kommenCompleet, werkGaten, type Gat, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
 import GatenEditor from './gaten-editor'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
@@ -348,6 +348,8 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const gaten = tekening.gaten
   const kommenStaan = !!tekenContext && kommenCompleet(gaten, tekenContext)
   const handdoekUitsparing = handdoekUitsparingKeuze && model.id === HANDDOEK_UITSPARING_MODEL
+  // In het tekenvenster kan de dealer nog van waskom wisselen
+  const tekenKomKeuzes = model.waskom && zelfTekenen ? komKeuzes({ ...bladInvoer, waskomAantal }) : undefined
   const tekenBlad = tekenContext ? { context: tekenContext, gaten, indicatief: !zelfTekenen } : null
   const ladeFout = isDuo ? null : valideerLadeBreedtes(breedtes, ruimte, gekozen)
   const magAanpassen = !isDuo && kanLadesAanpassen(ruimte, gekozen)
@@ -1429,7 +1431,13 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
             gaten={gaten}
             titel={`${model.naam} · ${tekenLengte} mm`}
             prijsPerStuk={prijsPerUitsparing || undefined}
-            onKlaar={(g) => { setGaten(g); setTekenvenster(false) }}
+            komKeuzes={tekenKomKeuzes}
+            komKeuze={tekenKomKeuzes?.findIndex((k) => k.vorm === waskomVorm && (k.maat ?? waskomMaat) === waskomMaat)}
+            onKlaar={(g, kom) => {
+              if (kom) { setWaskomVorm(kom.vorm); if (kom.maat) setWaskomMaat(kom.maat) }
+              setGaten(g)
+              setTekenvenster(false)
+            }}
             onSluiten={() => setTekenvenster(false)}
           />
         )}

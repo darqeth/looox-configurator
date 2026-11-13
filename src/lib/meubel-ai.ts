@@ -220,7 +220,7 @@ export function maakMeubelVoorstel(ruw: MeubelAiRuw): MeubelVoorstel | null {
     if (uitsparingen > 0) {
       const c = context
       const punten = snappunten(c.blad).slice(0, uitsparingen)
-      config.gaten = punten.map((p) => klemGat({ soort: 'sifon', vak: p.vak, y: 240, d: GAT.sifon.std }, c))
+      config.gaten = punten.map((p) => klemGat({ soort: 'sifon', x: p.x, y: 240, d: GAT.sifon.std }, c))
       const rest = uitsparingen - punten.length
       meld(`${punten.length} ${punten.length === 1 ? 'sifongat' : 'sifongaten'} in de tekening gezet. Controleer plaats en maat.${rest > 0 ? ` Nog ${rest} ${rest === 1 ? 'gat' : 'gaten'} (bijvoorbeeld voor de kraan) zet je er zelf bij.` : ''}`)
     }

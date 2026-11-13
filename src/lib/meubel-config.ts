@@ -1416,6 +1416,26 @@ export function waskomMax(c: Parameters<typeof gatenContext>[0], vorm: WaskomVor
   return ctx?.kom ? komMax(ctx.blad, ctx.kom) : 0
 }
 
+/** Een waskom die in het Solid Surface blad kan, met het blad zoals het er dan uitziet. */
+export interface KomKeuze {
+  vorm: WaskomVorm
+  maat: KomMaat | null
+  naam: string
+  context: GatenContext
+  /** Past het gekozen aantal van deze waskom boven de lades? */
+  past: boolean
+}
+
+/** De waskommen waartussen de dealer kan wisselen: ovaal, rechthoekig 500 en rechthoekig 850. Leeg bij hout. */
+export function komKeuzes(c: Parameters<typeof gatenContext>[0]): KomKeuze[] {
+  const opties: [WaskomVorm, KomMaat | null, string][] = [['ovaal', null, 'Ovaal'], ['vierkant', 500, 'Rechthoekig 500'], ['vierkant', 850, 'Rechthoekig 850']]
+  return opties.flatMap(([vorm, maat, naam]) => {
+    const context = gatenContext({ ...c, waskomVorm: vorm, waskomMaat: maat ?? undefined })
+    if (!context?.kom || context.soort !== 'solid') return []
+    return [{ vorm, maat, naam, context, past: komMax(context.blad, context.kom) >= context.komAantal }]
+  })
+}
+
 /** Controle van de tekening en wat daarbij hoort; foutmelding of null. */
 function valideerTekening(c: MeubelInput, model: MeubelModel): string | null {
   if (c.handdoekUitsparing && model.id !== HANDDOEK_UITSPARING_MODEL) return 'Een handdoekuitsparing kan alleen bij de Mini Base Shelf.'

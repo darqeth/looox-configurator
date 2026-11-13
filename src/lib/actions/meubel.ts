@@ -15,7 +15,7 @@ import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
 
 const mm = z.number().finite().min(-5000).max(5000)
 const gatSchema = z.discriminatedUnion('soort', [
-  z.object({ soort: z.literal('sifon'), vak: z.number().int().min(0).max(20), y: mm, d: mm }),
+  z.object({ soort: z.literal('sifon'), x: mm, y: mm, d: mm }),
   z.object({ soort: z.literal('kraan'), x: mm, y: mm, d: mm }),
   z.object({ soort: z.literal('kom'), vak: z.number().int().min(0).max(20) }),
   z.object({ soort: z.literal('kraan-kom'), vak: z.number().int().min(0).max(20), dx: mm, d: mm }),
@@ -250,7 +250,12 @@ function naarEigenTekening(opts: Record<string, unknown>): Record<string, unknow
 }
 
 /** Slaat de tekening uit de tekenmodule op bij een bestaand meubel, zonder de configuratie te openen. */
-export async function setMeubelGaten(configId: string, rawGaten: Gat[]): Promise<{ error?: string }> {
+const komSchema = z.object({ vorm: z.enum(['ovaal', 'vierkant']), maat: z.union([z.literal(500), z.literal(850)]).nullable() }).optional()
+
+/** `kom`: de dealer wisselde in het tekenvenster van waskom (Solid Surface); vorm en maat gaan dan mee. */
+export async function setMeubelGaten(configId: string, rawGaten: Gat[], rawKom?: { vorm: 'ovaal' | 'vierkant'; maat: 500 | 850 | null }): Promise<{ error?: string }> {
+  const kom = komSchema.safeParse(rawKom)
+  if (!kom.success) return { error: 'Ongeldige waskom' }
   if (!z.string().uuid().safeParse(configId).success) return { error: 'Ongeldige configuratie' }
   const parsed = gatenSchema.safeParse(rawGaten)
   if (!parsed.success) return { error: 'Ongeldige tekening' }
@@ -261,10 +266,15 @@ export async function setMeubelGaten(configId: string, rawGaten: Gat[]): Promise
   if (!await hasMeubelAccess(supabase, user.id)) return { error: 'Dit account heeft geen toegang tot Tailor-Made. Neem contact op met LoooX.' }
 
   const { data: bestaand } = await supabase.from('configurations').select('selected_options, status, project_id').eq('id', configId).maybeSingle()
-  const opts = (bestaand?.selected_options ?? {}) as Record<string, unknown>
+  const ruw = (bestaand?.selected_options ?? {}) as Record<string, unknown>
+  // Een andere waskom verandert het blad: eerst de keuze verwerken, dan pas de gaten controleren
+  const opts = kom.data && ruw.meubel
+    ? { ...ruw, meubel: { ...(ruw.meubel as Record<string, unknown>), waskomVorm: kom.data.vorm, waskomMaat: kom.data.vorm === 'vierkant' ? kom.data.maat ?? 500 : undefined } }
+    : ruw
   const meubel = bestaand ? leesMeubel(opts) : null
   if (!bestaand || !meubel) return { error: 'Configuratie niet gevonden' }
   if (bestaand.status === 'ordered') return { error: 'Een bestelde configuratie kan niet meer worden aangepast' }
+  if (kom.data && !meubel.model.waskom) return { error: 'Bij dit product hoort geen waskom.' }
   if (!meubel.gatenContext) return { error: 'Bij dit product kan geen tekening gemaakt worden.' }
   const fout = valideerGaten(gaten, meubel.gatenContext)
   if (fout) return { error: fout }

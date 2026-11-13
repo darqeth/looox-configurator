@@ -5,8 +5,8 @@ import type { MeubelModel, WaskomVorm } from '@/lib/meubel-config'
 // hart. Scherm, PDF en server rekenen met deze functies, zodat ze nooit uiteenlopen.
 
 export type Gat =
-  /** Hout: snapt in de breedte op een vak (lade), schuift in de diepte */
-  | { soort: 'sifon'; vak: number; y: number; d: number }
+  /** Hout, gat voor de sifon van een opbouwwaskom: vrij te plaatsen, maar niet op een tussenschot */
+  | { soort: 'sifon'; x: number; y: number; d: number }
   /** Hout: vrij te plaatsen */
   | { soort: 'kraan'; x: number; y: number; d: number }
   /** Solid Surface: kom boven een vak; vorm en maat horen bij het meubel */
@@ -19,6 +19,10 @@ export type GatenSoort = 'hout' | 'solid'
 export type KomMaat = 500 | 850
 
 export const GAT = {
+  /** Vrije ruimte tussen de rand van een sifongat en een tussenschot */
+  schot: 30,
+  /** Doorsnee van de gemiddelde opbouwwaskom, als hulplijn bij het plaatsen van het sifongat */
+  komRef: 400,
   /** Rand van een gat tot de rand van het blad (opgave LoooX) */
   rand: 30,
   /** Rand van een gat tot de rand van een ander gat */
@@ -111,6 +115,13 @@ export function maakBlad(o: {
 const EPS = 1e-6
 const past = (vak: { x0: number; x1: number }, kom: Kom) => vak.x1 - vak.x0 + EPS >= kom.b + GAT.komMarge
 
+/** Tussenschotten: de scheidingen tussen lades (en naast een regaalkast), X in mm. Een blad zonder lades heeft er geen. */
+export function schotten(blad: Blad): number[] {
+  if (blad.los) return []
+  const xs = blad.vakken.flatMap((v) => [v.x0, v.x1]).filter((x) => x > 0.5 && x < blad.lengte - 0.5)
+  return [...new Set(xs.map((x) => Math.round(x * 10) / 10))]
+}
+
 /** Snappunten: het hart van elk vak. Met een kom alleen de vakken waar die kom boven past. */
 export function snappunten(blad: Blad, kom?: Kom | null): { vak: number; x: number }[] {
   return blad.vakken
@@ -145,10 +156,9 @@ const vakHart = (c: GatenContext, vak: number): number | null => {
 
 /** Absolute plaats van een gat; null als het vak niet (meer) bestaat of de kom ontbreekt. */
 export function plaatsGat(g: Gat, c: GatenContext): GeplaatstGat | null {
-  if (g.soort === 'kraan') return { x: g.x, y: g.y, d: g.d }
+  if (g.soort === 'kraan' || g.soort === 'sifon') return { x: g.x, y: g.y, d: g.d }
   const x = vakHart(c, g.vak)
   if (x === null) return null
-  if (g.soort === 'sifon') return { x, y: g.y, d: g.d }
   if (!c.kom) return null
   if (g.soort === 'kom') return { x, y: c.kom.cy, d: 0, b: c.kom.b, h: c.kom.d }
   return { x: x + g.dx, y: GAT.komKraan.y, d: g.d }
@@ -165,8 +175,14 @@ export function klemGat(g: Gat, c: GatenContext): Gat {
   if (g.soort === 'kom') return { soort: 'kom', vak: g.vak }
   if (g.soort === 'sifon') {
     const d = klem(g.d, GAT.sifon.min, GAT.sifon.max, GAT.sifon.std)
-    const min = GAT.rand + d / 2, max = diepte - GAT.rand - d / 2
-    return { soort: 'sifon', vak: g.vak, y: klem(g.y, Math.ceil(min), Math.floor(max), Math.min(240, Math.round(diepte / 2))), d }
+    const marge = GAT.rand + d / 2
+    let x = klem(g.x, Math.ceil(marge), Math.floor(lengte - marge), Math.round(lengte / 2))
+    // Niet op een tussenschot: het gat schuift naar de kant waar het al stond
+    const vrij = GAT.schot + d / 2
+    for (const sx of schotten(c.blad)) {
+      if (Math.abs(x - sx) < vrij - EPS) x = x >= sx ? Math.ceil(sx + vrij) : Math.floor(sx - vrij)
+    }
+    return { soort: 'sifon', x, y: klem(g.y, Math.ceil(marge), Math.floor(diepte - marge), Math.min(240, Math.round(diepte / 2))), d }
   }
   if (g.soort === 'kraan') {
     const d = klem(g.d, GAT.kraan.min, GAT.kraan.max, GAT.kraan.std)
@@ -202,7 +218,7 @@ export function valideerGaten(gaten: Gat[], c: GatenContext): string | null {
     const p = plaatsGat(g, c)
     if (!p) return 'Een gat staat boven een lade die er niet meer is.'
 
-    if (g.soort !== 'kraan') {
+    if (g.soort === 'kom' || g.soort === 'kraan-kom') {
       const sleutel = `${g.soort === 'kraan-kom' ? 'kraan' : 'vak'}:${g.vak}`
       if (bezet.has(sleutel)) return g.soort === 'kraan-kom' ? 'Bij een waskom kan één kraangat.' : 'Boven een lade kan één gat of waskom.'
       bezet.add(sleutel)
@@ -225,6 +241,7 @@ export function valideerGaten(gaten: Gat[], c: GatenContext): string | null {
     }
 
     if (!tussen(p.y, GAT.rand + r, diepte - GAT.rand - r)) return `Een gat moet minstens ${GAT.rand} mm van de rand blijven.`
+    if (g.soort === 'sifon' && schotten(c.blad).some((sx) => Math.abs(p.x - sx) + EPS < GAT.schot + r)) return `Het sifongat moet minstens ${GAT.schot} mm van het tussenschot tussen twee lades blijven.`
     if (rondjes.some((o) => Math.hypot(o.x - p.x, o.y - p.y) - o.d / 2 - r + EPS < GAT.tussen)) return `Tussen twee gaten moet minstens ${GAT.tussen} mm blijven.`
     rondjes.push(p)
   }
@@ -281,4 +298,32 @@ export function werkGaten(gaten: Gat[], c: GatenContext): { gaten: Gat[]; verval
   if (vast.length === 0 || kommenCompleet(herzien.gaten, c)) return herzien
   const kranen = herzien.gaten.filter((g) => g.soort === 'kraan-kom' && vast.some((k) => k.soort === 'kom' && k.vak === g.vak))
   return { gaten: [...vast, ...kranen], vervallen: herzien.vervallen }
+}
+
+/** Steekt een gemiddelde opbouwwaskom (Ø 400) rond dit sifongat over de rand van het blad? Alleen een waarschuwing. */
+export function komOverRand(g: Gat, c: GatenContext): boolean {
+  if (g.soort !== 'sifon') return false
+  const r = GAT.komRef / 2
+  return g.x - r < -EPS || g.x + r > c.blad.lengte + EPS || g.y - r < -EPS || g.y + r > c.blad.diepte + EPS
+}
+
+/**
+ * Leest opgeslagen gaten: alleen bekende vormen blijven. Een sifongat uit de eerste versie
+ * (boven het hart van een lade, met "vak") krijgt zijn X in mm.
+ */
+export function leesGaten(ruw: unknown, c: GatenContext): Gat[] {
+  if (!Array.isArray(ruw)) return []
+  const uit: Gat[] = []
+  for (const g of ruw) {
+    const o = g as Record<string, unknown> | null
+    if (!o || typeof o !== 'object') continue
+    const n = (k: string) => typeof o[k] === 'number' && Number.isFinite(o[k] as number)
+    if (o.soort === 'sifon' && n('y') && n('d')) {
+      const x = n('x') ? o.x as number : n('vak') ? vakHart(c, o.vak as number) : null
+      if (x !== null) uit.push({ soort: 'sifon', x, y: o.y as number, d: o.d as number })
+    } else if (o.soort === 'kraan' && n('x') && n('y') && n('d')) uit.push({ soort: 'kraan', x: o.x as number, y: o.y as number, d: o.d as number })
+    else if (o.soort === 'kom' && n('vak')) uit.push({ soort: 'kom', vak: o.vak as number })
+    else if (o.soort === 'kraan-kom' && n('vak') && n('dx') && n('d')) uit.push({ soort: 'kraan-kom', vak: o.vak as number, dx: o.dx as number, d: o.d as number })
+  }
+  return uit
 }

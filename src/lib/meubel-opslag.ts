@@ -1,9 +1,9 @@
 import {
   HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getArtikelVariant, indelingTekst, PLANK_EXTRAS, heeftExtras, getPlankExtraArtikel, plankExtraPrijs, LAMPEN_MAX, getDeurOpties, kanLogo, kanLadeAccessoire, getLadeAccessoire,
   type PlankExtra, type HanddoekType, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
-  type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm, gatenContext, telUitsparingen, HANDDOEK_UITSPARING_MODEL,
+  type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm, gatenContext, komKeuzes, telUitsparingen, HANDDOEK_UITSPARING_MODEL, type KomKeuze,
 } from '@/lib/meubel-config'
-import { gatenSoort, herzieGaten, kommenCompleet, komMax, werkGaten, type Gat, type GatenContext, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
+import { gatenSoort, herzieGaten, leesGaten, kommenCompleet, werkGaten, type Gat, type GatenContext, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
 
 // Een meubel staat in dezelfde tabel als de spiegels (configurations), herkenbaar
 // aan selected_options.shape = 'meubel' met de keuzes onder selected_options.meubel.
@@ -65,17 +65,6 @@ export interface OpgeslagenMeubel {
 }
 
 /** Heeft dit de vorm van een gat uit de tekenmodule? De maten toetst herzieGaten. */
-function isGat(g: unknown): g is Gat {
-  const o = g as Record<string, unknown> | null
-  if (!o || typeof o !== 'object') return false
-  const n = (k: string) => typeof o[k] === 'number' && Number.isFinite(o[k] as number)
-  if (o.soort === 'sifon') return n('vak') && n('y') && n('d')
-  if (o.soort === 'kraan') return n('x') && n('y') && n('d')
-  if (o.soort === 'kom') return n('vak')
-  if (o.soort === 'kraan-kom') return n('vak') && n('dx') && n('d')
-  return false
-}
-
 export function isMeubelConfig(selectedOptions: unknown): boolean {
   return (selectedOptions as { shape?: unknown } | null)?.shape === MEUBEL_SHAPE
 }
@@ -110,7 +99,7 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
   // Zelf getekend telt alleen bij een product met tekenmodule; wat niet (meer) te maken is, valt weg
   const tekenwijze: Tekenwijze = m.tekenwijze === 'module' && gatenSoort(basisModel) ? 'module' : 'upload'
   const context = gatenContext({ modelId: basisModel.id, lengte, lades, diepte: model.diepte, regaalBreedte: regaalBreedte || undefined, regaalZijde, waskomVorm: waskomVorm ?? undefined, waskomMaat: waskomMaat ?? undefined, waskomAantal, ladeBreedtes: breedtes })
-  const gaten = tekenwijze === 'module' && context && Array.isArray(m.gaten) ? herzieGaten(m.gaten.filter(isGat), context).gaten : []
+  const gaten = tekenwijze === 'module' && context && Array.isArray(m.gaten) ? herzieGaten(leesGaten(m.gaten, context), context).gaten : []
   const handdoekUitsparing = m.handdoekUitsparing === true && basisModel.id === HANDDOEK_UITSPARING_MODEL
   const uitsparingenTeller = tekenwijze === 'module' ? 0 : uitsparingen
   return {
@@ -169,14 +158,24 @@ export interface TekenInvoer {
   titel: string
   /** De dealer koos voor zelf tekenen: er hoort geen eigen maattekening bij */
   zelf: boolean
+  /** Solid Surface: de waskommen waartussen gewisseld kan worden, en welke nu gekozen is */
+  komKeuzes?: KomKeuze[]
+  komKeuze?: number
 }
 
-/** Null als er bij dit meubel niet getekend kan worden, of als de gekozen waskom niet boven de lades past. */
+/** Null als er bij dit meubel niet getekend kan worden, of als er geen waskom boven de lades past. */
 export function tekenInvoer(m: OpgeslagenMeubel): TekenInvoer | null {
   const c = m.gatenContext
   if (!c) return null
-  if (c.soort === 'solid' && (!c.kom || komMax(c.blad, c.kom) < c.komAantal)) return null
-  return { context: c, gaten: werkGaten(m.gaten, c).gaten, titel: `${m.model.naam} · ${m.lengte} mm`, zelf: m.tekenwijze === 'module' }
+  const basis = { titel: `${m.model.naam} · ${m.lengte} mm`, zelf: m.tekenwijze === 'module' }
+  if (c.soort !== 'solid') return { ...basis, context: c, gaten: werkGaten(m.gaten, c).gaten }
+  const keuzes = komKeuzes({ ...meubelPrijsInput(m), waskomAantal: m.waskomAantal })
+  const nu = keuzes.findIndex((k) => k.vorm === m.waskomVorm && (k.maat ?? null) === (k.vorm === 'vierkant' ? m.waskomMaat : null))
+  // Past de opgeslagen waskom niet, dan begint het venster op de eerste die wel past
+  const start = nu >= 0 && keuzes[nu].past ? nu : keuzes.findIndex((k) => k.past)
+  if (start < 0) return null
+  const context = keuzes[start].context
+  return { ...basis, context, gaten: werkGaten(m.gaten, context).gaten, komKeuzes: keuzes, komKeuze: start }
 }
 
 /** Korte omschrijving voor lijsten: "Facet Double · 2000 mm · 3 × 2 lades · White". */

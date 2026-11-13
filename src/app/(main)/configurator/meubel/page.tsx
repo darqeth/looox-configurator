@@ -3,11 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import MeubelConfigurator from './meubel-configurator'
 import { isUuid, projectKop } from '@/lib/project'
+import { MEUBEL_CATEGORIEEN } from '@/lib/meubel-config'
 
 export const metadata = { title: 'Tailor-Made | LoooX Configurator' }
 
-export default async function MeubelPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
-  const { project: projectParam } = await searchParams
+export default async function MeubelPage({ searchParams }: { searchParams: Promise<{ project?: string; categorie?: string }> }) {
+  const { project: projectParam, categorie } = await searchParams
   const supabase = await createClient()
   const { data: claimsData } = await supabase.auth.getClaims()
   const userId = claimsData?.claims?.sub
@@ -33,5 +34,8 @@ export default async function MeubelPage({ searchParams }: { searchParams: Promi
     project = { id: projectParam, naam: kop.naam, referentie: kop.referentie }
   }
 
-  return <MeubelConfigurator factor={factor} project={project} />
+  // ?categorie=waskommen: direct naar de modellen van die categorie (bijverkoop na een bestelling)
+  const startCategorie = MEUBEL_CATEGORIEEN.find((c) => c.id === categorie)?.id
+
+  return <MeubelConfigurator factor={factor} project={project} startCategorie={startCategorie} />
 }

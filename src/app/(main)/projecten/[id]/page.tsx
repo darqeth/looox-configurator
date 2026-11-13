@@ -9,6 +9,8 @@ import ProjectNaam from './project-naam'
 import RegelActies from './regel-acties'
 import TekeningUpload from '@/components/tekening-upload'
 import ProjectBestellen from './project-bestellen'
+import { upsellVoorMeubels } from '@/components/upsell-cards'
+import { leesMeubel } from '@/lib/meubel-opslag'
 import { berekenProjectOrderRegel, projectOrderTotaalCents } from '@/lib/project-order'
 
 export const metadata = { title: 'Project | LoooX Configurator' }
@@ -90,6 +92,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               projectId={id}
               naam={kop.naam}
               totaalCents={projectOrderTotaalCents(orderRegels)}
+              upsell={upsellVoorMeubels(
+                configs.flatMap((c) => { const m = leesMeubel(c.selected_options); return m ? [m.model] : [] }),
+                regels.some((r) => r.soort !== 'meubel'),
+              )}
               fout={blokkade}
               regels={orderRegels.map((r) => ({
                 id: r.configId, titel: r.regel.titel, omschrijving: r.regel.omschrijving,

@@ -66,7 +66,7 @@ export interface MeubelProject {
   referentie: string
 }
 
-export default function MeubelConfigurator({ factor, initialConfig, project }: { factor: number; initialConfig?: MeubelInitialConfig; project?: MeubelProject | null }) {
+export default function MeubelConfigurator({ factor, initialConfig, project, startCategorie }: { factor: number; initialConfig?: MeubelInitialConfig; project?: MeubelProject | null; startCategorie?: MeubelCategorieId }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const isEditing = !!initialConfig
@@ -106,9 +106,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
     afmetingTekst: variant?.afmeting,
     afbeelding: variant?.afbeelding ?? basisModel.afbeelding,
   } : null
-  const [categorie, setCategorie] = useState<MeubelCategorieId | null>(basisModel?.categorie ?? null)
+  const [categorie, setCategorie] = useState<MeubelCategorieId | null>(basisModel?.categorie ?? startCategorie ?? null)
   // 0 categorie, 1 model, 2 samenstellen, 3 samenvatting
-  const [step, setStep] = useState(model ? 2 : 0)
+  const [step, setStep] = useState(model ? 2 : startCategorie ? 1 : 0)
   const [lengteTekst, setLengteTekst] = useState(String(initialConfig?.lengte ?? 1200))
   // Laatste geldige lengte: tekening en opties blijven staan terwijl je typt
   const [laatsteLengte, setLaatsteLengte] = useState(initialConfig?.lengte ?? 1200)

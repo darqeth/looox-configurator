@@ -9,6 +9,7 @@ import {
   tekeningVerplicht, meubelAfmeting, indelingTekst, kanUitsparing, getDeurOpties, plankExtraPrijs, getPlankExtraArtikel,
 } from '../src/lib/meubel-config'
 import { leesMeubel, meubelPrijsInput, meubelKort } from '../src/lib/meubel-opslag'
+import { upsellVoorMeubels } from '../src/components/upsell-cards'
 
 // Prijslijst Tailor-Made juli 2026 (netto). Rij: [lengte in mm, lades, euro].
 // Per staffel de onder- en bovengrens, zodat een verschoven grens opvalt.
@@ -700,6 +701,16 @@ test.describe('Planken, waskommen en accessoires', () => {
     // De Wooden Box Facet staat bij de kasten, direct na de Mirror Cabinet
     const kasten = MEUBEL_MODELLEN.filter((m) => m.categorie === 'kasten').map((m) => m.id)
     expect(kasten.slice(0, 2)).toEqual(['mirror-cabinet', 'wooden-box-facet'])
+  })
+
+  test('Bijverkoop na bestellen: waskom alleen als er nog geen is, spiegel als die ontbreekt', () => {
+    const m = (id: string) => getMeubelModel(id)!
+    expect(upsellVoorMeubels([m('facet')])).toEqual({ waskom: true, spiegel: true })
+    expect(upsellVoorMeubels([m('solid-facet')])).toEqual({ waskom: false, spiegel: true })
+    expect(upsellVoorMeubels([m('facet'), m('waskom-ceramic')])).toEqual({ waskom: false, spiegel: true })
+    expect(upsellVoorMeubels([m('cabinet')])).toEqual({ waskom: false, spiegel: true })
+    expect(upsellVoorMeubels([m('base-shelf-solo')], true)).toEqual({ waskom: true, spiegel: false })
+    expect(upsellVoorMeubels([])).toEqual({ waskom: false, spiegel: false })
   })
 
   test('Mirror Cabinet: lamp erbij tegen catalogusprijs', () => {

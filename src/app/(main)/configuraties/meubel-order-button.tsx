@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
 import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, indelingTekst, meubelAfmeting } from '@/lib/meubel-config'
+import UpsellCards, { upsellVoorMeubels } from '@/components/upsell-cards'
 import { meubelPrijsInput, type OpgeslagenMeubel, meubelExtraPrijs } from '@/lib/meubel-opslag'
 import TekeningUpload from '@/components/tekening-upload'
 
@@ -114,6 +115,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                 <p className="text-[13px] text-lx-text-secondary">
                   {opAanvraag ? 'Je ontvangt een bevestiging per e-mail. LoooX neemt contact op over de prijs.' : 'Je ontvangt een orderbevestiging per e-mail.'}
                 </p>
+                <UpsellCards {...upsellVoorMeubels([meubel.model])} />
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={() => router.push('/bestellingen')}

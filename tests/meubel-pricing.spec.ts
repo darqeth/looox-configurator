@@ -666,11 +666,11 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(getPlankExtraArtikel('rail', 'bestaat-niet')?.id).toBe('WHH35MZ')
     // Towel holder curved is geen accessoire meer (dat is handdoekhouder type B)
     expect(calcMeubelNettoCents({ ...b, extra: 'towel-holder-curved' as never })).toBeNull()
-    // Ook onder de Solid Washbasin Solo en de Solid mini, niet onder een gewone waskom
+    // Ook onder de Solid Washbasin Solo, niet onder een waskom (ook niet de Basin Free)
     const solo = { ...k, modelId: 'solid-washbasin-solo', lades: 0, lengte: 1000 }
     expect(calcMeubelNettoCents({ ...solo, extra: 'roll-curved', extraArtikel: 'WROLLC16RVS' })).toBe(calcMeubelNettoCents(solo)! + 3588)
     const mini = { ...k, modelId: 'waskom-basin-free', lades: 0, lengte: 0, variant: 'TMSMBS425W' }
-    expect(calcMeubelNettoCents({ ...mini, extra: 'rail' })).toBe(13416 + 6188)
+    expect(calcMeubelNettoCents({ ...mini, extra: 'rail' })).toBeNull()
     expect(calcMeubelNettoCents({ ...mini, variant: 'TMSWTFR35W', extra: 'rail' })).toBeNull()
   })
 

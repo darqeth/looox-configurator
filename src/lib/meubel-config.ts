@@ -186,7 +186,7 @@ export function getPlankExtraArtikel(extra?: string | null, artikel?: string | n
   return e.artikelen.find((a) => a.id === artikel) ?? e.artikelen[0]
 }
 
-/** Kan er een accessoire onder: planken met `extras`, de Solid Washbasin Solo en de Solid mini. */
+/** Kan er een accessoire onder: planken met `extras` en de Solid Washbasin Solo. */
 export function heeftExtras(model: MeubelModel, variant?: string | null): boolean {
   return !!(model.plank?.extras || model.extras || (model.artikel && getArtikelVariant(model, variant)?.extras))
 }
@@ -1005,7 +1005,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     geenHout: !g.hout,
     accessoireKleur: true,
     opmerking: g.opmerking,
-    artikel: { varianten: g.varianten.map(([id, naam, afmeting, prijs]) => ({ id, naam, afmeting, prijs, ...(g.categorie === 'waskommen' && { afbeelding: `/images/meubels/artikel-${id}.webp` }), ...(id === 'TMSMBS425W' && { extras: true }) })) },
+    artikel: { varianten: g.varianten.map(([id, naam, afmeting, prijs]) => ({ id, naam, afmeting, prijs, ...(g.categorie === 'waskommen' && { afbeelding: `/images/meubels/artikel-${id}.webp` }) })) },
     staffels: [],
   })),
 ]

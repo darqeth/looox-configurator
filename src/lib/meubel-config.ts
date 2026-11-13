@@ -234,8 +234,8 @@ export interface KastOpbouw {
   /** Vast aantal deuren (Stripes: altijd 2). Kiezen kan de dealer niet. */
   deuren?: number
   /**
-   * Eén of twee deuren, afhankelijk van de hoogte: LoooX bepaalt dit, de dealer kiest niet.
-   * De grens is nog niet bekend (Mark zoekt het uit); tot die tijd tonen we alleen de tekst.
+   * Eén of twee deuren naar keuze, zonder prijsverschil. Een deur is maximaal
+   * DEUR_MAX_HOOGTE hoog: daarboven zijn het altijd twee gelijke deuren.
    */
   deurenNaarHoogte?: boolean
   /** In deze kast kan een uitsparing (alleen de toiletmeubels) */
@@ -851,7 +851,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     rijen: 1,
     geenAanvraag: true,
     ...('geenKleuren' in k && { geenKleuren: [...k.geenKleuren] }),
-    opmerking: 'opmerking' in k ? k.opmerking : 'naarHoogte' in k ? 'Deze kast heeft één of twee deuren, afhankelijk van de hoogte. Dat bepaalt LoooX.' : undefined,
+    opmerking: 'opmerking' in k ? k.opmerking : undefined,
     kast: {
       breedtes: [350, 400], dieptes: [250, 300, 350], front: k.front,
       ...('deuren' in k && { deuren: k.deuren }),
@@ -1089,7 +1089,7 @@ function findStaffel(model: MeubelModel, lengte: number): Staffel | null {
 export function getLadeOpties(model: MeubelModel, lengte: number, regaalBreedte = 0): number[] {
   // Duo: altijd twee kasten met elk één lade
   if (model.duo) return [2]
-  if (model.kast) return [model.kast.deuren ?? 0]
+  if (model.kast) return getDeurOpties(model, model.hoogte)
   if (model.plank || model.artikel) return [0]
   const staffel = findStaffel(model, lengte)
   if (!staffel) return []
@@ -1217,6 +1217,18 @@ export function plankTekst(o: { handdoekhouders?: number | null; handdoekType?: 
   return delen.length > 0 ? delen.join(' · ') : 'Zonder handdoekhouder'
 }
 
+/** Een deur is maximaal 120 cm hoog */
+export const DEUR_MAX_HOOGTE = 1200
+
+/** Aantal deuren dat bij deze hoogte kan: vast, naar keuze (1 of 2), of 0 bij een kast zonder deurkeuze. */
+export function getDeurOpties(model: MeubelModel, hoogte: number): number[] {
+  const k = model.kast
+  if (!k) return [0]
+  if (k.deuren) return [k.deuren]
+  if (k.deurenNaarHoogte) return hoogte > DEUR_MAX_HOOGTE ? [2] : [1, 2]
+  return [0]
+}
+
 /** Netto basisprijs van een kast in centen, of null als de maten niet bestaan. */
 export function getKastPrijs(model: MeubelModel, input: { lengte: number; lades: number; hoogte?: number; diepte?: number }): number | null {
   const k = model.kast
@@ -1225,7 +1237,7 @@ export function getKastPrijs(model: MeubelModel, input: { lengte: number; lades:
   const diepte = input.diepte ?? model.diepte
   if (!k.breedtes.includes(input.lengte) || !k.dieptes.includes(diepte)) return null
   if (getMeubelHoogte(model, hoogte) !== hoogte) return null
-  if ((k.deuren ?? 0) !== input.lades) return null
+  if (!getDeurOpties(model, hoogte).includes(input.lades)) return null
   if (k.prijsPerBreedte) return k.prijsPerBreedte[input.lengte] ?? null
   if (k.prijsPerHoogte) return k.prijsPerHoogte[hoogte] ?? null
   // Zelfde grensregel als bij de lengtestaffels: boven de bovengrens geldt de volgende staffel
@@ -1268,6 +1280,11 @@ export function indelingTekst(model: MeubelModel, lades: number, breedtes: LadeB
   return `${ladeLabel(model, lades)} · ${ladeBreedtesTekst(breedtes, ruimte, lades)}`
 }
 
+/** Kan het LoooX-logo erop? Niet zonder hout, niet op een vast artikel en niet op de spiegelkast. */
+export function kanLogo(model: MeubelModel): boolean {
+  return !model.geenHout && !model.artikel && model.kast?.front !== 'spiegel'
+}
+
 /** Kan er een uitsparing of boorgat in dit model? In de hoge kasten en de Mirror Cabinet niet. */
 export function kanUitsparing(model: MeubelModel): boolean {
   if (model.artikel) return false
@@ -1284,7 +1301,6 @@ export function ladeLabel(model: MeubelModel, kolommen: number): string {
   if (model.kast) {
     if (model.kast.front === 'open') return 'Open kast'
     if (model.kast.front === 'spiegel') return 'Spiegeldeuren'
-    if (model.kast.deurenNaarHoogte) return '1 of 2 deuren, afhankelijk van de hoogte'
     return kolommen === 2 ? '2 deuren' : kolommen === 1 ? '1 deur' : 'Standaard uitvoering'
   }
   if (model.zonderLades) return 'Zonder lades'

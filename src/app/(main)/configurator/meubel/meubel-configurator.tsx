@@ -16,7 +16,7 @@ import {
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
-  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel,
+  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo,
   type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
@@ -326,7 +326,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
     if (!geldig || !projectName.trim() || !model) return
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
-      logo: logo && !model.geenHout && !model.artikel, uitsparingen: magUitsparing ? uitsparingen : 0,
+      logo: logo && kanLogo(model), uitsparingen: magUitsparing ? uitsparingen : 0,
       ...((model.kast || model.plank) && { diepte: model.diepte }),
       ...(model.plank?.handdoekhouder && { handdoekhouders, handdoekType }),
       ...(magExtra && { extra, extraArtikel: extraArtikel?.id ?? null }),
@@ -770,10 +770,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               )}
 
-              {!isDuo && !model.zonderLades && !model.kast && (
+              {!isDuo && !model.zonderLades && (!model.kast || model.kast.deurenNaarHoogte) && (
                 <div>
-                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Lades</p>
-                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Aantal lades">
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">{model.kast ? 'Deuren' : 'Lades'}</p>
+                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={model.kast ? 'Aantal deuren' : 'Aantal lades'}>
                     {opties.map((n) => (
                       <button
                         key={n}
@@ -792,12 +792,13 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                     ))}
                   </div>
                   <p className="text-[12px] text-lx-text-muted mt-1.5">
-                    Welke indelingen kunnen, hangt af van de lengte.
-                    {model.rand ? ` De rand van ${model.rand} mm aan beide zijden gaat er eerst af.` : ''}
+                    {model.kast
+                      ? `${opties.length > 1 ? 'Zonder prijsverschil. ' : ''}Een deur is maximaal 120 cm hoog${opties.length > 1 ? '.' : ', dus deze kast krijgt twee gelijke deuren.'}`
+                      : `Welke indelingen kunnen, hangt af van de lengte.${model.rand ? ` De rand van ${model.rand} mm aan beide zijden gaat er eerst af.` : ''}`}
                   </p>
 
 
-                  {magAanpassen && (
+                  {magAanpassen && !model.kast && (
                     <div className="mt-4 bg-lx-panel-bg rounded-xl p-4">
                       <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
                         <span>
@@ -933,10 +934,10 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 </div>
               </div>}
 
-              {!model.artikel && <div>
+              {(kanLogo(model) || magUitsparing) && <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Opties</p>
                 <div className="bg-lx-panel-bg rounded-xl p-4 space-y-4">
-                  {!model.geenHout && <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
+                  {kanLogo(model) && <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
                     <span>
                       <span className="block text-[13px] font-medium text-lx-text-primary">Met logo</span>
                       <span className="block text-[11.5px] text-lx-text-secondary">LoooX-logo op het front. Zonder meerprijs.</span>
@@ -1026,7 +1027,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                 {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${isDuo ? 'in het midden' : regaalZijde}`} onEdit={() => setStep(2)} />}
                 {model.waskom && <Rij label="Waskom" waarde={waskomTekst({ waskomVorm, waskomAantal })} onEdit={() => setStep(2)} />}
                 {!model.geenHout && <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />}
-                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && !model.geenHout && !model.artikel, uitsparingen })} onEdit={() => setStep(2)} />
+                <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && kanLogo(model), uitsparingen })} onEdit={() => setStep(2)} />
               </div>
 
               <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">

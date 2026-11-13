@@ -7,7 +7,7 @@ import { parseOrThrow } from '@/lib/validation'
 import { DEFAULT_PRODUCT_ID, generateArticleNumber, assertValidAttachmentUrl } from '@/lib/actions/configurator-helpers'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import {
-  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, heeftExtras, getPlankExtraArtikel, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig,
+  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, heeftExtras, getPlankExtraArtikel, kanLogo, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
 import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
@@ -98,7 +98,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           houtkleur: input.houtkleur,
           factor,
           opAanvraag,
-          logo: input.logo === true && !model.geenHout && !model.artikel,
+          logo: input.logo === true && kanLogo(model),
           ...(model.regaal && { regaalBreedte: input.regaalBreedte, regaalZijde: input.regaalZijde }),
           ...(model.waskom && { waskomVorm: input.waskomVorm, waskomAantal: input.waskomAantal }),
           uitsparingen,

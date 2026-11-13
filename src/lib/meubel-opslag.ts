@@ -1,5 +1,5 @@
 import {
-  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getArtikelVariant, indelingTekst, PLANK_EXTRAS, heeftExtras, getPlankExtraArtikel, plankExtraPrijs, LAMPEN_MAX,
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getArtikelVariant, indelingTekst, PLANK_EXTRAS, heeftExtras, getPlankExtraArtikel, plankExtraPrijs, LAMPEN_MAX, getDeurOpties, kanLogo,
   type PlankExtra, type HanddoekType, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
   type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm,
 } from '@/lib/meubel-config'
@@ -89,13 +89,14 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     regaalZijde: m.regaalZijde === 'links' || m.regaalZijde === 'midden' ? m.regaalZijde : 'rechts',
     ladeRuimte: ladeRuimte(model, lengte, regaalBreedte),
     // Een kast of los blad heeft geen lades: daar is 0 een geldige waarde
-    lades: model.kast || model.zonderLades || model.plank || model.artikel ? Math.max(0, Number(m.lades) || 0) : Number(m.lades) || 1,
+    // Kast: een eerder opgeslagen aantal deuren dat bij deze hoogte niet (meer) kan, wordt het eerste dat wel kan
+    lades: model.kast ? (getDeurOpties(model, model.hoogte).includes(Number(m.lades)) ? Number(m.lades) : getDeurOpties(model, model.hoogte)[0]) : model.zonderLades || model.plank || model.artikel ? Math.max(0, Number(m.lades) || 0) : Number(m.lades) || 1,
     ladeBreedtes: breedtes,
     houtkleur: kleur?.id ?? '',
     houtkleurNaam: model.geenHout ? (model.artikel ? '' : 'Solid Surface') : kleur?.naam ?? '',
     factor: m.factor === undefined ? MEUBEL_FACTOR_DEFAULT : parseMeubelFactor(m.factor),
     opAanvraag: m.opAanvraag === true,
-    logo: m.logo === true,
+    logo: m.logo === true && kanLogo(model),
     uitsparingen,
     attachmentUrl,
     tekeningOntbreekt: tekeningVerplicht(model, uitsparingen) && !attachmentUrl,
@@ -114,7 +115,7 @@ export function meubelSamenvatting(m: OpgeslagenMeubel): string {
 export function meubelKort(m: OpgeslagenMeubel): string {
   if (m.model.artikel) return indelingTekst(m.model, 0, null, 0, m)
   if (m.model.plank) return meubelAfmeting(m.model, m.lengte)
-  if (m.model.kast) return [meubelAfmeting(m.model, m.lengte), m.model.kast.deuren ? ladeLabel(m.model, m.lades) : ''].filter(Boolean).join(' · ')
+  if (m.model.kast) return [meubelAfmeting(m.model, m.lengte), m.lades > 0 ? ladeLabel(m.model, m.lades) : ''].filter(Boolean).join(' · ')
   return `${m.lengte} mm · ${ladeLabel(m.model, m.lades)}`
 }
 

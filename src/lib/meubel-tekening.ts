@@ -111,8 +111,7 @@ export function tekenKast(model: MeubelModel, deuren: number): TekenKast | null 
     return { horizontaal: Array.from({ length: vakken - 1 }, (_, i) => (i + 1) / vakken), verticaal: [], open: true, spiegel: false }
   }
   if (k.front === 'spiegel') return { horizontaal: [], verticaal: [0.5], open: false, spiegel: true }
-  // Twee deuren boven elkaar
-  // Volgt het aantal deuren uit de hoogte, dan tekenen we geen deurnaad: de grens is nog niet bekend
+  // Twee gelijke deuren boven elkaar: de naad zit in het midden
   return { horizontaal: deuren === 2 ? [0.5] : [], verticaal: [], open: false, spiegel: false }
 }
 

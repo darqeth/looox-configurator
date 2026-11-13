@@ -2,10 +2,10 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Trash2, X } from 'lucide-react'
+import { RotateCcw, Trash2, X } from 'lucide-react'
 import { formatMm, type KomKeuze } from '@/lib/meubel-config'
 import {
-  GAT, betaaldeGaten, klemGat, komOverRand, plaatsGat, snappunten, valideerGaten, werkGaten,
+  GAT, betaaldeGaten, klemGat, komOverRand, plaatsGat, snappunten, startGaten, valideerGaten, werkGaten,
   type Gat, type GatenContext,
 } from '@/lib/meubel-gaten'
 import { gatNaam, tekenGaten, type TekenGat } from '@/lib/meubel-tekening'
@@ -171,6 +171,15 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
     if (!nieuw || !nieuw.past || i === keuze) return
     setKeuze(i)
     setGaten(werkGaten(gaten, nieuw.context).gaten)
+    setGekozen(null)
+    setMelding(null)
+  }
+
+  // Leeg blad: alles weg, behalve een waskom waar niets aan te kiezen valt
+  const leeg = startGaten(context)
+  const isLeeg = gaten.length === leeg.length && gaten.every((g) => g.soort === 'kom')
+  function wisAlles() {
+    setGaten(leeg)
     setGekozen(null)
     setMelding(null)
   }
@@ -413,6 +422,13 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
           </p>
           <div className="flex items-center gap-2 ml-auto">
             {nogTePlaatsen && <span className="text-[12px] text-amber-700">Plaats nog {context.komAantal - kommen.length === 1 ? 'een waskom' : 'de waskommen'} om te kunnen bestellen.</span>}
+            <button
+              onClick={wisAlles}
+              disabled={isLeeg || bezig}
+              className="inline-flex items-center gap-1.5 h-10 px-3 rounded-xl text-[13px] font-medium text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              <RotateCcw size={15} aria-hidden="true" /> Alles verwijderen
+            </button>
             <button
               onClick={() => onKlaar(gaten, komKeuzes?.[keuze])}
               disabled={bezig}

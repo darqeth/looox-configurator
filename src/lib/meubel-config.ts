@@ -247,17 +247,17 @@ const ARTIKEL_GROEPEN: { id: string; categorie: MeubelCategorieId; naam: string;
     ['TMMPROUNDGW', 'Round, buiten Gloss White, binnen Gloss White', 'Ø 40 cm, hoogte 90 cm', 37336],
     ['TMMPROUNDMW', 'Round, buiten Matt White, binnen Matt White', 'Ø 40 cm, hoogte 90 cm', 35256],
     ['TMMPROUNDGWLG', 'Round, buiten Matt Light Grey, binnen Gloss White', 'Ø 40 cm, hoogte 90 cm', 41496],
-    ['TMMPSQUAREGW', 'Square, buiten Matt White, binnen Matt White', '40 × 40 cm, hoogte 90 cm', 40456],
-    ['TMMPSQUAREMW', 'Square, buiten Gloss White, binnen Gloss White', '40 × 40 cm, hoogte 90 cm', 38376],
+    ['TMMPSQUAREGW', 'Square, buiten Gloss White, binnen Gloss White', '40 × 40 cm, hoogte 90 cm', 40456],
+    ['TMMPSQUAREMW', 'Square, buiten Matt White, binnen Matt White', '40 × 40 cm, hoogte 90 cm', 38376],
     ['TMMPSQUAREGWLG', 'Square, buiten Matt Light Grey, binnen Gloss White', '40 × 40 cm, hoogte 90 cm', 44616],
   ] },
   { id: 'organizer', categorie: 'accessoires', naam: 'Organizer', omschrijving: 'Organizer voor in de lade, met magnetische bevestiging.', opmerking: 'Elke Organizer wordt geleverd met 1 Divider.', varianten: [
-    ['organizer-m', 'M', 'Maat M', 5096],
-    ['organizer-l', 'L', 'Maat L', 5616],
+    ['WORG218', 'M', 'Maat M', 5096],
+    ['WORG242', 'L', 'Maat L', 5616],
   ] },
   { id: 'divider', categorie: 'accessoires', naam: 'Divider', omschrijving: 'Losse verdeler voor in de Organizer.', varianten: [
-    ['divider-m', 'M', 'Maat M', 936],
-    ['divider-l', 'L', 'Maat L', 936],
+    ['WDIV218', 'M', 'Maat M', 936],
+    ['WDIV242', 'L', 'Maat L', 936],
   ] },
   { id: 'wooden-box-facet', categorie: 'accessoires', naam: 'Wooden Box Facet', omschrijving: 'Open houten box, mooi naast de Mirror Cabinet.', hout: true, opmerking: 'De Wooden Box Facet kan alleen besteld worden in de standaardmaat.', varianten: [
     ['wooden-box-facet-20', 'Standaard', 'Breedte 20 cm', 21736],
@@ -1122,13 +1122,17 @@ export function getPlankPrijs(model: MeubelModel, input: { lengte: number; hoogt
   return kolom < 0 ? null : rij.prijzen[kolom] ?? null
 }
 
-/** Artikelnummer uit de prijslijst, of null bij een artikel zonder nummer (Organizer, Divider). */
+/** Artikelnummer uit de prijslijst, of null bij een artikel zonder nummer (Wooden Box Facet). */
 export function artikelNummer(v: ArtikelVariant): string | null {
   return /^[A-Z0-9]+$/.test(v.id) ? v.id : null
 }
 
+// Eerder opgeslagen configuraties gebruikten eigen id's voor Organizer en Divider
+const OUDE_ARTIKEL_IDS: Record<string, string> = { 'organizer-m': 'WORG218', 'organizer-l': 'WORG242', 'divider-m': 'WDIV218', 'divider-l': 'WDIV242' }
+
 export function getArtikelVariant(model: MeubelModel, id?: string | null): ArtikelVariant | null {
-  return model.artikel?.varianten.find((v) => v.id === id) ?? null
+  const echt = (id && OUDE_ARTIKEL_IDS[id]) || id
+  return model.artikel?.varianten.find((v) => v.id === echt) ?? null
 }
 
 /** Uitvoering van een plank in één regel: handdoekhouders en wat eronder hangt. */

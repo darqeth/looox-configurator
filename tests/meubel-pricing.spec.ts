@@ -638,7 +638,7 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0 })).toBeNull()
     expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'WTMWK30W', uitsparingen: 1 })).toBeNull()
     expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-ceramic', lengte: 0, variant: 'WTMWK30W', houtkleur: 'white' })).toBeNull()
-    expect(calcMeubelNettoCents({ ...k, modelId: 'organizer', lengte: 0, variant: 'organizer-l' })).toBe(5616)
+    expect(calcMeubelNettoCents({ ...k, modelId: 'organizer', lengte: 0, variant: 'WORG242' })).toBe(5616)
     expect(calcMeubelNettoCents({ ...k, modelId: 'divider', lengte: 0, variant: 'divider-m' })).toBe(936)
     // Wooden Box Facet is van hout: accessoirekleur
     expect(calcMeubelNettoCents({ ...k, modelId: 'wooden-box-facet', lengte: 0, variant: 'wooden-box-facet-20' })).toBe(21736)

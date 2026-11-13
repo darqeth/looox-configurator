@@ -6,7 +6,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeProjectOrder } from '@/lib/actions/orders'
 import { formatCents } from '@/lib/meubel-config'
-import UpsellCards, { type UpsellKeuze } from '@/components/upsell-cards'
 
 // Bestelt het hele project in één keer. De bedragen zijn netto en door de server
 // uitgerekend met dezelfde functie die de bestelling zelf gebruikt.
@@ -23,9 +22,8 @@ export interface BestelRegel {
 const inputCls = 'w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13px] text-lx-text-primary outline-none focus:border-lx-cta bg-white transition-colors'
 const labelCls = 'text-[12px] font-semibold text-lx-text-secondary mb-1.5 block'
 
-export default function ProjectBestellen({ projectId, naam, regels, totaalCents, fout: blokkade, upsell }: {
+export default function ProjectBestellen({ projectId, naam, regels, totaalCents, fout: blokkade }: {
   /** Bijverkoop op het bedankscherm: wat er nog bij het project past */
-  upsell?: UpsellKeuze
   projectId: string
   naam: string
   regels: BestelRegel[]
@@ -117,7 +115,6 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
                 <p className="text-[13px] text-lx-text-secondary">
                   {regels.length} {regels.length === 1 ? 'regel' : 'regels'} onder één nummer. Je ontvangt een bevestiging per e-mail.
                 </p>
-                {upsell && <UpsellCards {...upsell} />}
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => router.push('/bestellingen')} className="flex-1 h-10 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors cursor-pointer">
                     Mijn bestellingen

@@ -9,7 +9,7 @@ import ProjectNaam from './project-naam'
 import RegelActies from './regel-acties'
 import TekeningUpload from '@/components/tekening-upload'
 import ProjectBestellen from './project-bestellen'
-import { upsellVoorMeubels } from '@/components/upsell-cards'
+import UpsellCards, { upsellVoorMeubels } from '@/components/upsell-cards'
 import { leesMeubel } from '@/lib/meubel-opslag'
 import { berekenProjectOrderRegel, projectOrderTotaalCents } from '@/lib/project-order'
 
@@ -54,6 +54,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const blokkade = orderRegels.find((r) => r.fout)?.fout
     ?? (heeftMeubel && !meubelToegang ? 'Dit account heeft geen toegang tot Tailor-Made.' : null)
 
+  // Bijverkoop: wat past er nog bij de meubels in dit project
+  const upsell = upsellVoorMeubels(
+    configs.flatMap((c) => { const m = leesMeubel(c.selected_options); return m ? [m.model] : [] }),
+    regels.some((r) => r.soort !== 'meubel'),
+  )
+
   // Besteld project: het gezamenlijke ordernummer erbij
   const { data: orders } = besteld
     ? await supabase.from('orders').select('order_number, order_group').in('configuration_id', configs.map((c) => c.id)).limit(1)
@@ -92,10 +98,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               projectId={id}
               naam={kop.naam}
               totaalCents={projectOrderTotaalCents(orderRegels)}
-              upsell={upsellVoorMeubels(
-                configs.flatMap((c) => { const m = leesMeubel(c.selected_options); return m ? [m.model] : [] }),
-                regels.some((r) => r.soort !== 'meubel'),
-              )}
               fout={blokkade}
               regels={orderRegels.map((r) => ({
                 id: r.configId, titel: r.regel.titel, omschrijving: r.regel.omschrijving,
@@ -153,6 +155,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <p className="text-[20px] font-bold text-lx-cta tabular-nums flex-shrink-0">{formatCents(totaal.totaalCents)}</p>
         </div>
       </div>
+
+      {!besteld && (upsell.waskom || upsell.spiegel) && (
+        <div className="mt-5">
+          <p className="text-[13px] font-semibold text-lx-text-primary">Maak het compleet</p>
+          <p className="text-[12px] text-lx-text-secondary mt-0.5 mb-1.5">Voeg het toe aan dit project, dan gaat alles mee in één bestelling.</p>
+          <div className="max-w-xl"><UpsellCards {...upsell} projectId={id} /></div>
+        </div>
+      )}
 
       {!besteld && (
         <p className="text-[12px] text-lx-text-muted mt-4 leading-relaxed">

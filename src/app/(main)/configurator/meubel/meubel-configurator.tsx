@@ -20,6 +20,7 @@ import {
   type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
+import UpsellCards, { upsellVoorMeubels, upsellHref, type UpsellSoort } from '@/components/upsell-cards'
 
 // Stappen: model kiezen, samenstellen (lengte, lades, houtkleur), samenvatting.
 // In beeld staat alleen bruto (netto × factor); netto komt pas in de bestelstap.
@@ -326,8 +327,9 @@ export default function MeubelConfigurator({ factor, initialConfig, project, sta
     setEigenBreedtes(nieuw)
   }
 
-  // nieuwProject: opslaan als eerste regel van een project, om er daarna een product aan toe te voegen
-  function handleSave(nieuwProject = false) {
+  // nieuwProject: opslaan als eerste regel van een project, om er daarna een product aan toe te voegen.
+  // vervolg: bijverkoop, na het opslaan direct door naar de waskom of spiegel voor hetzelfde project.
+  function handleSave(nieuwProject = false, vervolg?: UpsellSoort) {
     if (!geldig || !projectName.trim() || !model) return
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
@@ -349,7 +351,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project, sta
           ? await updateMeubelConfiguration(initialConfig.id, payload)
           : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject })
         // Een regel van een project gaat terug naar het project, een losse configuratie naar de lijst
-        router.push(projectId ? `/projecten/${projectId}` : '/configuraties')
+        router.push(projectId ? (vervolg ? upsellHref(vervolg, projectId) : `/projecten/${projectId}`) : '/configuraties')
       } catch (e) {
         console.error(e)
         toast(e instanceof Error ? e.message : 'Opslaan mislukt. Probeer het opnieuw.')
@@ -1193,6 +1195,17 @@ export default function MeubelConfigurator({ factor, initialConfig, project, sta
               {!projectName.trim() && (
                 <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>
               )}
+              {!isEditing && !project && (() => {
+                const upsell = upsellVoorMeubels([model])
+                if (!upsell.waskom && !upsell.spiegel) return null
+                return (
+                  <div className="pt-3 border-t border-lx-divider">
+                    <p className="text-[13px] font-semibold text-lx-text-primary">Maak het compleet</p>
+                    <p className="text-[11.5px] text-lx-text-secondary mt-0.5 mb-1">We slaan dit meubel op in een project en je stelt het volgende product direct samen. Zo bestel je alles in één keer.</p>
+                    <UpsellCards {...upsell} onKies={(soort) => handleSave(true, soort)} disabled={!projectName.trim() || isPending} />
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>

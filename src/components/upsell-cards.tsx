@@ -3,7 +3,8 @@ import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import type { MeubelModel } from '@/lib/meubel-config'
 
-// Bijverkoop na een bestelling met een meubel: een waskom en een spiegel erbij.
+// Bijverkoop bij een meubel, vóór het bestellen: een waskom en een spiegel erbij als
+// regel in hetzelfde project, zodat alles in één bestelling meegaat.
 // Alleen wat nog ontbreekt wordt getoond; zonder kaarten rendert er niets.
 
 export interface UpsellKeuze {
@@ -20,12 +21,27 @@ export function upsellVoorMeubels(modellen: MeubelModel[], heeftSpiegel = false)
 
 const kaartCls = 'group flex items-center gap-3 rounded-xl border border-black/8 bg-lx-panel-bg p-3 text-left hover:border-lx-cta transition-colors'
 
-export default function UpsellCards({ waskom, spiegel }: UpsellKeuze) {
+export type UpsellSoort = 'waskom' | 'spiegel'
+
+/** Waar de dealer het product samenstelt, als regel van dit project. */
+export function upsellHref(soort: UpsellSoort, projectId: string): string {
+  return soort === 'waskom' ? `/configurator/meubel?project=${projectId}&categorie=waskommen` : `/configurator/nieuw?project=${projectId}`
+}
+
+/**
+ * Met projectId zijn het links naar de configurator. Zonder project (in de samenvatting,
+ * het meubel is nog niet opgeslagen) meldt onKies de keuze en slaat de aanroeper eerst op.
+ */
+export default function UpsellCards({ waskom, spiegel, projectId, onKies, disabled }: UpsellKeuze & { projectId?: string; onKies?: (soort: UpsellSoort) => void; disabled?: boolean }) {
   if (!waskom && !spiegel) return null
+  const Kaart = ({ soort, children }: { soort: UpsellSoort; children: React.ReactNode }) =>
+    projectId
+      ? <Link href={upsellHref(soort, projectId)} className={kaartCls}>{children}</Link>
+      : <button type="button" disabled={disabled} onClick={() => onKies?.(soort)} className={`${kaartCls} w-full cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}>{children}</button>
   return (
     <div className="space-y-2 pt-1">
       {waskom && (
-        <Link href="/configurator/meubel?categorie=waskommen" className={kaartCls}>
+        <Kaart soort="waskom">
           <span className="relative w-16 h-12 flex-shrink-0">
             <Image src="/images/meubels/artikel-WTMWK40MW.webp" alt="" fill sizes="64px" className="object-contain" />
           </span>
@@ -34,10 +50,10 @@ export default function UpsellCards({ waskom, spiegel }: UpsellKeuze) {
             <span className="block text-[11.5px] text-lx-text-secondary">Keramiek, terrazzo of Solid Surface, passend bij je meubel.</span>
           </span>
           <ArrowRight size={16} className="text-lx-cta flex-shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-        </Link>
+        </Kaart>
       )}
       {spiegel && (
-        <Link href="/configurator/nieuw" className={kaartCls}>
+        <Kaart soort="spiegel">
           <span className="w-16 h-12 flex-shrink-0 flex items-center justify-center">
             <svg width="34" height="44" viewBox="0 0 34 44" fill="none" aria-hidden="true">
               <rect x="1" y="1" width="32" height="42" rx="16" fill="#DDE5E8" stroke="var(--lx-text-primary)" strokeWidth="1.5" />
@@ -49,7 +65,7 @@ export default function UpsellCards({ waskom, spiegel }: UpsellKeuze) {
             <span className="block text-[11.5px] text-lx-text-secondary">Stel een spiegel op maat samen, met of zonder verlichting.</span>
           </span>
           <ArrowRight size={16} className="text-lx-cta flex-shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-        </Link>
+        </Kaart>
       )}
     </div>
   )

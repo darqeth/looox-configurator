@@ -128,6 +128,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                   {r.nalopen && <span className="ml-2 align-middle inline-block rounded-md bg-amber-100 text-amber-900 text-[10.5px] font-bold uppercase tracking-wide px-1.5 py-0.5">Nog nalopen</span>}
                 </p>
                 <p className="text-[11.5px] text-lx-text-secondary mt-0.5">{r.omschrijving}</p>
+                {r.aiNotities?.map((n) => <p key={n} className="text-[11.5px] text-amber-800 mt-0.5">{n}</p>)}
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="text-[13px] font-bold text-lx-text-primary tabular-nums">

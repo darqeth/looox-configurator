@@ -13,7 +13,7 @@ import { getMeubelModel } from '@/lib/meubel-config'
 import { saveMeubelConfiguration } from '@/lib/actions/meubel'
 import { saveConfiguration } from '@/lib/actions/configurator'
 import type { AISuggestion } from '@/lib/types/ai-configurator'
-import type { LightType } from '@/lib/configurator-config'
+import { ORGANIC_SIZES, type LightType } from '@/lib/configurator-config'
 
 // Het hulpje voor Tailor-Made: de dealer omschrijft wat hij zoekt (tekst en/of schets),
 // het taalmodel kiest modellen en keuzes, en maakMeubelVoorstel brengt dat terug naar
@@ -53,7 +53,7 @@ REGELS
 - Spiegels (geen spiegelkast) horen niet in "producten". Zet per spiegel een volledige omschrijving in "spiegels", met alles wat de dealer erover zegt (vorm, maat, verlichting, opties).
 - Een spiegelkast is wel een product: mirror-cabinet.
 - Wat je niet in de prijslijst kunt vinden (kranen, douches, verlichting los, enzovoort) zet je kort in "nietGevonden".
-- Twijfel over een keuze zet je in "opmerkingen" van dat product: korte Nederlandse zin, zonder streepjes, gericht aan de dealer.
+- "opmerkingen" alleen bij echte twijfel over wat de dealer bedoelt (bijvoorbeeld twee modellen passen even goed). Korte Nederlandse zin, zonder streepjes, gericht aan de dealer. Is alles duidelijk, dan een lege lijst. Schrijf niets over beschikbaarheid, prijzen of wat wel of niet kan: dat controleert het systeem zelf.
 
 UITVOER
 {
@@ -92,30 +92,75 @@ function datumNl(): string {
   return new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Amsterdam' }).format(new Date())
 }
 
-/** Zet het voorstel van de spiegel-intake om naar de invoer van saveConfiguration. */
+/**
+ * Zet het voorstel van de spiegel-intake om naar de invoer van saveConfiguration.
+ * Vormen met eigen maatregels krijgen de startwaarden van de wizard, met een notitie
+ * zodat de dealer ze naloopt. Null bij op aanvraag: dat blijft handwerk.
+ */
 function spiegelInvoer(s: AISuggestion) {
-  const rond = s.shape === 'rond'
+  if (s.shape === 'op-aanvraag') return null
+  const notities: string[] = []
   const licht = (l: AISuggestion['directLight'] | undefined) => ({
     position: l?.position ?? 'geen',
     type: (l && l.position !== 'geen' ? l.type : null) as LightType | null,
     control: l && l.position !== 'geen' ? l.control : null,
   })
-  return {
+  const basis = {
     shape: s.shape,
-    width: rond ? s.diameter ?? 0 : s.width ?? 0,
-    height: rond ? s.diameter ?? 0 : s.height ?? 0,
-    diameter: rond ? s.diameter ?? null : null,
-    organicSizeKey: null,
+    width: s.width ?? 0,
+    height: s.height ?? 0,
+    diameter: null as number | null,
+    organicSizeKey: null as string | null,
     glasKleur: s.glasKleur ?? 'helder',
     directLight: licht(s.directLight),
     indirectLight: licht(s.indirectLight),
     selectedOptions: s.selectedOptions ?? [],
     optionSubChoices: s.optionSubChoices ?? {},
   }
+  if (s.shape === 'rond') {
+    if (!s.diameter) return null
+    return { invoer: { ...basis, width: s.diameter, height: s.diameter, diameter: s.diameter }, notities }
+  }
+  if (s.shape === 'organic') {
+    // Vaste maten: de gevraagde maat, anders de dichtstbijzijnde op breedte
+    const maat = ORGANIC_SIZES.find((o) => o.key === s.organicSizeKey)
+      ?? (s.width ? ORGANIC_SIZES.reduce((beste, o) => (Math.abs(o.width - s.width!) < Math.abs(beste.width - s.width!) ? o : beste)) : null)
+    if (!maat) notities.push('Geen maat genoemd. Kies de maat van de Organic.')
+    else if (maat.key !== s.organicSizeKey && (maat.width !== s.width || (s.height != null && maat.height !== s.height))) notities.push(`Organic bestaat in vaste maten. Het is ${maat.label} geworden.`)
+    const gekozen = maat ?? ORGANIC_SIZES[1]
+    return { invoer: { ...basis, width: gekozen.width, height: gekozen.height, organicSizeKey: gekozen.key }, notities }
+  }
+  if (s.shape === 'elips') {
+    // Verhouding 1:2, kortste zijde minimaal 40, langste maximaal 200
+    const liggend = (s.width ?? 0) >= (s.height ?? 0)
+    const gevraagd = Math.max(s.width ?? 0, s.height ?? 0)
+    const lang = gevraagd ? Math.min(200, Math.max(80, Math.round(gevraagd / 2) * 2)) : 100
+    const invoer = { ...basis, width: liggend ? lang : lang / 2, height: liggend ? lang / 2 : lang }
+    if (!gevraagd) notities.push('Geen maat genoemd. Vul de maat van de Ellips in.')
+    else if (invoer.width !== s.width || invoer.height !== s.height) notities.push(`Een Ellips heeft de verhouding 1:2. Het is ${invoer.width} × ${invoer.height} cm geworden.`)
+    return { invoer, notities }
+  }
+  if (s.shape === 'sol' || s.shape === 'luna') {
+    // Startwaarden van de wizard: de maten hangen af van het meubel en de plaats aan de muur
+    notities.push(`Diameter en plaatsing van de ${s.shape === 'sol' ? 'Sol' : 'Luna'} staan op de standaard. Vul de maten van het meubel in.`)
+    const type = s.indirectLight?.type === '4000k' ? '4000k' : '3000k'
+    return {
+      invoer: {
+        ...basis, width: 80, height: 60, diameter: 160,
+        directLight: { position: 'geen', type: null, control: null },
+        indirectLight: { position: 'rondom', type: type as LightType, control: 'externe-schakeling' },
+        // Verwarming zit bij Sol en Luna altijd in de basis
+        selectedOptions: [...new Set([...basis.selectedOptions, 'verwarming'])],
+        ...(s.shape === 'sol'
+          ? { solMeubelHoogte: 35, solOnderkant: 15 }
+          : { lunaMeubelHoogte: 35, lunaOnderkant: 15, lunaAfstand: 20, lunaMuurZijde: 'links' as const }),
+      },
+      notities,
+    }
+  }
+  if (!basis.width || !basis.height) return null
+  return { invoer: basis, notities }
 }
-
-// Vormen die de wizard met eigen maatregels opbouwt: die laat het hulpje aan de dealer
-const SPIEGEL_ZELF = ['sol', 'luna', 'organic', 'op-aanvraag', 'elips']
 
 export async function analyzeMeubelWithAI(input: {
   description: string | null
@@ -213,16 +258,18 @@ export async function analyzeMeubelWithAI(input: {
     try {
       const analyse = await analyseerSpiegel({ description: s.omschrijving.slice(0, 1500), imageBase64: null, imageMimeType: null })
       if (!analyse.success) throw new Error(analyse.error)
-      if (SPIEGEL_ZELF.includes(analyse.result.shape)) throw new Error(`vorm ${analyse.result.shape} stelt de dealer zelf samen`)
       const sp = spiegelInvoer(analyse.result)
-      if (!sp.width || !sp.height) throw new Error('spiegel zonder maat')
+      if (!sp) throw new Error(`vorm ${analyse.result.shape} of maat ontbreekt: stelt de dealer zelf samen`)
       const opgeslagen = await saveConfiguration({
-        ...sp,
+        ...sp.invoer,
         projectName: naam, reference: '', description: '',
         quantity: Math.min(99, Math.max(1, Math.round(Number(s.aantal) || 1))),
         status: 'saved',
         projectId, nieuwProject: projectId === null,
-        nalopen: true, aiNotities: (analyse.result.confidenceNotes ?? []).slice(0, 6).map((n) => String(n).slice(0, 200)),
+        nalopen: true,
+        // Bij Sol en Luna gaan de twijfels van het taalmodel over maten die hier toch op de standaard staan
+        aiNotities: [...sp.notities, ...(sp.invoer.shape === 'sol' || sp.invoer.shape === 'luna' ? [] : analyse.result.confidenceNotes ?? [])]
+          .slice(0, 6).map((n) => String(n).replace(/\s+[—–]\s+/g, ', ').slice(0, 200)),
       })
       projectId = opgeslagen.projectId ?? projectId
       aantal++

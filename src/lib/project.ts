@@ -41,6 +41,8 @@ export interface ProjectRegel {
   tekeningOntbreekt?: boolean
   /** Door het hulpje ingevuld en nog niet door de dealer nagelopen en opgeslagen */
   nalopen?: boolean
+  /** Wat het hulpje de dealer laat nakijken; alleen zolang de regel nog nagelopen moet worden */
+  aiNotities?: string[]
 }
 
 /** Door het hulpje ingevuld: de vlag vervalt zodra de dealer de regel opent en opslaat. */
@@ -59,6 +61,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
   const besteld = c.status === 'ordered'
   const aantal = Math.max(1, Math.floor(Number(opts.quantity) || 1))
   const nalopen = moetNalopen(opts) && !besteld
+  const aiNotities = nalopen && Array.isArray(opts.aiNotities) ? opts.aiNotities.filter((n): n is string => typeof n === 'string') : undefined
 
   const meubel = leesMeubel(opts)
   if (meubel) {
@@ -69,7 +72,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
       omschrijving: meubelSamenvatting(meubel).split(' · ').slice(1).join(' · '),
       quantity: meubel.quantity, opAanvraag: meubel.opAanvraag,
       stukCents: stuk, totaalCents: stuk * meubel.quantity, netto: false, besteld,
-      tekeningOntbreekt: meubel.tekeningOntbreekt, nalopen,
+      tekeningOntbreekt: meubel.tekeningOntbreekt, nalopen, aiNotities,
     }
   }
 
@@ -80,7 +83,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
     return {
       id: c.id, soort: 'projectspiegel', titel: 'Projectspiegel', omschrijving,
       quantity: aantal, opAanvraag: false,
-      stukCents: Math.round(totaal / aantal), totaalCents: totaal, netto: true, besteld, nalopen,
+      stukCents: Math.round(totaal / aantal), totaalCents: totaal, netto: true, besteld, nalopen, aiNotities,
     }
   }
 
@@ -90,7 +93,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
   return {
     id: c.id, soort: 'maatwerk', titel: `Spiegel ${formatShape(shape).toLowerCase()}`, omschrijving,
     quantity: aantal, opAanvraag,
-    stukCents: stuk, totaalCents: stuk * aantal, netto: false, besteld, nalopen,
+    stukCents: stuk, totaalCents: stuk * aantal, netto: false, besteld, nalopen, aiNotities,
   }
 }
 

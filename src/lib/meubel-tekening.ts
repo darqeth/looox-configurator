@@ -115,3 +115,22 @@ export function tekenKast(model: MeubelModel, deuren: number): TekenKast | null 
   // Volgt het aantal deuren uit de hoogte, dan tekenen we geen deurnaad: de grens is nog niet bekend
   return { horizontaal: deuren === 2 ? [0.5] : [], verticaal: [], open: false, spiegel: false }
 }
+
+/**
+ * Lichte reflectie op de spiegeldeuren: per deur twee schuine banen, als
+ * punten voor een polygon. De banen blijven binnen de deur, dus knippen hoeft niet.
+ */
+export function spiegelGlans(x: number, y: number, w: number, h: number, verticaal: number[]): { punten: string; dekking: number }[] {
+  const grenzen = [0, ...verticaal, 1]
+  const uit: { punten: string; dekking: number }[] = []
+  for (let i = 0; i < grenzen.length - 1; i++) {
+    const px = x + w * grenzen[i], pw = w * (grenzen[i + 1] - grenzen[i])
+    // Schuinte: de baan loopt van rechtsboven naar linksonder
+    const schuin = Math.min(pw * 0.3, h * 0.25)
+    for (const [van, tot, dekking] of [[0.42, 0.66, 0.5], [0.74, 0.8, 0.38]] as const) {
+      const a = px + pw * van, b = px + pw * tot
+      uit.push({ punten: `${a},${y} ${b},${y} ${b - schuin},${y + h} ${a - schuin},${y + h}`, dekking })
+    }
+  }
+  return uit
+}

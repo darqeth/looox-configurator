@@ -2,7 +2,7 @@
 
 import { memo, useId } from 'react'
 import { HOUTKLEUREN, formatMm, houtkleurAfbeelding, type MeubelModel } from '@/lib/meubel-config'
-import { tekenIndeling, tekenKast, tekenWaskommen, type RegaalZijde } from '@/lib/meubel-tekening'
+import { tekenIndeling, tekenKast, tekenWaskommen, type RegaalZijde, spiegelGlans } from '@/lib/meubel-tekening'
 
 // Schematisch vooraanzicht op schaal, in dezelfde stijl als de spiegeltekening:
 // zachte vulling, dunne lijnen en maatlijnen. Volgt lengte, lades en houtkleur.
@@ -103,7 +103,14 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
 
       {/* Korpus */}
       <rect x={x} y={y} width={w} height={h} rx="1.5" fill={toonHout ? `url(#${patroon})` : VLAK_ZONDER_HOUT} />
-      {kast?.spiegel && <rect x={x + 3} y={y + 3} width={Math.max(0, w - 6)} height={Math.max(0, h - 6)} fill="#E6ECEE" />}
+      {kast?.spiegel && (
+        <>
+          <rect x={x + 3} y={y + 3} width={Math.max(0, w - 6)} height={Math.max(0, h - 6)} fill="#DDE5E8" />
+          {spiegelGlans(x + 3, y + 3, Math.max(0, w - 6), Math.max(0, h - 6), kast.verticaal).map((g) => (
+            <polygon key={g.punten} points={g.punten} fill="#fff" fillOpacity={g.dekking} />
+          ))}
+        </>
+      )}
       {kast?.open && (
         <>
           <rect x={x + 3} y={y + 3} width={Math.max(0, w - 6)} height={Math.max(0, h - 6)} fill="#000" fillOpacity={toonHout ? 0.38 : 0.1} />

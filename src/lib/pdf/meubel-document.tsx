@@ -1,11 +1,11 @@
 import React from 'react'
 import { meubelExtraPrijs } from '@/lib/meubel-opslag'
-import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Ellipse, Text as SvgText } from '@react-pdf/renderer'
+import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Ellipse, Polygon, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
 import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
-import { tekenIndeling, tekenKast, tekenWaskommen } from '@/lib/meubel-tekening'
+import { spiegelGlans, tekenIndeling, tekenKast, tekenWaskommen } from '@/lib/meubel-tekening'
 
 // PDF voor een Tailor-Made meubel, in dezelfde opmaak als de spiegeldocumenten.
 //   offerte: voor de klant van de dealer, met de brutoprijs (netto × factor)
@@ -142,7 +142,10 @@ function PdfMeubelTekening({ meubel }: { meubel: OpgeslagenMeubel }) {
         </>
       )}
       <Rect x={x} y={y} width={w} height={h} fill={model.geenHout ? '#FBFAF7' : '#F6F4EF'} stroke="#26282B" strokeWidth={1.2} />
-      {kast?.spiegel && <Rect x={x + 3} y={y + 3} width={Math.max(0, w - 6)} height={Math.max(0, h - 6)} fill="#E6ECEE" />}
+      {kast?.spiegel && <Rect x={x + 3} y={y + 3} width={Math.max(0, w - 6)} height={Math.max(0, h - 6)} fill="#DDE5E8" />}
+      {kast?.spiegel && spiegelGlans(x + 3, y + 3, Math.max(0, w - 6), Math.max(0, h - 6), kast.verticaal).map((g, i) => (
+        <Polygon key={`sg${i}`} points={g.punten} fill="#ffffff" fillOpacity={g.dekking} />
+      ))}
       {kast?.open && <Rect x={x + 3} y={y + 3} width={Math.max(0, w - 6)} height={Math.max(0, h - 6)} fill="#D9D5CC" stroke="#26282B" strokeWidth={0.5} />}
       {kast?.horizontaal.map((f, i) => <Line key={`kh${i}`} x1={x + (kast.open ? 3 : 0)} y1={y + h * f} x2={x + w - (kast.open ? 3 : 0)} y2={y + h * f} stroke="#26282B" strokeWidth={kast.open ? 1.6 : 1} />)}
       {kast?.verticaal.map((f, i) => <Line key={`kv${i}`} x1={x + w * f} y1={y + 3} x2={x + w * f} y2={y + h - 3} {...lijn} />)}

@@ -49,7 +49,17 @@ REGELS
 - Noemt de dealer geen aantal, dan is het 1. Hetzelfde product meerdere keren is één product met "aantal".
 - Een meubel met ingebouwde waskom (Solid Surface) is één product. Een losse waskom op een houten meubel is een apart product.
 - Houtkleuren (houtkleur): ${houtkleurenTekst()}. Wit = white, zwart = black, naturel of licht eiken = pure. Twijfel je, laat het veld weg.
+- "uitsparingen": aantal gaten in het blad. Elke opbouwwaskom op een houten meubel of plank is 1 uitsparing (voor de afvoer). Een kraan door het blad is er ook 1. Niet bij een meubel met ingebouwde waskom.
+- Noemt of tekent de dealer waskommen zonder type, voeg dan GEEN waskom toe als product. Zet in "opmerkingen": "Er staan N waskommen op de schets. Voeg ze toe aan het project." Noemt hij wel een type, dan is de waskom een eigen product met "aantal".
 - Maximaal ${AI_MAX_PRODUCTEN} producten.
+
+SCHETS OF FOTO LEZEN
+- Tekst op de schets (modelnaam, kleur, maat) telt als invoer van de dealer.
+- Voorgedrukte lijntjes of ruitjes van het papier zijn geen onderdeel van de tekening. Alleen met pen of potlood getekende lijnen tellen.
+- Tel de vakken van het front: verticale scheidingslijnen verdelen het meubel in vakken naast elkaar. Twee scheidingslijnen zijn drie vakken, dus "lades": 3. Een dubbele lijn dicht tegen elkaar is één scheiding.
+- Horizontale scheidingslijnen over de hele breedte zijn laderijen boven elkaar: kies dan een model met twee rijen.
+- Komvormen (halve cirkel, bakje) boven op de bovenlijn zijn opbouwwaskommen. Tel ze en zet dat aantal in "uitsparingen".
+- Een maat met een maatlijn onder of boven het meubel is de lengte.
 - Spiegels (geen spiegelkast) horen niet in "producten". Zet per spiegel een volledige omschrijving in "spiegels", met alles wat de dealer erover zegt (vorm, maat, verlichting, opties).
 - Een spiegelkast is wel een product: mirror-cabinet.
 - Wat je niet in de prijslijst kunt vinden (kranen, douches, verlichting los, enzovoort) zet je kort in "nietGevonden".
@@ -69,6 +79,7 @@ UITVOER
     "handdoekhouders": 0 | 1 | 2, "handdoekType": "A" | "B",
     "lamp": boolean,
     "organizer": "WORG218" | "WORG242", "divider": "WDIV218" | "WDIV242",
+    "uitsparingen": number,
     "aantal": number,
     "opmerkingen": string[]
   }],

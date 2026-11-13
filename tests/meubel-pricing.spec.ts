@@ -785,6 +785,12 @@ test.describe('Planken, waskommen en accessoires', () => {
     const p = maakMeubelVoorstel({ modelId: 'base-shelf-solo', lengte: 1400, diepte: 480, handdoekhouders: 2, handdoekType: 'B', houtkleur: 'old-grey' })!
     expect(p.config).toMatchObject({ lengte: 1400, diepte: 480, handdoekhouders: 2, handdoekType: 'B' })
 
+    // Uitsparingen voor opbouwwaskommen: meegenomen met melding, niet bij een vast artikel
+    const u = maakMeubelVoorstel({ modelId: 'facet-stripes', lengte: 2100, lades: 3, houtkleur: 'black', uitsparingen: 2 })!
+    expect(u.config).toMatchObject({ lengte: 2100, lades: 3, houtkleur: 'black', uitsparingen: 2 })
+    expect(u.meldingen.join(' ')).toContain('2 uitsparingen')
+    expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw', variant: 'WTMWK40RO', uitsparingen: 2 })!.config.uitsparingen).toBe(0)
+
     // Vast artikel: uitvoering op artikelnummer, anders de eerste met melding
     expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw', variant: 'WTMWK40RO' })!.config.variant).toBe('WTMWK40RO')
     expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw' })!.meldingen.join(' ')).toContain('uitvoering')

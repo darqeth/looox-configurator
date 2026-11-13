@@ -2,7 +2,7 @@ import {
   MEUBEL_MODELLEN, MEUBEL_CATEGORIEEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, MEUBEL_AANTAL_MAX, MEUBEL_AANVRAAG_MAX_MM, LAMPEN_MAX,
   getMeubelModel, getLengteBereik, getLadeOpties, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, getMeubelDiepte,
   getKastHoogteBereik, getDeurOpties, getRegaalBreedte, getDuoPrijs, getDuoReeksen, getArtikelVariant, getLadeAccessoire,
-  kanLadeAccessoire, kanLogo, ladeRuimte, valideerMeubelConfig,
+  kanLadeAccessoire, kanLogo, kanUitsparing, ladeRuimte, valideerMeubelConfig, UITSPARING_MAX,
   type MeubelModel, type MeubelConfig, type WaskomVorm, type HanddoekType,
 } from '@/lib/meubel-config'
 
@@ -28,6 +28,7 @@ export interface MeubelAiRuw {
   lamp?: unknown
   organizer?: unknown
   divider?: unknown
+  uitsparingen?: unknown
   aantal?: unknown
   opmerkingen?: unknown
 }
@@ -189,6 +190,13 @@ export function maakMeubelVoorstel(ruw: MeubelAiRuw): MeubelVoorstel | null {
       const v = getLadeAccessoire(soort, typeof ruw[soort] === 'string' ? ruw[soort] as string : null)
       if (v) config[soort] = v.id
     }
+  }
+
+  // Uitsparingen in het blad (waskom, kraan): de plaats tekent de dealer op de maattekening
+  const uitsparingen = kanUitsparing(model) ? klem(getal(ruw.uitsparingen) ?? 0, 0, UITSPARING_MAX) : 0
+  if (uitsparingen > 0) {
+    config.uitsparingen = uitsparingen
+    meld(`${uitsparingen} ${uitsparingen === 1 ? 'uitsparing' : 'uitsparingen'} meegenomen. Teken de plaats op de maattekening.`)
   }
 
   if (valideerMeubelConfig(config) !== null) return null

@@ -6,7 +6,7 @@ import {
   MEUBEL_MODELLEN, getHoutkleuren, getMeubelHoogte, ladeRuimte, meubelOptiesTekst,
   getRegaalBreedte, getDuoPrijs, getDuoReeksen, getLengteBereik as lengteBereik,
   formatMm, ladeBreedtesTekst, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
-  tekeningVerplicht, meubelAfmeting, indelingTekst, kanUitsparing,
+  tekeningVerplicht, meubelAfmeting, indelingTekst, kanUitsparing, plankExtraPrijs, getPlankExtraArtikel,
 } from '../src/lib/meubel-config'
 import { leesMeubel, meubelPrijsInput, meubelKort } from '../src/lib/meubel-opslag'
 
@@ -592,7 +592,7 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(calcMeubelNettoCents({ ...b, lengte: 1000, diepte: 300 })).toBe(54496)
     expect(calcMeubelNettoCents({ ...b, lengte: 1000, diepte: 501 })).toBeNull()
     expect(calcMeubelNettoCents({ ...b, lengte: 1000, diepte: 400, handdoekhouders: 1 })).toBeNull()
-    expect(calcMeubelNettoCents({ ...b, lengte: 1000, extra: 'rail' })).toBe(54496)
+    expect(calcMeubelNettoCents({ ...b, lengte: 1000, extra: 'rail' })).toBe(54496 + 6188)
     expect(calcMeubelNettoCents({ ...b, lengte: 1000, houtkleur: 'white' })).toBe(54496 + 4160)
     expect(calcMeubelNettoCents({ ...k, modelId: 'base-shelf-deco', lengte: 2100, diepte: 410, hoogte: 70 })).toBe(73736)
     expect(calcMeubelNettoCents({ ...k, modelId: 'base-shelf-deco', lengte: 2100, diepte: 410, hoogte: 70, handdoekhouders: 1 })).toBeNull()
@@ -605,7 +605,7 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(calcMeubelNettoCents({ ...b, lengte: 601, diepte: 280 })).toBe(25376)
     expect(calcMeubelNettoCents({ ...b, lengte: 1250, diepte: 250 })).toBe(26936)
     expect(calcMeubelNettoCents({ ...b, lengte: 600, diepte: 240 })).toBeNull()
-    expect(calcMeubelNettoCents({ ...b, lengte: 600, diepte: 230, uitsparingen: 1, houtkleur: 'pure', extra: 'roll' })).toBe(19136 + 1040 + 2080)
+    expect(calcMeubelNettoCents({ ...b, lengte: 600, diepte: 230, uitsparingen: 1, houtkleur: 'pure', extra: 'roll' })).toBe(19136 + 1040 + 2080 + 6708)
   })
 
   test('Niche Shelf, Wall Shelf Free en Cover', () => {
@@ -652,12 +652,34 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(valideerMeubelConfig({ ...k, modelId: 'base-shelf-solo', lengte: 1000, diepte: 400, hoogte: 70, handdoekhouders: 1, ladeBreedtes: null, quantity: 1 })).toContain('460')
   })
 
+  test('Accessoire onder de plank: catalogusprijs, factor telt niet mee', () => {
+    const b = { ...k, modelId: 'base-shelf-solo', lades: 0, hoogte: 70, lengte: 1000 }
+    const zonder = calcMeubelNettoCents(b)!
+    // Rail 50 cm rvs: catalogus € 134,16, dealer betaalt de helft
+    const met = { ...b, extra: 'rail' as const, extraArtikel: 'WHH50RVS' }
+    expect(calcMeubelNettoCents(met)).toBe(zonder + 6708)
+    expect(calcMeubelBrutoCents(met, 2.5)).toBe(Math.round(zonder * 2.5) + 13416)
+    expect(calcMeubelBrutoCents(met, 1.8)).toBe(Math.round(zonder * 1.8) + 13416)
+    const o = getMeubelOrderOpbouw(zonder + 6708, 2.5, plankExtraPrijs(met))
+    expect(o.brutoCents).toBe(Math.round(zonder * 2.5) + 13416)
+    // Onbekend artikelnummer valt terug op het eerste van de soort
+    expect(getPlankExtraArtikel('rail', 'bestaat-niet')?.id).toBe('WHH35MZ')
+    // Towel holder curved is geen accessoire meer (dat is handdoekhouder type B)
+    expect(calcMeubelNettoCents({ ...b, extra: 'towel-holder-curved' as never })).toBeNull()
+    // Ook onder de Solid Washbasin Solo en de Solid mini, niet onder een gewone waskom
+    const solo = { ...k, modelId: 'solid-washbasin-solo', lades: 0, lengte: 1000 }
+    expect(calcMeubelNettoCents({ ...solo, extra: 'roll-curved', extraArtikel: 'WROLLC16RVS' })).toBe(calcMeubelNettoCents(solo)! + 3588)
+    const mini = { ...k, modelId: 'waskom-basin-free', lades: 0, lengte: 0, variant: 'TMSMBS425W' }
+    expect(calcMeubelNettoCents({ ...mini, extra: 'rail' })).toBe(13416 + 6188)
+    expect(calcMeubelNettoCents({ ...mini, variant: 'TMSWTFR35W', extra: 'rail' })).toBeNull()
+  })
+
   test('Opgeslagen plank en artikel lezen terug', () => {
     const p = leesMeubel({ shape: 'meubel', meubel: { modelId: 'base-shelf-solo', lengte: 1400, lades: 0, hoogte: 70, diepte: 480, houtkleur: 'old-grey', handdoekhouders: 2, handdoekType: 'B', extra: 'roll' }, quantity: 1 })!
     expect(p.model.diepte).toBe(480)
-    expect(calcMeubelNettoCents(meubelPrijsInput(p))).toBe(61256 + 5200)
+    expect(calcMeubelNettoCents(meubelPrijsInput(p))).toBe(61256 + 5200 + 6708)
     expect(meubelKort(p)).toBe('L 1400 × D 480 × dikte 70 mm')
-    expect(indelingTekst(p.model, 0, null, 0, p)).toBe('2 handdoekhouders type B · Roll')
+    expect(indelingTekst(p.model, 0, null, 0, p)).toBe('2 handdoekhouders type B · Roll 16 cm, Mat zwart (art. WROLL16MZ)')
     expect(p.tekeningOntbreekt).toBe(false)
     const a = leesMeubel({ shape: 'meubel', meubel: { modelId: 'waskom-ceramic-raw', lengte: 0, lades: 0, houtkleur: 'old-grey', variant: 'WTMWK40RO' }, quantity: 2 })!
     expect(calcMeubelNettoCents(meubelPrijsInput(a))).toBe(31096)

@@ -54,6 +54,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
           handdoekhouders: meubel.handdoekhouders,
           handdoekType: meubel.handdoekType,
           extra: meubel.extra,
+          extraArtikel: meubel.extraArtikel,
           variant: meubel.variant,
           logo: meubel.logo,
           waskomVorm: meubel.waskomVorm,

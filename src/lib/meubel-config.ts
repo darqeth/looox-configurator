@@ -93,6 +93,8 @@ export interface MeubelModel {
   plank?: PlankOpbouw
   /** Vast artikel met artikelnummer (waskommen, accessoires): de dealer kiest alleen een uitvoering */
   artikel?: ArtikelOpbouw
+  /** Onder dit model kan een accessoire (Rail, Roll), ook al is het geen plank */
+  extras?: boolean
   /** Valt onder "Opties accessoires": lagere meerprijs voor de houtkleur (toiletmeubels) */
   accessoireKleur?: boolean
   /** Kast in plaats van ladenmeubel: breedte, hoogte en diepte uit vaste keuzes; `staffels` blijft leeg */
@@ -135,20 +137,66 @@ export interface ArtikelVariant {
   prijs: number
   /** Eigen foto van deze uitvoering (waskommen) */
   afbeelding?: string
+  /** Onder deze uitvoering kan een accessoire (Solid mini) */
+  extras?: boolean
 }
 
 export interface ArtikelOpbouw {
   varianten: ArtikelVariant[]
 }
 
+// Accessoires onder de plank: vaste artikelen uit de catalogus.
+// De prijs is de catalogusprijs (bruto, ex btw). Daar gaat een vaste korting af;
+// de factor van de dealer telt hier niet mee.
+export interface PlankExtraArtikel {
+  /** Artikelnummer uit de catalogus */
+  id: string
+  maat: string
+  kleur: string
+  /** Catalogusprijs in centen */
+  bruto: number
+}
+const EXTRA_KLEUR = { MZ: 'Mat zwart', W: 'Wit', RVS: 'Geborsteld rvs' } as const
+const extraRij = (id: string, maat: string, kleur: keyof typeof EXTRA_KLEUR, bruto: number): PlankExtraArtikel => ({ id, maat, kleur: EXTRA_KLEUR[kleur], bruto })
 export const PLANK_EXTRAS = [
-  { id: 'rail', naam: 'Rail' },
-  { id: 'rail-curved', naam: 'Rail curved' },
-  { id: 'towel-holder-curved', naam: 'Towel holder curved' },
-  { id: 'roll', naam: 'Roll' },
-  { id: 'roll-curved', naam: 'Roll curved' },
+  { id: 'rail', naam: 'Rail', artikelen: [
+    extraRij('WHH35MZ', '35 cm', 'MZ', 12376), extraRij('WHH35W', '35 cm', 'W', 12376), extraRij('WHH35RVS', '35 cm', 'RVS', 13000),
+    extraRij('WHH50MZ', '50 cm', 'MZ', 13000), extraRij('WHH50W', '50 cm', 'W', 13000), extraRij('WHH50RVS', '50 cm', 'RVS', 13416),
+  ] },
+  { id: 'rail-curved', naam: 'Rail curved', artikelen: [
+    extraRij('WHHC35MZ', '35 cm', 'MZ', 9776), extraRij('WHHC35RVS', '35 cm', 'RVS', 7176),
+    extraRij('WHHC50MZ', '50 cm', 'MZ', 10296), extraRij('WHHC50RVS', '50 cm', 'RVS', 7696),
+  ] },
+  { id: 'roll', naam: 'Roll', artikelen: [
+    extraRij('WROLL16MZ', '16 cm', 'MZ', 13416), extraRij('WROLL16W', '16 cm', 'W', 13416), extraRij('WROLL16RVS', '16 cm', 'RVS', 15080),
+    extraRij('WROLL35MZ', '35 cm', 'MZ', 14040), extraRij('WROLL35W', '35 cm', 'W', 14040), extraRij('WROLL35RVS', '35 cm', 'RVS', 15496),
+  ] },
+  { id: 'roll-curved', naam: 'Roll curved', artikelen: [
+    extraRij('WROLLC16MZ', '16 cm', 'MZ', 9256), extraRij('WROLLC16RVS', '16 cm', 'RVS', 7176),
+  ] },
 ] as const
 export type PlankExtra = typeof PLANK_EXTRAS[number]['id']
+/** Dealers krijgen 50% op de catalogusprijs van deze accessoires */
+export const PLANK_EXTRA_NETTO_DEEL = 0.5
+
+/** Het gekozen artikel van een accessoire; zonder (geldige) keuze het eerste uit de lijst. */
+export function getPlankExtraArtikel(extra?: string | null, artikel?: string | null): PlankExtraArtikel | null {
+  const e = PLANK_EXTRAS.find((x) => x.id === extra)
+  if (!e) return null
+  return e.artikelen.find((a) => a.id === artikel) ?? e.artikelen[0]
+}
+
+/** Kan er een accessoire onder: planken met `extras`, de Solid Washbasin Solo en de Solid mini. */
+export function heeftExtras(model: MeubelModel, variant?: string | null): boolean {
+  return !!(model.plank?.extras || model.extras || (model.artikel && getArtikelVariant(model, variant)?.extras))
+}
+
+/** Catalogusprijs en netto van het gekozen accessoire, in centen. */
+export function plankExtraPrijs(input: { modelId: string; extra?: string | null; extraArtikel?: string | null; variant?: string | null }): { bruto: number; netto: number } {
+  const model = getMeubelModel(input.modelId)
+  const a = model && heeftExtras(model, input.variant) ? getPlankExtraArtikel(input.extra, input.extraArtikel) : null
+  return a ? { bruto: a.bruto, netto: Math.round(a.bruto * PLANK_EXTRA_NETTO_DEEL) } : { bruto: 0, netto: 0 }
+}
 
 export const HANDDOEKHOUDER_TYPES = ['A', 'B'] as const
 export type HanddoekType = typeof HANDDOEKHOUDER_TYPES[number]
@@ -742,6 +790,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     waskom: true,
     zonderLades: true,
     geenHout: true,
+    extras: true,
     staffels: [
       { min: 71, max: 120, prijzen: { 0: 114296 } },
       { min: 121, max: 140, prijzen: { 0: 138216 } },
@@ -956,7 +1005,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     geenHout: !g.hout,
     accessoireKleur: true,
     opmerking: g.opmerking,
-    artikel: { varianten: g.varianten.map(([id, naam, afmeting, prijs]) => ({ id, naam, afmeting, prijs, ...(g.categorie === 'waskommen' && { afbeelding: `/images/meubels/artikel-${id}.webp` }) })) },
+    artikel: { varianten: g.varianten.map(([id, naam, afmeting, prijs]) => ({ id, naam, afmeting, prijs, ...(g.categorie === 'waskommen' && { afbeelding: `/images/meubels/artikel-${id}.webp` }), ...(id === 'TMSMBS425W' && { extras: true }) })) },
     staffels: [],
   })),
 ]
@@ -1135,11 +1184,18 @@ export function getArtikelVariant(model: MeubelModel, id?: string | null): Artik
   return model.artikel?.varianten.find((v) => v.id === echt) ?? null
 }
 
+/** Het accessoire onder de plank: "Rail 50 cm, Mat zwart (art. WHH50MZ)", of leeg. */
+export function plankExtraTekst(o: { extra?: string | null; extraArtikel?: string | null }): string {
+  const e = PLANK_EXTRAS.find((x) => x.id === o.extra)
+  const a = getPlankExtraArtikel(o.extra, o.extraArtikel)
+  return e && a ? `${e.naam} ${a.maat}, ${a.kleur} (art. ${a.id})` : ''
+}
+
 /** Uitvoering van een plank in één regel: handdoekhouders en wat eronder hangt. */
-export function plankTekst(o: { handdoekhouders?: number | null; handdoekType?: string | null; extra?: string | null }): string {
+export function plankTekst(o: { handdoekhouders?: number | null; handdoekType?: string | null; extra?: string | null; extraArtikel?: string | null }): string {
   const delen = [
     o.handdoekhouders ? `${o.handdoekhouders} ${o.handdoekhouders === 1 ? 'handdoekhouder' : 'handdoekhouders'} type ${o.handdoekType ?? 'A'}` : '',
-    PLANK_EXTRAS.find((e) => e.id === o.extra)?.naam ?? '',
+    plankExtraTekst(o),
   ].filter(Boolean)
   return delen.length > 0 ? delen.join(' · ') : 'Zonder handdoekhouder'
 }
@@ -1175,6 +1231,7 @@ export interface UitvoeringKeuzes {
   handdoekhouders?: number | null
   handdoekType?: string | null
   extra?: string | null
+  extraArtikel?: string | null
   variant?: string | null
 }
 
@@ -1186,10 +1243,10 @@ export function indelingTekst(model: MeubelModel, lades: number, breedtes: LadeB
   if (model.artikel) {
     const v = getArtikelVariant(model, keuzes.variant)
     if (!v) return 'Onbekend'
-    return artikelNummer(v) ? `${v.naam} · art. ${v.id}` : v.naam
+    return [artikelNummer(v) ? `${v.naam} · art. ${v.id}` : v.naam, v.extras ? plankExtraTekst(keuzes) : ''].filter(Boolean).join(' · ')
   }
   if (model.plank) return model.plank.handdoekhouder || model.plank.extras ? plankTekst(keuzes) : 'Standaard'
-  if (model.kast || model.zonderLades) return ladeLabel(model, lades)
+  if (model.kast || model.zonderLades) return [ladeLabel(model, lades), model.extras ? plankExtraTekst(keuzes) : ''].filter(Boolean).join(' · ')
   return `${ladeLabel(model, lades)} · ${ladeBreedtesTekst(breedtes, ruimte, lades)}`
 }
 
@@ -1252,6 +1309,8 @@ export interface MeubelInput {
   handdoekhouders?: number
   handdoekType?: HanddoekType
   extra?: PlankExtra | null
+  /** Artikelnummer van het accessoire (maat en kleur) */
+  extraArtikel?: string | null
   /** Vast artikel: het artikelnummer van de gekozen uitvoering */
   variant?: string
   /** Kant van de regaalkast */
@@ -1273,7 +1332,7 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
     // Met een handdoekhouder moet de plank diep genoeg zijn
     if (!h || !Number.isInteger(houders) || houders < 0 || houders > 2 || (input.diepte ?? model.diepte) < h.minDiepte) return null
   }
-  if (input.extra != null && (!model.plank?.extras || !PLANK_EXTRAS.some((e) => e.id === input.extra))) return null
+  if (input.extra != null && (!heeftExtras(model, input.variant) || !PLANK_EXTRAS.some((e) => e.id === input.extra))) return null
   const basis = model.artikel
     ? getArtikelVariant(model, input.variant)?.prijs ?? null
     : model.plank
@@ -1286,7 +1345,7 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
       ? findStaffel(model, input.lengte)?.prijzen[input.lades] ?? null
       : null
   if (basis === null) return null
-  return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0)
+  return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0) + plankExtraPrijs(input).netto
 }
 
 export function parseMeubelFactor(v: unknown): number {
@@ -1299,7 +1358,9 @@ export function parseMeubelFactor(v: unknown): number {
 export function calcMeubelBrutoCents(input: MeubelInput, factor: number): number | null {
   const netto = calcMeubelNettoCents(input)
   if (netto === null) return null
-  return Math.round(netto * parseMeubelFactor(factor))
+  // Het accessoire onder de plank staat er voor de catalogusprijs in, zonder factor
+  const extra = plankExtraPrijs(input)
+  return Math.round((netto - extra.netto) * parseMeubelFactor(factor)) + extra.bruto
 }
 
 export function formatCents(cents: number): string {
@@ -1327,6 +1388,8 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
   const houders = input.handdoekhouders ?? 0
   if (houders > 0) extra.push({ label: `Handdoekhouder · ${houders}×`, cents: Math.round(houders * (model.plank?.handdoekhouder?.prijs ?? 0) * f) })
+  const acc = plankExtraPrijs(input)
+  if (acc.bruto > 0) extra.push({ label: plankExtraTekst(input).replace(/ \(art\. .*\)$/, ''), cents: acc.bruto })
   const basis = totaal - extra.reduce((som, r) => som + r.cents, 0)
   return {
     regels: [{
@@ -1490,8 +1553,9 @@ export interface MeubelOrderOpbouw {
   nettoCents: number
 }
 
-export function getMeubelOrderOpbouw(nettoCents: number, factor: number): MeubelOrderOpbouw {
-  const brutoCents = Math.round(nettoCents * parseMeubelFactor(factor))
+/** `extra`: catalogusprijs en netto van het accessoire onder de plank; daar telt de factor niet voor. */
+export function getMeubelOrderOpbouw(nettoCents: number, factor: number, extra: { bruto: number; netto: number } = { bruto: 0, netto: 0 }): MeubelOrderOpbouw {
+  const brutoCents = Math.round((nettoCents - extra.netto) * parseMeubelFactor(factor)) + extra.bruto
   const kortingCents = brutoCents - nettoCents
   return {
     brutoCents,

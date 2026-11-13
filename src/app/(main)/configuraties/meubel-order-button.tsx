@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
 import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, indelingTekst, meubelAfmeting } from '@/lib/meubel-config'
-import { meubelPrijsInput, type OpgeslagenMeubel } from '@/lib/meubel-opslag'
+import { meubelPrijsInput, type OpgeslagenMeubel, meubelExtraPrijs } from '@/lib/meubel-opslag'
 import TekeningUpload from '@/components/tekening-upload'
 
 // Bestelmodal voor een Tailor-Made meubel. Dit is de enige plek waar de dealer
@@ -36,7 +36,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   const [alt, setAlt] = useState({ straat: '', huisnummer: '', woonplaats: '', provincie: '', land: 'NL' })
 
   const nettoCents = opAanvraag ? null : calcMeubelNettoCents(meubelPrijsInput(meubel))
-  const opbouw = nettoCents !== null ? getMeubelOrderOpbouw(nettoCents, meubel.factor) : null
+  const opbouw = nettoCents !== null ? getMeubelOrderOpbouw(nettoCents, meubel.factor, meubelExtraPrijs(meubel)) : null
   // Staat het meubel niet meer in de prijslijst, dan kan het niet besteld worden
   const [tekeningToegevoegd, setTekeningToegevoegd] = useState(false)
   const tekeningOntbreekt = meubel.tekeningOntbreekt && !tekeningToegevoegd

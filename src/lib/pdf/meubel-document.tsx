@@ -1,4 +1,5 @@
 import React from 'react'
+import { meubelExtraPrijs } from '@/lib/meubel-opslag'
 import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Ellipse, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
@@ -218,7 +219,7 @@ export default function MeubelDocument({
   const btw = Math.round(subtotaal * 21) / 100
   const inclBtw = Math.round((subtotaal + btw) * 100) / 100
   // Order: bruto, korting en netto, net als bij spiegels. Bruto volgt uit de factor van de offerte.
-  const opbouw = getMeubelOrderOpbouw(Math.round(unitPrice * 100), meubel.factor)
+  const opbouw = getMeubelOrderOpbouw(Math.round(unitPrice * 100), meubel.factor, meubelExtraPrijs(meubel))
   const footerLinks = isOrder ? 'LoooX' : `${dealer.company ?? dealer.name ?? ''} - ${dealer.email}`
   const footerRechts = isOrder ? `${docTitle} ${orderNumber ?? ''}` : `Offerte ${projectName ?? ''} - ${today}`
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
-import { leesMeubel } from '@/lib/meubel-opslag'
+import { leesMeubel, meubelExtraPrijs } from '@/lib/meubel-opslag'
 import { formatPct, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 import { formatOrganicSize } from '@/lib/configurator-config'
 import { formatEuro } from '@/lib/mms'
@@ -51,7 +51,7 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
   else if ((shape === 'rond' || shape === 'sol' || shape === 'luna') && opts.diameter) afmeting = `∅ ${opts.diameter} cm`
   else if (order.config?.width && order.config?.height) afmeting = `B ${order.config.width} × H ${order.config.height} cm`
 
-  const opbouw = meubel && !isOfferte ? getMeubelOrderOpbouw(Math.round(Number(order.unit_price) * 100), meubel.factor) : null
+  const opbouw = meubel && !isOfferte ? getMeubelOrderOpbouw(Math.round(Number(order.unit_price) * 100), meubel.factor, meubelExtraPrijs(meubel)) : null
   const altAdres = typeof opts.altShippingAddress === 'string' ? opts.altShippingAddress.split('\t').filter(Boolean).join(' ') : ''
 
   return createPortal(

@@ -15,7 +15,7 @@ import { getNotificationEmails } from '@/lib/actions/settings'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { z } from 'zod'
 import { hasMeubelAccess } from '@/lib/meubel-access'
-import { leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
+import { leesMeubel, meubelPrijsInput, meubelExtraPrijs } from '@/lib/meubel-opslag'
 import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
 
 type LightConfig = {
@@ -664,8 +664,8 @@ export async function placeMeubelOrder(
     meubel: {
       opAanvraag: isOfferte,
       ...(!isOfferte && {
-        brutoUnitPrice: getMeubelOrderOpbouw(nettoCents, meubel.factor).brutoCents / 100,
-        kortingLabel: formatPct(getMeubelOrderOpbouw(nettoCents, meubel.factor).kortingPct),
+        brutoUnitPrice: getMeubelOrderOpbouw(nettoCents, meubel.factor, meubelExtraPrijs(meubel)).brutoCents / 100,
+        kortingLabel: formatPct(getMeubelOrderOpbouw(nettoCents, meubel.factor, meubelExtraPrijs(meubel)).kortingPct),
       }),
       regels: [
         ['Model', meubel.model.naam],

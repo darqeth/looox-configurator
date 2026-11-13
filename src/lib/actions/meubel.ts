@@ -7,7 +7,7 @@ import { parseOrThrow } from '@/lib/validation'
 import { DEFAULT_PRODUCT_ID, generateArticleNumber, assertValidAttachmentUrl } from '@/lib/actions/configurator-helpers'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import {
-  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig,
+  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, heeftExtras, getPlankExtraArtikel, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE } from '@/lib/meubel-opslag'
 import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
@@ -23,7 +23,8 @@ const meubelInputSchema = z.object({
   diepte: z.number().int().min(1).max(1000).optional(),
   handdoekhouders: z.number().int().min(0).max(2).optional(),
   handdoekType: z.enum(['A', 'B']).optional(),
-  extra: z.enum(['rail', 'rail-curved', 'towel-holder-curved', 'roll', 'roll-curved']).nullish(),
+  extra: z.enum(['rail', 'rail-curved', 'roll', 'roll-curved']).nullish(),
+  extraArtikel: z.string().max(20).nullish(),
   variant: z.string().max(40).optional(),
   logo: z.boolean().optional(),
   waskomVorm: z.enum(['ovaal', 'vierkant']).optional(),
@@ -88,7 +89,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           hoogte: getMeubelHoogte(model, input.hoogte),
           ...((model.kast || model.plank) && { diepte: getMeubelDiepte(model, input.diepte) }),
           ...(model.plank?.handdoekhouder && { handdoekhouders: input.handdoekhouders ?? 0, handdoekType: input.handdoekType ?? 'A' }),
-          ...(model.plank?.extras && { extra: input.extra ?? null }),
+          ...(heeftExtras(model, input.variant) && { extra: input.extra ?? null, extraArtikel: getPlankExtraArtikel(input.extra, input.extraArtikel)?.id ?? null }),
           ...(model.artikel && { variant: input.variant }),
           lades: input.lades,
           ladeBreedtes: input.ladeBreedtes,

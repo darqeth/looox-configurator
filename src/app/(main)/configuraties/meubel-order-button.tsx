@@ -8,6 +8,7 @@ import { placeMeubelOrder } from '@/lib/actions/orders'
 import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, indelingTekst, meubelAfmeting } from '@/lib/meubel-config'
 import { meubelPrijsInput, type OpgeslagenMeubel, meubelExtraPrijs } from '@/lib/meubel-opslag'
 import TekeningUpload from '@/components/tekening-upload'
+import { foutTekst } from '@/lib/fout-tekst'
 
 // Bestelmodal voor een Tailor-Made meubel. Dit is de enige plek waar de dealer
 // de nettoprijs ziet: de tabelprijs, zonder dealerkorting, staffel of kortingscode.
@@ -73,7 +74,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
       }
     } catch (e) {
       console.error(e)
-      setFout(e instanceof Error ? e.message : 'Er is iets misgegaan. Probeer het opnieuw.')
+      setFout(foutTekst(e, 'Er is iets misgegaan. Probeer het opnieuw.'))
     } finally {
       setLoading(false)
     }

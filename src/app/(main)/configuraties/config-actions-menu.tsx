@@ -9,6 +9,7 @@ import { deleteConfiguration } from '@/lib/actions/configurator'
 import { startProjectVanConfig } from '@/lib/actions/project'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/components/toast'
+import { foutTekst } from '@/lib/fout-tekst'
 
 interface Props {
   configId: string
@@ -35,7 +36,7 @@ export default function ConfigActionsMenu({ configId, configName, canDownload, c
       router.push(`/projecten/${id}`)
     } catch (e) {
       console.error(e)
-      toast(e instanceof Error ? e.message : 'Project openen mislukt. Probeer het opnieuw.')
+      toast(foutTekst(e, 'Project openen mislukt. Probeer het opnieuw.'))
       setProjectBezig(false)
     }
   }

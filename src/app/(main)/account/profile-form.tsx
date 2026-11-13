@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { updateProfile, updatePassword } from '@/lib/actions/account'
+import { foutTekst } from '@/lib/fout-tekst'
 
 type Profile = {
   full_name: string | null
@@ -118,7 +119,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       await updateProfile(fd)
       setProfileStatus('success')
     } catch (e) {
-      setProfileError(e instanceof Error ? e.message : 'Er is iets misgegaan')
+      setProfileError(foutTekst(e, 'Er is iets misgegaan'))
       setProfileStatus('error')
     } finally {
       setProfileLoading(false)
@@ -194,7 +195,7 @@ export function PasswordForm() {
       setStatus('success')
       ;(document.getElementById('password-form') as HTMLFormElement)?.reset()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Er is iets misgegaan')
+      setError(foutTekst(e, 'Er is iets misgegaan'))
       setStatus('error')
     } finally {
       setLoading(false)

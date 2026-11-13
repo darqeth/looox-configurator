@@ -21,6 +21,7 @@ import { checkAndAwardMilestones, type AwardedMilestone } from '@/lib/actions/mi
 import MilestoneCelebration from '@/app/(main)/looox-circle/milestone-celebration'
 import { createClient } from '@/lib/supabase/client'
 import { loadDraft, saveDraft, clearDraft as clearSharedDraft } from '@/lib/configurator-draft'
+import { foutTekst } from '@/lib/fout-tekst'
 
 interface InitialConfig {
   id: string
@@ -414,7 +415,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       }
     } catch (e) {
       console.error(e)
-      setSaveError(e instanceof Error ? e.message : 'Opslaan mislukt')
+      setSaveError(foutTekst(e, 'Opslaan mislukt'))
       setSaving(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

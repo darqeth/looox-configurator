@@ -16,6 +16,7 @@ import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LI
 import { getMaatwerkStaffelTip, type MaatwerkStaffelTip } from '@/lib/maatwerk-staffel'
 import { computeOrderTotals } from '@/lib/order-pricing'
 import { MMS, clampMmsQuantity, formatEuro, resolveMmsUnitPrice } from '@/lib/mms'
+import { foutTekst } from '@/lib/fout-tekst'
 
 interface OrderButtonProps {
   configId: string
@@ -189,7 +190,7 @@ function OrderButtonInner({ configId, configName, metaSummary, price, korting, i
       queryClient.invalidateQueries({ queryKey: ['looox-circle'] })
     } catch (e) {
       console.error(e)
-      setOrderError(e instanceof Error ? e.message : 'Er is iets misgegaan. Probeer het opnieuw.')
+      setOrderError(foutTekst(e, 'Er is iets misgegaan. Probeer het opnieuw.'))
     } finally {
       setLoading(false)
     }

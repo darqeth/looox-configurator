@@ -24,6 +24,7 @@ import { MeubelTekening } from './meubel-tekening'
 import MeubelAiBalk from './meubel-ai-balk'
 import type { MeubelVoorstel } from '@/lib/meubel-ai'
 import UpsellCards, { upsellVoorMeubels, upsellHref, type UpsellSoort } from '@/components/upsell-cards'
+import { foutTekst } from '@/lib/fout-tekst'
 
 // Stappen: model kiezen, samenstellen (lengte, lades, houtkleur), samenvatting.
 // In beeld staat alleen bruto (netto × factor); netto komt pas in de bestelstap.
@@ -330,7 +331,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
         router.push(upsellHref(soort, projectId))
       } catch (e) {
         console.error(e)
-        toast(e instanceof Error ? e.message : 'Dat lukte niet. Voeg het product toe vanuit je configuraties.')
+        toast(foutTekst(e, 'Dat lukte niet. Voeg het product toe vanuit je configuraties.'))
         router.push('/configuraties')
       }
     })
@@ -401,7 +402,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
         else router.push('/configuraties')
       } catch (e) {
         console.error(e)
-        toast(e instanceof Error ? e.message : 'Opslaan mislukt. Probeer het opnieuw.')
+        toast(foutTekst(e, 'Opslaan mislukt. Probeer het opnieuw.'))
       }
     })
   }

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, Pencil, Trash2 } from 'lucide-react'
 import { deleteConfiguration } from '@/lib/actions/configurator'
 import { toast } from '@/components/toast'
+import { foutTekst } from '@/lib/fout-tekst'
 
 // Bewerken en verwijderen van één regel in een project.
 export default function RegelActies({ configId, titel, laatste }: { configId: string; titel: string; laatste: boolean }) {
@@ -27,7 +28,7 @@ export default function RegelActies({ configId, titel, laatste }: { configId: st
         else router.refresh()
       } catch (e) {
         console.error(e)
-        toast(e instanceof Error ? e.message : 'Verwijderen mislukt. Probeer het opnieuw.')
+        toast(foutTekst(e, 'Verwijderen mislukt. Probeer het opnieuw.'))
         setBevestig(false)
       }
     })

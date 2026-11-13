@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { setMeubelTekening } from '@/lib/actions/meubel'
 import { toast } from '@/components/toast'
 import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
+import { foutTekst } from '@/lib/fout-tekst'
 
 const MAX_MB = 10
 
@@ -39,14 +40,15 @@ export default function TekeningUpload({ configId, onKlaar, groot = false }: {
       const { error } = await supabase.storage.from('attachments').upload(pad, bestand, { upsert: false })
       if (error) throw new Error('Uploaden van de maattekening is mislukt. Probeer het opnieuw.')
       const url = supabase.storage.from('attachments').getPublicUrl(pad).data.publicUrl
-      await setMeubelTekening(configId, url)
+      const res = await setMeubelTekening(configId, url)
+      if (res.error) throw new Error(res.error)
       onKlaar?.(url)
       queryClient.invalidateQueries({ queryKey: ['configurations'] })
       router.refresh()
       toast('Maattekening toegevoegd.', 'success')
     } catch (e) {
       console.error('[upload] maattekening', e)
-      toast(e instanceof Error ? e.message : 'Uploaden mislukt. Probeer het opnieuw.')
+      toast(foutTekst(e, 'Uploaden mislukt. Probeer het opnieuw.'))
     } finally {
       setBezig(false)
       if (inputRef.current) inputRef.current.value = ''

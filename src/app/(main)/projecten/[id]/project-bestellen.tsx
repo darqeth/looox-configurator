@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeProjectOrder } from '@/lib/actions/orders'
 import { formatCents } from '@/lib/meubel-config'
+import { foutTekst } from '@/lib/fout-tekst'
 
 // Bestelt het hele project in één keer. De bedragen zijn netto en door de server
 // uitgerekend met dezelfde functie die de bestelling zelf gebruikt.
@@ -74,7 +75,7 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
       }
     } catch (e) {
       console.error(e)
-      setFout(e instanceof Error ? e.message : 'Er is iets misgegaan. Probeer het opnieuw.')
+      setFout(foutTekst(e, 'Er is iets misgegaan. Probeer het opnieuw.'))
     } finally {
       setLoading(false)
     }

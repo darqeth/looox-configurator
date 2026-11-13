@@ -2,6 +2,7 @@
 
 import { useState, useRef, useTransition } from 'react'
 import { setControleVereist, uploadDrawingFile } from '@/lib/actions/admin'
+import { foutTekst } from '@/lib/fout-tekst'
 
 type UploadedFile = { file_url: string; file_name: string }
 
@@ -61,7 +62,7 @@ export function OrderDrawingsUploadModal({
         }
       })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload mislukt')
+      setError(foutTekst(e, 'Upload mislukt'))
     } finally {
       setUploading(false)
     }

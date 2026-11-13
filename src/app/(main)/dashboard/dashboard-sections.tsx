@@ -16,6 +16,7 @@ import { ProjectBadge } from '@/components/project-badge'
 import type { ConfigPreview } from '@/app/(main)/configurator/nieuw/price-panel'
 import type { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 import { formatOrganicSize } from '@/lib/configurator-config'
+import { productIcoon } from '@/lib/product-icoon'
 
 // ─── Shared cached profile per request ───────────────────────────────────────
 
@@ -404,7 +405,7 @@ export async function RecentConfigsRows({ userId }: { userId: string }) {
         return (
           <div key={config.id} className="flex items-center gap-3 px-5 py-3 hover:bg-lx-panel-bg transition-colors group">
             <div className="w-9 h-9 rounded-lg bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-              <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
+              <img src={productIcoon(opts)} width="15" height="15" alt="" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2">

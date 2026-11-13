@@ -1,5 +1,6 @@
 import { formatDimensions, formatShape, type ConfigOptions } from '@/lib/pdf/helpers'
 import { leesMeubel, meubelSamenvatting } from '@/lib/meubel-opslag'
+import { productIcoon } from '@/lib/product-icoon'
 
 // Een project is het winkelmandje: configuraties met hetzelfde project_id vormen
 // samen één offerte en één bestelling. Er is geen eigen tabel; projectnaam en
@@ -25,6 +26,8 @@ export interface ProjectRegel {
   soort: ProjectRegelSoort
   /** Productnaam: model of vorm */
   titel: string
+  /** Pad van het icoon: de vorm van de spiegel of de categorie van het meubel */
+  icoon: string
   /** Afmeting en keuzes in één regel */
   omschrijving: string
   quantity: number
@@ -72,7 +75,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
       omschrijving: meubelSamenvatting(meubel).split(' · ').slice(1).join(' · '),
       quantity: meubel.quantity, opAanvraag: meubel.opAanvraag,
       stukCents: stuk, totaalCents: stuk * meubel.quantity, netto: false, besteld,
-      tekeningOntbreekt: meubel.tekeningOntbreekt, nalopen, aiNotities,
+      tekeningOntbreekt: meubel.tekeningOntbreekt, nalopen, aiNotities, icoon: productIcoon(opts),
     }
   }
 
@@ -83,7 +86,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
     return {
       id: c.id, soort: 'projectspiegel', titel: 'Projectspiegel', omschrijving,
       quantity: aantal, opAanvraag: false,
-      stukCents: Math.round(totaal / aantal), totaalCents: totaal, netto: true, besteld, nalopen, aiNotities,
+      stukCents: Math.round(totaal / aantal), totaalCents: totaal, netto: true, besteld, nalopen, aiNotities, icoon: productIcoon(opts),
     }
   }
 
@@ -93,7 +96,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
   return {
     id: c.id, soort: 'maatwerk', titel: `Spiegel ${formatShape(shape).toLowerCase()}`, omschrijving,
     quantity: aantal, opAanvraag,
-    stukCents: stuk, totaalCents: stuk * aantal, netto: false, besteld, nalopen, aiNotities,
+    stukCents: stuk, totaalCents: stuk * aantal, netto: false, besteld, nalopen, aiNotities, icoon: productIcoon(opts),
   }
 }
 

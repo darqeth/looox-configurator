@@ -120,7 +120,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
               <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/icons/shapes/${r.soort === 'meubel' ? 'meubel' : r.soort === 'projectspiegel' ? 'projectspiegel' : 'rechthoek'}.svg`} width="15" height="15" alt="" />
+                <img src={r.icoon} width="15" height="15" alt="" />
               </div>
               <div className="flex-1 min-w-[180px]">
                 <p className="text-[13px] font-semibold text-lx-text-primary">

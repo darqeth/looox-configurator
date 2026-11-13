@@ -6,6 +6,7 @@ import { AdminPagination } from '@/components/admin-pagination'
 import { OfferteBadge } from '@/components/project-badge'
 import { formatEuro } from '@/lib/mms'
 import OrderDetailModal from './order-detail-modal'
+import { productIcoon } from '@/lib/product-icoon'
 
 const PAGE_SIZE = 20
 
@@ -21,8 +22,8 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled:        'Geannuleerd',
 }
 
-function ShapeIcon({ shape }: { shape: string }) {
-  return <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
+function ShapeIcon({ options }: { options: unknown }) {
+  return <img src={productIcoon(options)} width="15" height="15" alt="" />
 }
 
 function formatDate(iso: string) {
@@ -133,7 +134,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                   {/* Mobile */}
                   <div className="lg:hidden px-4 py-3.5 flex gap-3">
                     <div className="w-8 h-8 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <ShapeIcon shape={shape} />
+                      <ShapeIcon options={order.config?.selected_options} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
@@ -154,7 +155,7 @@ export function AdminBestellingenList({ orders }: { orders: AdminOrder[] }) {
                   {/* Desktop */}
                   <div className="hidden lg:grid grid-cols-[36px_1fr_1fr_80px_96px_160px] gap-4 items-center px-5 py-3.5">
                     <div className="w-8 h-8 rounded-xl bg-lx-icon-bg flex items-center justify-center">
-                      <ShapeIcon shape={shape} />
+                      <ShapeIcon options={order.config?.selected_options} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-[12.5px] font-bold text-lx-text-primary font-mono truncate"><button type="button" onClick={(e) => { e.stopPropagation(); setDetail(order) }} className="hover:text-lx-cta hover:underline cursor-pointer" title="Details en PDF">{order.order_number}</button>{isOpAanvraag && <OfferteBadge className="ml-1.5" />}</p>

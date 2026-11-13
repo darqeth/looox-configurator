@@ -10,6 +10,7 @@ import { fetchOrders } from '@/lib/queries/fetch-orders'
 import { ProjectBadge, OfferteBadge } from '@/components/project-badge'
 import { formatEuro } from '@/lib/mms'
 import { BestellingenContentSkeleton } from './bestellingen-skeleton'
+import { productIcoon } from '@/lib/product-icoon'
 
 const STATUS_LABELS: Record<string, string> = {
   pending:          'In behandeling',
@@ -35,8 +36,8 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled:        'bg-red-50 text-red-600 border-red-200',
 }
 
-function ShapeIcon({ shape }: { shape: string }) {
-  return <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
+function ShapeIcon({ options }: { options: unknown }) {
+  return <img src={productIcoon(options)} width="15" height="15" alt="" />
 }
 
 function formatDate(iso: string) {
@@ -192,7 +193,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                 {/* Mobile layout */}
                 <div className="flex gap-3 px-4 py-3.5 sm:hidden">
                   <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <ShapeIcon shape={shape} />
+                    <ShapeIcon options={config?.selected_options} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
@@ -230,7 +231,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                 <div className="hidden sm:flex items-center gap-4 px-5 py-3.5">
                   {/* Icon */}
                   <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-                    <ShapeIcon shape={shape} />
+                    <ShapeIcon options={config?.selected_options} />
                   </div>
 
                   {/* Col: Order number + date */}

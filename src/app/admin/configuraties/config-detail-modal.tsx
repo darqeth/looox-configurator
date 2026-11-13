@@ -14,6 +14,7 @@ import {
   CONTROLS_FOR_TYPE,
   EXTRA_OPTIONS,
 } from '@/lib/configurator-config'
+import { productIcoon } from '@/lib/product-icoon'
 
 interface SelectedOptions {
   shape?: string
@@ -62,8 +63,8 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   ordered: { label: 'Besteld',    className: 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]' },
 }
 
-function ShapeIcon({ shape }: { shape: string }) {
-  return <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
+function ShapeIcon({ options }: { options: unknown }) {
+  return <img src={productIcoon(options)} width="15" height="15" alt="" />
 }
 
 function getLightSummary(light?: SelectedOptions['directLight']): string {
@@ -133,7 +134,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
         {/* Mobile layout */}
         <div className="flex gap-3 px-4 py-3.5 sm:hidden">
           <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0 mt-0.5">
-            <ShapeIcon shape={shape} />
+            <ShapeIcon options={opts} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
@@ -156,7 +157,7 @@ export default function ConfigDetailModal({ config }: { config: ConfigRow }) {
         <div className="hidden sm:flex items-center gap-4 px-5 py-3.5">
           {/* Icon */}
           <div className="w-9 h-9 rounded-xl bg-lx-icon-bg flex items-center justify-center flex-shrink-0">
-            <ShapeIcon shape={shape} />
+            <ShapeIcon options={opts} />
           </div>
 
           {/* Col: Naam + article# + datum */}

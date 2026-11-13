@@ -11,6 +11,8 @@ import {
 import { leesMeubel, meubelPrijsInput, meubelKort } from '../src/lib/meubel-opslag'
 import { upsellVoorMeubels } from '../src/components/upsell-cards'
 import { maakMeubelVoorstel, meubelCatalogusTekst } from '../src/lib/meubel-ai'
+import { productIcoon } from '../src/lib/product-icoon'
+import { existsSync } from 'fs'
 
 // Prijslijst Tailor-Made juli 2026 (netto). Rij: [lengte in mm, lades, euro].
 // Per staffel de onder- en bovengrens, zodat een verschoven grens opvalt.
@@ -794,5 +796,15 @@ test.describe('Planken, waskommen en accessoires', () => {
     // Vast artikel: uitvoering op artikelnummer, anders de eerste met melding
     expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw', variant: 'WTMWK40RO' })!.config.variant).toBe('WTMWK40RO')
     expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw' })!.meldingen.join(' ')).toContain('uitvoering')
+  })
+
+  test('Icoon per product: vorm bij spiegels, categorie bij Tailor-Made', () => {
+    expect(productIcoon({ shape: 'rond' })).toBe('/icons/shapes/rond.svg')
+    expect(productIcoon({ shape: 'onbekend' })).toBe('/icons/shapes/rechthoek.svg')
+    expect(productIcoon(null)).toBe('/icons/shapes/rechthoek.svg')
+    expect(productIcoon({ shape: 'meubel', meubel: { modelId: 'waskom-ceramic' } })).toBe('/icons/shapes/meubel-waskommen.svg')
+    expect(productIcoon({ shape: 'meubel', meubel: { modelId: 'cabinet' } })).toBe('/icons/shapes/meubel-kasten.svg')
+    // Elk model heeft een icoonbestand
+    for (const m of MEUBEL_MODELLEN) expect(existsSync(`public${productIcoon({ shape: 'meubel', meubel: { modelId: m.id } })}`), m.id).toBe(true)
   })
 })

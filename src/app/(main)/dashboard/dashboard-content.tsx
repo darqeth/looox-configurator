@@ -13,6 +13,7 @@ import type { ShapeSlug } from '@/lib/configurator-config'
 import type { GlasKleur } from '@/lib/configurator-config'
 import { formatOrganicSize } from '@/lib/configurator-config'
 import type { DashboardData } from '@/lib/queries/fetch-dashboard'
+import { productIcoon } from '@/lib/product-icoon'
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -156,7 +157,7 @@ export function DashboardContent({ data }: { data: DashboardData }) {
                 const isProjectspiegel = shape === 'projectspiegel'
                 const projectspiegelStuks = isProjectspiegel ? (opts?.quantity as number | undefined) : undefined
                 const shapeLabelMap: Record<string, string> = { rechthoek: 'Rechthoek', rond: 'Rond', organic: 'Organic', 'op-aanvraag': 'Op aanvraag', 'rounded-rect': 'Afgerond', ovaal: 'Ovaal', elips: 'Ellips', arc: 'Boog' }
-                const ShapeIcon = () => <img src={`/icons/shapes/${shape}.svg`} width="15" height="15" alt="" />
+                const ShapeIcon = () => <img src={productIcoon(opts)} width="15" height="15" alt="" />
                 return (
                   <div key={config.id} className="flex items-center gap-3 px-5 py-3 hover:bg-lx-panel-bg transition-colors group">
                     <div className="w-9 h-9 rounded-lg bg-lx-icon-bg flex items-center justify-center flex-shrink-0"><ShapeIcon /></div>

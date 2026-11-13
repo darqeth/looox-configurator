@@ -95,6 +95,8 @@ export interface MeubelModel {
   artikel?: ArtikelOpbouw
   /** Onder dit model kan een accessoire (Rail, Roll), ook al is het geen plank */
   extras?: boolean
+  /** Los bij te bestellen lamp (Mirror Cabinet): catalogusartikel, prijs bruto in centen */
+  lamp?: { id: string; naam: string; omschrijving: string; bruto: number }
   /** Valt onder "Opties accessoires": lagere meerprijs voor de houtkleur (toiletmeubels) */
   accessoireKleur?: boolean
   /** Kast in plaats van ladenmeubel: breedte, hoogte en diepte uit vaste keuzes; `staffels` blijft leeg */
@@ -192,10 +194,23 @@ export function heeftExtras(model: MeubelModel, variant?: string | null): boolea
 }
 
 /** Catalogusprijs en netto van het gekozen accessoire, in centen. */
-export function plankExtraPrijs(input: { modelId: string; extra?: string | null; extraArtikel?: string | null; variant?: string | null }): { bruto: number; netto: number } {
+export function plankExtraPrijs(input: { modelId: string; extra?: string | null; extraArtikel?: string | null; variant?: string | null; lampen?: number | null }): { bruto: number; netto: number } {
   const model = getMeubelModel(input.modelId)
   const a = model && heeftExtras(model, input.variant) ? getPlankExtraArtikel(input.extra, input.extraArtikel) : null
-  return a ? { bruto: a.bruto, netto: Math.round(a.bruto * PLANK_EXTRA_NETTO_DEEL) } : { bruto: 0, netto: 0 }
+  const bruto = (a?.bruto ?? 0) + lampBruto(input)
+  return { bruto, netto: Math.round(bruto * PLANK_EXTRA_NETTO_DEEL) }
+}
+
+export const LAMPEN_MAX = 2
+/** Catalogusprijs van de bijbestelde lampen (Mirror Cabinet), in centen. */
+export function lampBruto(input: { modelId: string; lampen?: number | null }): number {
+  const lamp = getMeubelModel(input.modelId)?.lamp
+  return lamp ? (input.lampen ?? 0) * lamp.bruto : 0
+}
+
+/** "1 × Mirror Light (art. ML300BL)", of leeg zonder lamp. */
+export function lampTekst(model: MeubelModel, lampen?: number | null): string {
+  return model.lamp && lampen ? `${lampen} × ${model.lamp.naam} (art. ${model.lamp.id})` : ''
 }
 
 export const HANDDOEKHOUDER_TYPES = ['A', 'B'] as const
@@ -804,7 +819,8 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     id: 'mirror-cabinet',
     categorie: 'kasten',
     naam: 'Mirror Cabinet',
-    omschrijving: 'Spiegelkast met houten korpus. Verlichting is apart verkrijgbaar.',
+    omschrijving: 'Spiegelkast met houten korpus. Verlichting kun je erbij bestellen.',
+    lamp: { id: 'ML300BL', naam: 'Mirror Light', omschrijving: 'Spiegellamp 30 cm, mat zwart, 5W led 3000K', bruto: 4155 },
     afbeelding: '/images/meubels/model-mirror-cabinet.webp',
     diepte: 140,
     hoogte: 600,
@@ -1233,6 +1249,7 @@ export interface UitvoeringKeuzes {
   extra?: string | null
   extraArtikel?: string | null
   variant?: string | null
+  lampen?: number | null
 }
 
 /**
@@ -1246,7 +1263,7 @@ export function indelingTekst(model: MeubelModel, lades: number, breedtes: LadeB
     return [artikelNummer(v) ? `${v.naam} · art. ${v.id}` : v.naam, v.extras ? plankExtraTekst(keuzes) : ''].filter(Boolean).join(' · ')
   }
   if (model.plank) return model.plank.handdoekhouder || model.plank.extras ? plankTekst(keuzes) : 'Standaard'
-  if (model.kast || model.zonderLades) return [ladeLabel(model, lades), model.extras ? plankExtraTekst(keuzes) : ''].filter(Boolean).join(' · ')
+  if (model.kast || model.zonderLades) return [ladeLabel(model, lades), model.extras ? plankExtraTekst(keuzes) : '', lampTekst(model, keuzes.lampen)].filter(Boolean).join(' · ')
   return `${ladeLabel(model, lades)} · ${ladeBreedtesTekst(breedtes, ruimte, lades)}`
 }
 
@@ -1311,6 +1328,8 @@ export interface MeubelInput {
   extra?: PlankExtra | null
   /** Artikelnummer van het accessoire (maat en kleur) */
   extraArtikel?: string | null
+  /** Aantal bijbestelde lampen (Mirror Cabinet) */
+  lampen?: number
   /** Vast artikel: het artikelnummer van de gekozen uitvoering */
   variant?: string
   /** Kant van de regaalkast */
@@ -1332,6 +1351,8 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
     // Met een handdoekhouder moet de plank diep genoeg zijn
     if (!h || !Number.isInteger(houders) || houders < 0 || houders > 2 || (input.diepte ?? model.diepte) < h.minDiepte) return null
   }
+  const lampen = input.lampen ?? 0
+  if (lampen !== 0 && (!model.lamp || !Number.isInteger(lampen) || lampen < 0 || lampen > LAMPEN_MAX)) return null
   if (input.extra != null && (!heeftExtras(model, input.variant) || !PLANK_EXTRAS.some((e) => e.id === input.extra))) return null
   const basis = model.artikel
     ? getArtikelVariant(model, input.variant)?.prijs ?? null
@@ -1389,7 +1410,9 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   const houders = input.handdoekhouders ?? 0
   if (houders > 0) extra.push({ label: `Handdoekhouder · ${houders}×`, cents: Math.round(houders * (model.plank?.handdoekhouder?.prijs ?? 0) * f) })
   const acc = plankExtraPrijs(input)
-  if (acc.bruto > 0) extra.push({ label: plankExtraTekst(input).replace(/ \(art\. .*\)$/, ''), cents: acc.bruto })
+  const lampCents = lampBruto(input)
+  if (acc.bruto - lampCents > 0) extra.push({ label: plankExtraTekst(input).replace(/ \(art\. .*\)$/, ''), cents: acc.bruto - lampCents })
+  if (lampCents > 0) extra.push({ label: `${model.lamp!.naam} · ${input.lampen}×`, cents: lampCents })
   const basis = totaal - extra.reduce((som, r) => som + r.cents, 0)
   return {
     regels: [{

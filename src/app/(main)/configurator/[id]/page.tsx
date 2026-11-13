@@ -52,6 +52,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
           hoogte: meubel.model.hoogte,
           diepte: meubel.model.diepte,
           handdoekhouders: meubel.handdoekhouders,
+          lampen: meubel.lampen,
           handdoekType: meubel.handdoekType,
           extra: meubel.extra,
           extraArtikel: meubel.extraArtikel,

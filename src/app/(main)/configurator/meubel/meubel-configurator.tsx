@@ -49,6 +49,7 @@ export interface MeubelInitialConfig {
   handdoekType?: HanddoekType
   extra?: PlankExtra | null
   extraArtikel?: string | null
+  lampen?: number
   variant?: string | null
   quantity: number
   projectName: string
@@ -88,6 +89,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const [handdoekType, setHanddoekType] = useState<HanddoekType>(initialConfig?.handdoekType ?? 'A')
   const [extra, setExtra] = useState<PlankExtra | null>(initialConfig?.extra ?? null)
   const [extraArtikelKeuze, setExtraArtikel] = useState<string | null>(initialConfig?.extraArtikel ?? null)
+  const [lampen, setLampen] = useState(initialConfig?.lampen ?? 0)
   // Met een handdoekhouder moet de plank diep genoeg zijn
   const houderMinDiepte = basisModel?.plank?.handdoekhouder && handdoekhouders > 0 ? basisModel.plank.handdoekhouder.minDiepte : 0
   const plankDiepteOk = !plankDiepteBereik || (plankDiepteInvoer >= Math.max(plankDiepteBereik.min, houderMinDiepte) && plankDiepteInvoer <= plankDiepteBereik.max)
@@ -266,7 +268,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const diepteKeuzes = model.kast?.dieptes ?? model.plank?.dieptes
   const magExtra = heeftExtras(model, variant?.id)
   const extraArtikel = magExtra ? getPlankExtraArtikel(extra, extraArtikelKeuze) : null
-  const plankKeuzes = { handdoekhouders, handdoekType, extra: magExtra ? extra : null, extraArtikel: extraArtikel?.id, variant: variant?.id }
+  const plankKeuzes = { handdoekhouders, handdoekType, extra: magExtra ? extra : null, extraArtikel: extraArtikel?.id, variant: variant?.id, lampen: model.lamp ? lampen : 0 }
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
   const gekozen = opties.includes(lades) ? lades : opties[0]
   const breedtes = isDuo ? duoBreedtes : eigenBreedtes && eigenBreedtes.length === gekozen ? eigenBreedtes : null
@@ -277,7 +279,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
   const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen, hoogte: model.hoogte, diepte: model.diepte,
-    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
+    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
   const magUitsparing = kanUitsparing(model)
   const tekeningNodig = tekeningVerplicht(model, uitsparingen)
@@ -328,6 +330,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
       ...((model.kast || model.plank) && { diepte: model.diepte }),
       ...(model.plank?.handdoekhouder && { handdoekhouders, handdoekType }),
       ...(magExtra && { extra, extraArtikel: extraArtikel?.id ?? null }),
+      ...(model.lamp && { lampen }),
       ...(variant && { variant: variant.id }),
       ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
       ...(model.waskom && { waskomVorm, waskomAantal }),
@@ -647,6 +650,39 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                   <p className="text-[12px] text-lx-text-muted mt-1.5">
                     {formatCents(Math.round(model.plank.handdoekhouder.prijs * parseMeubelFactor(factor)))} per handdoekhouder. In mat zwart of geborsteld rvs; geef de kleur door bij Opmerking.
                   </p>
+                </div>
+              )}
+
+              {model.lamp && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Verlichting</p>
+                  <div className="flex items-center gap-4 rounded-xl border border-black/10 p-3">
+                    <span className="relative w-20 h-[60px] flex-shrink-0">
+                      <Image src="/images/meubels/extra-mirror-light.webp" alt="" fill sizes="80px" className="object-contain" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-semibold text-lx-text-primary">{model.lamp.naam}</span>
+                      <span className="block text-[11.5px] text-lx-text-secondary">{model.lamp.omschrijving} · art. {model.lamp.id}</span>
+                      <span className="block text-[11.5px] text-lx-text-secondary">{formatCents(model.lamp.bruto)} per stuk</span>
+                    </span>
+                    <div className="flex gap-2 flex-shrink-0" role="radiogroup" aria-label="Aantal lampen">
+                      {[0, 1, 2].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          role="radio"
+                          aria-checked={lampen === n}
+                          onClick={() => setLampen(n)}
+                          className={`px-3 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                            lampen === n ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
+                          }`}
+                        >
+                          {n === 0 ? 'Geen' : `${n}×`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">Wordt los meegeleverd. Catalogusprijs, exclusief btw.</p>
                 </div>
               )}
 

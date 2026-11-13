@@ -1,5 +1,5 @@
 import {
-  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getArtikelVariant, indelingTekst, PLANK_EXTRAS, heeftExtras, getPlankExtraArtikel, plankExtraPrijs,
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getArtikelVariant, indelingTekst, PLANK_EXTRAS, heeftExtras, getPlankExtraArtikel, plankExtraPrijs, LAMPEN_MAX,
   type PlankExtra, type HanddoekType, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
   type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm,
 } from '@/lib/meubel-config'
@@ -32,6 +32,7 @@ export interface OpgeslagenMeubel {
   waskomAantal: number
   /** Plank: handdoekhouders, het type en wat eronder hangt */
   handdoekhouders: number
+  lampen: number
   handdoekType: HanddoekType
   extra: PlankExtra | null
   extraArtikel: string | null
@@ -80,6 +81,7 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     waskomAantal: m.waskomAantal === 2 ? 2 : 1,
     regaalBreedte,
     handdoekhouders: houders,
+    lampen: basisModel.lamp ? Math.min(LAMPEN_MAX, Math.max(0, Math.floor(Number(m.lampen) || 0))) : 0,
     handdoekType: m.handdoekType === 'B' ? 'B' : 'A',
     extra: heeftExtras(basisModel, typeof m.variant === 'string' ? m.variant : null) ? PLANK_EXTRAS.find((e) => e.id === m.extra)?.id ?? null : null,
     extraArtikel: heeftExtras(basisModel, typeof m.variant === 'string' ? m.variant : null) ? getPlankExtraArtikel(typeof m.extra === 'string' ? m.extra : null, typeof m.extraArtikel === 'string' ? m.extraArtikel : null)?.id ?? null : null,
@@ -119,10 +121,10 @@ export function meubelKort(m: OpgeslagenMeubel): string {
 /** Invoer voor de prijsmotor uit een opgeslagen meubel: één plek, zodat geen optie wordt vergeten. */
 export function meubelPrijsInput(m: OpgeslagenMeubel): MeubelInput {
   return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, hoogte: m.model.hoogte, diepte: m.model.diepte,
-    ...(m.handdoekhouders > 0 && { handdoekhouders: m.handdoekhouders, handdoekType: m.handdoekType }), ...(m.extra && { extra: m.extra, extraArtikel: m.extraArtikel }), ...(m.variant && { variant: m.variant }), houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
+    ...(m.handdoekhouders > 0 && { handdoekhouders: m.handdoekhouders, handdoekType: m.handdoekType }), ...(m.extra && { extra: m.extra, extraArtikel: m.extraArtikel }), ...(m.lampen > 0 && { lampen: m.lampen }), ...(m.variant && { variant: m.variant }), houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
 }
 
 /** Accessoire onder de plank: catalogusprijs en netto, voor de prijsopbouw bij bestellen. */
 export function meubelExtraPrijs(m: OpgeslagenMeubel): { bruto: number; netto: number } {
-  return plankExtraPrijs({ modelId: m.model.id, extra: m.extra, extraArtikel: m.extraArtikel, variant: m.variant })
+  return plankExtraPrijs({ modelId: m.model.id, extra: m.extra, extraArtikel: m.extraArtikel, variant: m.variant, lampen: m.lampen })
 }

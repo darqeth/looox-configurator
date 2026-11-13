@@ -47,6 +47,7 @@ REGELS
 - Bij een plank staat de dikte in "hoogte".
 - Bij waskommen en accessoires kies je de uitvoering met "variant" (het artikelnummer voor het =-teken).
 - Noemt de dealer geen aantal, dan is het 1. Hetzelfde product meerdere keren is één product met "aantal".
+- "waskomVorm" vierkant is de rechthoekige waskom; alleen die heeft een "waskomMaat" (breedte 500 of 850). Laat de maat weg als hij niet genoemd is.
 - Een meubel met ingebouwde waskom (Solid Surface) is één product. Een losse waskom op een houten meubel is een apart product.
 - Houtkleuren (houtkleur): ${houtkleurenTekst()}. Wit = white, zwart = black, naturel of licht eiken = pure. Twijfel je, laat het veld weg.
 - "uitsparingen": aantal gaten in het blad. Elke opbouwwaskom op een houten meubel of plank is 1 uitsparing (voor de afvoer). Een kraan door het blad is er ook 1. Niet bij een meubel met ingebouwde waskom.
@@ -74,7 +75,7 @@ UITVOER
     "lades": number,
     "houtkleur": string,
     "variant": string,
-    "waskomVorm": "ovaal" | "vierkant", "waskomAantal": 1 | 2,
+    "waskomVorm": "ovaal" | "vierkant", "waskomMaat": 500 | 850, "waskomAantal": 1 | 2,
     "regaalBreedte": number, "regaalZijde": "links" | "rechts",
     "handdoekhouders": 0 | 1 | 2, "handdoekType": "A" | "B",
     "lamp": boolean,

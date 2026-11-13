@@ -2,9 +2,10 @@ import {
   MEUBEL_MODELLEN, MEUBEL_CATEGORIEEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, MEUBEL_AANTAL_MAX, MEUBEL_AANVRAAG_MAX_MM, LAMPEN_MAX,
   getMeubelModel, getLengteBereik, getLadeOpties, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, getMeubelDiepte,
   getKastHoogteBereik, getDeurOpties, getRegaalBreedte, getDuoPrijs, getDuoReeksen, getArtikelVariant, getLadeAccessoire,
-  kanLadeAccessoire, kanLogo, kanUitsparing, ladeRuimte, valideerMeubelConfig, UITSPARING_MAX,
+  kanLadeAccessoire, kanLogo, kanUitsparing, ladeRuimte, valideerMeubelConfig, gatenContext, waskomMax, UITSPARING_MAX,
   type MeubelModel, type MeubelConfig, type WaskomVorm, type HanddoekType,
 } from '@/lib/meubel-config'
+import { GAT, klemGat, komMax, snappunten, startGaten, type Gat } from '@/lib/meubel-gaten'
 
 // AI-hulp voor Tailor-Made. Het taalmodel kiest alleen een model en keuzes; alles wat
 // hier binnenkomt is onbetrouwbaar en wordt teruggebracht naar iets wat de prijslijst
@@ -21,6 +22,7 @@ export interface MeubelAiRuw {
   variant?: unknown
   waskomVorm?: unknown
   waskomAantal?: unknown
+  waskomMaat?: unknown
   regaalBreedte?: unknown
   regaalZijde?: unknown
   handdoekhouders?: unknown
@@ -192,9 +194,37 @@ export function maakMeubelVoorstel(ruw: MeubelAiRuw): MeubelVoorstel | null {
     }
   }
 
-  // Uitsparingen in het blad (waskom, kraan): de plaats tekent de dealer op de maattekening
+  // Uitsparingen in het blad (waskom, kraan). Kan er getekend worden, dan zet het hulpje een
+  // eerste opzet in de tekening; de dealer loopt plaats en maat na. Anders telt alleen het aantal.
   const uitsparingen = kanUitsparing(model) ? klem(getal(ruw.uitsparingen) ?? 0, 0, UITSPARING_MAX) : 0
-  if (uitsparingen > 0) {
+  let context = gatenContext(config)
+  if (context?.soort === 'solid') {
+    const aantal = config.waskomAantal === 2 ? 2 : 1
+    if (config.waskomVorm === 'vierkant') {
+      const gevraagd = getal(ruw.waskomMaat) === 850 ? 850 : 500
+      config.waskomMaat = gevraagd === 850 && waskomMax(config, 'vierkant', 850) < aantal ? 500 : gevraagd
+      if (config.waskomMaat !== gevraagd) meld('Een waskom van 850 mm past niet boven deze lades. Het is 500 mm geworden.')
+      context = gatenContext(config)
+    }
+    const punten = context?.kom && komMax(context.blad, context.kom) >= aantal ? snappunten(context.blad, context.kom).slice(0, aantal) : []
+    if (context && punten.length === aantal) {
+      config.tekenwijze = 'module'
+      config.gaten = punten.map((p): Gat => ({ soort: 'kom', vak: p.vak }))
+      if (startGaten(context).length === 0) meld(`De ${aantal === 2 ? 'waskommen staan' : 'waskom staat'} in de tekening. Controleer boven welke lade.`)
+    } else {
+      config.tekenwijze = 'upload'
+      meld('De waskom past niet boven deze lades: een lade moet minstens 15 cm breder zijn dan de waskom. Kies een andere indeling of lever een eigen maattekening aan.')
+    }
+  } else if (context) {
+    config.tekenwijze = 'module'
+    if (uitsparingen > 0) {
+      const c = context
+      const punten = snappunten(c.blad).slice(0, uitsparingen)
+      config.gaten = punten.map((p) => klemGat({ soort: 'sifon', vak: p.vak, y: 240, d: GAT.sifon.std }, c))
+      const rest = uitsparingen - punten.length
+      meld(`${punten.length} ${punten.length === 1 ? 'sifongat' : 'sifongaten'} in de tekening gezet. Controleer plaats en maat.${rest > 0 ? ` Nog ${rest} ${rest === 1 ? 'gat' : 'gaten'} (bijvoorbeeld voor de kraan) zet je er zelf bij.` : ''}`)
+    }
+  } else if (uitsparingen > 0) {
     config.uitsparingen = uitsparingen
     meld(`${uitsparingen} ${uitsparingen === 1 ? 'uitsparing' : 'uitsparingen'} meegenomen. Teken de plaats op de maattekening.`)
   }
@@ -235,7 +265,7 @@ function maten(m: MeubelModel): string {
     `hoogte ${m.hoogtes ? m.hoogtes.join('/') : m.hoogte}`,
     `diepte ${m.diepte}`,
     m.regaal ? `open regaalkast ${m.regaal.min}-${m.regaal.max} breed${m.duo ? ' in het midden' : ', links of rechts'}` : '',
-    m.waskom ? 'waskom in het blad: ovaal of vierkant, 1 of 2' : '',
+    m.waskom ? 'waskom in het blad: ovaal of vierkant (rechthoekig, 500 of 850 breed), 1 of 2' : '',
     m.geenHout ? 'geen houtkleur' : m.geenKleuren?.length ? `niet in ${m.geenKleuren.join(', ')}` : '',
   ].filter(Boolean).join(', ')
 }

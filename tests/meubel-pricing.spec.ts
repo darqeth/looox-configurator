@@ -791,8 +791,24 @@ test.describe('Planken, waskommen en accessoires', () => {
 
     // Uitsparingen voor opbouwwaskommen: meegenomen met melding, niet bij een vast artikel
     const u = maakMeubelVoorstel({ modelId: 'facet-stripes', lengte: 2100, lades: 3, houtkleur: 'black', uitsparingen: 2 })!
-    expect(u.config).toMatchObject({ lengte: 2100, lades: 3, houtkleur: 'black', uitsparingen: 2 })
-    expect(u.meldingen.join(' ')).toContain('2 uitsparingen')
+    // Hout: het hulpje zet de sifongaten in de tekening, de teller blijft leeg
+    expect(u.config).toMatchObject({ lengte: 2100, lades: 3, houtkleur: 'black', uitsparingen: 0, tekenwijze: 'module' })
+    expect(u.config.gaten).toHaveLength(2)
+    expect(u.config.gaten!.every((g) => g.soort === 'sifon')).toBe(true)
+    expect(u.meldingen.join(' ')).toContain('2 sifongaten')
+    // Meer gaten dan lades: de rest zet de dealer zelf
+    const meer = maakMeubelVoorstel({ modelId: 'facet', lengte: 1000, lades: 1, uitsparingen: 3 })!
+    expect(meer.config.gaten).toHaveLength(1)
+    expect(meer.meldingen.join(' ')).toContain('Nog 2 gaten')
+    // Solid Surface: waskom staat in de tekening; 850 valt terug op 500 als hij niet past
+    const s1 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1200, lades: 1, waskomVorm: 'vierkant', waskomMaat: 850 })!
+    expect(s1.config).toMatchObject({ tekenwijze: 'module', waskomMaat: 850, gaten: [{ soort: 'kom', vak: 0 }] })
+    const s2 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1600, lades: 2, waskomVorm: 'vierkant', waskomMaat: 850 })!
+    expect(s2.config).toMatchObject({ tekenwijze: 'module', waskomMaat: 500 })
+    expect(s2.meldingen.join(' ')).toContain('850')
+    const s3 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1200, lades: 2 })!
+    expect(s3.config.tekenwijze).toBe('upload')
+    expect(s3.meldingen.join(' ')).toContain('15 cm')
     expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw', variant: 'WTMWK40RO', uitsparingen: 2 })!.config.uitsparingen).toBe(0)
 
     // Vast artikel: uitvoering op artikelnummer, anders de eerste met melding

@@ -119,7 +119,17 @@ export default function MeubelAiBalk({ projectId, onVoorstel }: {
       </div>
 
       <div aria-live="polite">
-        {bezig && <p className="text-[12px] text-lx-text-secondary mt-2 px-1">Dit duurt enkele seconden. Bij meerdere producten iets langer.</p>}
+        {bezig && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center">
+              {/* Zelfde animatie als bij de spiegel-intake; een gif kan niet door next/image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/loop_ai_config.gif" alt="" className="w-full rounded-xl mb-5 object-cover" />
+              <p className="text-[16px] font-semibold text-lx-text-primary mb-1">Het LoooX hulpje is jouw voorstel aan het samenstellen…</p>
+              <p className="text-[13px] text-lx-text-secondary">Dit duurt enkele seconden. Bij meerdere producten iets langer.</p>
+            </div>
+          </div>
+        )}
         {uitkomst?.soort === 'fout' && (
           <p className="text-[12.5px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mt-2">{uitkomst.tekst}</p>
         )}

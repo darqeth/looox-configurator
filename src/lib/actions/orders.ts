@@ -9,7 +9,7 @@ import { computeOrderTotals, type OrderDiscount } from '@/lib/order-pricing'
 import { runAfterResponse } from '@/lib/after-response'
 import { parseOrThrow, placeOrderInputSchema, orderFromConfigSchema } from '@/lib/validation'
 import { sendOrderConfirmationEmail, sendInternalOrderEmail, sendProjectOrderConfirmationEmail, sendInternalProjectOrderEmail, type OrderEmailDetails, type ProjectOrderEmail } from '@/lib/email'
-import { projectKop } from '@/lib/project'
+import { projectKop, moetNalopen } from '@/lib/project'
 import { berekenProjectOrderRegel, type ProjectOrderRegel } from '@/lib/project-order'
 import { getNotificationEmails } from '@/lib/actions/settings'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
@@ -621,6 +621,7 @@ export async function placeMeubelOrder(
   const meubel = leesMeubel(config.selected_options)
   if (!meubel) throw new Error('Dit is geen meubelconfiguratie')
   if (meubel.tekeningOntbreekt) throw new Error('De maattekening ontbreekt. Voeg hem toe en probeer het opnieuw.')
+  if (moetNalopen(config.selected_options)) throw new Error('Deze configuratie is door het hulpje ingevuld. Open hem, controleer de keuzes en sla hem op.')
 
   const isOfferte = meubel.opAanvraag
   const nettoCents = isOfferte ? 0 : calcMeubelNettoCents(meubelPrijsInput(meubel))

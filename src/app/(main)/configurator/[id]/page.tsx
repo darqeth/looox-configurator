@@ -6,6 +6,7 @@ import { LightConfig } from '../nieuw/step-verlichting'
 import { ShapeSlug, GlasKleur } from '@/lib/configurator-config'
 import MeubelConfigurator from '../meubel/meubel-configurator'
 import { leesMeubel, isMeubelConfig } from '@/lib/meubel-opslag'
+import { moetNalopen } from '@/lib/project'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 
 export default async function EditConfiguratorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,6 +44,8 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
         project={config.project_id ? { id: config.project_id as string, naam: config.name ?? '', referentie: meubel.reference } : null}
         initialConfig={{
           id: config.id,
+          nalopen: moetNalopen(opts),
+          aiNotities: Array.isArray((opts as { aiNotities?: unknown }).aiNotities) ? ((opts as { aiNotities: unknown[] }).aiNotities).filter((n): n is string => typeof n === 'string') : [],
           modelId: meubel.model.id,
           lengte: meubel.lengte,
           lades: meubel.lades,

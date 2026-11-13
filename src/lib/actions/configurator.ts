@@ -15,6 +15,9 @@ const saveConfigSchema = configInputSchema.extend({
   projectId: z.string().uuid().nullish(),
   /** Opslaan als eerste regel van een nieuw project */
   nieuwProject: z.boolean().optional(),
+  /** Door het hulpje ingevuld: bestellen kan pas nadat de dealer de regel heeft nagelopen en opgeslagen */
+  nalopen: z.boolean().optional(),
+  aiNotities: z.array(z.string().max(200)).max(8).optional(),
 })
 const updateConfigSchema = saveConfigSchema.extend({
   configId: z.string().uuid(),
@@ -45,6 +48,8 @@ type SaveConfigInput = {
   status: 'draft' | 'saved'
   projectId?: string | null
   nieuwProject?: boolean
+  nalopen?: boolean
+  aiNotities?: string[]
   attachmentUrl?: string | null
   solMeubelHoogte?: number
   solOnderkant?: number
@@ -112,7 +117,10 @@ export async function saveConfiguration(rawInput: SaveConfigInput): Promise<{ pr
     ? 0
     : isInternational ? Math.round(calcPrice * 1.05) : calcPrice
 
-  const selectedOptionsJson = buildSelectedOptionsJson(input, { isInternational })
+  const selectedOptionsJson = {
+    ...buildSelectedOptionsJson(input, { isInternational }),
+    ...(input.nalopen && { nalopen: true, aiNotities: input.aiNotities ?? [] }),
+  }
 
   // Project (winkelmandje): naam en referentie volgen dan het project
   const doel = await bepaalProjectDoel(supabase, { projectId: input.projectId, nieuwProject: input.nieuwProject, naam: input.projectName, referentie: input.reference })

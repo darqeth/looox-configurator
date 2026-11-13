@@ -36,6 +36,9 @@ const meubelInputSchema = z.object({
   regaalZijde: z.enum(['links', 'rechts', 'midden']).optional(),
   uitsparingen: z.number().int().min(0).max(UITSPARING_MAX).optional(),
   attachmentUrl: z.string().max(1000).nullish(),
+  /** Door het hulpje ingevuld: bestellen kan pas nadat de dealer de regel heeft nagelopen en opgeslagen */
+  nalopen: z.boolean().optional(),
+  aiNotities: z.array(z.string().max(200)).max(8).optional(),
   /** Toevoegen aan een bestaand project (winkelmandje) */
   projectId: z.string().uuid().nullish(),
   /** Opslaan als eerste regel van een nieuw project */
@@ -118,6 +121,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
         extras: [],
         optionSubChoices: {},
         attachmentUrl,
+        ...(input.nalopen && { nalopen: true, aiNotities: input.aiNotities ?? [] }),
       },
     },
   }

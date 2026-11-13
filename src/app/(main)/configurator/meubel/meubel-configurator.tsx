@@ -20,6 +20,8 @@ import {
   type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { MeubelTekening } from './meubel-tekening'
+import MeubelAiBalk from './meubel-ai-balk'
+import type { MeubelVoorstel } from '@/lib/meubel-ai'
 import UpsellCards, { upsellVoorMeubels, upsellHref, type UpsellSoort } from '@/components/upsell-cards'
 
 // Stappen: model kiezen, samenstellen (lengte, lades, houtkleur), samenvatting.
@@ -30,7 +32,12 @@ const STEPS = ['Categorie', 'Model', 'Samenstellen', 'Samenvatting']
 const DUO_START_MM = 700
 
 export interface MeubelInitialConfig {
-  id: string
+  /** Ontbreekt bij een voorstel van het hulpje: ingevuld, maar nog niet opgeslagen */
+  id?: string
+  /** Wat de dealer moet nakijken aan een door het hulpje ingevulde configuratie */
+  aiNotities?: string[]
+  /** Door het hulpje ingevuld en nog niet nagelopen */
+  nalopen?: boolean
   modelId: string
   lengte: number
   lades: number
@@ -67,10 +74,28 @@ export interface MeubelProject {
   referentie: string
 }
 
-export default function MeubelConfigurator({ factor, initialConfig, project, startCategorie }: { factor: number; initialConfig?: MeubelInitialConfig; project?: MeubelProject | null; startCategorie?: MeubelCategorieId }) {
+type Props = { factor: number; initialConfig?: MeubelInitialConfig; project?: MeubelProject | null; startCategorie?: MeubelCategorieId }
+
+/** Een voorstel van het hulpje vult de configurator opnieuw: de key zet alle keuzes in één keer goed. */
+export default function MeubelConfigurator(props: Props) {
+  const [voorstel, setVoorstel] = useState<{ nr: number; config: MeubelInitialConfig } | null>(null)
+  return (
+    <MeubelConfiguratorInner
+      key={voorstel?.nr ?? 0}
+      {...props}
+      initialConfig={voorstel?.config ?? props.initialConfig}
+      onVoorstel={(v, meldingen) => setVoorstel((vorige) => ({
+        nr: (vorige?.nr ?? 0) + 1,
+        config: { ...v.config, aiNotities: [...v.meldingen, ...meldingen], nalopen: true, projectName: '', reference: '', description: '' },
+      }))}
+    />
+  )
+}
+
+function MeubelConfiguratorInner({ factor, initialConfig, project, startCategorie, onVoorstel }: Props & { onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[]) => void }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const isEditing = !!initialConfig
+  const isEditing = !!initialConfig?.id
 
   const [basisModel, setModel] = useState<MeubelModel | null>(
     () => MEUBEL_MODELLEN.find((m) => m.id === initialConfig?.modelId) ?? null,
@@ -150,7 +175,8 @@ export default function MeubelConfigurator({ factor, initialConfig, project, sta
       <Kader step={0} onStep={setStep} maxStep={model ? 3 : categorie ? 1 : 0}>
         <div className="w-full">
           <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">Tailor-Made</h1>
-          <p className="text-[13px] text-lx-text-secondary mt-1 mb-5">Wat wil je samenstellen?</p>
+          <p className="text-[13px] text-lx-text-secondary mt-1 mb-5">Omschrijf wat je zoekt, of kies zelf een categorie.</p>
+          {!isEditing && <MeubelAiBalk projectId={project?.id} onVoorstel={onVoorstel} />}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {MEUBEL_CATEGORIEEN.map((c) => {
               const modellen = MEUBEL_MODELLEN.filter((m) => m.categorie === c.id)
@@ -347,7 +373,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project, sta
     startTransition(async () => {
       try {
         const payload = { ...basis, attachmentUrl: await uploadTekening() }
-        const { projectId } = initialConfig
+        const { projectId } = initialConfig?.id
           ? await updateMeubelConfiguration(initialConfig.id, payload)
           : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject })
         // Een regel van een project gaat terug naar het project, een losse configuratie naar de lijst
@@ -366,6 +392,16 @@ export default function MeubelConfigurator({ factor, initialConfig, project, sta
         <div className="bg-white rounded-2xl shadow-sm border border-lx-divider p-5">
           {step === 2 && (
             <div className="space-y-6">
+              {initialConfig?.nalopen && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12.5px] text-amber-900">
+                  <p className="font-semibold">Ingevuld door het hulpje. Controleer de keuzes en sla op.</p>
+                  {(initialConfig.aiNotities ?? []).length > 0 && (
+                    <ul className="mt-1 space-y-0.5">
+                      {(initialConfig.aiNotities ?? []).map((n) => <li key={n}>{n}</li>)}
+                    </ul>
+                  )}
+                </div>
+              )}
               <div className="flex items-center gap-4">
                 <div className="relative w-24 h-[72px] shrink-0 rounded-xl bg-lx-panel-bg overflow-hidden">
                   <Image src={model.afbeelding} alt="" fill sizes="96px" className="object-contain p-1.5" />

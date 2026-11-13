@@ -123,7 +123,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 <img src={`/icons/shapes/${r.soort === 'meubel' ? 'meubel' : r.soort === 'projectspiegel' ? 'projectspiegel' : 'rechthoek'}.svg`} width="15" height="15" alt="" />
               </div>
               <div className="flex-1 min-w-[180px]">
-                <p className="text-[13px] font-semibold text-lx-text-primary">{r.titel}</p>
+                <p className="text-[13px] font-semibold text-lx-text-primary">
+                  {r.titel}
+                  {r.nalopen && <span className="ml-2 align-middle inline-block rounded-md bg-amber-100 text-amber-900 text-[10.5px] font-bold uppercase tracking-wide px-1.5 py-0.5">Nog nalopen</span>}
+                </p>
                 <p className="text-[11.5px] text-lx-text-secondary mt-0.5">{r.omschrijving}</p>
               </div>
               <div className="text-right flex-shrink-0">

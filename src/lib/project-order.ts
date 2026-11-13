@@ -31,6 +31,11 @@ export function berekenProjectOrderRegel(config: ProjectConfigRij, dealerKorting
   const regel = projectRegel(config)
   const basis = { configId: config.id, regel, staffelPct: 0, fout: null as string | null }
 
+  // Het hulpje vult in, de dealer beslist: eerst nalopen en opslaan, dan pas bestellen
+  if (regel.nalopen) {
+    return { ...basis, quantity: regel.quantity, korting: 0, unitPrice: 0, totalPrice: 0, fout: `${regel.titel} is door het hulpje ingevuld en nog niet nagelopen. Open de regel, controleer de keuzes en sla hem op.` }
+  }
+
   const meubel = leesMeubel(opts)
   if (meubel) {
     // Regel van 12 nov: bij elk meubel hoort een maattekening. Oudere offertes zonder tekening eerst aanvullen.

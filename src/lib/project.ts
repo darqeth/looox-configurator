@@ -39,6 +39,13 @@ export interface ProjectRegel {
   besteld: boolean
   /** Meubel zonder maattekening: kan nog niet besteld worden */
   tekeningOntbreekt?: boolean
+  /** Door het hulpje ingevuld en nog niet door de dealer nagelopen en opgeslagen */
+  nalopen?: boolean
+}
+
+/** Door het hulpje ingevuld: de vlag vervalt zodra de dealer de regel opent en opslaat. */
+export function moetNalopen(selectedOptions: unknown): boolean {
+  return (selectedOptions as { nalopen?: unknown } | null)?.nalopen === true
 }
 
 function cents(bedrag: number | string): number {
@@ -51,6 +58,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
   const shape = typeof opts.shape === 'string' ? opts.shape : 'rechthoek'
   const besteld = c.status === 'ordered'
   const aantal = Math.max(1, Math.floor(Number(opts.quantity) || 1))
+  const nalopen = moetNalopen(opts) && !besteld
 
   const meubel = leesMeubel(opts)
   if (meubel) {
@@ -61,7 +69,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
       omschrijving: meubelSamenvatting(meubel).split(' · ').slice(1).join(' · '),
       quantity: meubel.quantity, opAanvraag: meubel.opAanvraag,
       stukCents: stuk, totaalCents: stuk * meubel.quantity, netto: false, besteld,
-      tekeningOntbreekt: meubel.tekeningOntbreekt,
+      tekeningOntbreekt: meubel.tekeningOntbreekt, nalopen,
     }
   }
 
@@ -72,7 +80,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
     return {
       id: c.id, soort: 'projectspiegel', titel: 'Projectspiegel', omschrijving,
       quantity: aantal, opAanvraag: false,
-      stukCents: Math.round(totaal / aantal), totaalCents: totaal, netto: true, besteld,
+      stukCents: Math.round(totaal / aantal), totaalCents: totaal, netto: true, besteld, nalopen,
     }
   }
 
@@ -82,7 +90,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
   return {
     id: c.id, soort: 'maatwerk', titel: `Spiegel ${formatShape(shape).toLowerCase()}`, omschrijving,
     quantity: aantal, opAanvraag,
-    stukCents: stuk, totaalCents: stuk * aantal, netto: false, besteld,
+    stukCents: stuk, totaalCents: stuk * aantal, netto: false, besteld, nalopen,
   }
 }
 

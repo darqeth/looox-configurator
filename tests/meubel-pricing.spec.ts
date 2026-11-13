@@ -10,6 +10,7 @@ import {
 } from '../src/lib/meubel-config'
 import { leesMeubel, meubelPrijsInput, meubelKort } from '../src/lib/meubel-opslag'
 import { upsellVoorMeubels } from '../src/components/upsell-cards'
+import { maakMeubelVoorstel, meubelCatalogusTekst } from '../src/lib/meubel-ai'
 
 // Prijslijst Tailor-Made juli 2026 (netto). Rij: [lengte in mm, lades, euro].
 // Per staffel de onder- en bovengrens, zodat een verschoven grens opvalt.
@@ -737,5 +738,55 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(meubelAfmeting(a.model, a.lengte)).toBe('Ø 40 cm, hoogte 15 cm')
     expect(a.houtkleurNaam).toBe('')
     expect(a.tekeningOntbreekt).toBe(false)
+  })
+
+  test('AI-hulp: elk model geeft zonder verdere invoer een geldige configuratie', () => {
+    for (const m of MEUBEL_MODELLEN) {
+      const v = maakMeubelVoorstel({ modelId: m.id })
+      expect(v, m.id).not.toBeNull()
+      expect(valideerMeubelConfig(v!.config), m.id).toBeNull()
+      expect(meubelCatalogusTekst()).toContain(`- ${m.id} |`)
+    }
+    expect(maakMeubelVoorstel({ modelId: 'bestaat-niet' })).toBeNull()
+    expect(maakMeubelVoorstel({})).toBeNull()
+  })
+
+  test('AI-hulp: keuzes worden overgenomen of teruggebracht naar de prijslijst', () => {
+    const v = maakMeubelVoorstel({ modelId: 'facet', lengte: 1400, lades: 3, houtkleur: 'white', aantal: 2, organizer: 'WORG242' })!
+    expect(v.config).toMatchObject({ modelId: 'facet', lengte: 1400, lades: 3, houtkleur: 'white', quantity: 2, organizer: 'WORG242', opAanvraag: false })
+    expect(v.meldingen).toEqual([])
+    expect(calcMeubelNettoCents(v.config)).toBe(179816 + 4160 + calcMeubelNettoCents({ ...k, modelId: 'organizer', lengte: 0, lades: 0, variant: 'WORG242' })!)
+
+    // Lades die niet kunnen: dichtstbijzijnde, met melding. Tekst als getal mag.
+    const l = maakMeubelVoorstel({ modelId: 'facet', lengte: '1000', lades: 4, houtkleur: 'old-grey' })!
+    expect(l.config.lades).toBe(2)
+    expect(l.meldingen.join(' ')).toContain('4 lades')
+
+    // Groter dan standaard: op aanvraag, zonder prijs en zonder bijverkoop
+    const g = maakMeubelVoorstel({ modelId: 'facet', lengte: 3000, lades: 3, houtkleur: 'black', organizer: 'WORG242' })!
+    expect(g.config.opAanvraag).toBe(true)
+    expect(g.config.organizer).toBeUndefined()
+    expect(valideerMeubelConfig(g.config)).toBeNull()
+
+    // Kleur die niet bestaat of niet kan: standaardkleur met melding
+    const s = maakMeubelVoorstel({ modelId: 'facet-stripes', lengte: 1200, lades: 2, houtkleur: 'white' })!
+    expect(s.config.houtkleur).toBe('old-grey')
+    expect(s.meldingen.join(' ')).toContain('houtkleur')
+
+    // Kast: maten naar de lijst, twee deuren boven 120 cm, geen logo
+    const c = maakMeubelVoorstel({ modelId: 'cabinet', lengte: 410, hoogte: 900, houtkleur: 'black' })!
+    expect(c.config.lengte).toBe(400)
+    expect(c.config.hoogte).toBeGreaterThanOrEqual(1360)
+    expect(c.config.logo).toBe(false)
+    expect(c.meldingen.length).toBeGreaterThan(0)
+
+    // Spiegelkast met lamp, plank met handdoekhouder op te kleine diepte
+    expect(maakMeubelVoorstel({ modelId: 'mirror-cabinet', lamp: true, houtkleur: 'black' })!.config.lampen).toBe(1)
+    const p = maakMeubelVoorstel({ modelId: 'base-shelf-solo', lengte: 1400, diepte: 480, handdoekhouders: 2, handdoekType: 'B', houtkleur: 'old-grey' })!
+    expect(p.config).toMatchObject({ lengte: 1400, diepte: 480, handdoekhouders: 2, handdoekType: 'B' })
+
+    // Vast artikel: uitvoering op artikelnummer, anders de eerste met melding
+    expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw', variant: 'WTMWK40RO' })!.config.variant).toBe('WTMWK40RO')
+    expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw' })!.meldingen.join(' ')).toContain('uitvoering')
   })
 })

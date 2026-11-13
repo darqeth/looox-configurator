@@ -1,9 +1,9 @@
 // Maakt de webafbeelding van een meubelrender (assets-bron → public/images/meubels).
 // Centreert op het meubel zelf, niet op meubel + schaduw, zodat het midden in het vak staat.
-// Gebruik: node tools/meubel-afbeelding.mjs <bron.png> <naam>
+// Gebruik: node tools/meubel-afbeelding.mjs <bron.png> <naam> [voorvoegsel: model | extra | artikel]
 import sharp from 'sharp'
 
-const [bron, naam] = process.argv.slice(2)
+const [bron, naam, voorvoegsel = 'model'] = process.argv.slice(2)
 if (!bron || !naam) { console.error('Gebruik: node tools/meubel-afbeelding.mjs <bron.png> <naam>'); process.exit(1) }
 
 const W = 1000, H = 750, VUL_B = 0.74, VUL_H = 0.66, WERK = 1600
@@ -24,5 +24,5 @@ await sharp(await basis.clone().extend({ top: rand, bottom: rand, left: rand, ri
   .extract({ left: links + rand, top: boven + rand, width: uw, height: uh })
   .resize(W, H)
   .webp({ quality: 82 })
-  .toFile(`public/images/meubels/model-${naam}.webp`)
+  .toFile(`public/images/meubels/${voorvoegsel}-${naam}.webp`)
 console.log(naam, 'meubel', bw, 'x', bh, '→', W, 'x', H)

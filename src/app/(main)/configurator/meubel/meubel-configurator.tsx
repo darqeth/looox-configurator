@@ -97,6 +97,7 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
     hoogte: getMeubelHoogte(basisModel, kastHoogteBereik ? (kastHoogteOk ? kastHoogteInvoer : null) : hoogteKeuze),
     diepte: getMeubelDiepte(basisModel, plankDiepteBereik ? (plankDiepteOk ? plankDiepteInvoer : null) : diepteKeuze),
     afmetingTekst: variant?.afmeting,
+    afbeelding: variant?.afbeelding ?? basisModel.afbeelding,
   } : null
   const [categorie, setCategorie] = useState<MeubelCategorieId | null>(basisModel?.categorie ?? null)
   // 0 categorie, 1 model, 2 samenstellen, 3 samenvatting
@@ -378,7 +379,12 @@ export default function MeubelConfigurator({ factor, initialConfig, project }: {
                           variant?.id === v.id ? 'border-lx-cta bg-lx-icon-bg' : 'border-black/10 hover:border-black/25'
                         }`}
                       >
-                        <span className="min-w-0">
+                        {v.afbeelding && (
+                          <span className="relative w-14 h-[42px] flex-shrink-0">
+                            <Image src={v.afbeelding} alt="" fill sizes="56px" className="object-contain" />
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1">
                           <span className="block text-[13px] font-semibold text-lx-text-primary">{v.naam}</span>
                           <span className="block text-[11.5px] text-lx-text-secondary">{v.afmeting}{artikelNummer(v) ? ` · art. ${v.id}` : ''}</span>
                         </span>

@@ -63,6 +63,7 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     hoogte: getMeubelHoogte(basisModel, m.hoogte == null ? null : Number(m.hoogte)),
     diepte: getMeubelDiepte(basisModel, m.diepte == null ? null : Number(m.diepte)),
     afmetingTekst: getArtikelVariant(basisModel, typeof m.variant === 'string' ? m.variant : null)?.afmeting,
+    afbeelding: getArtikelVariant(basisModel, typeof m.variant === 'string' ? m.variant : null)?.afbeelding ?? basisModel.afbeelding,
   }
   const houders = basisModel.plank?.handdoekhouder ? Math.min(2, Math.max(0, Math.floor(Number(m.handdoekhouders) || 0))) : 0
   const kleur = HOUTKLEUREN.find((k) => k.id === m.houtkleur)

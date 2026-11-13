@@ -133,6 +133,8 @@ export interface ArtikelVariant {
   naam: string
   afmeting: string
   prijs: number
+  /** Eigen foto van deze uitvoering (waskommen) */
+  afbeelding?: string
 }
 
 export interface ArtikelOpbouw {
@@ -944,7 +946,8 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     categorie: g.categorie,
     naam: g.naam,
     omschrijving: g.omschrijving,
-    afbeelding: `/images/meubels/model-${g.afbeelding ?? g.id}.webp`,
+    // Waskommen hebben een foto per uitvoering; de eerste staat op de modelkaart
+    afbeelding: g.categorie === 'waskommen' ? `/images/meubels/artikel-${g.varianten[0][0]}.webp` : `/images/meubels/model-${g.afbeelding ?? g.id}.webp`,
     diepte: 0,
     hoogte: 0,
     rijen: 1,
@@ -953,7 +956,7 @@ export const MEUBEL_MODELLEN: MeubelModel[] = [
     geenHout: !g.hout,
     accessoireKleur: true,
     opmerking: g.opmerking,
-    artikel: { varianten: g.varianten.map(([id, naam, afmeting, prijs]) => ({ id, naam, afmeting, prijs })) },
+    artikel: { varianten: g.varianten.map(([id, naam, afmeting, prijs]) => ({ id, naam, afmeting, prijs, ...(g.categorie === 'waskommen' && { afbeelding: `/images/meubels/artikel-${id}.webp` }) })) },
     staffels: [],
   })),
 ]

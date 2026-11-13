@@ -19,6 +19,7 @@ import {
   getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelModel, LADE_ACCESSOIRES, type LadeAccessoire,
   type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht } from '@/lib/meubel-config'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
+import { startProjectVanConfig } from '@/lib/actions/project'
 import { MeubelTekening } from './meubel-tekening'
 import MeubelAiBalk from './meubel-ai-balk'
 import type { MeubelVoorstel } from '@/lib/meubel-ai'
@@ -169,6 +170,8 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const [projectName, setProjectName] = useState(project?.naam ?? initialConfig?.projectName ?? '')
   const [reference, setReference] = useState(project?.referentie ?? initialConfig?.reference ?? '')
   const [description, setDescription] = useState(initialConfig?.description ?? '')
+  // Na het opslaan van een los meubel: vraag of er nog iets bij moet
+  const [nogIets, setNogIets] = useState<{ configId: string; waskom: boolean; spiegel: boolean } | null>(null)
 
   if (!categorie || step === 0) {
     return (
@@ -318,6 +321,21 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const tekeningOntbreekt = tekeningNodig && !tekeningBestand && !bestaandeTekening
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
 
+  // Bijverkoop na opslaan: de losse configuratie wordt een project en de dealer stelt het volgende product samen
+  function kiesNogIets(soort: UpsellSoort) {
+    if (!nogIets) return
+    startTransition(async () => {
+      try {
+        const { projectId } = await startProjectVanConfig(nogIets.configId)
+        router.push(upsellHref(soort, projectId))
+      } catch (e) {
+        console.error(e)
+        toast(e instanceof Error ? e.message : 'Dat lukte niet. Voeg het product toe vanuit je configuraties.')
+        router.push('/configuraties')
+      }
+    })
+  }
+
   async function uploadTekening(): Promise<string | null> {
     if (!tekeningBestand) return bestaandeTekening
     const supabase = createClient()
@@ -353,9 +371,8 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
     setEigenBreedtes(nieuw)
   }
 
-  // nieuwProject: opslaan als eerste regel van een project, om er daarna een product aan toe te voegen.
-  // vervolg: bijverkoop, na het opslaan direct door naar de waskom of spiegel voor hetzelfde project.
-  function handleSave(nieuwProject = false, vervolg?: UpsellSoort) {
+  // nieuwProject: opslaan als eerste regel van een project, om er daarna een product aan toe te voegen
+  function handleSave(nieuwProject = false) {
     if (!geldig || !projectName.trim() || !model) return
     const basis = {
       modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
@@ -373,11 +390,15 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
     startTransition(async () => {
       try {
         const payload = { ...basis, attachmentUrl: await uploadTekening() }
-        const { projectId } = initialConfig?.id
-          ? await updateMeubelConfiguration(initialConfig.id, payload)
+        const opgeslagen = initialConfig?.id
+          ? { id: initialConfig.id, ...await updateMeubelConfiguration(initialConfig.id, payload) }
           : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject })
-        // Een regel van een project gaat terug naar het project, een losse configuratie naar de lijst
-        router.push(projectId ? (vervolg ? upsellHref(vervolg, projectId) : `/projecten/${projectId}`) : '/configuraties')
+        // Een regel van een project gaat terug naar het project
+        if (opgeslagen.projectId) return router.push(`/projecten/${opgeslagen.projectId}`)
+        // Losse configuratie: eerst vragen of er nog een waskom of spiegel bij moet, dan naar de lijst
+        const upsell = upsellVoorMeubels([model])
+        if (!isEditing && (upsell.waskom || upsell.spiegel)) setNogIets({ configId: opgeslagen.id, ...upsell })
+        else router.push('/configuraties')
       } catch (e) {
         console.error(e)
         toast(e instanceof Error ? e.message : 'Opslaan mislukt. Probeer het opnieuw.')
@@ -1231,17 +1252,6 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
               {!projectName.trim() && (
                 <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>
               )}
-              {!isEditing && !project && (() => {
-                const upsell = upsellVoorMeubels([model])
-                if (!upsell.waskom && !upsell.spiegel) return null
-                return (
-                  <div className="pt-3 border-t border-lx-divider">
-                    <p className="text-[13px] font-semibold text-lx-text-primary">Maak het compleet</p>
-                    <p className="text-[11.5px] text-lx-text-secondary mt-0.5 mb-1">We slaan dit meubel op in een project en je stelt het volgende product direct samen. Zo bestel je alles in één keer.</p>
-                    <UpsellCards {...upsell} onKies={(soort) => handleSave(true, soort)} disabled={!projectName.trim() || isPending} />
-                  </div>
-                )
-              })()}
             </div>
           )}
         </div>
@@ -1274,6 +1284,27 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
             <Maximize2 size={14} />
           </button>}
         </div>
+
+        {nogIets && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-labelledby="nog-iets-titel">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+              <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-lx-cta mb-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+                Opgeslagen
+              </p>
+              <h2 id="nog-iets-titel" className="text-[18px] font-bold text-lx-text-primary tracking-tight">Nog iets toevoegen?</h2>
+              <p className="text-[13px] text-lx-text-secondary mt-1 mb-3">Kies je iets, dan maken we er een project van. Zo bestel je alles in één keer.</p>
+              <UpsellCards waskom={nogIets.waskom} spiegel={nogIets.spiegel} onKies={kiesNogIets} disabled={isPending} />
+              <button
+                onClick={() => router.push('/configuraties')}
+                disabled={isPending}
+                className="w-full h-11 mt-3 rounded-xl border border-black/10 text-lx-text-primary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors cursor-pointer disabled:opacity-60"
+              >
+                Nee, bedankt
+              </button>
+            </div>
+          </div>
+        )}
 
         {tekeningGroot && (
           <TekeningPopup

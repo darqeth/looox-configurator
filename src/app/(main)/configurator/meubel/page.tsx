@@ -37,5 +37,6 @@ export default async function MeubelPage({ searchParams }: { searchParams: Promi
   // ?categorie=waskommen: direct naar de modellen van die categorie (bijverkoop na een bestelling)
   const startCategorie = MEUBEL_CATEGORIEEN.find((c) => c.id === categorie)?.id
 
-  return <MeubelConfigurator factor={factor} project={project} startCategorie={startCategorie} />
+  // key: een andere ?project of ?categorie begint met een schone configurator, ook als je er vanuit de configurator zelf heen gaat
+  return <MeubelConfigurator key={`${project?.id ?? ''}:${startCategorie ?? ''}`} factor={factor} project={project} startCategorie={startCategorie} />
 }

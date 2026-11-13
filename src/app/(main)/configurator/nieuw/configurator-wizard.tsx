@@ -371,8 +371,10 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     }
   }
 
-  const handleSave = useCallback(async () => {
+  // nieuwProject: opslaan als eerste regel van een project, om er daarna een product aan toe te voegen
+  const handleSave = useCallback(async (nieuwProject?: unknown) => {
     if (!shape || !projectName.trim()) return
+    let nieuwProjectId: string | null = null
     setSaving(true)
     setSaveError(null)
     try {
@@ -397,12 +399,12 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       if (isEditing && initialConfig) {
         await updateConfiguration({ ...payload, configId: initialConfig.id })
       } else {
-        await saveConfiguration({ ...payload, projectId: project?.id ?? null })
+        nieuwProjectId = (await saveConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject: !project && nieuwProject === true })).projectId
       }
       setSaved(true)
       clearDraft()
       // Een regel van een project gaat terug naar het project, een losse configuratie naar de lijst
-      router.push(project ? `/projecten/${project.id}` : '/configuraties')
+      router.push(project ? `/projecten/${project.id}` : nieuwProjectId ? `/projecten/${nieuwProjectId}` : '/configuraties')
       // background: sidebar/dashboard counts bijwerken
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
@@ -795,7 +797,9 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       onSchunineZijdenFileChange={(f) => { schunineZijdenFileRef.current = f; setSchunineZijdenFile(f) }}
                       onOpAanvraagFileChange={(f) => { opAanvraagFileRef.current = f; setOpAanvraagFile(f) }}
                       onGoToStep={goToStep}
-                      onSave={handleSave}
+                      onSave={() => handleSave()}
+                      onSaveProject={!project && !isEditing ? () => handleSave(true) : undefined}
+                      isEditing={isEditing}
                       onOrder={handleOrder}
                       canOrder={canOrder}
                     />

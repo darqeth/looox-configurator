@@ -60,6 +60,9 @@ interface StepSamenvattingProps {
   onOpAanvraagFileChange: (f: File | null) => void
   onGoToStep: (step: number) => void
   onSave: (asConcept: boolean) => void
+  /** Opslaan als eerste regel van een nieuw project; ontbreekt bij een regel van een project en bij bewerken */
+  onSaveProject?: () => void
+  isEditing?: boolean
   onOrder: (params: {
     quantity: number
     notes: string
@@ -115,7 +118,7 @@ export default function StepSamenvatting({
   lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde,
   directLight, indirectLight, selectedOptions, optionSubChoices,
   projectName, reference, quantity, mmsQuantity,
-  saving, schunineZijdenFile, opAanvraagFile, existingAttachmentUrl, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange, projectVast = false,
+  saving, schunineZijdenFile, opAanvraagFile, existingAttachmentUrl, isInternational = false, korting: _korting = 50, onProjectNameChange, onReferenceChange, projectVast = false, onSaveProject, isEditing = false,
   onQuantityChange, onMmsQuantityChange, onSchunineZijdenFileChange, onOpAanvraagFileChange,
   onGoToStep, onSave, onOrder: _onOrder, canOrder: _canOrder = true,
 }: StepSamenvattingProps) {
@@ -349,7 +352,7 @@ export default function StepSamenvatting({
       <div className="space-y-3">
         <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary">Projectgegevens</p>
         {projectVast && (
-          <p className="text-[12px] text-lx-text-secondary bg-lx-panel-bg rounded-xl px-3.5 py-2.5">Deze spiegel hoort bij een project. Naam en referentie wijzig je op de projectpagina.</p>
+          <p className="text-[12px] text-lx-text-secondary bg-lx-panel-bg rounded-xl px-3.5 py-2.5">{isEditing ? 'Deze spiegel hoort bij' : 'Deze spiegel wordt toegevoegd aan'} project <span className="font-semibold text-lx-text-primary">{projectName}</span>. Naam en referentie wijzig je op de projectpagina.</p>
         )}
 
         <div>
@@ -362,7 +365,7 @@ export default function StepSamenvatting({
             onChange={(e) => onProjectNameChange(e.target.value)}
             disabled={projectVast}
             placeholder="Bijv. Badkamer renovatie De Vries"
-            className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
+            className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors disabled:bg-lx-panel-bg disabled:text-lx-text-secondary disabled:cursor-not-allowed"
           />
         </div>
 
@@ -373,8 +376,8 @@ export default function StepSamenvatting({
             value={reference}
             onChange={(e) => onReferenceChange(e.target.value)}
             disabled={projectVast}
-            placeholder="Bijv. PO-2026-0042"
-            className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors"
+            placeholder={projectVast ? '' : 'Bijv. PO-2026-0042'}
+            className="w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13.5px] text-lx-text-primary placeholder-lx-placeholder outline-none focus:border-lx-cta bg-white transition-colors disabled:bg-lx-panel-bg disabled:text-lx-text-secondary disabled:cursor-not-allowed"
           />
         </div>
 
@@ -539,7 +542,7 @@ export default function StepSamenvatting({
           <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
         </svg>
         <p className="text-[12px] text-lx-text-secondary leading-relaxed">
-          Sla de configuratie op als offerte. Vanuit het overzicht kun je daarna een bestelling plaatsen.
+          {projectVast ? 'De spiegel komt als regel in het project. Je bestelt het project in één keer.' : 'Sla de configuratie op als offerte. Vanuit het overzicht kun je daarna een bestelling plaatsen.'}
         </p>
       </div>
 
@@ -555,8 +558,17 @@ export default function StepSamenvatting({
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Opslaan…</span>
             </>
-          ) : 'Opslaan als offerte'}
+          ) : projectVast ? (isEditing ? 'Wijzigingen opslaan' : 'Toevoegen aan project') : 'Opslaan als offerte'}
         </button>
+        {onSaveProject && (
+          <button
+            onClick={onSaveProject}
+            disabled={!projectName.trim() || saving || (shape === 'op-aanvraag' && !opAanvraagFile && !existingAttachmentUrl) || (needsTekening && !schunineZijdenFile && !existingAttachmentUrl)}
+            className="w-full h-11 rounded-xl border border-black/10 text-lx-text-primary text-[13.5px] font-semibold hover:bg-lx-panel-bg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Opslaan en nog een product toevoegen
+          </button>
+        )}
       </div>
       {!projectName.trim() && (
         <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>

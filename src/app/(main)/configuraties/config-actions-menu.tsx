@@ -18,7 +18,7 @@ interface Props {
   canDelete: boolean
   /** Project waar deze regel al bij hoort (winkelmandje) */
   projectId?: string | null
-  /** Toon "Product toevoegen": maakt van deze configuratie een project. Alleen met Tailor-Made toegang. */
+  /** Toon "Product toevoegen": maakt van deze configuratie een project. Voor elk account, ook zonder Tailor-Made. */
   kanProject?: boolean
 }
 

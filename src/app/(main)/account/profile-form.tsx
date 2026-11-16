@@ -41,7 +41,8 @@ function ErrorBanner({ message }: { message: string }) {
   )
 }
 
-function InputField({ label, name, defaultValue, type = 'text', placeholder, readOnly }: {
+function InputField({ label, name, defaultValue, type = 'text', placeholder, readOnly, hint }: {
+  hint?: string
   label: string
   name: string
   defaultValue?: string | null
@@ -116,8 +117,11 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           .join('\t')
       fd.set('address', compose('address'))
       fd.set('shipping_address', hasShippingAddress ? compose('shipping') : '')
-      await updateProfile(fd)
-      setProfileStatus('success')
+      const res = await updateProfile(fd)
+      if (res?.bedrijfBestaatAl) {
+        setProfileError(`Het bedrijf "${res.bedrijfBestaatAl}" bestaat al. Neem contact op met LoooX om je account daaraan te koppelen. De rest is opgeslagen.`)
+        setProfileStatus('error')
+      } else setProfileStatus('success')
     } catch (e) {
       setProfileError(foutTekst(e, 'Er is iets misgegaan'))
       setProfileStatus('error')
@@ -130,7 +134,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     <form onSubmit={handleProfile} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <InputField label="Volledige naam" name="full_name" defaultValue={profile.full_name} placeholder="Jan de Vries" />
-        <InputField label="Bedrijf" name="company" defaultValue={profile.company} placeholder="Interieur BV" />
+        <InputField label="Bedrijf" name="company" defaultValue={profile.company} placeholder="Interieur BV" readOnly={!!profile.company?.trim()} hint={profile.company?.trim() ? 'Bedrijf wijzigen? Neem contact op met LoooX.' : undefined} />
         <InputField label="Telefoonnummer" name="phone" defaultValue={profile.phone} placeholder="+31 6 12345678" />
         <InputField label="E-mailadres" name="email" defaultValue={profile.email} readOnly />
       </div>

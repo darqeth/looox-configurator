@@ -78,7 +78,7 @@ function AddressFields({ prefix, defaults }: { prefix: string; defaults: ParsedA
         <InputField label="Huisnr." name={`${prefix}_huisnummer`} defaultValue={defaults.huisnummer} placeholder="10A" />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <InputField label="Woonplaats" name={`${prefix}_woonplaats`} defaultValue={defaults.woonplaats} placeholder="Amsterdam" />
+        <InputField label="Postcode en plaats" name={`${prefix}_woonplaats`} defaultValue={defaults.woonplaats} placeholder="1234 AB Amsterdam" />
         <InputField label="Provincie" name={`${prefix}_provincie`} defaultValue={defaults.provincie} placeholder="Noord-Holland" />
       </div>
       <div>

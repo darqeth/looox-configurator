@@ -549,8 +549,8 @@ function OrderButtonInner({ configId, configName, metaSummary, price, korting, i
                           </div>
                           <div className="grid grid-cols-2 gap-2.5">
                             <div>
-                              <label className={labelCls}>Woonplaats</label>
-                              <input type="text" value={altWoonplaats} onChange={e => setAltWoonplaats(e.target.value)} placeholder="Amsterdam" className={inputCls} />
+                              <label className={labelCls}>Postcode en plaats</label>
+                              <input type="text" value={altWoonplaats} onChange={e => setAltWoonplaats(e.target.value)} placeholder="1234 AB Amsterdam" className={inputCls} />
                             </div>
                             <div>
                               <label className={labelCls}>Provincie</label>

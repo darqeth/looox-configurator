@@ -278,7 +278,7 @@ export default function ProjectBestellen({ projectId, naam, regels: alleRegels, 
                           </label>
                         </div>
                         <div className="grid grid-cols-2 gap-2.5">
-                          <label><span className={labelCls}>Woonplaats</span>
+                          <label><span className={labelCls}>Postcode en plaats</span>
                             <input type="text" maxLength={100} value={alt.woonplaats} onChange={(e) => setAlt({ ...alt, woonplaats: e.target.value })} className={inputCls} />
                           </label>
                           <label><span className={labelCls}>Provincie</span>

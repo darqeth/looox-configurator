@@ -171,7 +171,8 @@ export function BestellingenContent({ page, view }: { page: string; view: string
               : '—'
 
             const price = Number(order.total_price)
-            const unitPrice = Number(order.unit_price)
+            // orders.unit_price is bij maatwerkspiegels bruto; hier staat netto, dus per stuk uit het nettototaal
+            const unitPrice = order.quantity > 0 ? Math.round((price / order.quantity) * 100) / 100 : price
             const priceSubLabel = order.quantity > 1
               ? `€${unitPrice.toLocaleString('nl-NL')} p.st.`
               : 'Netto ex. BTW'

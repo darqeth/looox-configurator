@@ -30,6 +30,19 @@ export type VisualisationConfig = {
 
 export const VISUALISATION_SHAPES = ['rechthoek', 'rounded-rect', 'rond', 'organic', 'ovaal', 'arc']
 
+// Beelden uit de wizard hebben nog geen configuratie. Bij opslaan gaan deze id's mee,
+// zodat het vinkje voor de offerte bij de juiste configuratie terechtkomt.
+const LOS = 'lx-viz-los'
+export function losseBeelden(): string[] {
+  try { return JSON.parse(sessionStorage.getItem(LOS) ?? '[]') as string[] } catch { return [] }
+}
+function onthoudLosBeeld(id: string) {
+  try { sessionStorage.setItem(LOS, JSON.stringify([...losseBeelden(), id].slice(-20))) } catch {}
+}
+export function losseBeeldenKlaar() {
+  try { sessionStorage.removeItem(LOS) } catch {}
+}
+
 export function VisualisationButton({ config, configurationId, variant = 'knop' }: {
   config: VisualisationConfig
   configurationId?: string | null
@@ -112,6 +125,7 @@ function VisualisationModal({ config, configurationId, onClose }: {
         return
       }
       setResults(r => ({ ...r, [sceneId]: { url: res.url, visualisationId: res.visualisationId, inPdf: false } }))
+      if (!configurationId) onthoudLosBeeld(res.visualisationId)
       setStatus(s => s ? { ...s, dailyUsed: res.dailyUsed, bonus: res.bonus } : s)
     } catch {
       toast('Genereren mislukt. Probeer het opnieuw.')

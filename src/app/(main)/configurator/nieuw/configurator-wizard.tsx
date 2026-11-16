@@ -1,5 +1,7 @@
 'use client'
 
+import { losseBeelden, losseBeeldenKlaar } from '@/components/visualisation-modal'
+
 import { useNieuwProject, nieuwProjectActief, nieuwProjectKlaar } from '@/lib/nieuw-project'
 import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
@@ -333,6 +335,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
 
   const clearDraft = () => {
     clearSharedDraft()
+    losseBeeldenKlaar()
     setDraftAvailable(false)
   }
 
@@ -422,9 +425,9 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
         lunaMuurZijde,
       }
       if (isEditing && initialConfig) {
-        await updateConfiguration({ ...payload, configId: initialConfig.id })
+        await updateConfiguration({ ...payload, visualisationIds: losseBeelden(), configId: initialConfig.id })
       } else {
-        nieuwProjectId = (await saveConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject: !project && (nieuwProject === true || nieuwProjectActief()) })).projectId
+        nieuwProjectId = (await saveConfiguration({ ...payload, visualisationIds: losseBeelden(), projectId: project?.id ?? null, nieuwProject: !project && (nieuwProject === true || nieuwProjectActief()) })).projectId
         nieuwProjectKlaar()
       }
       setSaved(true)

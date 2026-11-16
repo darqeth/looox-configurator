@@ -50,6 +50,8 @@ type SaveConfigInput = {
   nieuwProject?: boolean
   nalopen?: boolean
   aiNotities?: string[]
+  /** Sfeerbeelden die in de wizard zijn gemaakt, nog zonder configuratie */
+  visualisationIds?: string[]
   attachmentUrl?: string | null
   solMeubelHoogte?: number
   solOnderkant?: number
@@ -77,6 +79,18 @@ async function assertConfiguratorAccess(
       ? 'Dit account heeft geen toegang tot de maatwerk-configurator'
       : 'Dit account heeft geen toegang tot de projectspiegel-configurator')
   }
+}
+
+/**
+ * Een sfeerbeeld dat in de wizard is gemaakt hangt nog aan geen configuratie; zonder deze
+ * koppeling komt het vinkje "Toon in consumentenofferte" nooit in de PDF terecht.
+ */
+async function koppelVisualisaties(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, configId: string, ids: unknown) {
+  const geldig = (Array.isArray(ids) ? ids : []).filter((id): id is string => z.string().uuid().safeParse(id).success).slice(0, 20)
+  if (geldig.length === 0) return
+  const { error } = await supabase.from('visualisations').update({ configuration_id: configId })
+    .in('id', geldig).eq('user_id', userId).is('configuration_id', null)
+  if (error) console.error('[visualisatie-koppelen]', error.message)
 }
 
 export async function saveConfiguration(rawInput: SaveConfigInput): Promise<{ projectId: string | null }> {
@@ -125,7 +139,7 @@ export async function saveConfiguration(rawInput: SaveConfigInput): Promise<{ pr
   // Project (winkelmandje): naam en referentie volgen dan het project
   const doel = await bepaalProjectDoel(supabase, { projectId: input.projectId, nieuwProject: input.nieuwProject, naam: input.projectName, referentie: input.reference })
 
-  const { error } = await supabase.from('configurations').insert({
+  const { data: nieuw, error } = await supabase.from('configurations').insert({
     user_id: user.id,
     product_id: DEFAULT_PRODUCT_ID,
     name: doel?.naam ?? input.projectName,
@@ -135,9 +149,10 @@ export async function saveConfiguration(rawInput: SaveConfigInput): Promise<{ pr
     status: input.status,
     article_number: generateArticleNumber(),
     project_id: doel?.projectId ?? null,
-  })
+  }).select('id').single()
 
   if (error) throw new Error(error.message)
+  await koppelVisualisaties(supabase, user.id, nieuw.id, rawInput.visualisationIds)
 
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
@@ -237,6 +252,7 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
 
   if (error) throw new Error(error.message)
   if (!data || data.length === 0) throw new Error('Configuratie niet gevonden of geen rechten om op te slaan')
+  await koppelVisualisaties(supabase, user.id, input.configId, (rawInput as { visualisationIds?: unknown }).visualisationIds)
 
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')

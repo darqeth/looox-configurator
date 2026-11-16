@@ -2,6 +2,7 @@
 
 import { leesMeubel, meubelKort, tekenInvoer } from '@/lib/meubel-opslag'
 
+import type { SidebarData } from '@/lib/sidebar-data'
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import OrderButton from './order-button'
@@ -49,6 +50,10 @@ export function ConfiguratiesContent({
     queryKey: ['configurations', { filter, view, page }],
     queryFn: () => fetchConfigurations({ filter, view, page: Number(page) }),
   })
+
+  // Aantal open projecten uit het menu: bij een lege lijst wijzen we daarheen
+  const { data: menu } = useQuery<SidebarData>({ queryKey: ['sidebar'], enabled: false })
+  const projectCount = menu?.projectCount ?? 0
 
   if (!data) return <ConfiguratiesContentSkeleton />
 
@@ -340,7 +345,11 @@ export function ConfiguratiesContent({
             </p>
             {!viewingName && (
               <>
-                <p className="text-[13px] text-lx-text-secondary mb-5">Maak je eerste configuratie en sla hem hier op.</p>
+                <p className="text-[13px] text-lx-text-secondary mb-5">
+                  {projectCount > 0
+                    ? <>Hier staan losse configuraties. Wat je in een project hebt gezet, vind je onder <Link href="/projecten" className="font-semibold text-lx-cta hover:underline">Projecten</Link>.</>
+                    : 'Maak je eerste configuratie en sla hem hier op.'}
+                </p>
                 <Link href="/configurator/nieuw" className="inline-flex items-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors">
                   Nieuwe configuratie
                 </Link>

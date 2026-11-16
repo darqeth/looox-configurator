@@ -1,5 +1,6 @@
 'use client'
 
+import { useNieuwProject, nieuwProjectActief, nieuwProjectKlaar } from '@/lib/nieuw-project'
 import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -161,6 +162,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   // Step 4: save info
   const [projectName, setProjectName] = useState(project?.naam ?? initialConfig?.projectName ?? '')
   const [reference, setReference] = useState(project?.referentie ?? initialConfig?.reference ?? '')
+  // Begonnen via "Nieuw project": de naam staat er al en opslaan maakt er een project van
+  useNieuwProject(!project && !initialConfig, setProjectName)
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [mmsQuantity, setMmsQuantity] = useState(initialConfig?.mmsQuantity ?? 0)
   const [schunineZijdenFile, setSchunineZijdenFile] = useState<File | null>(null)
@@ -421,7 +424,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
       if (isEditing && initialConfig) {
         await updateConfiguration({ ...payload, configId: initialConfig.id })
       } else {
-        nieuwProjectId = (await saveConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject: !project && nieuwProject === true })).projectId
+        nieuwProjectId = (await saveConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject: !project && (nieuwProject === true || nieuwProjectActief()) })).projectId
+        nieuwProjectKlaar()
       }
       setSaved(true)
       clearDraft()

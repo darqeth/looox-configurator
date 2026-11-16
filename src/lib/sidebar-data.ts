@@ -110,14 +110,17 @@ export async function fetchSidebarData(
   // Vereist supabase/sidebar-rpc-migration.sql; zolang die niet is uitgevoerd
   // valt dit automatisch terug op het oude query-pad.
   // De projectgegevens lopen parallel mee, zodat het menu er geen extra wachttijd door krijgt
-  const [{ data: rpc, error }, projecten] = await Promise.all([
+  const [{ data: rpc, error }, projecten, { data: orderRegels }] = await Promise.all([
     supabase.rpc('get_sidebar_data'),
     fetchProjectMenu(supabase, userId),
+    // Een projectbestelling staat per regel in de database; het menu telt hem als één bestelling
+    supabase.from('orders').select('id, order_group').eq('user_id', userId).limit(5000),
   ])
   const basis = !error && rpc ? buildFromRpc(rpc as SidebarRpcResult) : await fetchSidebarDataLegacy(supabase, userId)
   // Configuraties telt alleen losse configuraties; regels van een project staan onder Projecten
   const { projectRegelCount, ...menu } = projecten
-  return { ...basis, ...menu, configCount: Math.max(0, basis.configCount - projectRegelCount) }
+  const orderCount = orderRegels ? new Set(orderRegels.map((o) => (o.order_group as string | null) ?? (o.id as string))).size : basis.orderCount
+  return { ...basis, ...menu, orderCount, configCount: Math.max(0, basis.configCount - projectRegelCount) }
 }
 
 // Open projecten (winkelmandjes) voor het menu. Faalt stil: het menu blijft dan gewoon zonder dit item.

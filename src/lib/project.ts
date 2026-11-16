@@ -150,3 +150,27 @@ export function projectKop(configs: ProjectConfigRij[]): { naam: string; referen
 export function isUuid(v: unknown): v is string {
   return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
 }
+
+/**
+ * Seintje als spiegel en meubel niet meer bij elkaar passen, bijvoorbeeld nadat het
+ * meubel breder is gemaakt. Alleen bij één wastafelmeubel met een rechte spiegel die
+ * breder is dan het meubel, of er net naast zit (tot 20 cm verschil).
+ */
+export function maatSeintje(configs: ProjectConfigRij[]): string | null {
+  const open = configs.filter((c) => c.status !== 'ordered')
+  const meubels = open.map((c) => leesMeubel(c.selected_options)).filter((m) => m && !m.model.artikel && !m.model.plank && !m.model.kast && (m.model.categorie === 'wastafelmeubels' || m.model.categorie === 'solid-surface'))
+  if (meubels.length !== 1 || !meubels[0]) return null
+  const meubelMm = meubels[0].lengte
+  for (const c of open) {
+    const opts = (c.selected_options ?? {}) as Record<string, unknown>
+    if (leesMeubel(opts) || !c.width || opts.shape === 'projectspiegel' || opts.shape === 'rond') continue
+    const spiegelMm = Number(c.width) * 10
+    const verschil = spiegelMm - meubelMm
+    if (verschil === 0 || verschil < -200) continue
+    const cm = (mm: number) => `${(mm / 10).toLocaleString('nl-NL')} cm`
+    return verschil > 0
+      ? `De spiegel (${cm(spiegelMm)}) is breder dan het meubel (${cm(meubelMm)}). Klopt dat nog?`
+      : `De spiegel (${cm(spiegelMm)}) en het meubel (${cm(meubelMm)}) zijn niet even breed. Klopt dat nog?`
+  }
+  return null
+}

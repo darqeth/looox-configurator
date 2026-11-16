@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { generateArticleNumber } from '@/lib/actions/configurator-helpers'
 
 // Projecten (winkelmandje): zie src/lib/project.ts. Alle toegang loopt via de
 // bestaande RLS op configurations; hier staan geen eigen rechtenregels.
@@ -31,6 +32,28 @@ export async function startProjectVanConfig(configId: string): Promise<{ project
   revalidatePath('/configuraties')
   revalidatePath('/dashboard')
   return { projectId }
+}
+
+/** Kopie van een regel in hetzelfde project, om daarna aan te passen (tweede spiegel, andere maat). */
+export async function kopieerRegel(configId: string): Promise<void> {
+  if (!z.string().uuid().safeParse(configId).success) throw new Error('Ongeldige configuratie')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Niet ingelogd')
+
+  const { data: bron } = await supabase.from('configurations').select('*').eq('id', configId).maybeSingle()
+  if (!bron || !bron.project_id) throw new Error('Regel niet gevonden')
+  const { data: regels } = await supabase.from('configurations').select('status').eq('project_id', bron.project_id)
+  if ((regels ?? []).some((r) => r.status === 'ordered')) throw new Error('Aan een besteld project kan niets meer worden toegevoegd')
+
+  // Eigen nummer en eigen datums; de inhoud (ook een geüploade tekening) is gelijk aan de bron
+  const { id: _id, created_at: _aangemaakt, updated_at: _bijgewerkt, ...rest } = bron as Record<string, unknown>
+  void _id; void _aangemaakt; void _bijgewerkt
+  const { error } = await supabase.from('configurations').insert({ ...rest, user_id: user.id, status: 'saved', article_number: generateArticleNumber() })
+  if (error) throw new Error(error.message)
+
+  revalidatePath(`/projecten/${bron.project_id}`)
+  revalidatePath('/dashboard')
 }
 
 /** Naam en referentie van het project wijzigen: dat zijn de naam en referentie van elke regel. */

@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft, Download, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { hasMeubelAccess } from '@/lib/meubel-access'
-import { isUuid, projectKop, projectRegel, projectTotaal } from '@/lib/project'
+import { isUuid, projectKop, projectRegel, projectTotaal, maatSeintje } from '@/lib/project'
 import { formatCents } from '@/lib/meubel-config'
 import ProjectNaam from './project-naam'
 import RegelActies from './regel-acties'
@@ -45,6 +45,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const totaal = projectTotaal(regels)
   // Deelbestelling: regels kunnen los besteld zijn. Zodra er iets besteld is, ligt de samenstelling vast.
   const ietsBesteld = regels.some((r) => r.besteld)
+  // Past de spiegel nog bij het meubel, bijvoorbeeld na een maatwijziging?
+  const seintje = maatSeintje(configs)
   const allesBesteld = regels.every((r) => r.besteld)
   const heeftNetto = regels.some((r) => r.netto)
   const heeftBruto = regels.some((r) => !r.netto && !r.opAanvraag)
@@ -122,6 +124,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </p>
       )}
 
+      {seintje && (
+        <p role="note" className="text-[12.5px] text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">{seintje}</p>
+      )}
+
       <div className="bg-white rounded-[18px] border border-black/6 shadow-sm overflow-hidden">
         <ul className="divide-y divide-lx-divider">
           {regels.map((r) => (
@@ -148,7 +154,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 </p>
               </div>
               {!r.besteld && r.tekeningOntbreekt && <TekeningUpload configId={r.id} tekenen={r.tekenen} />}
-              {!r.besteld && <RegelActies configId={r.id} titel={r.titel} laatste={regels.length === 1} />}
+              {!r.besteld && <RegelActies configId={r.id} titel={r.titel} laatste={regels.length === 1} kopieerbaar={!ietsBesteld} />}
             </li>
           ))}
         </ul>

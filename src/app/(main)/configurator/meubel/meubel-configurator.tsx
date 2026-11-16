@@ -23,6 +23,7 @@ import { betaaldeGaten, kommenCompleet, werkGaten, type Gat, type KomMaat, type 
 import GatenEditor from './gaten-editor'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { startProjectVanConfig } from '@/lib/actions/project'
+import { useNieuwProject, nieuwProjectActief, nieuwProjectKlaar } from '@/lib/nieuw-project'
 import { MeubelTekening } from './meubel-tekening'
 import MeubelAiBalk from './meubel-ai-balk'
 import type { MeubelVoorstel } from '@/lib/meubel-ai'
@@ -210,6 +211,8 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   const [quantity, setQuantity] = useState(initialConfig?.quantity ?? 1)
   const [projectName, setProjectName] = useState(project?.naam ?? initialConfig?.projectName ?? '')
   const [reference, setReference] = useState(project?.referentie ?? initialConfig?.reference ?? '')
+  // Begonnen via "Nieuw project": de naam staat er al en opslaan maakt er een project van
+  useNieuwProject(!project && !initialConfig, setProjectName)
   const [description, setDescription] = useState(initialConfig?.description ?? '')
   // Na het opslaan van een los meubel: vraag of er nog iets bij moet
   const [nogIets, setNogIets] = useState<{ configId: string; waskom: boolean; spiegel: boolean } | null>(null)
@@ -474,7 +477,8 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
         const payload = { ...basis, attachmentUrl: zelfTekenen ? null : await uploadTekening() }
         const opgeslagen = initialConfig?.id
           ? { id: initialConfig.id, ...await updateMeubelConfiguration(initialConfig.id, payload) }
-          : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject })
+          : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject: nieuwProject || (!project && nieuwProjectActief()) })
+        nieuwProjectKlaar()
         // Een regel van een project gaat terug naar het project
         if (opgeslagen.projectId) return router.push(`/projecten/${opgeslagen.projectId}`)
         // Losse configuratie: eerst vragen of er nog een waskom of spiegel bij moet, dan naar de lijst

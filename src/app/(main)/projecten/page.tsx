@@ -4,6 +4,7 @@ import { ChevronRight, ShoppingCart } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { projectKop, projectRegel, projectTotaal, type ProjectConfigRij } from '@/lib/project'
 import { formatCents } from '@/lib/meubel-config'
+import NieuwProjectKnop from './nieuw-project-knop'
 
 export const metadata = { title: 'Projecten | LoooX Configurator' }
 
@@ -48,9 +49,12 @@ export default async function ProjectenPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 w-full max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">Projecten</h1>
-        <p className="text-[13px] text-lx-text-secondary mt-0.5">Meerdere producten samen in één offerte en één bestelling</p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[20px] font-bold text-lx-text-primary tracking-tight">Projecten</h1>
+          <p className="text-[13px] text-lx-text-secondary mt-0.5">Meerdere producten samen in één offerte en één bestelling</p>
+        </div>
+        {projecten.length > 0 && <NieuwProjectKnop />}
       </div>
 
       {projecten.length === 0 ? (
@@ -60,11 +64,9 @@ export default async function ProjectenPage() {
           </div>
           <p className="text-[14px] font-semibold text-lx-text-primary mb-1">Nog geen projecten</p>
           <p className="text-[13px] text-lx-text-secondary max-w-md mx-auto leading-relaxed">
-            Kies bij het opslaan van een product voor &ldquo;Opslaan en nog een product toevoegen&rdquo;, of open het menu van een configuratie en kies &ldquo;Product toevoegen&rdquo;.
+            Een project is één klant met alles wat erbij hoort. Geef het een naam en kies het eerste product, de rest voeg je daarna toe.
           </p>
-          <Link href="/configurator/nieuw" className="inline-flex items-center gap-2 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors mt-5">
-            Nieuwe configuratie
-          </Link>
+          <div className="mt-5"><NieuwProjectKnop primair /></div>
         </div>
       ) : (
         <div className="space-y-6">

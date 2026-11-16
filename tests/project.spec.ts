@@ -134,3 +134,28 @@ test.describe('spiegelKenmerken', () => {
     expect(spiegelKenmerken({ shape: 'rechthoek', directLight: { position: 'geen' }, indirectLight: { position: 'geen' } })).toBe('Zonder verlichting')
   })
 })
+
+import { maatSeintje } from '../src/lib/project'
+
+test.describe('Project: seintje spiegel en meubel', () => {
+  const meubel = (lengte: number) => ({ ...basis, id: 'm', width: null, height: null, total_price: 1000, selected_options: meubelOpts({ lengte }) })
+  const spiegel = (width: number, shape = 'rechthoek') => ({ ...basis, id: 's', width, height: 70, total_price: 400, selected_options: { shape, quantity: 1 } })
+
+  test('even breed: geen seintje', () => {
+    expect(maatSeintje([meubel(1200), spiegel(120)])).toBeNull()
+  })
+  test('meubel breder gemaakt: seintje', () => {
+    expect(maatSeintje([meubel(1300), spiegel(120)])).toBe('De spiegel (120 cm) en het meubel (130 cm) zijn niet even breed. Klopt dat nog?')
+  })
+  test('spiegel breder dan meubel: seintje', () => {
+    expect(maatSeintje([meubel(1200), spiegel(140)])).toContain('is breder dan het meubel')
+  })
+  test('bewust veel smallere of ronde spiegel: geen seintje', () => {
+    expect(maatSeintje([meubel(1600), spiegel(80)])).toBeNull()
+    expect(maatSeintje([meubel(1200), spiegel(110, 'rond')])).toBeNull()
+  })
+  test('zonder meubel of met twee meubels: geen seintje', () => {
+    expect(maatSeintje([spiegel(120)])).toBeNull()
+    expect(maatSeintje([meubel(1300), { ...meubel(1500), id: 'm2' }, spiegel(120)])).toBeNull()
+  })
+})

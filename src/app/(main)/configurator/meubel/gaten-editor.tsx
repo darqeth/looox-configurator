@@ -21,8 +21,8 @@ type Soort = Gat['soort']
 const SNAP_MM = 15
 
 const LEGENDA: Record<Soort, { naam: string; hulp: string }> = {
-  sifon: { naam: 'Sifongat', hulp: 'Het gat onder de waskom. Klik op het blad, of op een bolletje midden boven een lade. Daarna kun je het slepen of de maten typen. Tijdens het slepen zie je een waskom van 40 cm als hulplijn. Boven een tussenschot kost 1 uitsparing extra.' },
-  kraan: { naam: 'Kraangat', hulp: 'Klik op het blad waar het kraangat moet komen. Daarna kun je het slepen of de maten typen. Boven een tussenschot kost 1 uitsparing extra.' },
+  sifon: { naam: 'Afvoergat', hulp: 'Het gat voor de afvoer, recht onder de waskom (ook wel sifongat). Klik op het blad, of op een bolletje midden boven een lade. Daarna kun je het slepen of de maten typen. Tijdens het slepen zie je een waskom van 40 cm als hulplijn. Staat het boven het schot tussen twee lades, dan telt het als 2 gaten.' },
+  kraan: { naam: 'Kraangat', hulp: 'Het gat voor een kraan die op het blad staat. Klik op het blad waar de kraan moet komen. Daarna kun je het slepen of de maten typen. Staat het boven het schot tussen twee lades, dan telt het als 2 gaten.' },
   kom: { naam: 'Waskom', hulp: 'Klik op een bolletje om de waskom boven die lade te plaatsen.' },
   'kraan-kom': { naam: 'Kraangat', hulp: 'Klik op het plusje achter een waskom. Het gat schuift daarna naar links of rechts.' },
 }
@@ -401,7 +401,7 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
             ? <p role="alert" className="text-[12.5px] text-red-700 bg-red-50 rounded-lg px-3 py-2">{melding}</p>
             : (hap || overRand) && (
               <p role="status" className="text-[12.5px] text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
-                {hap && `Dit gat staat boven een tussenschot. Er moet dan een stuk uit het schot: dat is 1 uitsparing extra${prijsPerStuk ? ` (${prijsPerStuk})` : ''}. `}
+                {hap && `Dit gat staat boven het schot tussen twee lades. Daar moet dan ook een stuk uit: dat telt als 1 gat extra${prijsPerStuk ? ` (${prijsPerStuk})` : ''}. `}
                 {overRand && 'Let op: een waskom van 40 cm steekt hier over de rand van het blad.'}
               </p>
             )}
@@ -447,9 +447,9 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
         <div className="sticky bottom-0 z-10 bg-white mt-3 pt-3 pb-4 sm:pb-6 -mb-4 sm:-mb-6 border-t border-lx-divider flex flex-wrap items-center justify-between gap-3">
           <p className="text-[12.5px] text-lx-text-secondary" aria-live="polite">
             {!hout && `${kommen.length} van ${context.komAantal} ${context.komAantal === 1 ? 'waskom' : 'waskommen'} geplaatst · `}
-            {aantal === 0 ? 'Geen uitsparingen' : `${aantal} ${aantal === 1 ? 'uitsparing' : 'uitsparingen'}`}
+            {aantal === 0 ? 'Geen gaten' : `${aantal} ${aantal === 1 ? 'gat' : 'gaten'} te maken`}
             {aantal > 0 && prijsPerStuk && `, ${prijsPerStuk} per stuk`}
-            {hout && aantal === 0 && '. Zonder gaten bestellen mag: je maakt ze dan zelf.'}
+            {hout && aantal === 0 && '. Weet je de plek nog niet? Zonder gaten bestellen mag, de monteur boort ze dan zelf.'}
           </p>
           <div className="flex items-center gap-2 ml-auto">
             {nogTePlaatsen && <span className="text-[12px] text-amber-700">Plaats nog {context.komAantal - kommen.length === 1 ? 'een waskom' : 'de waskommen'} om te kunnen bestellen.</span>}

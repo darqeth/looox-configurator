@@ -96,15 +96,15 @@ export default function MeubelConfigurator(props: Props) {
       key={voorstel?.nr ?? 0}
       {...props}
       initialConfig={voorstel?.config ?? props.initialConfig}
-      onVoorstel={(v, meldingen) => setVoorstel((vorige) => ({
+      onVoorstel={(v, meldingen, projectnaam) => setVoorstel((vorige) => ({
         nr: (vorige?.nr ?? 0) + 1,
-        config: { ...v.config, aiNotities: [...v.meldingen, ...meldingen], nalopen: true, projectName: '', reference: '', description: '' },
+        config: { ...v.config, aiNotities: [...v.meldingen, ...meldingen], nalopen: true, projectName: projectnaam, reference: '', description: '' },
       }))}
     />
   )
 }
 
-function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig, project, startCategorie, onVoorstel }: Props & { onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[]) => void }) {
+function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig, project, startCategorie, onVoorstel }: Props & { onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[], projectnaam: string) => void }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const isEditing = !!initialConfig?.id
@@ -169,6 +169,15 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
     window.addEventListener('popstate', opTerug)
     return () => window.removeEventListener('popstate', opTerug)
   }, [])
+  // Tabblad sluiten of verversen met een niet opgeslagen meubel: de browser vraagt eerst om bevestiging
+  const opgeslagenRef = useRef(false)
+  const heeftWerk = step >= 2 && !!basisModel
+  useEffect(() => {
+    if (!heeftWerk) return
+    const waarschuw = (e: BeforeUnloadEvent) => { if (!opgeslagenRef.current) e.preventDefault() }
+    window.addEventListener('beforeunload', waarschuw)
+    return () => window.removeEventListener('beforeunload', waarschuw)
+  }, [heeftWerk])
   const [lengteTekst, setLengteTekst] = useState(String(initialConfig?.lengte ?? 1200))
   // Laatste geldige lengte: tekening en opties blijven staan terwijl je typt
   const [laatsteLengte, setLaatsteLengte] = useState(initialConfig?.lengte ?? 1200)
@@ -478,6 +487,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
         const opgeslagen = initialConfig?.id
           ? { id: initialConfig.id, ...await updateMeubelConfiguration(initialConfig.id, payload) }
           : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject: nieuwProject || (!project && nieuwProjectActief()) })
+        opgeslagenRef.current = true
         nieuwProjectKlaar()
         // Een regel van een project gaat terug naar het project
         if (opgeslagen.projectId) return router.push(`/projecten/${opgeslagen.projectId}`)
@@ -1222,10 +1232,10 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                       ? <span className="text-lx-text-primary font-medium">
                           {model.waskom && <>{gaten.filter((g) => g.soort === 'kom').length} van {waskomAantal} {waskomAantal === 1 ? 'waskom' : 'waskommen'} geplaatst · </>}
                           {gatenGetekend === 0 ? 'geen gaten' : `${gatenGetekend} ${gatenGetekend === 1 ? 'gat' : 'gaten'}`}
-                          {uitsparingenGetekend > gatenGetekend && <span className="font-normal text-lx-text-secondary"> · {uitsparingenGetekend} uitsparingen, want een gat staat boven een tussenschot</span>}
-                          {prijsPerUitsparing && gatenGetekend > 0 && <span className="font-normal text-lx-text-secondary">, {prijsPerUitsparing} per {uitsparingenGetekend > gatenGetekend ? 'uitsparing' : 'stuk'}</span>}
+                          {uitsparingenGetekend > gatenGetekend && <span className="font-normal text-lx-text-secondary"> · telt als {uitsparingenGetekend}, want een gat staat boven het schot tussen twee lades</span>}
+                          {prijsPerUitsparing && gatenGetekend > 0 && <span className="font-normal text-lx-text-secondary">, {prijsPerUitsparing} per stuk</span>}
                         </span>
-                      : model.waskom ? 'Plaats de waskom in de tekening.' : 'Niet verplicht: zonder gaten bestellen mag, dan maak je ze zelf.'}
+                      : model.waskom ? 'Plaats de waskom in de tekening.' : 'Niet verplicht. Weet je de plek nog niet, dan boort de monteur de gaten zelf.'}
                   </p>
                   {tekening.vervallen > 0 && !geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-1.5">De tekening past niet meer helemaal bij deze maten. Wat niet past, telt niet mee. Open de tekening om het opnieuw te plaatsen.</p>}
                   {geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-1.5">Boven deze lades past geen waskom: een lade moet minstens 15 cm breder zijn dan de waskom. Kies minder lades of een langer meubel, of lever een eigen tekening aan.</p>}

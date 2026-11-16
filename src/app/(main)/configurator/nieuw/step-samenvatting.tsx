@@ -14,6 +14,8 @@ import {
   KRAANGAT_OPTIE_ID,
   formatKraangat,
   calcTotalPrice,
+  DIRECT_LIGHT_POSITIONS,
+  INDIRECT_LIGHT_POSITIONS,
 } from '@/lib/configurator-config'
 import { LightConfig } from './step-verlichting'
 import { useEffect, useState } from 'react'
@@ -204,8 +206,8 @@ export default function StepSamenvatting({
         <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-2">Configuratie</p>
         <Row label="Vorm" value={shapeName} onEdit={() => onGoToStep(0)} />
         <Row label="Afmeting" value={`${getDimensionSummary(shape, width, height, diameter, organicSizeKey, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde)} · ${glasKleurNaam}`} onEdit={() => onGoToStep(1)} />
-        <Row label="Directe verlichting" value={getLightSummary(directLight)} onEdit={() => onGoToStep(2)} />
-        <Row label="Indirecte verlichting" value={getLightSummary(indirectLight)} onEdit={() => onGoToStep(2)} />
+        {(DIRECT_LIGHT_POSITIONS[shape]?.length ?? 0) > 0 && <Row label="Directe verlichting" value={getLightSummary(directLight)} onEdit={() => onGoToStep(2)} />}
+        {(INDIRECT_LIGHT_POSITIONS[shape]?.length ?? 0) > 0 && <Row label="Indirecte verlichting" value={getLightSummary(indirectLight)} onEdit={() => onGoToStep(2)} />}
         <Row label="Extra opties" value={selectedOptionNames || 'Geen'} onEdit={() => onGoToStep(3)} />
       </div>
 

@@ -82,6 +82,31 @@ export function DashboardContent({ data }: { data: DashboardData }) {
 
   return (
     <>
+      {/* Welkom: alleen zolang er nog niets is samengesteld */}
+      {(totalConfigCount ?? 0) === 0 && (
+        <div className="bg-white rounded-[18px] border border-lx-cta/30 shadow-sm p-5 sm:p-6 mb-5">
+          <p className="text-[16px] font-semibold text-lx-text-primary">Welkom bij de LoooX configurator</p>
+          <p className="text-[13.5px] text-lx-text-secondary mt-1">Hier stel je spiegels en meubels op maat samen en bestel je ze direct bij LoooX. Zo werkt het:</p>
+          <ol className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            {[
+              ['Stel samen', 'Kies een spiegel of meubel en vul de maten in. Je ziet meteen de prijs.'],
+              ['Bewaar per klant', 'Alles voor één klant zet je in een project. Daar maak je ook de offerte.'],
+              ['Bestel', 'Opslaan is nog geen bestellen. Je bestelt pas als je op Bestellen klikt.'],
+            ].map(([kop, tekst], i) => (
+              <li key={kop} className="rounded-xl bg-lx-panel-bg p-4">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-lx-cta text-white text-[12px] font-semibold">{i + 1}</span>
+                <p className="text-[13.5px] font-semibold text-lx-text-primary mt-2">{kop}</p>
+                <p className="text-[12.5px] text-lx-text-secondary mt-0.5 leading-relaxed">{tekst}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="text-[12.5px] text-lx-text-secondary mt-4">De prijzen die je ziet zijn adviesprijzen voor je klant, exclusief btw.{magInkoop ? ' Je eigen inkoopprijs zie je met het oogje bij de prijs.' : ''}</p>
+          <Link href="/configurator/nieuw" className="inline-flex items-center gap-1.5 h-10 px-5 rounded-xl bg-lx-cta text-white text-[13.5px] font-semibold hover:bg-lx-cta-hover transition-colors mt-4">
+            Eerste product samenstellen <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </div>
+      )}
+
       {/* KPI Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-5">
         <KpiCard

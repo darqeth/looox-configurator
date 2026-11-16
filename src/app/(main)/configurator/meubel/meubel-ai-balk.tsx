@@ -30,9 +30,10 @@ type Uitkomst =
 
 export default function MeubelAiBalk({ projectId, onVoorstel }: {
   projectId?: string | null
-  onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[]) => void
+  onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[], projectnaam: string) => void
 }) {
   const [tekst, setTekst] = useState('')
+  const [naam, setNaam] = useState('')
   const [beeld, setBeeld] = useState<File | null>(null)
   const [uitkomst, setUitkomst] = useState<Uitkomst | null>(null)
   const [bezig, start] = useTransition()
@@ -58,9 +59,10 @@ export default function MeubelAiBalk({ projectId, onVoorstel }: {
           imageBase64: klein ? await naarBase64(klein) : null,
           imageMimeType: klein?.type ?? null,
           projectId: projectId ?? null,
+          projectName: projectId ? null : naam.trim() || null,
         })
         if (!r.success) setUitkomst({ soort: 'fout', tekst: r.error })
-        else if (r.soort === 'meubel') onVoorstel(r.voorstel, r.meldingen)
+        else if (r.soort === 'meubel') onVoorstel(r.voorstel, r.meldingen, r.projectnaam)
         else if (r.soort === 'project') setUitkomst({ soort: 'project', projectId: r.projectId, aantal: r.aantal, meldingen: r.meldingen })
         else setUitkomst({ soort: 'spiegel', meldingen: r.meldingen })
       } catch (e) {
@@ -107,11 +109,22 @@ export default function MeubelAiBalk({ projectId, onVoorstel }: {
               <Paperclip size={14} aria-hidden="true" /> Schets of foto
             </button>
           )}
+          {!projectId && (
+            <input
+              value={naam}
+              onChange={(e) => setNaam(e.target.value)}
+              disabled={bezig}
+              maxLength={120}
+              aria-label="Projectnaam"
+              placeholder="Projectnaam, bijv. naam klant"
+              className="hidden sm:block ml-auto w-52 h-9 rounded-xl border border-black/10 bg-transparent px-3 text-[13px] text-lx-text-primary placeholder:text-lx-text-muted outline-none focus:border-lx-cta disabled:opacity-60"
+            />
+          )}
           <button
             type="button"
             onClick={verstuur}
             disabled={!kan}
-            className="ml-auto inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`${projectId ? 'ml-auto' : 'ml-auto sm:ml-0'} inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {bezig ? 'Het hulpje stelt samen…' : <>Stel samen <ArrowRight size={14} aria-hidden="true" /></>}
           </button>

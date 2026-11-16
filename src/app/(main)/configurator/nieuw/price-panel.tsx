@@ -897,6 +897,11 @@ export default function PricePanel({
   }
 
   const lineItems: { label: string; price: number }[] = []
+  // Elke regel wordt los afgerond; een verschil van een paar euro met het totaal gaat in de eerste regel
+  const afrondRestVan = (totaal: number, factor: number) => {
+    const rest = Math.round(totaal * factor) - lineItems.reduce((s, r) => s + Math.round(r.price * factor), 0)
+    return Math.abs(rest) <= lineItems.length ? rest : 0
+  }
 
   if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc' || shape === 'elips') {
     // Glaskosten (Elips: eigen €/m² placeholder via glasKostenForShape)
@@ -1037,6 +1042,8 @@ export default function PricePanel({
     }
   }
 
+  const afrondRest = afrondRestVan(netto, mult)
+
   return (
     <div className="sticky top-6 space-y-4">
       {/* Preview kaart */}
@@ -1099,7 +1106,7 @@ export default function PricePanel({
                 {lineItems.map((item, i) => (
                   <div key={i} className="flex justify-between gap-2 text-[12px]">
                     <span className="text-lx-text-secondary truncate">{item.label}</span>
-                    <span className="text-lx-text-primary font-semibold flex-shrink-0">€{Math.round(item.price * mult).toLocaleString('nl-NL')}</span>
+                    <span className="text-lx-text-primary font-semibold flex-shrink-0">€{(Math.round(item.price * mult) + (i === 0 ? afrondRest : 0)).toLocaleString('nl-NL')}</span>
                   </div>
                 ))}
                 <div className="flex justify-between gap-2 text-[13px] font-bold pt-1.5 border-t border-lx-divider mt-1.5">

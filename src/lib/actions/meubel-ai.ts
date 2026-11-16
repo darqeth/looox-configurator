@@ -25,7 +25,7 @@ const anthropic = new Anthropic()
 export type MeubelAiResultaat =
   | { success: false; error: string }
   /** Eén meubel: de configurator opent ingevuld, er is nog niets opgeslagen */
-  | { success: true; soort: 'meubel'; voorstel: MeubelVoorstel; meldingen: string[] }
+  | { success: true; soort: 'meubel'; voorstel: MeubelVoorstel; meldingen: string[]; projectnaam: string }
   /** Meerdere producten: regels in een project */
   | { success: true; soort: 'project'; projectId: string; aantal: number; meldingen: string[] }
   /** Alleen een spiegel gevraagd: die stelt de dealer samen in de spiegelconfigurator */
@@ -51,7 +51,7 @@ REGELS
 - Een meubel met ingebouwde waskom (Solid Surface) is één product. Een losse waskom op een houten meubel is een apart product.
 - Houtkleuren (houtkleur): ${houtkleurenTekst()}. Wit = white, zwart = black, naturel of licht eiken = pure. Twijfel je, laat het veld weg.
 - "uitsparingen": aantal gaten in het blad. Elke opbouwwaskom op een houten meubel of plank is 1 uitsparing (voor de afvoer). Een kraan door het blad is er ook 1. Niet bij een meubel met ingebouwde waskom.
-- Noemt of tekent de dealer waskommen zonder type, voeg dan GEEN waskom toe als product. Zet in "opmerkingen": "Er staan N waskommen op de schets. Voeg ze toe aan het project." Noemt hij wel een type, dan is de waskom een eigen product met "aantal".
+- Noemt of tekent de dealer waskommen zonder type, voeg ze dan toe als product "waskom-ceramic" ZONDER "variant", met "aantal". Het systeem vraagt de dealer zelf om de uitvoering. Noemt hij wel een type, kies dan het model en de variant die erbij horen.
 - Maximaal ${AI_MAX_PRODUCTEN} producten.
 
 SCHETS OF FOTO LEZEN
@@ -180,6 +180,8 @@ export async function analyzeMeubelWithAI(input: {
   imageMimeType: string | null
   /** De producten komen als regel bij dit bestaande project */
   projectId?: string | null
+  /** Naam die de dealer vooraf opgeeft; gaat voor op wat het hulpje uit de tekst haalt */
+  projectName?: string | null
 }): Promise<MeubelAiResultaat> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -226,6 +228,7 @@ export async function analyzeMeubelWithAI(input: {
     return { success: false, error: 'Het hulpje is even niet bereikbaar. Probeer het opnieuw of stel het meubel zelf samen.' }
   }
 
+  const eigenNaam = (input.projectName ?? '').trim().slice(0, 120)
   const meldingen: string[] = []
   const ruweProducten = (Array.isArray(uitvoer.producten) ? uitvoer.producten : []).slice(0, AI_MAX_PRODUCTEN) as MeubelAiRuw[]
   const voorstellen: MeubelVoorstel[] = []
@@ -245,10 +248,11 @@ export async function analyzeMeubelWithAI(input: {
     return { success: false, error: meldingen[0] ?? 'Het hulpje herkende geen product uit Tailor-Made. Omschrijf het model, de lengte en het aantal lades.' }
   }
   if (voorstellen.length === 0 && spiegels.length === 1) return { success: true, soort: 'spiegel', meldingen }
-  if (voorstellen.length === 1 && spiegels.length === 0) return { success: true, soort: 'meubel', voorstel: voorstellen[0], meldingen }
+  if (voorstellen.length === 1 && spiegels.length === 0) return { success: true, soort: 'meubel', voorstel: voorstellen[0], meldingen, projectnaam: eigenNaam || (typeof uitvoer.projectnaam === 'string' ? uitvoer.projectnaam.trim().slice(0, 120) : '') }
 
   // Meerdere producten: regels in een project, elk nog na te lopen door de dealer
-  const naam = typeof uitvoer.projectnaam === 'string' && uitvoer.projectnaam.trim() ? uitvoer.projectnaam.trim().slice(0, 120) : `Voorstel hulpje ${datumNl()}`
+  const gevonden = typeof uitvoer.projectnaam === 'string' ? uitvoer.projectnaam.trim().slice(0, 120) : ''
+  const naam = eigenNaam || gevonden || `Voorstel hulpje ${datumNl()}`
   let projectId = input.projectId ?? null
   let aantal = 0
   for (const v of voorstellen) {

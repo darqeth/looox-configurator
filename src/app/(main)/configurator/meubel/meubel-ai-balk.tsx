@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, Paperclip, Sparkles, X } from 'lucide-react'
 import { analyzeMeubelWithAI } from '@/lib/actions/meubel-ai'
 import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
@@ -33,6 +34,7 @@ export default function MeubelAiBalk({ projectId, onVoorstel }: {
   projectId?: string | null
   onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[], projectnaam: string) => void
 }) {
+  const queryClient = useQueryClient()
   const [tekst, setTekst] = useState('')
   const [naam, setNaam] = useState('')
   // Net een nieuw project begonnen: het hulpje zet zijn voorstel in dat project
@@ -66,7 +68,7 @@ export default function MeubelAiBalk({ projectId, onVoorstel }: {
         })
         if (!r.success) setUitkomst({ soort: 'fout', tekst: r.error })
         else if (r.soort === 'meubel') onVoorstel(r.voorstel, r.meldingen, r.projectnaam)
-        else if (r.soort === 'project') { nieuwProjectKlaar(); setUitkomst({ soort: 'project', projectId: r.projectId, aantal: r.aantal, meldingen: r.meldingen }) }
+        else if (r.soort === 'project') { nieuwProjectKlaar(); queryClient.invalidateQueries({ queryKey: ['sidebar'] }); setUitkomst({ soort: 'project', projectId: r.projectId, aantal: r.aantal, meldingen: r.meldingen }) }
         else setUitkomst({ soort: 'spiegel', meldingen: r.meldingen })
       } catch (e) {
         console.error(e)

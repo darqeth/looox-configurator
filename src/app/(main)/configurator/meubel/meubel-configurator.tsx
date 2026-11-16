@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -142,6 +143,7 @@ export default function MeubelConfigurator(props: Props) {
 
 function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig, project, startCategorie, onVoorstel }: Props & { onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[], projectnaam: string) => void }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [isPending, startTransition] = useTransition()
   const isEditing = !!initialConfig?.id
 
@@ -465,6 +467,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
     startTransition(async () => {
       try {
         const { projectId } = await startProjectVanConfig(nogIets.configId)
+        queryClient.invalidateQueries({ queryKey: ['sidebar'] })
         router.push(upsellHref(soort, projectId))
       } catch (e) {
         console.error(e)
@@ -539,6 +542,8 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
           ? { id: initialConfig.id, ...await updateMeubelConfiguration(initialConfig.id, payload) }
           : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject: nieuwProject || (!project && nieuwProjectActief()) })
         opgeslagenRef.current = true
+        // Tellers in het menu (Projecten, Configuraties) meteen bijwerken
+        for (const key of ['sidebar', 'configurations']) queryClient.invalidateQueries({ queryKey: [key] })
         wisMeubelConcept(project?.id ?? null)
         nieuwProjectKlaar()
         // Een regel van een project gaat terug naar het project

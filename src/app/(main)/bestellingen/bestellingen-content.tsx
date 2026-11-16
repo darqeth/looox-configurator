@@ -9,6 +9,7 @@ import { AdminPagination } from '@/components/admin-pagination'
 import { fetchOrders } from '@/lib/queries/fetch-orders'
 import { ProjectBadge, OfferteBadge } from '@/components/project-badge'
 import { formatEuro } from '@/lib/mms'
+import { useMagInkoop } from '@/components/inkoop-oog'
 import { BestellingenContentSkeleton } from './bestellingen-skeleton'
 import { productIcoon } from '@/lib/product-icoon'
 
@@ -45,6 +46,8 @@ function formatDate(iso: string) {
 }
 
 export function BestellingenContent({ page, view }: { page: string; view: string }) {
+  // Bestellingen staan in netto: zonder het recht geen bedragen
+  const magInkoop = useMagInkoop()
   const { data } = useQuery({
     queryKey: ['orders', { view, page }],
     queryFn: () => fetchOrders({ view, page: Number(page) }),
@@ -182,7 +185,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white text-lx-cta">Project</span>
                     <span className="text-[12.5px] font-bold text-lx-text-primary font-mono tracking-wide">{groep}</span>
                     <span className="text-[12px] text-lx-text-secondary flex-1 min-w-0 truncate">
-                      {groepRegels.length} {groepRegels.length === 1 ? 'regel' : 'regels'} · totaal {formatEuro(groepRegels.reduce((som, o) => som + Math.round(Number(o.total_price) * 100), 0) / 100)} netto
+                      {groepRegels.length} {groepRegels.length === 1 ? 'regel' : 'regels'}{magInkoop && ` · totaal ${formatEuro(groepRegels.reduce((som, o) => som + Math.round(Number(o.total_price) * 100), 0) / 100)} netto`}
                     </span>
                     <a href={`/api/pdf/order/groep/${groep}`} download className="text-[12px] font-semibold text-lx-cta hover:underline whitespace-nowrap">
                       Projectorder downloaden
@@ -208,7 +211,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                     <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{(shape === 'op-aanvraag' || meubel?.opAanvraag) && <OfferteBadge className="ml-1.5" />}</p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[11px] text-lx-text-secondary">{dims} · {order.quantity}×</span>
-                      <span className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : formatEuro(price)}</span>
+                      <span className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : magInkoop ? formatEuro(price) : ''}</span>
                     </div>
                     <div className="flex items-center justify-end gap-1 mt-2.5">
                       {config && (
@@ -253,8 +256,8 @@ export function BestellingenContent({ page, view }: { page: string; view: string
 
                   {/* Col: Price */}
                   <div className="w-[92px] flex-shrink-0 text-right">
-                    <p className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : formatEuro(price)}</p>
-                    {shape !== 'op-aanvraag' && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceSubLabel}</p>}
+                    <p className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : magInkoop ? formatEuro(price) : ''}</p>
+                    {shape !== 'op-aanvraag' && magInkoop && <p className="text-[10.5px] text-lx-text-secondary mt-0.5">{priceSubLabel}</p>}
                   </div>
 
                   {/* Col: Status */}

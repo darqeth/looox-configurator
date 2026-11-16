@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { placeMeubelOrder } from '@/lib/actions/orders'
+import { useMagInkoop } from '@/components/inkoop-oog'
 import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatCents, formatPct, getMeubelOrderOpbouw, indelingTekst, meubelAfmeting } from '@/lib/meubel-config'
 import { meubelPrijsInput, type OpgeslagenMeubel, meubelExtraPrijs, tekenInvoer } from '@/lib/meubel-opslag'
 import TekeningUpload from '@/components/tekening-upload'
@@ -36,6 +37,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   const [altShipping, setAltShipping] = useState(false)
   const [alt, setAlt] = useState({ straat: '', huisnummer: '', woonplaats: '', provincie: '', land: 'NL' })
 
+  const magInkoop = useMagInkoop()
   const nettoCents = opAanvraag ? null : calcMeubelNettoCents(meubelPrijsInput(meubel))
   const opbouw = nettoCents !== null ? getMeubelOrderOpbouw(nettoCents, meubel.factor, meubelExtraPrijs(meubel)) : null
   // Staat het meubel niet meer in de prijslijst, dan kan het niet besteld worden
@@ -191,6 +193,14 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
                       <p className="text-[12px] text-lx-text-secondary mt-0.5 leading-relaxed">
                         Dit meubel is groter dan de standaardmaten. Je vraagt een offerte aan; LoooX bepaalt de prijs.
                       </p>
+                    </div>
+                  ) : nettoCents !== null && !magInkoop ? (
+                    <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal bruto ex. BTW</span>
+                        <span className="text-[18px] font-bold text-lx-cta tabular-nums">{formatCents(opbouw!.brutoCents * quantity)}</span>
+                      </div>
+                      <p className="text-[11px] text-lx-text-muted">Je bestelt tegen de inkoopprijs van je bedrijf.</p>
                     </div>
                   ) : nettoCents !== null ? (
                     <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">

@@ -11,7 +11,7 @@ import { Maximize2, X } from 'lucide-react'
 import { toast } from '@/components/toast'
 import { calcMeubelNettoCents,
   MEUBEL_MODELLEN, MEUBEL_CATEGORIEEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_MM, LADE_MAX_MM, MEUBEL_AANTAL_MAX,
-  getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
+  getLengteBereik, getLadeOpties, getPrijsGrens, getMeubelVanafCents, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
@@ -261,6 +261,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {MEUBEL_MODELLEN.filter((m) => m.categorie === categorie).map((m) => {
               const b = getLengteBereik(m)
+              const vanaf = getMeubelVanafCents(m, factor)
               return (
                 <button
                   key={m.id}
@@ -293,6 +294,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                         ? `Breedte ${m.kast.breedtes.join(' / ')} mm · hoogte ${m.kast.hoogtes ? m.kast.hoogtes.join(' / ') : `${getKastHoogteBereik(m)?.min} tot ${getKastHoogteBereik(m)?.max}`} mm · diepte ${m.kast.dieptes.join(' / ')} mm`
                         : `Lengte ${b.min} tot ${b.max} mm · hoogte ${m.hoogtes ? m.hoogtes.join(' / ') : m.hoogte} mm · diepte ${m.diepte} mm`}
                     </p>
+                    {vanaf !== null && <p className="text-[13px] font-semibold text-lx-text-primary mt-2 tabular-nums">Vanaf {formatCents(vanaf)} <span className="font-normal text-lx-text-muted text-[11px]">bruto ex. btw</span></p>}
                   </div>
                 </button>
               )
@@ -386,6 +388,8 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   const prijsInput = { modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing, hoogte: model.hoogte, diepte: model.diepte,
     ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }
   const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw(prijsInput, factor) : null
+  // Uitleg bij een prijssprong: tot waar de prijs van nu geldt
+  const prijsGrens = lengteOk && !opAanvraag ? getPrijsGrens(model, lengte) : null
   // Eigen inkoop: de tabelprijs zonder factor, achter het oogje
   const nettoCents = opbouw ? calcMeubelNettoCents(prijsInput) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
@@ -487,7 +491,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   }
 
   return (
-    <Kader step={step} onStep={setStep} maxStep={geldig ? 3 : 2}>
+    <Kader step={step} onStep={setStep} maxStep={geldig ? 3 : 2} prijs={opbouw ? formatCents(opbouw.totaal) : opAanvraag ? 'Op aanvraag' : undefined}>
       {/* Links: stap */}
       <div className="flex-1 min-w-0 w-full">
         <div className="bg-white rounded-2xl shadow-sm border border-lx-divider p-5">
@@ -621,10 +625,16 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                           className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
                         />
                         <span className="text-[13px] text-lx-text-secondary">mm</span>
+                        {lengteOk && <span className="text-[13px] text-lx-text-muted tabular-nums">= {(lengte / 10).toLocaleString('nl-NL')} cm</span>}
                       </div>
                       <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
                         Hele millimeters, van {bereik.min} tot {bereik.max} mm.
                       </p>
+                      {prijsGrens && (
+                        <p className="text-[12px] mt-1 text-lx-text-muted leading-relaxed">
+                          Deze prijs geldt tot en met {prijsGrens.tot} mm. Daarboven geldt de volgende prijsstaffel{prijsGrens.extraLade ? ` en is een extra lade nodig, want een lade is maximaal ${LADE_MAX_MM} mm breed` : ''}.
+                        </p>
+                      )}
                     </>
                   )}
 
@@ -1619,7 +1629,9 @@ function Rij({ label, waarde, onEdit }: { label: string; waarde: string; onEdit:
 }
 
 // Zelfde stappenbalk en kolommen als de spiegelconfigurators
-function Kader({ step, maxStep, onStep, children }: {
+function Kader({ step, maxStep, onStep, prijs, children }: {
+  /** Prijs van nu: op telefoon in de vaste bovenbalk, daar staat het prijsblok onderaan de pagina */
+  prijs?: string
   step: number
   /** Verste stap waar je nu naartoe mag springen */
   maxStep: number
@@ -1628,9 +1640,9 @@ function Kader({ step, maxStep, onStep, children }: {
 }) {
   return (
     <div className="flex flex-col min-h-screen bg-lx-divider">
-      <div className="bg-white border-b border-lx-divider sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3">
-          <ol className="flex items-center gap-1 max-w-xl">
+      <div className="bg-white border-b border-lx-divider sticky top-[85px] lg:top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+          <ol className="flex items-center gap-1 max-w-xl flex-1 min-w-0">
             {STEPS.map((label, i) => {
               const bereikbaar = i !== step && i <= maxStep
               return (
@@ -1659,6 +1671,12 @@ function Kader({ step, maxStep, onStep, children }: {
               )
             })}
           </ol>
+          {prijs && (
+            <p className="lg:hidden flex-shrink-0 text-right leading-tight" aria-hidden="true">
+              <span className="block text-[9.5px] font-bold uppercase tracking-wider text-lx-text-secondary">Bruto</span>
+              <span className="block text-[14px] font-bold text-lx-text-primary tabular-nums">{prijs}</span>
+            </p>
+          )}
         </div>
       </div>
       <div className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 flex flex-col lg:flex-row gap-6 items-start">

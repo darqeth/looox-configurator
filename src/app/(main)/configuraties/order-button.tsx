@@ -15,6 +15,7 @@ import { MirrorPreview, type ConfigPreview } from '@/app/(main)/configurator/nie
 import { SHAPES, ORGANIC_SIZES, GLAS_KLEUREN, EXTRA_OPTIONS, POSITION_LABELS, LIGHT_TYPE_LABELS, KRAANGAT_OPTIE_ID, formatKraangat, type GlasKleur } from '@/lib/configurator-config'
 import { getMaatwerkStaffelTip, type MaatwerkStaffelTip } from '@/lib/maatwerk-staffel'
 import { computeOrderTotals } from '@/lib/order-pricing'
+import { useMagInkoop } from '@/components/inkoop-oog'
 import { MMS, clampMmsQuantity, formatEuro, resolveMmsUnitPrice } from '@/lib/mms'
 import { foutTekst } from '@/lib/fout-tekst'
 
@@ -116,6 +117,7 @@ function PreviewCard({ preview }: { preview: ConfigPreview }) {
 function OrderButtonInner({ configId, configName, metaSummary, price, korting, isProjectspiegel, projectspiegelStuks, configPreview, isOpAanvraag, initialQuantity, initialMmsQuantity, mmsUnitPrice: storedMmsUnitPrice }: OrderButtonProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const magInkoop = useMagInkoop()
   const startQuantity = Math.max(1, Math.floor(initialQuantity ?? 1))
   const [open, setOpen] = useState(false)
   const [modalStep, setModalStep] = useState<1 | 2>(1)
@@ -300,7 +302,17 @@ function OrderButtonInner({ configId, configName, metaSummary, price, korting, i
                     ) : (
                       <>
                         <div className="bg-lx-panel-bg rounded-xl px-4 py-3 space-y-1.5">
-                          {isProjectspiegel ? (
+                          {!magInkoop ? (
+                            <>
+                              {!isProjectspiegel && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[12.5px] text-lx-text-secondary font-medium">Bruto ex. BTW{quantity > 1 ? ` (${quantity}×)` : ''}</span>
+                                  <span className="text-[14px] font-bold text-lx-cta">€{(price * quantity).toLocaleString('nl-NL')}</span>
+                                </div>
+                              )}
+                              <p className="text-[11.5px] text-lx-text-secondary leading-snug">Je bestelt tegen de inkoopprijs van je bedrijf.</p>
+                            </>
+                          ) : isProjectspiegel ? (
                             <>
                               {projectspiegelStuks && (
                                 <div className="flex items-center justify-between">
@@ -439,7 +451,7 @@ function OrderButtonInner({ configId, configName, metaSummary, price, korting, i
                           </div>
                         )}
 
-                        {staffelTip && (
+                        {staffelTip && magInkoop && (
                           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                             <p className="text-[12px] text-amber-800 leading-relaxed">
                               Bestel er nog <strong>{staffelTip.stuks}</strong> meer (totaal{' '}

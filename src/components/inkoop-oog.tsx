@@ -1,6 +1,9 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { zietInkoop } from '@/lib/inkoop'
 import { Eye, EyeOff } from 'lucide-react'
 
 // De inkoopprijs staat standaard uit: een klant kijkt vaak mee op het scherm.
@@ -29,6 +32,32 @@ export function useToonInkoop(): [boolean, (aan: boolean) => void] {
     window.dispatchEvent(new Event(GEBEURTENIS))
   }
   return [aan, zet]
+}
+
+/**
+ * Het recht van de ingelogde gebruiker om de inkoopprijs te zien, voor schermen
+ * die het niet van de server meekrijgen. Zolang het niet bekend is: niet tonen.
+ */
+export function useMagInkoop(): boolean {
+  const { data } = useQuery({
+    queryKey: ['inkoop-recht'],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const supabase = createClient()
+      const { data: sessie } = await supabase.auth.getSession()
+      const userId = sessie.session?.user.id
+      if (!userId) return false
+      const { data: lid, error } = await supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', userId).maybeSingle()
+      if (error) return false
+      return zietInkoop(lid)
+    },
+  })
+  return data ?? false
+}
+
+/** Toont de inhoud alleen aan wie de inkoopprijs mag zien, anders `anders`. */
+export function AlleenMetInkoop({ children, anders = null }: { children: React.ReactNode; anders?: React.ReactNode }) {
+  return <>{useMagInkoop() ? children : anders}</>
 }
 
 /** Knop met oogje: toont of verbergt de eigen inkoopprijs. */

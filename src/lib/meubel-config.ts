@@ -1494,6 +1494,39 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
   return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0) + ladeAcc + plankExtraPrijs(input).netto
 }
 
+/**
+ * Tot welke lengte de prijs van nu geldt, en of daarboven een extra lade nodig is.
+ * Alleen voor meubels met een lengtestaffel; null als er geen hogere staffel is.
+ */
+export function getPrijsGrens(model: MeubelModel, lengte: number): { tot: number; extraLade: boolean } | null {
+  if (model.plank || model.kast || model.duo || model.artikel || model.vasteLengtes) return null
+  const staffel = findStaffel(model, lengte)
+  if (!staffel) return null
+  const tot = staffel.max * 10
+  if (tot >= getLengteBereik(model).max) return null
+  const nu = getLadeOpties(model, lengte)
+  const straks = getLadeOpties(model, tot + 1)
+  if (!nu.length || !straks.length) return null
+  return { tot, extraLade: Math.min(...straks) > Math.min(...nu) }
+}
+
+/** Laagste brutoprijs van een model in centen, voor "vanaf" op de modelkaart. Null als die niet te bepalen is. */
+export function getMeubelVanafCents(model: MeubelModel, factor: number): number | null {
+  const kleur = getHoutkleuren(model)[0]?.id
+  if (!kleur) return null
+  const lengtes = model.kast?.breedtes ?? model.vasteLengtes ?? [model.plank?.lengte.min ?? getLengteBereik(model).min]
+  const varianten: (string | undefined)[] = model.artikel ? model.artikel.varianten.map((v) => v.id) : [undefined]
+  let laagste: number | null = null
+  for (const lengte of lengtes) for (const variant of varianten) {
+    const lades = getLadeOpties(model, lengte)
+    for (const l of lades.length ? lades : [0]) {
+      const c = calcMeubelBrutoCents({ modelId: model.id, lengte, lades: l, houtkleur: kleur, uitsparingen: 0, hoogte: model.hoogte, diepte: model.diepte, ...(variant && { variant }) } as MeubelInput, factor)
+      if (c !== null && (laagste === null || c < laagste)) laagste = c
+    }
+  }
+  return laagste
+}
+
 export function parseMeubelFactor(v: unknown): number {
   const n = typeof v === 'string' ? Number(v.replace(',', '.')) : Number(v)
   if (!Number.isFinite(n) || n <= 0 || n > MEUBEL_FACTOR_MAX) return MEUBEL_FACTOR_DEFAULT

@@ -357,6 +357,21 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     }
   }
 
+  // Meerprijs bij de keuzeknop: het verschil tussen de prijs mét die keuze en de prijs nu
+  type PrijsStaat = Parameters<typeof calcTotalPrice>[0]
+  const meerprijs = (wijziging: Partial<PrijsStaat>): number => {
+    if (!shape || shape === 'op-aanvraag') return 0
+    const nu: PrijsStaat = {
+      shape, width, height, diameter, organicSizeKey, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte,
+      directPosition: directLight.position, directType: directLight.type,
+      indirectPosition: indirectLight.position, indirectType: indirectLight.type,
+      lightControl: directLight.control ?? indirectLight.control,
+      selectedOptions, optionSubChoices,
+    }
+    const verschil = calcTotalPrice({ ...nu, ...wijziging }) - calcTotalPrice(nu)
+    return Math.round(verschil * (isInternational ? 1.05 : 1))
+  }
+
   // Eén gedeelde volgende-stap-handler voor desktop én mobiel — de
   // verwarming-autoselectie voor Sol/Luna mag nooit per device verschillen
   // (audit U4: mobiel sloeg deze over → andere prijs dan desktop)
@@ -717,6 +732,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     shape={shape} width={width} height={height}
                     diameter={diameter} organicSizeKey={organicSizeKey}
                     glasKleur={glasKleur}
+                    glasMeerprijs={(k) => meerprijs({ glasKleur: k })}
                     solMeubelHoogte={solMeubelHoogte}
                     solOnderkant={solOnderkant}
                     lunaMeubelHoogte={lunaMeubelHoogte}
@@ -747,6 +763,11 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                     onDirectChange={(updates) => setDirectLight(prev => ({ ...prev, ...updates }))}
                     onIndirectChange={(updates) => setIndirectLight(prev => ({ ...prev, ...updates }))}
                     controlTooltips={controlTooltips}
+                    meerprijs={(w) => meerprijs({
+                      ...(w.directPosition !== undefined && { directPosition: w.directPosition }),
+                      ...(w.indirectPosition !== undefined && { indirectPosition: w.indirectPosition }),
+                      ...(w.type !== undefined && { directType: w.type, indirectType: w.type }),
+                    })}
                     isInternational={isInternational}
                   />
                 )}

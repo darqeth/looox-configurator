@@ -14,6 +14,8 @@ import {
 } from '@/lib/configurator-config'
 
 interface StepAfmetingProps {
+  /** Prijsverschil van een andere glaskleur met de huidige, in euro's */
+  glasMeerprijs?: (k: GlasKleur) => number
   shape: ShapeSlug
   width: number
   height: number
@@ -100,7 +102,7 @@ function RestmaatItem({ value, label, hint, icon }: { value: number; label: stri
   )
 }
 
-const GlaskleurPicker = memo(function GlaskleurPicker({ glasKleur, onChange }: { glasKleur: GlasKleur; onChange: (k: GlasKleur) => void }) {
+const GlaskleurPicker = memo(function GlaskleurPicker({ glasKleur, onChange, meerprijs }: { glasKleur: GlasKleur; onChange: (k: GlasKleur) => void; /** Prijsverschil met de huidige keuze, in euro's */ meerprijs?: (k: GlasKleur) => number }) {
   return (
     <div className="space-y-3">
       <p className="text-[12px] font-semibold text-lx-text-secondary uppercase tracking-wide">Glaskleur</p>
@@ -125,6 +127,10 @@ const GlaskleurPicker = memo(function GlaskleurPicker({ glasKleur, onChange }: {
             }`}>
               {g.name}
             </span>
+            {(() => {
+              const d = glasKleur === g.id ? 0 : meerprijs?.(g.id) ?? 0
+              return <span className="text-[10.5px] font-semibold text-lx-text-secondary tabular-nums h-3.5 -mt-1">{d === 0 ? '' : `${d > 0 ? '+' : '−'}€${Math.abs(d).toLocaleString('nl-NL')}`}</span>
+            })()}
           </button>
         ))}
       </div>
@@ -210,7 +216,7 @@ const DimInput = memo(function DimInput({
   )
 })
 
-export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde, onChange }: StepAfmetingProps) {
+export default function StepAfmeting({ shape, width, height, diameter, organicSizeKey, glasKleur, solMeubelHoogte, solOnderkant, lunaMeubelHoogte, lunaOnderkant, lunaAfstand, lunaMuurZijde, onChange, glasMeerprijs }: StepAfmetingProps) {
   if (shape === 'rechthoek' || shape === 'rounded-rect' || shape === 'ovaal' || shape === 'arc') {
     const presets = [
       { w: 60, h: 80 }, { w: 80, h: 60 }, { w: 100, h: 70 },
@@ -278,7 +284,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
           </p>
         )}
         <div className="border-t border-lx-divider pt-5">
-          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} meerprijs={glasMeerprijs} />
         </div>
       </div>
     )
@@ -306,7 +312,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
           </div>
         </div>
         <div className="border-t border-lx-divider pt-5">
-          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} meerprijs={glasMeerprijs} />
         </div>
       </div>
     )
@@ -334,7 +340,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
           </div>
         </div>
         <div className="border-t border-lx-divider pt-5">
-          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} meerprijs={glasMeerprijs} />
         </div>
       </div>
     )
@@ -386,7 +392,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
         </div>
         <RestmatenKaart rest={computeSolRestmaten(diameter ?? 80, solMeubelHoogte, solOnderkant)} />
         <div className="border-t border-lx-divider pt-5">
-          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} meerprijs={glasMeerprijs} />
         </div>
       </div>
     )
@@ -477,7 +483,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
         </div>
         <RestmatenKaart rest={computeLunaRestmaten(diameter ?? 90, lunaMeubelHoogte ?? 35, lunaOnderkant ?? 15, afstand)} />
         <div className="border-t border-lx-divider pt-5">
-          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} meerprijs={glasMeerprijs} />
         </div>
       </div>
     )
@@ -533,7 +539,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
           . Lange zijde 80–200 cm; de korte zijde is automatisch de helft.
         </p>
         <div className="border-t border-lx-divider pt-5">
-          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} />
+          <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} meerprijs={glasMeerprijs} />
         </div>
       </div>
     )

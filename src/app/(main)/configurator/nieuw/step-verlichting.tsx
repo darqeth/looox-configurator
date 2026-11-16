@@ -52,11 +52,15 @@ const ControlIcon = memo(function ControlIcon({ id, active }: { id: string; acti
 })
 
 // Positiekiezer per lichtsectie (direct / indirect).
-const PositionPicker = memo(function PositionPicker({ title, positions, selected, onSelect }: {
+const prijsVerschil = (d: number) => (d === 0 ? '' : `${d > 0 ? '+' : '−'}€${Math.abs(d).toLocaleString('nl-NL')}`)
+
+const PositionPicker = memo(function PositionPicker({ title, positions, selected, onSelect, meerprijs }: {
   title: string
   positions: string[]
   selected: string
   onSelect: (pos: string) => void
+  /** Prijsverschil met de huidige keuze, in euro's */
+  meerprijs?: (pos: string) => { bedrag: number; vanaf: boolean }
 }) {
   if (positions.length === 0) return null
   return (
@@ -74,6 +78,9 @@ const PositionPicker = memo(function PositionPicker({ title, positions, selected
             }`}
           >
             {POSITION_LABELS[pos]}
+            {selected !== pos && meerprijs && meerprijs(pos).bedrag !== 0 && (
+              <span className="ml-1.5 text-[11px] font-semibold opacity-70 tabular-nums">{meerprijs(pos).vanaf ? 'vanaf ' : ''}{prijsVerschil(meerprijs(pos).bedrag)}</span>
+            )}
           </button>
         ))}
       </div>
@@ -83,8 +90,9 @@ const PositionPicker = memo(function PositionPicker({ title, positions, selected
 
 // Gedeeld lichttype + bediening: geldt voor direct én indirect samen, 1× geprijsd.
 const SharedLightSettings = memo(function SharedLightSettings({
-  shape, type, control, onTypeChange, onControlChange, controlTooltips, isInternational = false,
+  shape, type, control, onTypeChange, onControlChange, controlTooltips, isInternational = false, typeMeerprijs,
 }: {
+  typeMeerprijs?: (type: LightType) => number
   shape: ShapeSlug
   type: LightType | null
   control: string | null
@@ -117,7 +125,10 @@ const SharedLightSettings = memo(function SharedLightSettings({
                   : 'bg-white border-black/10 text-lx-text-primary hover:border-lx-cta/50'
               }`}
             >
-              <span className="text-[13px] font-bold">{LIGHT_TYPE_LABELS[lt]}</span>
+              <span className="text-[13px] font-bold">
+                {LIGHT_TYPE_LABELS[lt]}
+                {type !== lt && typeMeerprijs && typeMeerprijs(lt) !== 0 && <span className="ml-1.5 text-[11px] font-semibold text-lx-text-secondary tabular-nums">{prijsVerschil(typeMeerprijs(lt))}</span>}
+              </span>
               <span className="text-[10.5px] text-lx-text-secondary leading-tight">{LIGHT_TYPE_DESCRIPTIONS[lt]}</span>
             </button>
           ))}
@@ -203,6 +214,8 @@ interface StepVerlichtingProps {
   onIndirectChange: (updates: Partial<LightConfig>) => void
   controlTooltips?: Record<string, string>
   isInternational?: boolean
+  /** Prijsverschil als deze keuze wordt gemaakt, in euro's; zo staat de meerprijs bij de knop */
+  meerprijs?: (wijziging: { directPosition?: string; indirectPosition?: string; type?: LightType }) => number
 }
 
 export default function StepVerlichting({
@@ -213,6 +226,7 @@ export default function StepVerlichting({
   onIndirectChange,
   controlTooltips,
   isInternational = false,
+  meerprijs,
 }: StepVerlichtingProps) {
   const directPositions = DIRECT_LIGHT_POSITIONS[shape] ?? []
   const indirectPositions = INDIRECT_LIGHT_POSITIONS[shape] ?? []
@@ -276,6 +290,14 @@ export default function StepVerlichting({
     else onIndirectChange({ position: pos, type: sharedType, control: sharedControl })
   }
 
+  // Meerprijs van een positie. Zonder gekozen lichttype kost een positie nog niets:
+  // dan de prijs met het voordeligste type, als "vanaf".
+  const positieMeerprijs = (soort: 'directPosition' | 'indirectPosition') => meerprijs && ((pos: string) => {
+    if (sharedType || pos === 'geen') return { bedrag: meerprijs({ [soort]: pos }), vanaf: false }
+    const bedragen = (Object.keys(LIGHT_TYPE_LABELS) as LightType[]).map((t) => meerprijs({ [soort]: pos, type: t })).filter((b) => b !== 0)
+    return { bedrag: bedragen.length ? Math.min(...bedragen) : 0, vanaf: true }
+  })
+
   // Gedeeld type/bediening: zet beide actieve lichten gelijk.
   function setSharedType(t: LightType) {
     const autoCtrl = CONTROLS_FOR_TYPE[t][0]?.auto ? CONTROLS_FOR_TYPE[t][0].id : null
@@ -295,6 +317,7 @@ export default function StepVerlichting({
           positions={directPositions}
           selected={directLight.position}
           onSelect={selectDirect}
+          meerprijs={positieMeerprijs('directPosition')}
         />
       )}
 
@@ -303,6 +326,7 @@ export default function StepVerlichting({
         positions={indirectPositions}
         selected={indirectLight.position}
         onSelect={selectIndirect}
+        meerprijs={positieMeerprijs('indirectPosition')}
       />
 
       {anyActive && (
@@ -314,6 +338,7 @@ export default function StepVerlichting({
           onControlChange={setSharedControl}
           controlTooltips={controlTooltips}
           isInternational={isInternational}
+          typeMeerprijs={meerprijs && ((t) => meerprijs({ type: t }))}
         />
       )}
     </div>

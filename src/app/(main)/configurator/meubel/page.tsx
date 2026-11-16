@@ -4,6 +4,7 @@ import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import MeubelConfigurator from './meubel-configurator'
 import { isUuid, projectKop } from '@/lib/project'
 import { MEUBEL_CATEGORIEEN } from '@/lib/meubel-config'
+import { zietInkoop } from '@/lib/inkoop'
 
 export const metadata = { title: 'Tailor-Made | LoooX Configurator' }
 
@@ -15,9 +16,10 @@ export default async function MeubelPage({ searchParams }: { searchParams: Promi
   if (!userId) redirect('/login')
 
   // Servercheck: ook een directe link werkt niet zonder toegang
-  const [toegang, factor] = await Promise.all([
+  const [toegang, factor, { data: lid }] = await Promise.all([
     hasMeubelAccess(supabase, userId),
     getMeubelFactor(supabase, userId),
+    supabase.from('company_members').select('role, can_see_purchase_prices').eq('user_id', userId).maybeSingle(),
   ])
   if (!toegang) redirect('/configurator/nieuw')
 
@@ -38,5 +40,5 @@ export default async function MeubelPage({ searchParams }: { searchParams: Promi
   const startCategorie = MEUBEL_CATEGORIEEN.find((c) => c.id === categorie)?.id
 
   // key: een andere ?project of ?categorie begint met een schone configurator, ook als je er vanuit de configurator zelf heen gaat
-  return <MeubelConfigurator key={`${project?.id ?? ''}:${startCategorie ?? ''}`} factor={factor} project={project} startCategorie={startCategorie} />
+  return <MeubelConfigurator key={`${project?.id ?? ''}:${startCategorie ?? ''}`} factor={factor} magInkoopZien={zietInkoop(lid)} project={project} startCategorie={startCategorie} />
 }

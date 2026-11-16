@@ -255,14 +255,13 @@ export default function OfferteDocument({
   attachmentUrl, visualisationUrl,
 }: OfferteDocumentProps) {
   const opts = config.options
-  // Mirror Maintenance Set: eigen regel naast de spiegels. De spiegels blijven
-  // rekenen zoals altijd (btw op hele euro's), de set telt exact in centen mee.
+  // Mirror Maintenance Set: eigen regel naast de spiegels. Btw rekenen we op de cent.
   const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
   const mmsUnitPrice = resolveMmsUnitPrice(opts.mmsUnitPrice)
   const mmsBruto = calcMmsBruto(mmsQuantity, mmsUnitPrice)
   const spiegelSubtotaal = unitPrice * quantity
   const subtotalExclBtw = addEuro(spiegelSubtotaal, mmsBruto)
-  const btwBedrag = addEuro(Math.round(spiegelSubtotaal * 0.21), Math.round(mmsBruto * 21) / 100)
+  const btwBedrag = addEuro(Math.round(spiegelSubtotaal * 21) / 100, Math.round(mmsBruto * 21) / 100)
   const totalInclBtw = addEuro(subtotalExclBtw, btwBedrag)
 
   const today = formatDate(new Date().toISOString())

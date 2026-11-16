@@ -37,7 +37,8 @@ export default async function ProjectenPage() {
       kop: projectKop(configs),
       regels,
       totaal: projectTotaal(regels),
-      besteld: regels.some((r) => r.besteld),
+      // Pas besteld als alle regels besteld zijn: bij een deelbestelling staat er nog iets open
+      besteld: regels.every((r) => r.besteld),
       bijgewerkt: configs.reduce((laatst, c) => (c.updated_at > laatst ? c.updated_at : laatst), ''),
     }
   }).sort((a, b) => Number(a.besteld) - Number(b.besteld) || b.bijgewerkt.localeCompare(a.bijgewerkt))

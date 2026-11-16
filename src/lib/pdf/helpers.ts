@@ -173,8 +173,7 @@ export function formatDate(iso: string): string {
   })
 }
 
-// Hele bedragen zonder decimalen (zoals altijd), bedragen met centen op twee decimalen
+// Altijd twee decimalen: spiegel-, meubel- en overzichtspagina staan in één offerte naast elkaar (Mark, 16 nov 2026)
 export function formatPrice(amount: number): string {
-  const heel = Math.abs(amount - Math.round(amount)) < 0.005
-  return `€ ${new Intl.NumberFormat('nl-NL', { minimumFractionDigits: heel ? 0 : 2, maximumFractionDigits: 2 }).format(amount)}`
+  return `€ ${new Intl.NumberFormat('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)}`
 }

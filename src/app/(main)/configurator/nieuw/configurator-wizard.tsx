@@ -122,7 +122,7 @@ const MobilePriceBar = memo(function MobilePriceBar({ shape, width, height, diam
   )
 })
 
-export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrder = true, isInternational = false, resumeDraft = false, optionTooltips = {}, controlTooltips = {}, project = null }: { initialConfig?: InitialConfig; korting?: number; canOrder?: boolean; isInternational?: boolean; resumeDraft?: boolean; optionTooltips?: Record<string, string>; controlTooltips?: Record<string, string>; /** Project (winkelmandje) waar deze spiegel bij komt of al bij hoort */ project?: { id: string; naam: string; referentie: string } | null }) {
+export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrder = true, magInkoopZien = false, isInternational = false, resumeDraft = false, optionTooltips = {}, controlTooltips = {}, project = null }: { initialConfig?: InitialConfig; korting?: number; canOrder?: boolean; /** Recht om de eigen inkoopprijs te zien */ magInkoopZien?: boolean; isInternational?: boolean; resumeDraft?: boolean; optionTooltips?: Record<string, string>; controlTooltips?: Record<string, string>; /** Project (winkelmandje) waar deze spiegel bij komt of al bij hoort */ project?: { id: string; naam: string; referentie: string } | null }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const isEditing = !!initialConfig
@@ -877,6 +877,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                 selectedOptions={selectedOptions}
                 optionSubChoices={optionSubChoices}
                 isInternational={isInternational}
+                korting={korting}
+                magInkoopZien={magInkoopZien}
                 solMeubelHoogte={solMeubelHoogte}
                 solOnderkant={solOnderkant}
                 lunaMeubelHoogte={lunaMeubelHoogte}

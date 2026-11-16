@@ -57,6 +57,7 @@ export async function updateProfile(formData: FormData) {
             can_order: true,
             can_configure: true,
             own_configs_only: false,
+            can_see_purchase_prices: true,
           }),
         ])
       }

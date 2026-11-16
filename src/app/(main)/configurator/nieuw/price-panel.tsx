@@ -1,5 +1,6 @@
 'use client'
 
+import { MijnInkoop } from '@/components/inkoop-oog'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ShapeSlug,
@@ -853,6 +854,9 @@ interface PricePanelProps {
   selectedOptions: string[]
   optionSubChoices: Record<string, string>
   isInternational?: boolean
+  /** Dealerkorting in procenten, voor de eigen inkoopprijs achter het oogje */
+  korting?: number
+  magInkoopZien?: boolean
   solMeubelHoogte?: number
   solOnderkant?: number
   lunaMeubelHoogte?: number
@@ -864,7 +868,7 @@ interface PricePanelProps {
 export default function PricePanel({
   shape, width, height, diameter, organicSizeKey, glasKleur,
   directLight, indirectLight, selectedOptions, optionSubChoices,
-  isInternational = false, solMeubelHoogte, solOnderkant,
+  isInternational = false, korting = 50, magInkoopZien = false, solMeubelHoogte, solOnderkant,
   lunaMeubelHoogte, lunaOnderkant, lunaAfstandLinks, lunaAfstandRechts,
 }: PricePanelProps) {
   const mult = isInternational ? 1.05 : 1
@@ -1104,6 +1108,12 @@ export default function PricePanel({
                 </div>
               </div>
             )}
+            {/* `netto` is hier de brutoprijs uit de catalogus; de inkoop is die prijs min de dealerkorting, afgerond op hele euro's zoals bij bestellen (order-pricing.ts) */}
+            <MijnInkoop
+              nettoCents={Math.round(Math.round(netto * mult) * (1 - korting / 100)) * 100}
+              mag={magInkoopZien}
+              toelichting="Per stuk. Bij meer stuks kan er staffelkorting bijkomen."
+            />
           </>
         )}
       </div>

@@ -1,3 +1,4 @@
+import { zietInkoop } from '@/lib/inkoop'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import ConfiguratorWizard from '../nieuw/configurator-wizard'
@@ -20,7 +21,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
   const [{ data: config, error }, { data: profile }, { data: memberData }] = await Promise.all([
     supabase.from('configurations').select('id, name, width, height, selected_options, status, project_id').eq('id', id).single(),
     supabase.from('profiles').select('korting, is_international, is_groothandel, configurator_access').eq('id', user.id).single(),
-    supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle(),
+    supabase.from('company_members').select('role, can_order, can_see_purchase_prices').eq('user_id', user.id).maybeSingle(),
   ])
 
   if (error || !config) notFound()
@@ -41,6 +42,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
     return (
       <MeubelConfigurator
         factor={factor}
+        magInkoopZien={zietInkoop(memberData)}
         project={config.project_id ? { id: config.project_id as string, naam: config.name ?? '', referentie: meubel.reference } : null}
         initialConfig={{
           id: config.id,
@@ -149,6 +151,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
       project={project}
       korting={korting}
       canOrder={canOrder}
+      magInkoopZien={zietInkoop(memberData)}
       isInternational={isInternational}
     />
   )

@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react'
 import { placeProjectOrder } from '@/lib/actions/orders'
 import { formatCents } from '@/lib/meubel-config'
 import { foutTekst } from '@/lib/fout-tekst'
+import InkoopOog, { useToonInkoop } from '@/components/inkoop-oog'
 
 // Bestelt het hele project in één keer. De bedragen zijn netto en door de server
 // uitgerekend met dezelfde functie die de bestelling zelf gebruikt.
@@ -16,12 +17,19 @@ export interface BestelRegel {
   titel: string
   omschrijving: string
   quantity: number
+  /** Netto regeltotaal in centen */
   totaalCents: number
+  /** Regeltotaal zoals op de offerte (adviesprijs), in centen */
+  brutoCents: number
+  /** Projectspiegel: bestaat alleen als nettoprijs, die staat ook op de offerte */
+  isNetto?: boolean
   opAanvraag: boolean
   /** Keuzes van een spiegel: verlichting, opties */
   details?: string
   /** Door het hulpje ingevuld en nog niet nagelopen: heeft nog geen prijs */
   nalopen?: boolean
+  /** Reden waarom deze regel nu niet te bestellen is */
+  fout?: string | null
 }
 
 const adresTekst = (adres: string) => adres.split('\t').map((d) => d.trim()).filter(Boolean).join(' ')
@@ -29,30 +37,41 @@ const adresTekst = (adres: string) => adres.split('\t').map((d) => d.trim()).fil
 const inputCls = 'w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13px] text-lx-text-primary outline-none focus:border-lx-cta bg-white transition-colors'
 const labelCls = 'text-[12px] font-semibold text-lx-text-secondary mb-1.5 block'
 
-export default function ProjectBestellen({ projectId, naam, regels, totaalCents, fout: blokkade, besteld, afleveradres }: {
+export default function ProjectBestellen({ projectId, naam, regels: alleRegels, fout: toegangsFout, besteld, afleveradres, magInkoopZien }: {
   /** Bijverkoop op het bedankscherm: wat er nog bij het project past */
   projectId: string
   naam: string
   regels: BestelRegel[]
-  totaalCents: number
   /** Reden waarom het project nu niet te bestellen is */
   fout: string | null
   /** Het project is besteld: alleen de bevestiging van deze sessie blijft nog staan */
   besteld: boolean
   /** Adres uit het account (afleveradres, anders het bedrijfsadres), met tabs gescheiden */
   afleveradres: string | null
+  /** Recht van de collega; staat het uit, dan blijven de adviesprijzen staan */
+  magInkoopZien: boolean
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const titelId = useId()
-  const isOfferte = regels.every((r) => r.opAanvraag)
+  // Deelbestelling: wat is uitgevinkt blijft in het project staan voor later
+  const [uit, setUit] = useState<Set<string>>(new Set())
+  const regels = alleRegels.filter((r) => !uit.has(r.id))
+  // Inkoop staat standaard uit (klant kijkt mee): dan staan hier de bedragen van de offerte
+  const [oogAan] = useToonInkoop()
+  const netto = magInkoopZien && oogAan
+  const bedrag = (r: BestelRegel) => (netto || r.isNetto ? r.totaalCents : r.brutoCents)
+  const totaalCents = regels.reduce((som, r) => som + (r.opAanvraag ? 0 : bedrag(r)), 0)
+  const totaalLabel = netto ? 'Totaal netto ex. BTW' : 'Totaal adviesprijs ex. BTW'
+  const blokkade = toegangsFout ?? regels.find((r) => r.fout)?.fout ?? (regels.length === 0 ? 'Kies minimaal één regel om te bestellen.' : null)
+  const isOfferte = regels.length > 0 && regels.every((r) => r.opAanvraag)
   const [open, setOpen] = useState(false)
   const [notes, setNotes] = useState('')
   const [checked, setChecked] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fout, setFout] = useState<string | null>(null)
   // Momentopname bij het bestellen: na het verversen kloppen de props niet meer met wat er besteld is
-  const [result, setResult] = useState<{ nummer: string; regels: BestelRegel[]; totaalCents: number; adres: string } | null>(null)
+  const [result, setResult] = useState<{ nummer: string; regels: BestelRegel[]; totaalCents: number; netto: boolean; adres: string } | null>(null)
   const accountAdres = afleveradres ? adresTekst(afleveradres) : ''
   const [altShipping, setAltShipping] = useState(!accountAdres)
   const [alt, setAlt] = useState({ straat: '', huisnummer: '', woonplaats: '', provincie: '', land: 'NL' })
@@ -82,8 +101,8 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
       const altShippingAddress = altShipping
         ? [alt.straat, alt.huisnummer, alt.woonplaats, alt.provincie, alt.land].map((v) => v.trim()).join('\t')
         : null
-      const { orderNumber } = await placeProjectOrder(projectId, notes, altShippingAddress)
-      setResult({ nummer: orderNumber, regels, totaalCents, adres: altShippingAddress ? adresTekst(altShippingAddress) : accountAdres })
+      const { orderNumber } = await placeProjectOrder(projectId, notes, altShippingAddress, regels.map((r) => r.id))
+      setResult({ nummer: orderNumber, regels, totaalCents, netto, adres: altShippingAddress ? adresTekst(altShippingAddress) : accountAdres })
       for (const key of ['orders', 'configurations', 'sidebar', 'dashboard', 'looox-circle']) {
         queryClient.invalidateQueries({ queryKey: [key] })
       }
@@ -140,14 +159,14 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
                           <p className="text-[11.5px] text-lx-text-secondary">{r.omschrijving}</p>
                         </div>
                         <p className="text-[12.5px] font-semibold text-lx-text-primary tabular-nums flex-shrink-0">
-                          {r.opAanvraag ? 'Op aanvraag' : formatCents(r.totaalCents)}
+                          {r.opAanvraag ? 'Op aanvraag' : formatCents(result.netto || r.isNetto ? r.totaalCents : r.brutoCents)}
                         </p>
                       </li>
                     ))}
                   </ul>
                   {!isOfferte && (
                     <div className="flex items-center justify-between border-t border-lx-divider py-2.5">
-                      <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal netto ex. BTW</span>
+                      <span className="text-[12.5px] text-lx-text-secondary font-medium">{result.netto ? 'Totaal netto ex. BTW' : 'Totaal adviesprijs ex. BTW'}</span>
                       <span className="text-[16px] font-bold text-lx-cta tabular-nums">{formatCents(result.totaalCents)}</span>
                     </div>
                   )}
@@ -179,29 +198,54 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
                 <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1 min-h-0">
                   <div className="bg-lx-panel-bg rounded-xl px-4 py-1">
                     <ul className="divide-y divide-lx-divider">
-                      {regels.map((r) => (
-                        <li key={r.id} className="flex items-start justify-between gap-3 py-2.5">
-                          <div className="min-w-0">
-                            <p className="text-[12.5px] font-semibold text-lx-text-primary">{r.quantity}× {r.titel}</p>
-                            <p className="text-[11.5px] text-lx-text-secondary">{r.omschrijving}</p>
-                            {r.details && <p className="text-[11.5px] text-lx-text-secondary">{r.details}</p>}
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <p className="text-[12.5px] font-semibold text-lx-text-primary tabular-nums">
-                              {r.nalopen ? 'Eerst nalopen' : r.opAanvraag ? 'Op aanvraag' : formatCents(r.totaalCents)}
-                            </p>
-                            {!r.nalopen && !r.opAanvraag && r.quantity > 1 && (
-                              <p className="text-[11px] text-lx-text-secondary tabular-nums">{formatCents(Math.round(r.totaalCents / r.quantity))} per stuk</p>
+                      {alleRegels.map((r) => {
+                        const mee = !uit.has(r.id)
+                        return (
+                          <li key={r.id} className={`flex items-start gap-3 py-2.5 ${mee ? '' : 'opacity-50'}`}>
+                            {alleRegels.length > 1 && (
+                              <input
+                                type="checkbox"
+                                checked={mee}
+                                onChange={() => setUit((oud) => { const n = new Set(oud); if (mee) n.add(r.id); else n.delete(r.id); return n })}
+                                aria-label={`${r.titel} meebestellen`}
+                                className="mt-0.5 w-4 h-4 accent-[var(--lx-cta)] cursor-pointer flex-shrink-0"
+                              />
                             )}
-                          </div>
-                        </li>
-                      ))}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12.5px] font-semibold text-lx-text-primary">{r.quantity}× {r.titel}</p>
+                              <p className="text-[11.5px] text-lx-text-secondary">{r.omschrijving}</p>
+                              {r.details && <p className="text-[11.5px] text-lx-text-secondary">{r.details}</p>}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-[12.5px] font-semibold text-lx-text-primary tabular-nums">
+                                {r.nalopen ? 'Eerst nalopen' : r.opAanvraag ? 'Op aanvraag' : formatCents(bedrag(r))}
+                              </p>
+                              {!r.nalopen && !r.opAanvraag && r.quantity > 1 && (
+                                <p className="text-[11px] text-lx-text-secondary tabular-nums">{formatCents(Math.round(bedrag(r) / r.quantity))} per stuk</p>
+                              )}
+                            </div>
+                          </li>
+                        )
+                      })}
                     </ul>
                     <div className="flex items-center justify-between border-t border-lx-divider py-2.5">
-                      <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal netto ex. BTW</span>
+                      <span className="text-[12.5px] text-lx-text-secondary font-medium">{totaalLabel}</span>
                       <span className="text-[18px] font-bold text-lx-cta tabular-nums">{formatCents(totaalCents)}</span>
                     </div>
                   </div>
+                  <div className="flex items-center justify-between gap-3 -mt-1.5">
+                    <p className="text-[11.5px] text-lx-text-secondary leading-snug">
+                      {netto ? 'Dit is wat je bij LoooX betaalt.' : 'Je bestelt tegen je eigen inkoopprijs. Hier staat de adviesprijs voor je klant.'}
+                    </p>
+                    {magInkoopZien && <InkoopOog className="flex-shrink-0" />}
+                  </div>
+                  {alleRegels.length > 1 && (
+                    <p className="text-[11.5px] text-lx-text-secondary leading-snug -mt-1.5">
+                      {uit.size === 0
+                        ? 'Vink een regel uit om hem nu niet mee te bestellen. Hij blijft dan in het project staan.'
+                        : `${uit.size} ${uit.size === 1 ? 'regel blijft' : 'regels blijven'} in het project staan. Die bestel je later. Let op: na deze bestelling kun je geen producten meer aan dit project toevoegen.`}
+                    </p>
+                  )}
 
                   {blokkade && (
                     <p role="alert" className="text-[12.5px] text-red-600 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">{blokkade}</p>

@@ -1,3 +1,4 @@
+import { zietInkoop } from '@/lib/inkoop'
 import { createClient } from '@/lib/supabase/server'
 import ConfiguratorWizard from './configurator-wizard'
 import ProjectspiegelConfigurator from './projectspiegel/index'
@@ -19,6 +20,7 @@ export default async function NieuweConfiguratiePage({ searchParams }: { searchP
 
   let korting = 50
   let canOrder = true
+  let magInkoopZien = true
   let isInternational = false
   let access: ReturnType<typeof parseConfiguratorAccess> = 'maatwerk'
 
@@ -32,7 +34,7 @@ export default async function NieuweConfiguratiePage({ searchParams }: { searchP
     getExtraOptionTooltips(),
     getControlTooltips(),
     user ? supabase.from('profiles').select('is_international, configurator_access, korting').eq('id', user.id).single() : Promise.resolve({ data: null }),
-    user ? supabase.from('company_members').select('role, can_order').eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
+    user ? supabase.from('company_members').select('role, can_order, can_see_purchase_prices').eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? hasMeubelAccess(supabase, user.id) : Promise.resolve(false),
   ])
 
@@ -41,6 +43,7 @@ export default async function NieuweConfiguratiePage({ searchParams }: { searchP
     const memberData = memberResult.data
     // can_order is leidend, ook voor een manager; geen member-rij = mag bestellen
     canOrder = memberData ? (memberData.can_order ?? true) : true
+    magInkoopZien = zietInkoop(memberData)
     isInternational = profile?.is_international ?? false
     access = parseConfiguratorAccess((profile as { configurator_access?: string | null } | null)?.configurator_access)
     korting = profile?.korting ?? 50
@@ -69,6 +72,7 @@ export default async function NieuweConfiguratiePage({ searchParams }: { searchP
     <ConfiguratorWizard
       korting={korting}
       canOrder={canOrder}
+      magInkoopZien={magInkoopZien}
       isInternational={isInternational}
       optionTooltips={optionTooltips}
       controlTooltips={controlTooltips}

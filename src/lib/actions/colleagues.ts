@@ -13,12 +13,16 @@ export type MemberPermissions = {
   can_order: boolean
   can_configure: boolean
   own_configs_only: boolean
+  /** Mag de eigen inkoopprijs (netto) zien; staat het uit, dan ziet de collega alleen adviesprijzen */
+  can_see_purchase_prices: boolean
 }
 
 export type InvitePermissions = {
   can_order: boolean
   can_configure: boolean
   own_configs_only: boolean
+  /** Mag de eigen inkoopprijs (netto) zien; staat het uit, dan ziet de collega alleen adviesprijzen */
+  can_see_purchase_prices: boolean
 }
 
 // ─── Collega uitnodigen ────────────────────────────────────────────────────────
@@ -29,6 +33,7 @@ export async function inviteColleague(
     can_order: false,
     can_configure: true,
     own_configs_only: true,
+    can_see_purchase_prices: false,
   }
 ): Promise<{ success: true; token: string } | { success: false; error: string }> {
   const supabase = await createClient()
@@ -145,6 +150,7 @@ export async function updateMemberPermissions(
       can_order: permissions.can_order,
       can_configure: permissions.can_configure,
       own_configs_only: permissions.own_configs_only,
+      can_see_purchase_prices: permissions.can_see_purchase_prices,
     })
     .eq('id', memberId)
     .eq('company_id', myMember.company_id)

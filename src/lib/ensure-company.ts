@@ -75,6 +75,8 @@ export async function ensureCompanyMembership(
         can_order: true,
         can_configure: true,
         own_configs_only: false,
+        // Bestaand gedrag: wie zo aan een bedrijf wordt gekoppeld, ziet zijn inkoop
+        can_see_purchase_prices: true,
       }),
     ])
     // 23505 = bestaat al (gelijktijdige login): prima, niets aan veranderen

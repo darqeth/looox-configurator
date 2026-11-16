@@ -11,7 +11,8 @@ import TekeningUpload from '@/components/tekening-upload'
 import ProjectBestellen from './project-bestellen'
 import UpsellCards, { upsellVoorMeubels } from '@/components/upsell-cards'
 import { leesMeubel } from '@/lib/meubel-opslag'
-import { berekenProjectOrderRegel, projectOrderTotaalCents } from '@/lib/project-order'
+import { berekenProjectOrderRegel } from '@/lib/project-order'
+import { zietInkoop } from '@/lib/inkoop'
 
 export const metadata = { title: 'Project | LoooX Configurator' }
 
@@ -35,24 +36,25 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       .order('created_at'),
     hasMeubelAccess(supabase, userId),
     supabase.from('profiles').select('korting, address, shipping_address').eq('id', userId).single(),
-    supabase.from('company_members').select('can_order').eq('user_id', userId).maybeSingle(),
+    supabase.from('company_members').select('role, can_order, can_see_purchase_prices').eq('user_id', userId).maybeSingle(),
   ])
   if (!configs || configs.length === 0) notFound()
 
   const kop = projectKop(configs)
   const regels = configs.map(projectRegel)
   const totaal = projectTotaal(regels)
-  const besteld = regels.some((r) => r.besteld)
+  // Deelbestelling: regels kunnen los besteld zijn. Zodra er iets besteld is, ligt de samenstelling vast.
+  const ietsBesteld = regels.some((r) => r.besteld)
+  const allesBesteld = regels.every((r) => r.besteld)
   const heeftNetto = regels.some((r) => r.netto)
   const heeftBruto = regels.some((r) => !r.netto && !r.opAanvraag)
 
   // Voorvertoning van de bestelling: zelfde berekening als placeProjectOrder op de server
-  const orderRegels = configs.map((c) => berekenProjectOrderRegel(c, profiel?.korting ?? 50))
+  const orderRegels = configs.filter((c) => c.status !== 'ordered').map((c) => berekenProjectOrderRegel(c, profiel?.korting ?? 50))
   // can_order is leidend; geen member-rij = mag bestellen
   const magBestellen = lid ? (lid.can_order ?? true) : true
   const heeftMeubel = regels.some((r) => r.soort === 'meubel')
-  const blokkade = orderRegels.find((r) => r.fout)?.fout
-    ?? (heeftMeubel && !meubelToegang ? 'Dit account heeft geen toegang tot Tailor-Made.' : null)
+  const blokkade = heeftMeubel && !meubelToegang ? 'Dit account heeft geen toegang tot Tailor-Made.' : null
 
   // Bijverkoop: wat past er nog bij de meubels in dit project
   const upsell = upsellVoorMeubels(
@@ -61,10 +63,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   )
 
   // Besteld project: het gezamenlijke ordernummer erbij
-  const { data: orders } = besteld
-    ? await supabase.from('orders').select('order_number, order_group').in('configuration_id', configs.map((c) => c.id)).limit(1)
+  const { data: orders } = ietsBesteld
+    ? await supabase.from('orders').select('configuration_id, order_number, order_group').in('configuration_id', configs.map((c) => c.id))
     : { data: null }
-  const orderNummer = orders?.[0]?.order_group ?? orders?.[0]?.order_number ?? null
+  const nummerVanRegel = new Map((orders ?? []).map((o) => [o.configuration_id as string, (o.order_group ?? o.order_number) as string]))
+  const orderNummers = [...new Set(nummerVanRegel.values())]
 
   return (
     <div className="p-4 sm:p-6 lg:p-7 w-full max-w-4xl">
@@ -75,7 +78,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">Project</p>
-          <ProjectNaam projectId={id} naam={kop.naam} referentie={kop.referentie} bewerkbaar={!besteld} />
+          <ProjectNaam projectId={id} naam={kop.naam} referentie={kop.referentie} bewerkbaar={!ietsBesteld} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a
@@ -85,7 +88,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           >
             <Download size={15} /> Offerte
           </a>
-          {!besteld && (
+          {!ietsBesteld && (
             <Link
               href={`/configurator/nieuw?project=${id}`}
               className="inline-flex items-center gap-1.5 border border-black/10 bg-white hover:bg-lx-panel-bg text-lx-text-primary text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors"
@@ -97,23 +100,25 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           {magBestellen && (
             <ProjectBestellen
               projectId={id}
-              besteld={besteld}
+              besteld={allesBesteld}
+              magInkoopZien={zietInkoop(lid)}
               afleveradres={profiel?.shipping_address || profiel?.address || null}
               naam={kop.naam}
-              totaalCents={projectOrderTotaalCents(orderRegels)}
               fout={blokkade}
               regels={orderRegels.map((r) => ({
                 id: r.configId, titel: r.regel.titel, omschrijving: r.regel.omschrijving, details: r.regel.details, nalopen: r.regel.nalopen,
-                quantity: r.quantity, totaalCents: Math.round(r.totalPrice * 100), opAanvraag: r.regel.opAanvraag,
+                quantity: r.quantity, totaalCents: Math.round(r.totalPrice * 100), opAanvraag: r.regel.opAanvraag, fout: r.fout, brutoCents: r.regel.totaalCents, isNetto: r.regel.netto,
               }))}
             />
           )}
         </div>
       </div>
 
-      {besteld && (
+      {ietsBesteld && (
         <p className="text-[12.5px] text-lx-text-secondary bg-white rounded-xl border border-black/6 px-4 py-3 mb-4">
-          Dit project is besteld{orderNummer ? ` onder ${orderNummer}` : ''} en kan niet meer worden aangepast.
+          {allesBesteld
+            ? `Dit project is besteld${orderNummers.length ? ` onder ${orderNummers.join(' en ')}` : ''} en kan niet meer worden aangepast.`
+            : 'Een deel van dit project is besteld. De regels zonder ordernummer kun je nog bestellen.'}
         </p>
       )}
 
@@ -129,6 +134,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 <p className="text-[13px] font-semibold text-lx-text-primary">
                   {r.titel}
                   {r.nalopen && <span className="ml-2 align-middle inline-block rounded-md bg-amber-100 text-amber-900 text-[10.5px] font-bold uppercase tracking-wide px-1.5 py-0.5">Nog nalopen</span>}
+                  {r.besteld && !allesBesteld && <span className="ml-2 align-middle inline-block rounded-md bg-lx-icon-bg text-lx-cta text-[10.5px] font-bold tracking-wide px-1.5 py-0.5">Besteld{nummerVanRegel.get(r.id) ? ` · ${nummerVanRegel.get(r.id)}` : ''}</span>}
                 </p>
                 <p className="text-[11.5px] text-lx-text-secondary mt-0.5">{r.omschrijving}</p>
                 {r.aiNotities?.map((n) => <p key={n} className="text-[11.5px] text-amber-800 mt-0.5">{n}</p>)}
@@ -141,8 +147,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                   {r.quantity}×{!r.opAanvraag && r.quantity > 1 ? ` ${formatCents(r.stukCents)}` : ''}{r.opAanvraag ? '' : r.netto ? ' · netto' : ' · bruto'}
                 </p>
               </div>
-              {!besteld && r.tekeningOntbreekt && <TekeningUpload configId={r.id} tekenen={r.tekenen} />}
-              {!besteld && <RegelActies configId={r.id} titel={r.titel} laatste={regels.length === 1} />}
+              {!r.besteld && r.tekeningOntbreekt && <TekeningUpload configId={r.id} tekenen={r.tekenen} />}
+              {!r.besteld && <RegelActies configId={r.id} titel={r.titel} laatste={regels.length === 1} />}
             </li>
           ))}
         </ul>
@@ -163,7 +169,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {!besteld && (upsell.waskom || upsell.spiegel) && (
+      {!ietsBesteld && (upsell.waskom || upsell.spiegel) && (
         <div className="mt-5">
           <p className="text-[13px] font-semibold text-lx-text-primary">Maak het compleet</p>
           <p className="text-[12px] text-lx-text-secondary mt-0.5 mb-1.5">Voeg het toe aan dit project, dan gaat alles mee in één bestelling.</p>
@@ -171,9 +177,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {!besteld && (
+      {!allesBesteld && (
         <p className="text-[12px] text-lx-text-muted mt-4 leading-relaxed">
-          De bedragen hierboven staan zoals op de offerte. Bij bestellen zie je het netto totaal.
+          De bedragen hierboven staan zoals op de offerte{zietInkoop(lid) ? '. Je eigen inkoopprijs zie je bij bestellen, achter het oogje' : ''}.
         </p>
       )}
     </div>

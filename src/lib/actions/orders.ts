@@ -706,30 +706,40 @@ const projectOrderSchema = z.object({
   projectId: z.string().uuid(),
   notes: z.string().max(5000),
   altShippingAddress: z.string().max(500).nullish(),
+  configIds: z.array(z.string().uuid()).min(1).max(200).nullish(),
 })
 
+/** Bestelt een project. Met `rawConfigIds` alleen die regels: de rest blijft in het project staan voor later. */
 export async function placeProjectOrder(
   rawProjectId: string,
   rawNotes: string,
   rawAltShippingAddress?: string | null,
+  rawConfigIds?: string[] | null,
 ): Promise<{ orderNumber: string; isOfferte: boolean }> {
-  const { projectId, notes, altShippingAddress } = parseOrThrow(projectOrderSchema, {
+  const { projectId, notes, altShippingAddress, configIds } = parseOrThrow(projectOrderSchema, {
     projectId: rawProjectId,
     notes: rawNotes,
     altShippingAddress: rawAltShippingAddress?.trim() || null,
+    configIds: rawConfigIds ?? null,
   })
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Niet ingelogd')
 
   // RLS bepaalt welke regels de aanroeper mag zien
-  const { data: configs, error: configError } = await supabase
+  const { data: alleConfigs, error: configError } = await supabase
     .from('configurations')
     .select('id, name, article_number, width, height, total_price, status, selected_options, user_id, created_at')
     .eq('project_id', projectId)
     .order('created_at')
-  if (configError || !configs || configs.length === 0) throw new Error('Project niet gevonden')
-  if (configs.some((c) => c.status === 'ordered')) throw new Error('Dit project is al besteld')
+  if (configError || !alleConfigs || alleConfigs.length === 0) throw new Error('Project niet gevonden')
+  // Deelbestelling: alleen de gekozen regels; zonder keuze alles wat nog niet besteld is
+  const configs = configIds
+    ? alleConfigs.filter((c) => configIds.includes(c.id))
+    : alleConfigs.filter((c) => c.status !== 'ordered')
+  if (configIds && configs.length !== new Set(configIds).size) throw new Error('Een gekozen regel hoort niet bij dit project')
+  if (configs.length === 0) throw new Error('Dit project is al besteld')
+  if (configs.some((c) => c.status === 'ordered')) throw new Error('Een gekozen regel is al besteld')
   if (configs.some((c) => c.status !== 'saved')) throw new Error('Dit project bevat een regel die nog niet is opgeslagen')
 
   for (const eigenaar of new Set(configs.map((c) => c.user_id as string))) {
@@ -772,7 +782,7 @@ export async function placeProjectOrder(
   revalidatePath('/configuraties')
   revalidatePath(`/projecten/${projectId}`)
 
-  const kop = projectKop(configs)
+  const kop = projectKop(alleConfigs)
   const orderDate = new Date().toISOString()
   runAfterResponse('project-order-emails', (async () => {
     const { data: profile } = await supabase

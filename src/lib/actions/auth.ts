@@ -56,12 +56,12 @@ export async function signUp(data: {
   // Validate invite token before registering (fail fast)
   // Gebruik admin client — invite-tabel heeft RLS die auth.uid() vereist,
   // maar de registrerende gebruiker is nog niet ingelogd.
-  let invite: { id: string; company_id: string; invited_by: string | null; can_order: boolean; can_configure: boolean; own_configs_only: boolean } | null = null
+  let invite: { id: string; company_id: string; invited_by: string | null; can_order: boolean; can_configure: boolean; own_configs_only: boolean; can_see_purchase_prices: boolean } | null = null
   if (data.inviteToken) {
     const admin = createAdminClient()
     const { data: inviteRow } = await admin
       .from('company_invites')
-      .select('id, company_id, invited_by, can_order, can_configure, own_configs_only')
+      .select('id, company_id, invited_by, can_order, can_configure, own_configs_only, can_see_purchase_prices')
       .eq('token', data.inviteToken)
       .eq('email', data.email)
       .is('accepted_at', null)
@@ -123,6 +123,7 @@ export async function signUp(data: {
       can_order: invite.can_order,
       can_configure: invite.can_configure,
       own_configs_only: invite.own_configs_only,
+      can_see_purchase_prices: invite.can_see_purchase_prices,
     })
     await admin
       .from('company_invites')

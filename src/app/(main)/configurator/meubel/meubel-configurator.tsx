@@ -4,11 +4,12 @@ import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createPortal } from 'react-dom'
+import { MijnInkoop } from '@/components/inkoop-oog'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Maximize2, X } from 'lucide-react'
 import { toast } from '@/components/toast'
-import {
+import { calcMeubelNettoCents,
   MEUBEL_MODELLEN, MEUBEL_CATEGORIEEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_MM, LADE_MAX_MM, MEUBEL_AANTAL_MAX,
   getLengteBereik, getLadeOpties, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
@@ -84,7 +85,7 @@ export interface MeubelProject {
   referentie: string
 }
 
-type Props = { factor: number; initialConfig?: MeubelInitialConfig; project?: MeubelProject | null; startCategorie?: MeubelCategorieId }
+type Props = { factor: number; /** Recht om de eigen inkoopprijs te zien */ magInkoopZien?: boolean; initialConfig?: MeubelInitialConfig; project?: MeubelProject | null; startCategorie?: MeubelCategorieId }
 
 /** Een voorstel van het hulpje vult de configurator opnieuw: de key zet alle keuzes in één keer goed. */
 export default function MeubelConfigurator(props: Props) {
@@ -102,7 +103,7 @@ export default function MeubelConfigurator(props: Props) {
   )
 }
 
-function MeubelConfiguratorInner({ factor, initialConfig, project, startCategorie, onVoorstel }: Props & { onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[]) => void }) {
+function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig, project, startCategorie, onVoorstel }: Props & { onVoorstel: (voorstel: MeubelVoorstel, meldingen: string[]) => void }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const isEditing = !!initialConfig?.id
@@ -382,8 +383,11 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const kleuren = getHoutkleuren(model)
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
-  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw({ modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing, hoogte: model.hoogte, diepte: model.diepte,
-    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }, factor) : null
+  const prijsInput = { modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing, hoogte: model.hoogte, diepte: model.diepte,
+    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }
+  const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw(prijsInput, factor) : null
+  // Eigen inkoop: de tabelprijs zonder factor, achter het oogje
+  const nettoCents = opbouw ? calcMeubelNettoCents(prijsInput) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
   const magUitsparing = kanUitsparing(model)
   const tekeningNodig = tekeningVerplicht(model, { tekenwijze, uitsparingen: zelfTekenen ? 0 : uitsparingen, kommenCompleet: kommenStaan })
@@ -1540,6 +1544,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
               </div>
             </div>
           )}
+          {opbouw && <MijnInkoop nettoCents={nettoCents} mag={magInkoopZien} />}
         </div>
       </div>
     </Kader>

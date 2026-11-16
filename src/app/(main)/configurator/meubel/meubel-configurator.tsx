@@ -1123,7 +1123,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                       const acc = getMeubelModel(soort)
                       if (!acc?.artikel) return null
                       return (
-                        <div key={soort} className="flex items-center gap-4 rounded-xl border border-black/10 p-3">
+                        <div key={soort} className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-3 rounded-xl border border-black/10 p-3">
                           <span className="relative w-20 h-[60px] flex-shrink-0">
                             <Image src={acc.afbeelding} alt="" fill sizes="80px" className="object-contain" />
                           </span>
@@ -1134,7 +1134,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                               {acc.artikel.varianten.map((v) => `${v.naam} ${formatCents(Math.round(v.prijs * parseMeubelFactor(factor)))}`).join(' · ')}
                             </span>
                           </span>
-                          <div className="flex gap-2 flex-shrink-0" role="radiogroup" aria-label={acc.naam}>
+                          <div className="flex gap-2 w-full sm:w-auto sm:flex-shrink-0" role="radiogroup" aria-label={acc.naam}>
                             {[null, ...acc.artikel.varianten.map((v) => v.id)].map((id) => (
                               <button
                                 key={id ?? 'geen'}
@@ -1142,7 +1142,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                                 role="radio"
                                 aria-checked={ladeAcc[soort] === id}
                                 onClick={() => setLadeAcc((s) => ({ ...s, [soort]: id }))}
-                                className={`px-3 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
+                                className={`flex-1 sm:flex-none px-3 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
                                   ladeAcc[soort] === id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
                                 }`}
                               >

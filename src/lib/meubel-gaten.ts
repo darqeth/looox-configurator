@@ -275,14 +275,14 @@ export function bovenSchot(g: Gat, c: GatenContext): number[] {
   return schotten(c.blad).filter((sx) => Math.abs(g.x - sx) + EPS < GAT.schot + g.d / 2)
 }
 
-/** Sifongat boven een tussenschot: er moet een hap uit het schot, en die telt als extra uitsparing. */
+/** Sifon- of kraangat boven een tussenschot: er moet een hap uit het schot, en die telt als extra uitsparing. */
 export function schotHap(g: Gat, c: GatenContext): boolean {
-  return g.soort === 'sifon' && bovenSchot(g, c).length > 0
+  return bovenSchot(g, c).length > 0
 }
 
 /**
  * Aantal uitsparingen waarvoor betaald wordt: elk gat, behalve de kom zelf, plus één
- * voor elk sifongat boven een tussenschot (de hap uit het schot).
+ * voor elk sifon- of kraangat boven een tussenschot (de hap uit het schot).
  */
 export function betaaldeGaten(gaten: Gat[], c: GatenContext | null): number {
   return gaten.filter((g) => g.soort !== 'kom').length + (c ? gaten.filter((g) => schotHap(g, c)).length : 0)

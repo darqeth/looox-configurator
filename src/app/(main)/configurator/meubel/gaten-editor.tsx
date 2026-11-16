@@ -22,7 +22,7 @@ const SNAP_MM = 15
 
 const LEGENDA: Record<Soort, { naam: string; hulp: string }> = {
   sifon: { naam: 'Sifongat', hulp: 'Het gat onder de waskom. Klik op het blad, of op een bolletje midden boven een lade. Daarna kun je het slepen of de maten typen. Tijdens het slepen zie je een waskom van 40 cm als hulplijn. Boven een tussenschot kost 1 uitsparing extra.' },
-  kraan: { naam: 'Kraangat', hulp: 'Klik op het blad waar het kraangat moet komen. Daarna kun je het slepen of de maten typen.' },
+  kraan: { naam: 'Kraangat', hulp: 'Klik op het blad waar het kraangat moet komen. Daarna kun je het slepen of de maten typen. Boven een tussenschot kost 1 uitsparing extra.' },
   kom: { naam: 'Waskom', hulp: 'Klik op een bolletje om de waskom boven die lade te plaatsen.' },
   'kraan-kom': { naam: 'Kraangat', hulp: 'Klik op het plusje achter een waskom. Het gat schuift daarna naar links of rechts.' },
 }

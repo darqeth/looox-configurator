@@ -57,7 +57,11 @@ test('sifongat boven een tussenschot: mag, kost een uitsparing extra, en dan gee
   // Kraangat boven het schot: alleen als het sifongat daar niet staat
   const kraan: Gat = { soort: 'kraan', x: 600, y: 80, d: 35 }
   expect(valideerGaten([vrij, kraan], c)).toBeNull()
-  expect(betaaldeGaten([vrij, kraan], c)).toBe(2)
+  // Ook het kraangat boven het schot kost een uitsparing extra; ernaast niet
+  expect(schotHap(kraan, c)).toBe(true)
+  expect(betaaldeGaten([vrij, kraan], c)).toBe(3)
+  expect(betaaldeGaten([vrij, { ...kraan, x: 552 }], c)).toBe(2)
+  expect(gatenTabel([kraan], c)[0].soort).toBe('Kraangat, met uitsparing in het tussenschot')
   expect(valideerGaten([erop, kraan], c)).toContain('te veel uit het schot')
   expect(valideerGaten([kraan, erop], c)).toContain('te veel uit het schot')
   // Kraangat naast het schot mag wel: rand 30 mm weg (straal 17,5, dus hart op 552,5 of verder)

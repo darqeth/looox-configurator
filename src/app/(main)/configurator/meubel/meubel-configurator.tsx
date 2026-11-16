@@ -180,6 +180,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   // Een offerte opslaan kan zonder; de bestelstap houdt het tegen.
   // Nieuw gekozen bestand, of de al opgeslagen bijlage
   const [tekeningBestand, setTekeningBestand] = useState<File | null>(null)
+  const tekeningInput = useRef<HTMLInputElement>(null)
   const bestaandeTekening = initialConfig?.attachmentUrl ?? null
   // Alleen weergave, wordt niet opgeslagen
   const [toonHout, setToonHout] = useState(true)
@@ -350,6 +351,8 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const handdoekUitsparing = handdoekUitsparingKeuze && model.id === HANDDOEK_UITSPARING_MODEL
   // In het tekenvenster kan de dealer nog van waskom wisselen
   const tekenKomKeuzes = model.waskom && zelfTekenen ? komKeuzes({ ...bladInvoer, waskomAantal }) : undefined
+  // Zelf tekenen kan pas als de maten kloppen en er (bij Solid Surface) een waskom boven de lades past
+  const kanTekenen = lengteOk && (!model.waskom || KOM_KEUZES.some((k) => waskomMax(bladInvoer, k.vorm, k.maat) > 0))
   const tekenBlad = tekenContext ? { context: tekenContext, gaten, indicatief: !zelfTekenen } : null
   const ladeFout = isDuo ? null : valideerLadeBreedtes(breedtes, ruimte, gekozen)
   const magAanpassen = !isDuo && kanLadesAanpassen(ruimte, gekozen)
@@ -365,6 +368,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const tekeningOntbreekt = tekeningNodig && (zelfTekenen || (!tekeningBestand && !bestaandeTekening))
   // Aantal waarvoor betaald wordt, voor de samenvatting
   const uitsparingenTotaal = telUitsparingen({ modelId: model.id, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing })
+  const gatenGetekend = gaten.filter((g) => g.soort !== 'kom').length
   const prijsPerUitsparing = opAanvraag ? null : formatCents(Math.round(UITSPARING_NETTO_CENTS * parseMeubelFactor(factor)))
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
 
@@ -1161,7 +1165,12 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                         type="button"
                         role="radio"
                         aria-checked={tekenwijze === id}
-                        onClick={() => setTekenwijze(id)}
+                        onClick={() => {
+                          // De knop kiest de manier en opent hem meteen: het tekenvenster of de bestandskiezer
+                          setTekenwijze(id)
+                          if (id === 'upload') tekeningInput.current?.click()
+                          else if (kanTekenen) setTekenvenster(true)
+                        }}
                         className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${tekenwijze === id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'}`}
                       >
                         {naam}
@@ -1169,34 +1178,41 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                     ))}
                   </div>
                 )}
-                {zelfTekenen && tekenContext && (
-                  <div className="bg-lx-panel-bg rounded-xl p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-[13px] text-lx-text-primary">
-                        {model.waskom && <>{gaten.filter((g) => g.soort === 'kom').length} van {waskomAantal} {waskomAantal === 1 ? 'waskom' : 'waskommen'} geplaatst · </>}
-                        {uitsparingenTotaal - (handdoekUitsparing ? 1 : 0) === 0 ? 'geen gaten' : `${uitsparingenTotaal - (handdoekUitsparing ? 1 : 0)} ${uitsparingenTotaal - (handdoekUitsparing ? 1 : 0) === 1 ? 'gat' : 'gaten'}`}
-                        {prijsPerUitsparing && uitsparingenTotaal - (handdoekUitsparing ? 1 : 0) > 0 && <span className="text-lx-text-secondary">, {prijsPerUitsparing} per stuk</span>}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setTekenvenster(true)}
-                        disabled={geenKomPast || !lengteOk}
-                        className="h-10 px-4 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity cursor-pointer"
-                      >
-                        {gaten.length > 0 ? 'Tekening aanpassen' : model.waskom ? 'Waskom plaatsen' : 'Gaten tekenen'}
-                      </button>
-                    </div>
-                    <p className="text-[12px] text-lx-text-muted mt-2 leading-relaxed">
-                      {model.waskom
-                        ? 'Kies boven welke lade de waskom komt en of er een kraangat in het blad moet.'
-                        : 'Zet het gat voor de sifon en het kraangat op het bovenaanzicht. Niet verplicht: zonder gaten bestellen mag, dan maak je ze zelf.'}
-                    </p>
-                    {tekening.vervallen > 0 && !geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-2">De tekening past niet meer helemaal bij deze maten. Wat niet past, telt niet mee. Open de tekening om het opnieuw te plaatsen.</p>}
-                    {geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-2">Boven deze lades past geen waskom: een lade moet minstens 15 cm breder zijn dan de waskom. Kies minder lades of een langer meubel, of lever een eigen tekening aan.</p>}
-                    {(tekeningBestand || bestaandeTekening || uitsparingen > 0) && <p className="text-[12px] text-lx-text-muted mt-2">Bij opslaan telt deze tekening. Je eigen maattekening vervalt dan.</p>}
-                  </div>
+                {zelfTekenen && tekenContext && <>
+                  <p className="text-[12.5px] text-lx-text-secondary leading-relaxed">
+                    {gaten.length > 0
+                      ? <span className="text-lx-text-primary font-medium">
+                          {model.waskom && <>{gaten.filter((g) => g.soort === 'kom').length} van {waskomAantal} {waskomAantal === 1 ? 'waskom' : 'waskommen'} geplaatst · </>}
+                          {gatenGetekend === 0 ? 'geen gaten' : `${gatenGetekend} ${gatenGetekend === 1 ? 'gat' : 'gaten'}`}
+                          {prijsPerUitsparing && gatenGetekend > 0 && <span className="font-normal text-lx-text-secondary">, {prijsPerUitsparing} per stuk</span>}
+                        </span>
+                      : model.waskom ? 'Plaats de waskom in de tekening.' : 'Niet verplicht: zonder gaten bestellen mag, dan maak je ze zelf.'}
+                  </p>
+                  {tekening.vervallen > 0 && !geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-1.5">De tekening past niet meer helemaal bij deze maten. Wat niet past, telt niet mee. Open de tekening om het opnieuw te plaatsen.</p>}
+                  {geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-1.5">Boven deze lades past geen waskom: een lade moet minstens 15 cm breder zijn dan de waskom. Kies minder lades of een langer meubel, of lever een eigen tekening aan.</p>}
+                  {(tekeningBestand || bestaandeTekening || uitsparingen > 0) && <p className="text-[12px] text-lx-text-muted mt-1.5">Bij opslaan telt deze tekening. Je eigen maattekening vervalt dan.</p>}
+                </>}
+                {/* De bestandskiezer blijft staan, ook bij zelf tekenen: de knop "Eigen tekening uploaden" opent hem */}
+                {heeftTekenmodule && (
+                  <input
+                    ref={tekeningInput}
+                    id="meubel-tekening"
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="sr-only"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) setTekeningBestand(f); e.target.value = '' }}
+                  />
                 )}
                 {!zelfTekenen && <>
+                {heeftTekenmodule ? (
+                  (tekeningBestand || bestaandeTekening) && (
+                    <p className="text-[12.5px] font-medium text-lx-text-primary">
+                      {tekeningBestand ? <>Gekozen: {tekeningBestand.name}</> : 'Maattekening al toegevoegd'}
+                    </p>
+                  )
+                ) : (
                 <label className="block cursor-pointer">
                   <input
                     id="meubel-tekening"
@@ -1214,6 +1230,7 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                         : <><span className="text-lx-cta font-semibold">Maattekening toevoegen</span> (afbeelding of PDF)</>}
                   </span>
                 </label>
+                )}
                 <p id="meubel-tekening-hulp" className="text-[12px] text-lx-text-muted mt-1.5 leading-relaxed">
                   {model.kast
                     ? (uitsparingen > 0 ? 'Teken hierop de plaats en maat van elke uitsparing.' : 'Alleen nodig als er uitsparingen in de kast moeten.')

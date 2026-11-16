@@ -88,10 +88,46 @@ export interface MeubelProject {
 
 type Props = { factor: number; /** Recht om de eigen inkoopprijs te zien */ magInkoopZien?: boolean; initialConfig?: MeubelInitialConfig; project?: MeubelProject | null; startCategorie?: MeubelCategorieId }
 
+// Concept in sessionStorage, per project (of los). Verloopt na twee uur.
+const CONCEPT = 'lx-meubel-concept'
+const conceptSleutel = (projectId: string | null) => `${CONCEPT}:${projectId ?? 'los'}`
+function bewaarMeubelConcept(projectId: string | null, keuzes: string) {
+  try { window.sessionStorage.setItem(conceptSleutel(projectId), JSON.stringify({ sinds: Date.now(), keuzes })) } catch { /* privévenster: dan zonder concept */ }
+}
+function wisMeubelConcept(projectId: string | null) {
+  try { window.sessionStorage.removeItem(conceptSleutel(projectId)) } catch { /* niets te wissen */ }
+}
+function leesMeubelConcept(projectId: string | null): MeubelInitialConfig | null {
+  try {
+    const ruw = window.sessionStorage.getItem(conceptSleutel(projectId))
+    if (!ruw) return null
+    const { sinds, keuzes } = JSON.parse(ruw) as { sinds?: unknown; keuzes?: unknown }
+    if (typeof sinds !== 'number' || typeof keuzes !== 'string' || Date.now() - sinds > 2 * 60 * 60 * 1000) return null
+    const c = JSON.parse(keuzes) as MeubelInitialConfig
+    return typeof c?.modelId === 'string' && getMeubelModel(c.modelId) ? c : null
+  } catch { return null }
+}
+
 /** Een voorstel van het hulpje vult de configurator opnieuw: de key zet alle keuzes in één keer goed. */
 export default function MeubelConfigurator(props: Props) {
   const [voorstel, setVoorstel] = useState<{ nr: number; config: MeubelInitialConfig } | null>(null)
+  // Concept van een eerder bezoek: alleen bij een nieuw meubel, en pas na het laden (sessionStorage)
+  const [concept, setConcept] = useState<MeubelInitialConfig | null>(null)
+  const projectId = props.project?.id ?? null
+  useEffect(() => {
+    if (props.initialConfig) return
+    setConcept(leesMeubelConcept(projectId))
+  }, [props.initialConfig, projectId])
+  const conceptModel = concept && !voorstel ? getMeubelModel(concept.modelId) : null
   return (
+    <>
+    {concept && conceptModel && (
+      <div role="status" className="flex flex-wrap items-center gap-3 bg-white border border-lx-cta/40 rounded-xl px-4 py-3 mb-4 text-[13px] text-lx-text-primary">
+        <span className="flex-1 min-w-[200px]">Je was bezig met een <strong>{conceptModel.naam}</strong>{concept.lengte ? ` van ${concept.lengte} mm` : ''}. Verder gaan waar je was?</span>
+        <button type="button" onClick={() => { setVoorstel((v) => ({ nr: (v?.nr ?? 0) + 1, config: concept })); setConcept(null) }} className="h-9 px-4 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors cursor-pointer">Verder gaan</button>
+        <button type="button" onClick={() => { wisMeubelConcept(projectId); setConcept(null) }} className="h-9 px-3 rounded-xl border border-black/10 text-[13px] font-medium text-lx-text-secondary hover:text-lx-text-primary transition-colors cursor-pointer">Weggooien</button>
+      </div>
+    )}
     <MeubelConfiguratorInner
       key={voorstel?.nr ?? 0}
       {...props}
@@ -100,7 +136,7 @@ export default function MeubelConfigurator(props: Props) {
         nr: (vorige?.nr ?? 0) + 1,
         config: { ...v.config, aiNotities: [...v.meldingen, ...meldingen], nalopen: true, projectName: projectnaam, reference: '', description: '' },
       }))}
-    />
+    />    </>
   )
 }
 
@@ -172,6 +208,15 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   // Tabblad sluiten of verversen met een niet opgeslagen meubel: de browser vraagt eerst om bevestiging
   const opgeslagenRef = useRef(false)
   const heeftWerk = step >= 2 && !!basisModel
+  // Concept: de keuzes staan pas verderop vast (na de schermen voor categorie en model), vandaar via een ref
+  const conceptRef = useRef<string | null>(null)
+  const conceptBewaard = useRef<string | null>(null)
+  useEffect(() => {
+    const tekst = conceptRef.current
+    if (!tekst || tekst === conceptBewaard.current || opgeslagenRef.current) return
+    conceptBewaard.current = tekst
+    bewaarMeubelConcept(project?.id ?? null, tekst)
+  })
   useEffect(() => {
     if (!heeftWerk) return
     const waarschuw = (e: BeforeUnloadEvent) => { if (!opgeslagenRef.current) e.preventDefault() }
@@ -464,23 +509,29 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
     setEigenBreedtes(nieuw)
   }
 
+  // Alle keuzes in de vorm waarin ze worden opgeslagen; ook de bron van het concept
+  const keuzes = model ? {
+    modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
+    logo: logo && kanLogo(model), uitsparingen: magUitsparing && !zelfTekenen ? uitsparingen : 0,
+    tekenwijze, ...(zelfTekenen && { gaten }), ...(handdoekUitsparing && { handdoekUitsparing }),
+    ...((model.kast || model.plank) && { diepte: model.diepte }),
+    ...(model.plank?.handdoekhouder && { handdoekhouders, handdoekType }),
+    ...(magExtra && { extra, extraArtikel: extraArtikel?.id ?? null }),
+    ...(model.lamp && { lampen }),
+    ...(magLadeAcc && ladeAccKeuze),
+    ...(variant && { variant: variant.id }),
+    ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
+    ...(model.waskom && { waskomVorm, waskomAantal, ...(waskomVorm === 'vierkant' && { waskomMaat }) }),
+    quantity, projectName, reference, description,
+  } : null
+  // Concept: wie de configurator verlaat (terugknop, ander menu) kan daarna verder waar hij was
+  const conceptTekst = keuzes && !isEditing && step >= 2 ? JSON.stringify(keuzes) : null
+  conceptRef.current = conceptTekst
+
   // nieuwProject: opslaan als eerste regel van een project, om er daarna een product aan toe te voegen
   function handleSave(nieuwProject = false) {
-    if (!geldig || !projectName.trim() || !model) return
-    const basis = {
-      modelId: model.id, lengte, lades: gekozen, ladeBreedtes: breedtes, houtkleur, opAanvraag, hoogte: model.hoogte,
-      logo: logo && kanLogo(model), uitsparingen: magUitsparing && !zelfTekenen ? uitsparingen : 0,
-      tekenwijze, ...(zelfTekenen && { gaten }), ...(handdoekUitsparing && { handdoekUitsparing }),
-      ...((model.kast || model.plank) && { diepte: model.diepte }),
-      ...(model.plank?.handdoekhouder && { handdoekhouders, handdoekType }),
-      ...(magExtra && { extra, extraArtikel: extraArtikel?.id ?? null }),
-      ...(model.lamp && { lampen }),
-      ...(magLadeAcc && ladeAccKeuze),
-      ...(variant && { variant: variant.id }),
-      ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
-      ...(model.waskom && { waskomVorm, waskomAantal, ...(waskomVorm === 'vierkant' && { waskomMaat }) }),
-      quantity, projectName: projectName.trim(), reference, description,
-    }
+    if (!geldig || !projectName.trim() || !model || !keuzes) return
+    const basis = { ...keuzes, projectName: projectName.trim() }
     startTransition(async () => {
       try {
         const payload = { ...basis, attachmentUrl: zelfTekenen ? null : await uploadTekening() }
@@ -488,6 +539,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
           ? { id: initialConfig.id, ...await updateMeubelConfiguration(initialConfig.id, payload) }
           : await saveMeubelConfiguration({ ...payload, projectId: project?.id ?? null, nieuwProject: nieuwProject || (!project && nieuwProjectActief()) })
         opgeslagenRef.current = true
+        wisMeubelConcept(project?.id ?? null)
         nieuwProjectKlaar()
         // Een regel van een project gaat terug naar het project
         if (opgeslagen.projectId) return router.push(`/projecten/${opgeslagen.projectId}`)

@@ -4,6 +4,7 @@ import { leesMeubel, meubelKort } from '@/lib/meubel-opslag'
 
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
+import { Folder } from 'lucide-react'
 import { OrderApprovalButtons } from './order-approval-buttons'
 import { AdminPagination } from '@/components/admin-pagination'
 import { fetchOrders } from '@/lib/queries/fetch-orders'
@@ -181,18 +182,49 @@ export function BestellingenContent({ page, view }: { page: string; view: string
 
             return (
               <div key={order.id} className="hover:bg-lx-panel-bg/50 transition-colors">
-                {eersteVanGroep && (
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 sm:px-5 py-2.5 bg-lx-icon-bg border-b border-lx-divider">
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white text-lx-cta">Project</span>
-                    <span className="text-[12.5px] font-bold text-lx-text-primary font-mono tracking-wide">{groep}</span>
-                    <span className="text-[12px] text-lx-text-secondary flex-1 min-w-0 truncate">
-                      {groepRegels.length} {groepRegels.length === 1 ? 'regel' : 'regels'}{magInkoop && ` · totaal ${formatEuro(groepRegels.reduce((som, o) => som + Math.round(Number(o.total_price) * 100), 0) / 100)} netto`}
-                    </span>
+                {eersteVanGroep && (() => {
+                  const stuks = groepRegels.reduce((som, o) => som + o.quantity, 0)
+                  const totaal = formatEuro(groepRegels.reduce((som, o) => som + Math.round(Number(o.total_price) * 100), 0) / 100)
+                  const regelsTekst = `${groepRegels.length} ${groepRegels.length === 1 ? 'regel' : 'regels'}`
+                  const download = (
                     <a href={`/api/pdf/order/groep/${groep}`} download className="text-[12px] font-semibold text-lx-cta hover:underline whitespace-nowrap">
                       Projectorder downloaden
                     </a>
-                  </div>
-                )}
+                  )
+                  return (
+                    <div className="bg-lx-icon-bg border-b border-lx-divider">
+                      {/* Telefoon */}
+                      <div className="sm:hidden px-4 py-2.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[12.5px] font-bold text-lx-text-primary font-mono tracking-wide">{groep}</span>
+                          {magInkoop && <span className="text-[13px] font-bold text-lx-text-primary">{totaal}</span>}
+                        </div>
+                        <p className="text-[12.5px] font-semibold text-lx-text-primary truncate mt-0.5">{config?.name ?? '—'}</p>
+                        <div className="flex items-center justify-between gap-3 mt-0.5">
+                          <span className="text-[11.5px] text-lx-text-secondary">Project · {regelsTekst} · {stuks} {stuks === 1 ? 'stuk' : 'stuks'}</span>
+                          {download}
+                        </div>
+                      </div>
+                      {/* Tablet en desktop: zelfde kolommen als de regels */}
+                      <div className="hidden sm:flex items-center gap-4 px-5 py-2.5">
+                        <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-white flex items-center justify-center text-lx-cta"><Folder size={15} aria-hidden="true" /></div>
+                        <div className="w-[140px] flex-shrink-0">
+                          <p className="text-[12.5px] font-bold text-lx-text-primary font-mono tracking-wide">{groep}</p>
+                          <p className="text-[11px] text-lx-text-secondary">Project · {regelsTekst}</p>
+                        </div>
+                        <p className="flex-1 min-w-0 text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}</p>
+                        <p className="hidden lg:block w-10 flex-shrink-0 text-center text-[12.5px] font-semibold text-lx-text-primary">{stuks}×</p>
+                        <div className="w-[92px] flex-shrink-0 text-right">
+                          {magInkoop && <>
+                            <p className="text-[13px] font-bold text-lx-text-primary">{totaal}</p>
+                            <p className="text-[10.5px] text-lx-text-secondary">Totaal netto</p>
+                          </>}
+                        </div>
+                        <div className="w-[200px] flex-shrink-0 text-right">{download}</div>
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Mobile layout */}
                 <div className="flex gap-3 px-4 py-3.5 sm:hidden">

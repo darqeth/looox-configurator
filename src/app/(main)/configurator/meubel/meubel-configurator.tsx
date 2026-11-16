@@ -11,7 +11,7 @@ import { Maximize2, X } from 'lucide-react'
 import { toast } from '@/components/toast'
 import { calcMeubelNettoCents,
   MEUBEL_MODELLEN, MEUBEL_CATEGORIEEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, LADE_MIN_MM, LADE_MAX_MM, MEUBEL_AANTAL_MAX,
-  getLengteBereik, getLadeOpties, getPrijsGrens, getMeubelVanafCents, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
+  getLengteBereik, getLadeOpties, getMeubelVanafCents, ladeLabel, getMeubelPrijsOpbouw, houtkleurAfbeelding, formatCents,
   getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerLadeBreedtes, ladeBreedtesTekst,
   UITSPARING_MAX, UITSPARING_NETTO_CENTS, meubelOptiesTekst, parseMeubelFactor,
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
@@ -388,8 +388,6 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   const prijsInput = { modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing, hoogte: model.hoogte, diepte: model.diepte,
     ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }
   const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw(prijsInput, factor) : null
-  // Uitleg bij een prijssprong: tot waar de prijs van nu geldt
-  const prijsGrens = lengteOk && !opAanvraag ? getPrijsGrens(model, lengte) : null
   // Eigen inkoop: de tabelprijs zonder factor, achter het oogje
   const nettoCents = opbouw ? calcMeubelNettoCents(prijsInput) : null
   // Zonder maattekening kan LoooX het meubel niet maken: opslaan mag, bestellen niet
@@ -630,11 +628,6 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                       <p id="meubel-lengte-hulp" className={`text-[12px] mt-1.5 ${lengteOk ? 'text-lx-text-muted' : 'text-red-600'}`}>
                         Hele millimeters, van {bereik.min} tot {bereik.max} mm.
                       </p>
-                      {prijsGrens && (
-                        <p className="text-[12px] mt-1 text-lx-text-muted leading-relaxed">
-                          Deze prijs geldt tot en met {prijsGrens.tot} mm. Daarboven geldt de volgende prijsstaffel{prijsGrens.extraLade ? ` en is een extra lade nodig, want een lade is maximaal ${LADE_MAX_MM} mm breed` : ''}.
-                        </p>
-                      )}
                     </>
                   )}
 

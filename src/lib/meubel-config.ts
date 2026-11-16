@@ -1494,22 +1494,6 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
   return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0) + ladeAcc + plankExtraPrijs(input).netto
 }
 
-/**
- * Tot welke lengte de prijs van nu geldt, en of daarboven een extra lade nodig is.
- * Alleen voor meubels met een lengtestaffel; null als er geen hogere staffel is.
- */
-export function getPrijsGrens(model: MeubelModel, lengte: number): { tot: number; extraLade: boolean } | null {
-  if (model.plank || model.kast || model.duo || model.artikel || model.vasteLengtes) return null
-  const staffel = findStaffel(model, lengte)
-  if (!staffel) return null
-  const tot = staffel.max * 10
-  if (tot >= getLengteBereik(model).max) return null
-  const nu = getLadeOpties(model, lengte)
-  const straks = getLadeOpties(model, tot + 1)
-  if (!nu.length || !straks.length) return null
-  return { tot, extraLade: Math.min(...straks) > Math.min(...nu) }
-}
-
 /** Laagste brutoprijs van een model in centen, voor "vanaf" op de modelkaart. Null als die niet te bepalen is. */
 export function getMeubelVanafCents(model: MeubelModel, factor: number): number | null {
   const kleur = getHoutkleuren(model)[0]?.id

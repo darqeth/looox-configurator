@@ -3,7 +3,7 @@
 // Alle bedragen in centen, alle maten in hele millimeters. In beeld en op de offerte staat altijd bruto
 // (netto × factor van het bedrijf); netto is alleen voor de bestelstap.
 
-import { betaaldeGaten, gatenSoort, getKom, komMax, kommenCompleet, maakBlad, valideerGaten, type Gat, type GatenContext, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
+import { GAT, betaaldeGaten, gatenSoort, getKom, komMax, kommenCompleet, maakBlad, valideerGaten, type Gat, type GatenContext, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
 
 export const MEUBEL_FACTOR_DEFAULT = 2
 export const MEUBEL_FACTOR_MAX = 10
@@ -1416,6 +1416,24 @@ export function waskomMax(c: Parameters<typeof gatenContext>[0], vorm: WaskomVor
   return ctx?.kom ? komMax(ctx.blad, ctx.kom) : 0
 }
 
+/** Zo breed moet een lade minstens zijn om er de kleinste waskom boven te zetten. */
+export const KOM_LADE_MIN_MM = getKom('ovaal').b + GAT.komMarge
+
+/**
+ * Er past geen waskom boven de lades: wat kan de dealer doen? `breder` is een indeling
+ * met één lade die breed genoeg is, `minder` het grootste aantal lades waarbij het wel past.
+ */
+export function komAdvies(c: Parameters<typeof gatenContext>[0], ruimte: number, opties: number[]): { breder: number[] | null; minder: number | null } {
+  const past = (invoer: typeof c) => waskomMax(invoer, 'ovaal') > 0
+  let breder: number[] | null = null
+  if (kanLadesAanpassen(ruimte, c.lades) && ruimte - (c.lades - 1) * LADE_MIN_MM >= KOM_LADE_MIN_MM) {
+    const voorstel = [KOM_LADE_MIN_MM, ...startLadeBreedtes(ruimte - KOM_LADE_MIN_MM, c.lades - 1)]
+    if (valideerLadeBreedtes(voorstel, ruimte, c.lades) === null && past({ ...c, ladeBreedtes: voorstel })) breder = voorstel
+  }
+  const minder = [...opties].sort((a, b) => b - a).find((n) => n < c.lades && past({ ...c, lades: n, ladeBreedtes: null })) ?? null
+  return { breder, minder }
+}
+
 /** Een waskom die in het Solid Surface blad kan, met het blad zoals het er dan uitziet. */
 export interface KomKeuze {
   vorm: WaskomVorm
@@ -1444,7 +1462,7 @@ function valideerTekening(c: MeubelInput, model: MeubelModel): string | null {
   if (c.tekenwijze !== 'module') return null
   const ctx = gatenContext(c)
   if (!ctx) return 'Bij dit product kan geen tekening gemaakt worden.'
-  if (ctx.kom && komMax(ctx.blad, ctx.kom) < ctx.komAantal) return 'Deze waskom past niet boven de lades. De lade moet minstens 15 cm breder zijn dan de waskom.'
+  if (ctx.kom && komMax(ctx.blad, ctx.kom) < ctx.komAantal) return 'Deze waskom past niet boven de lades. Een lade moet minstens 15 cm breder zijn dan de waskom. Maak een lade breder of kies minder lades.'
   return valideerGaten(c.gaten ?? [], ctx)
 }
 

@@ -5,7 +5,7 @@ import {
   getAanvraagBereik, getAanvraagLadeOpties, getMeubelOrderOpbouw, formatPct,
   MEUBEL_MODELLEN, getHoutkleuren, getMeubelHoogte, ladeRuimte, meubelOptiesTekst,
   getRegaalBreedte, getDuoPrijs, getDuoReeksen, getLengteBereik as lengteBereik,
-  formatMm, ladeBreedtesTekst, valideerLadeBreedtes, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
+  formatMm, ladeBreedtesTekst, valideerLadeBreedtes, komAdvies, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
   tekeningVerplicht, telUitsparingen, gatenContext, waskomMax, waskomTekst, UITSPARING_NETTO_CENTS, meubelAfmeting, indelingTekst, kanUitsparing, getDeurOpties, plankExtraPrijs, getPlankExtraArtikel,
 } from '../src/lib/meubel-config'
 import { leesMeubel, meubelPrijsInput, meubelKort, tekeningMelding } from '../src/lib/meubel-opslag'
@@ -880,6 +880,17 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
     expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', x: 600, y: 240, d: 45 }, { soort: 'kraan', x: 600, y: 80, d: 35 }] })).toContain('te veel uit het schot')
     expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'kraan', x: 10, y: 80, d: 35 }] })).toContain('30 mm')
     expect(valideerMeubelConfig({ ...cfg, modelId: 'facet-deco', lengte: 800, lades: 1, gaten: [] })).toContain('geen tekening')
+  })
+
+  test('advies als er geen waskom boven de lades past', () => {
+    const c = { modelId: 'solid-drawer-box', lengte: 1800, lades: 3, ladeBreedtes: null }
+    expect(waskomMax(c, 'ovaal')).toBe(0)
+    const advies = komAdvies(c, 1800, [2, 3])
+    expect(advies.breder).toEqual([650, 575, 575])
+    expect(advies.minder).toBe(2)
+    expect(waskomMax({ ...c, ladeBreedtes: advies.breder }, 'ovaal')).toBe(1)
+    // Te kort om een lade breed genoeg te maken: alleen minder lades helpt
+    expect(komAdvies({ ...c, lengte: 1300 }, 1300, [2, 3]).breder).toBeNull()
   })
 
   test('waskom 850 alleen rechthoekig en alleen als hij past', () => {

@@ -19,7 +19,7 @@ import { calcMeubelNettoCents,
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
   getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelModel, LADE_ACCESSOIRES, type LadeAccessoire,
-  type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht, gatenContext, waskomMax, komKeuzes, telUitsparingen, HANDDOEK_UITSPARING_MODEL } from '@/lib/meubel-config'
+  type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht, gatenContext, waskomMax, komKeuzes, komAdvies, KOM_LADE_MIN_MM, telUitsparingen, HANDDOEK_UITSPARING_MODEL } from '@/lib/meubel-config'
 import { betaaldeGaten, kommenCompleet, werkGaten, type Gat, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
 import GatenEditor from './gaten-editor'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
@@ -426,6 +426,8 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   const waskomVorm = kom.vorm
   const waskomMaat = kom.maat
   const geenKomPast = !!model.waskom && komPast(waskomVorm, waskomMaat) === 0
+  // Geen waskom boven deze lades: één lade breder maken of minder lades kiezen
+  const komHulp = geenKomPast && lengteOk ? komAdvies(bladInvoer, ruimte, opties) : null
   const waskomAantal = Math.max(1, Math.min(waskomAantalKeuze, komPast(waskomVorm, waskomMaat) || 1))
   const tekenContext = gatenContext({ ...bladInvoer, ...(model.waskom && { waskomVorm, waskomMaat, waskomAantal }) })
   // Wat na een maatwijziging niet meer te maken is, telt niet mee en verdwijnt bij opslaan
@@ -1022,6 +1024,29 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                   </p>
 
 
+                  {komHulp && (
+                    <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3" role="alert">
+                      <p className="text-[12.5px] text-amber-900 leading-relaxed">
+                        <strong>Boven {ladeLabel(model, gekozen)} past geen waskom.</strong> De lades zijn te smal: onder een waskom moet een lade minstens {KOM_LADE_MIN_MM} mm breed zijn.
+                        {!komHulp.breder && komHulp.minder === null && ' Kies een langer meubel of lever een eigen tekening aan.'}
+                      </p>
+                      {(komHulp.breder || komHulp.minder !== null) && (
+                        <div className="flex flex-wrap gap-2 mt-2.5">
+                          {komHulp.breder && (
+                            <button type="button" onClick={() => setEigenBreedtes(komHulp.breder)} className="px-3.5 h-9 rounded-xl border border-amber-300 bg-white text-[12.5px] font-semibold text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer">
+                              Maak één lade {KOM_LADE_MIN_MM} mm breed
+                            </button>
+                          )}
+                          {komHulp.minder !== null && (
+                            <button type="button" onClick={() => kiesLades(komHulp.minder!)} className="px-3.5 h-9 rounded-xl border border-amber-300 bg-white text-[12.5px] font-semibold text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer">
+                              Kies {ladeLabel(model, komHulp.minder)}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {magAanpassen && !model.kast && (
                     <div className="mt-4 bg-lx-panel-bg rounded-xl p-4">
                       <label className="flex items-center justify-between gap-4 cursor-pointer select-none">
@@ -1275,6 +1300,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                           setTekenwijze(id)
                           if (id === 'upload') tekeningInput.current?.click()
                           else if (kanTekenen) setTekenvenster(true)
+                          else if (lengteOk) toast('Boven deze lades past geen waskom. Maak een lade breder of kies minder lades.')
                         }}
                         className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border-black/10 bg-white text-lx-text-primary hover:bg-lx-panel-bg`}
                       >
@@ -1295,7 +1321,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                       : model.waskom ? 'Plaats de waskom in de tekening.' : 'Niet verplicht. Weet je de plek nog niet, dan boort de monteur de gaten zelf.'}
                   </p>
                   {tekening.vervallen > 0 && !geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-1.5">De tekening past niet meer helemaal bij deze maten. Wat niet past, telt niet mee. Open de tekening om het opnieuw te plaatsen.</p>}
-                  {geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-1.5">Boven deze lades past geen waskom: een lade moet minstens 15 cm breder zijn dan de waskom. Kies minder lades of een langer meubel, of lever een eigen tekening aan.</p>}
+                  {geenKomPast && <p role="status" className="text-[12px] text-amber-800 mt-1.5">Boven deze lades past geen waskom. Maak bij de indeling een lade minstens {KOM_LADE_MIN_MM} mm breed of kies minder lades. Een eigen tekening aanleveren kan ook.</p>}
                   {(tekeningBestand || bestaandeTekening || uitsparingen > 0) && <p className="text-[12px] text-lx-text-muted mt-1.5">Bij opslaan telt deze tekening. Je eigen maattekening vervalt dan.</p>}
                 </>}
                 {/* De bestandskiezer blijft staan, ook bij zelf tekenen: de knop "Eigen tekening uploaden" opent hem */}

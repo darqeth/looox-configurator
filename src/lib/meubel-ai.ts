@@ -213,7 +213,7 @@ export function maakMeubelVoorstel(ruw: MeubelAiRuw): MeubelVoorstel | null {
       if (startGaten(context).length === 0) meld(`De ${aantal === 2 ? 'waskommen staan' : 'waskom staat'} in de tekening. Controleer boven welke lade.`)
     } else {
       config.tekenwijze = 'upload'
-      meld('De waskom past niet boven deze lades: een lade moet minstens 15 cm breder zijn dan de waskom. Kies een andere indeling of lever een eigen maattekening aan.')
+      meld('De waskom past niet boven deze lades: een lade moet minstens 15 cm breder zijn dan de waskom. Maak een lade breder, kies minder lades of lever een eigen maattekening aan.')
     }
   } else if (context) {
     config.tekenwijze = 'module'

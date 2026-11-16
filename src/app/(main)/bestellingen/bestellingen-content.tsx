@@ -185,6 +185,9 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                 {eersteVanGroep && (() => {
                   const stuks = groepRegels.reduce((som, o) => som + o.quantity, 0)
                   const totaal = formatEuro(groepRegels.reduce((som, o) => som + Math.round(Number(o.total_price) * 100), 0) / 100)
+                  // Eén status als alle regels gelijk lopen
+                  const groepStatus = groepRegels.every((o) => o.status === order.status) ? order.status : null
+                  const projectId = (config as { project_id?: string | null } | null)?.project_id ?? null
                   const regelsTekst = `${groepRegels.length} ${groepRegels.length === 1 ? 'regel' : 'regels'}`
                   const download = (
                     <a href={`/api/pdf/order/groep/${groep}`} download className="text-[12px] font-semibold text-lx-cta hover:underline whitespace-nowrap">
@@ -220,7 +223,27 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                             <p className="text-[10.5px] text-lx-text-secondary">Totaal netto</p>
                           </>}
                         </div>
-                        <div className="w-[200px] flex-shrink-0 text-right">{download}</div>
+                        <div className="w-[124px] flex-shrink-0 flex justify-center">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${groepStatus ? STATUS_COLORS[groepStatus] ?? STATUS_COLORS.pending : 'bg-white text-lx-text-secondary border-black/10'}`}>
+                            {groepStatus ? STATUS_LABELS[groepStatus] ?? groepStatus : 'Verschilt per regel'}
+                          </span>
+                        </div>
+                        <div className="w-[60px] flex-shrink-0 flex items-center gap-1 justify-end">
+                          {projectId && (
+                            <div className="relative group">
+                            <a href={`/api/pdf/project/${projectId}`} download aria-label="Klantofferte van het project downloaden" className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-white transition-colors">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            </a>
+                            <div className="absolute bottom-full right-0 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">Klantofferte van het project downloaden</div>
+                          </div>
+                          )}
+                          <div className="relative group">
+                            <a href={`/api/pdf/order/groep/${groep}`} download aria-label="Projectorder downloaden" className="w-8 h-8 rounded-lg flex items-center justify-center text-lx-text-secondary hover:text-lx-cta hover:bg-white transition-colors">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </a>
+                            <div className="absolute bottom-full right-0 mb-1.5 px-2 py-1 bg-lx-text-primary text-white text-[10.5px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">Projectorder downloaden</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )

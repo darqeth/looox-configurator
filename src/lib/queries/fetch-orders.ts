@@ -21,6 +21,7 @@ export type OrderRow = {
   configurations: {
     id: string
     name: string | null
+    project_id?: string | null
     width: number | null
     height: number | null
     selected_options: Record<string, unknown>
@@ -108,6 +109,7 @@ export async function fetchOrders(params: { view: string; page: number }): Promi
         configurations (
           id,
           name,
+          project_id,
           width,
           height,
           selected_options

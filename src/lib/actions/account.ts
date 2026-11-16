@@ -1,5 +1,6 @@
 'use server'
 
+import { ensureCompanyMembership } from '@/lib/ensure-company'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
@@ -29,38 +30,10 @@ export async function updateProfile(formData: FormData) {
 
   if (error) throw new Error(error.message)
 
-  // Als user een bedrijfsnaam heeft ingevuld maar nog geen company_members-rij heeft,
-  // maak automatisch een bedrijf aan en voeg user toe als manager
-  if (company) {
-    const { data: existingMember } = await supabase
-      .from('company_members')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (!existingMember) {
-      const admin = createAdminClient()
-      const { data: newCompany } = await admin
-        .from('companies')
-        .insert({ name: company })
-        .select('id')
-        .single()
-
-      if (newCompany) {
-        await Promise.all([
-          admin.from('profiles').update({ company_id: newCompany.id }).eq('id', user.id),
-          admin.from('company_members').insert({
-            company_id: newCompany.id,
-            user_id: user.id,
-            role: 'manager',
-            can_order: true,
-            can_configure: true,
-            own_configs_only: false,
-          }),
-        ])
-      }
-    }
-  }
+  // Bedrijfsnaam ingevuld maar nog geen lidmaatschap: koppel aan het bestaande bedrijf
+  // met die naam, of maak het aan. Zelfde logica als bij inloggen en goedkeuren, zodat
+  // hier geen dubbele bedrijven meer ontstaan.
+  if (company) await ensureCompanyMembership(user.id)
 
   revalidatePath('/account')
   revalidatePath('/account/collegas')

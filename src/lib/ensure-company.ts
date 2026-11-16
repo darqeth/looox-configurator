@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normaliseerBedrijf } from '@/lib/bedrijfsnaam'
 
 // Zorgt dat een goedgekeurde gebruiker met een bedrijfsnaam (profiles.company)
 // ook echt een bedrijf-entiteit + company_members-rij heeft. Idempotent: bestaat
@@ -33,17 +34,26 @@ export async function ensureCompanyMembership(
   // bedrijven te vermijden; anders nieuw bedrijf aanmaken.
   let companyId: string | null = profile.company_id ?? null
   if (!companyId) {
-    const { data: existingCompany } = await admin
-      .from('companies')
-      .select('id')
-      .ilike('name', profile.company)
-      .maybeSingle()
-    if (existingCompany) {
-      companyId = existingCompany.id as string
+    // Zelfde bedrijf, ook als het anders geschreven is (hoofdletters, spaties, B.V.).
+    // De eerdere ilike + maybeSingle gaf niets terug zodra er twee bedrijven met die
+    // naam waren, waarna er telkens nog een bij kwam.
+    const norm = normaliseerBedrijf(profile.company)
+    const { data: alle } = await admin.from('companies').select('id, name, created_at').order('created_at')
+    const zelfde = norm ? (alle ?? []).filter((c) => normaliseerBedrijf(c.name as string) === norm) : []
+    let bestaand: string | null = null
+    if (zelfde.length === 1) bestaand = zelfde[0].id as string
+    else if (zelfde.length > 1) {
+      // Dubbelen uit het verleden: het bedrijf met de meeste leden, bij gelijk het oudste
+      const { data: leden } = await admin.from('company_members').select('company_id').in('company_id', zelfde.map((c) => c.id as string))
+      const aantal = (id: string) => (leden ?? []).filter((l) => l.company_id === id).length
+      bestaand = [...zelfde].sort((a, b) => aantal(b.id as string) - aantal(a.id as string))[0].id as string
+    }
+    if (bestaand) {
+      companyId = bestaand
     } else {
       const { data: newCompany } = await admin
         .from('companies')
-        .insert({ name: profile.company })
+        .insert({ name: profile.company.trim() })
         .select('id')
         .single()
       companyId = (newCompany?.id as string | undefined) ?? null

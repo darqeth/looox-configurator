@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { sendWelcomeEmail, sendPasswordResetEmail, sendNewRegistrationEmail } from '@/lib/email'
 import { getNotificationEmails } from '@/lib/actions/settings'
+import { suggereerBedrijven, vergelijkBedrijf, type BedrijfMatch } from '@/lib/bedrijfsnaam'
 import { ensureCompanyMembership } from '@/lib/ensure-company'
 
 export async function signIn(email: string, password: string) {
@@ -41,6 +42,30 @@ export async function signIn(email: string, password: string) {
   }
 
   redirect('/dashboard')
+}
+
+// Bestaande bedrijfsnamen voor het registratieformulier. Kort bewaard: dit wordt
+// bij elke toetsaanslag gevraagd en de lijst verandert zelden.
+let bedrijvenCache: { namen: string[]; tot: number } | null = null
+async function bedrijfsnamen(): Promise<string[]> {
+  if (bedrijvenCache && bedrijvenCache.tot > Date.now()) return bedrijvenCache.namen
+  const admin = createAdminClient()
+  const { data } = await admin.from('companies').select('name').limit(2000)
+  const namen = (data ?? []).map((c) => c.name as string).filter(Boolean)
+  bedrijvenCache = { namen, tot: Date.now() + 60_000 }
+  return namen
+}
+
+/** Snelselectie tijdens typen bij registratie: hooguit acht bestaande namen, vanaf drie tekens. */
+export async function zoekBedrijven(invoer: string): Promise<string[]> {
+  if (typeof invoer !== 'string' || invoer.length > 100) return []
+  return suggereerBedrijven(invoer, await bedrijfsnamen())
+}
+
+/** Bestaat deze bedrijfsnaam al, eventueel net anders geschreven? */
+export async function controleerBedrijf(invoer: string): Promise<BedrijfMatch> {
+  if (typeof invoer !== 'string' || invoer.length > 100) return { soort: 'nieuw' }
+  return vergelijkBedrijf(invoer, await bedrijfsnamen())
 }
 
 export async function signUp(data: {
@@ -103,7 +128,7 @@ export async function signUp(data: {
     id: authData.user.id,
     email: data.email,
     full_name: data.fullName,
-    company: data.company,
+    company: data.company.trim().slice(0, 100),
     phone: data.phone,
     approval_status: 'pending',
     ...(invite ? { company_id: invite.company_id } : {}),

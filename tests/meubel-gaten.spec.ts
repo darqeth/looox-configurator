@@ -3,7 +3,7 @@ import { getMeubelModel } from '../src/lib/meubel-config'
 import { gatenTabel, tekenGaten, tekenKommenIndicatief } from '../src/lib/meubel-tekening'
 import {
   maakBlad, snappunten, valideerGaten, klemGat, getKom, komMax, plaatsGat, herzieGaten,
-  betaaldeGaten, kommenCompleet, gatenSoort, startGaten, werkGaten, type GatenContext, schotten, komOverRand, leesGaten } from '../src/lib/meubel-gaten'
+  betaaldeGaten, kommenCompleet, gatenSoort, startGaten, werkGaten, type GatenContext, schotten, komOverRand, leesGaten, schotHap, type Gat } from '../src/lib/meubel-gaten'
 
 const facet = getMeubelModel('facet')!, solid = getMeubelModel('solid-facet')!
 const hout = (lengte: number, breedtes: number[]): GatenContext =>
@@ -41,27 +41,38 @@ test('twee gaten dichter dan 30 mm op elkaar', () => {
   expect(valideerGaten([{ soort: 'kraan', x: 300, y: 100, d: 35 }, { soort: 'kraan', x: 365, y: 100, d: 35 }], c)).toBeNull()
 })
 
-test('sifongat: vrij te plaatsen, maar 30 mm van een tussenschot', () => {
+test('sifongat boven een tussenschot: mag, kost een uitsparing extra, en dan geen kraangat boven dat schot', () => {
   const c = hout(1200, [600, 600])
   // Twee sifongaten boven dezelfde lade mag, zolang ze 30 mm uit elkaar blijven
   expect(valideerGaten([{ soort: 'sifon', x: 150, y: 200, d: 45 }, { soort: 'sifon', x: 400, y: 300, d: 45 }], c)).toBeNull()
-  // Schot op 600: rand van het gat (straal 22,5) moet 30 mm wegblijven, dus hart op 547,5 of verder
-  expect(valideerGaten([{ soort: 'sifon', x: 547, y: 200, d: 45 }], c)).toBeNull()
-  expect(valideerGaten([{ soort: 'sifon', x: 548, y: 200, d: 45 }], c)).toContain('tussenschot')
-  expect(valideerGaten([{ soort: 'sifon', x: 600, y: 200, d: 45 }], c)).toContain('tussenschot')
-  expect(valideerGaten([{ soort: 'sifon', x: 653, y: 200, d: 45 }], c)).toBeNull()
-  // Een kraangat mag wel boven het schot
-  expect(valideerGaten([{ soort: 'kraan', x: 600, y: 80, d: 35 }], c)).toBeNull()
+  // Schot op 600: rand van het gat (straal 22,5) binnen 30 mm, dus hart tussen 547,5 en 652,5
+  const vrij: Gat = { soort: 'sifon', x: 547, y: 240, d: 45 }
+  const erop: Gat = { soort: 'sifon', x: 548, y: 240, d: 45 }
+  expect([schotHap(vrij, c), schotHap(erop, c), schotHap({ ...erop, x: 600 }, c), schotHap({ ...erop, x: 653 }, c)]).toEqual([false, true, true, false])
+  expect(valideerGaten([erop], c)).toBeNull()
+  expect(betaaldeGaten([vrij], c)).toBe(1)
+  expect(betaaldeGaten([erop], c)).toBe(2)
+  // Zonder blad (onbekend) telt alleen het gat
+  expect(betaaldeGaten([erop], null)).toBe(1)
+  // Kraangat boven het schot: alleen als het sifongat daar niet staat
+  const kraan: Gat = { soort: 'kraan', x: 600, y: 80, d: 35 }
+  expect(valideerGaten([vrij, kraan], c)).toBeNull()
+  expect(betaaldeGaten([vrij, kraan], c)).toBe(2)
+  expect(valideerGaten([erop, kraan], c)).toContain('te veel uit het schot')
+  expect(valideerGaten([kraan, erop], c)).toContain('te veel uit het schot')
+  // Kraangat naast het schot mag wel: rand 30 mm weg (straal 17,5, dus hart op 552,5 of verder)
+  expect(valideerGaten([erop, { ...kraan, x: 552 }], c)).toBeNull()
+  // Bij drie lades: sifon bij het ene schot, kraan boven het andere mag
+  const drie = hout(1800, [600, 600, 600])
+  expect(valideerGaten([{ ...erop, x: 600 }, { ...kraan, x: 1200 }], drie)).toBeNull()
   // Een blad zonder lades heeft geen schotten
   expect(schotten(hout(1200, []).blad)).toEqual([])
   expect(schotten(c.blad)).toEqual([600])
   expect(valideerGaten([{ soort: 'kom', vak: 0 }], c)).not.toBeNull()
-})
-
-test('klemGat schuift een sifongat van het schot af, naar de kant waar het stond', () => {
-  const c = hout(1200, [600, 600])
-  expect(klemGat({ soort: 'sifon', x: 590, y: 240, d: 45 }, c)).toEqual({ soort: 'sifon', x: 547, y: 240, d: 45 })
-  expect(klemGat({ soort: 'sifon', x: 610, y: 240, d: 45 }, c)).toEqual({ soort: 'sifon', x: 653, y: 240, d: 45 })
+  // klemGat laat een sifongat boven het schot staan
+  expect(klemGat({ soort: 'sifon', x: 590, y: 240, d: 45 }, c)).toEqual({ soort: 'sifon', x: 590, y: 240, d: 45 })
+  // In de tabel staat de extra uitsparing erbij
+  expect(gatenTabel([erop], c)[0].soort).toBe('Sifongat, met uitsparing in het tussenschot')
 })
 
 test('komOverRand: waskom van 40 cm rond het sifongat steekt over de rand', () => {
@@ -158,7 +169,7 @@ test('herzieGaten: korter blad haalt het kraangat binnen het blad, kom weg haalt
 })
 
 test('kom telt niet als betaalde uitsparing', () => {
-  expect(betaaldeGaten([{ soort: 'kom', vak: 0 }, { soort: 'kraan-kom', vak: 0, dx: 0, d: 34 }, { soort: 'sifon', x: 300, y: 200, d: 45 }])).toBe(2)
+  expect(betaaldeGaten([{ soort: 'kom', vak: 0 }, { soort: 'kraan-kom', vak: 0, dx: 0, d: 34 }, { soort: 'sifon', x: 300, y: 200, d: 45 }], null)).toBe(2)
 })
 
 test('kommenCompleet: 2 gekozen, 1 geplaatst is niet compleet', () => {

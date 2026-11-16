@@ -5,7 +5,7 @@ import type { MeubelModel, WaskomVorm } from '@/lib/meubel-config'
 // hart. Scherm, PDF en server rekenen met deze functies, zodat ze nooit uiteenlopen.
 
 export type Gat =
-  /** Hout, gat voor de sifon van een opbouwwaskom: vrij te plaatsen, maar niet op een tussenschot */
+  /** Hout, gat voor de sifon van een opbouwwaskom: vrij te plaatsen. Bij een tussenschot komt er een hap uit het schot bij. */
   | { soort: 'sifon'; x: number; y: number; d: number }
   /** Hout: vrij te plaatsen */
   | { soort: 'kraan'; x: number; y: number; d: number }
@@ -19,7 +19,7 @@ export type GatenSoort = 'hout' | 'solid'
 export type KomMaat = 500 | 850
 
 export const GAT = {
-  /** Vrije ruimte tussen de rand van een sifongat en een tussenschot */
+  /** Komt de rand van een gat dichter dan dit bij een tussenschot, dan staat het gat 'boven het schot' */
   schot: 30,
   /** Doorsnee van de gemiddelde opbouwwaskom, als hulplijn bij het plaatsen van het sifongat */
   komRef: 400,
@@ -176,12 +176,7 @@ export function klemGat(g: Gat, c: GatenContext): Gat {
   if (g.soort === 'sifon') {
     const d = klem(g.d, GAT.sifon.min, GAT.sifon.max, GAT.sifon.std)
     const marge = GAT.rand + d / 2
-    let x = klem(g.x, Math.ceil(marge), Math.floor(lengte - marge), Math.round(lengte / 2))
-    // Niet op een tussenschot: het gat schuift naar de kant waar het al stond
-    const vrij = GAT.schot + d / 2
-    for (const sx of schotten(c.blad)) {
-      if (Math.abs(x - sx) < vrij - EPS) x = x >= sx ? Math.ceil(sx + vrij) : Math.floor(sx - vrij)
-    }
+    const x = klem(g.x, Math.ceil(marge), Math.floor(lengte - marge), Math.round(lengte / 2))
     return { soort: 'sifon', x, y: klem(g.y, Math.ceil(marge), Math.floor(diepte - marge), Math.min(240, Math.round(diepte / 2))), d }
   }
   if (g.soort === 'kraan') {
@@ -207,7 +202,7 @@ const tussen = (n: number, min: number, max: number) => Number.isFinite(n) && n 
 /** Controleert alle gaten samen. Foutmelding voor de dealer, of null als alles te maken is. */
 export function valideerGaten(gaten: Gat[], c: GatenContext): string | null {
   if (!Array.isArray(gaten)) return 'Ongeldige tekening.'
-  if (betaaldeGaten(gaten) > GAT.max) return `Er kunnen maximaal ${GAT.max} uitsparingen in één blad.`
+  if (betaaldeGaten(gaten, c) > GAT.max) return `Er kunnen maximaal ${GAT.max} uitsparingen in één blad.`
   const { lengte, diepte } = c.blad
   const bezet = new Set<string>()
   const rondjes: GeplaatstGat[] = []
@@ -241,9 +236,14 @@ export function valideerGaten(gaten: Gat[], c: GatenContext): string | null {
     }
 
     if (!tussen(p.y, GAT.rand + r, diepte - GAT.rand - r)) return `Een gat moet minstens ${GAT.rand} mm van de rand blijven.`
-    if (g.soort === 'sifon' && schotten(c.blad).some((sx) => Math.abs(p.x - sx) + EPS < GAT.schot + r)) return `Het sifongat moet minstens ${GAT.schot} mm van het tussenschot tussen twee lades blijven.`
     if (rondjes.some((o) => Math.hypot(o.x - p.x, o.y - p.y) - o.d / 2 - r + EPS < GAT.tussen)) return `Tussen twee gaten moet minstens ${GAT.tussen} mm blijven.`
     rondjes.push(p)
+  }
+
+  // Een sifongat boven een schot neemt daar al een hap uit: een kraangat erbij haalt te veel weg
+  const metHap = new Set(gaten.flatMap((g) => (g.soort === 'sifon' ? bovenSchot(g, c) : [])))
+  if (gaten.some((g) => g.soort === 'kraan' && bovenSchot(g, c).some((sx) => metHap.has(sx)))) {
+    return 'Boven een tussenschot kan geen kraangat als daar ook het sifongat staat. Er gaat dan te veel uit het schot.'
   }
 
   if (gaten.filter((g) => g.soort === 'kom').length > c.komAantal) return 'Er staan meer waskommen in de tekening dan gekozen.'
@@ -269,9 +269,23 @@ export function herzieGaten(gaten: Gat[], c: GatenContext): { gaten: Gat[]; verv
   return { gaten: goed.map((k) => k.g), vervallen: gaten.length - blijft.size }
 }
 
-/** Aantal uitsparingen waarvoor betaald wordt: elk gat, behalve de kom zelf. */
-export function betaaldeGaten(gaten: Gat[]): number {
-  return gaten.filter((g) => g.soort !== 'kom').length
+/** De tussenschotten waar dit gat boven staat: de rand van het gat komt er dichter bij dan 30 mm. Alleen bij hout. */
+export function bovenSchot(g: Gat, c: GatenContext): number[] {
+  if (g.soort !== 'sifon' && g.soort !== 'kraan') return []
+  return schotten(c.blad).filter((sx) => Math.abs(g.x - sx) + EPS < GAT.schot + g.d / 2)
+}
+
+/** Sifongat boven een tussenschot: er moet een hap uit het schot, en die telt als extra uitsparing. */
+export function schotHap(g: Gat, c: GatenContext): boolean {
+  return g.soort === 'sifon' && bovenSchot(g, c).length > 0
+}
+
+/**
+ * Aantal uitsparingen waarvoor betaald wordt: elk gat, behalve de kom zelf, plus één
+ * voor elk sifongat boven een tussenschot (de hap uit het schot).
+ */
+export function betaaldeGaten(gaten: Gat[], c: GatenContext | null): number {
+  return gaten.filter((g) => g.soort !== 'kom').length + (c ? gaten.filter((g) => schotHap(g, c)).length : 0)
 }
 
 /** Staan alle gekozen kommen in de tekening? Bij hout is er niets verplicht. */

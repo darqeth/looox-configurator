@@ -1,5 +1,5 @@
 import { formatMm, type MeubelModel } from '@/lib/meubel-config'
-import { plaatsGat, type Gat, type GatenContext } from '@/lib/meubel-gaten'
+import { plaatsGat, schotHap, type Gat, type GatenContext } from '@/lib/meubel-gaten'
 
 // Indeling van het vooraanzicht, gedeeld door de tekening op het scherm en in de
 // PDF: de vakken (lades en regaalkast) van links naar rechts, in tekeneenheden.
@@ -81,6 +81,8 @@ export interface TekenGat {
   y: number
   /** Diameter in mm; 0 bij een waskom */
   d: number
+  /** Sifongat boven een tussenschot: er komt een uitsparing in het schot bij */
+  schot?: boolean
   /** Waskom: buitenmaat, hoekradius en afvoer */
   b?: number
   h?: number
@@ -97,7 +99,7 @@ export function tekenGaten(gaten: Gat[], c: GatenContext): TekenGat[] {
     if (!p) return
     uit.push(g.soort === 'kom' && c.kom
       ? { soort: 'kom', index, x: p.x, y: p.y, d: 0, b: c.kom.b, h: c.kom.d, radius: c.kom.radius, ovaal: c.kom.ovaal, afvoer: c.kom.afvoer }
-      : { soort: g.soort, index, x: p.x, y: p.y, d: p.d })
+      : { soort: g.soort, index, x: p.x, y: p.y, d: p.d, ...(schotHap(g, c) && { schot: true }) })
   })
   uit.sort((a, b) => Number(a.soort !== 'kom') - Number(b.soort !== 'kom') || a.x - b.x || a.y - b.y)
   return uit.map((g, i) => ({ ...g, nr: i + 1 }))
@@ -129,7 +131,7 @@ export function gatNaam(g: Pick<TekenGat, 'soort' | 'ovaal' | 'b'>): string {
 /** Regels voor de tabel onder de tekening: plaats naar het hart, in mm. */
 export function gatenTabel(gaten: Gat[], c: GatenContext): { nr: number; soort: string; x: string; y: string; maat: string }[] {
   return tekenGaten(gaten, c).map((g) => ({
-    nr: g.nr, soort: gatNaam(g), x: formatMm(g.x), y: formatMm(g.y),
+    nr: g.nr, soort: gatNaam(g) + (g.schot ? ', met uitsparing in het tussenschot' : ''), x: formatMm(g.x), y: formatMm(g.y),
     maat: g.soort === 'kom' ? `${g.b} × ${g.h}` : `Ø ${formatMm(g.d)}`,
   }))
 }

@@ -7,7 +7,7 @@ import { parseOrThrow } from '@/lib/validation'
 import { DEFAULT_PRODUCT_ID, generateArticleNumber, assertValidAttachmentUrl } from '@/lib/actions/configurator-helpers'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import {
-  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig,
+  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig, gatenContext,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE, leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
 import { betaaldeGaten, valideerGaten, type Gat } from '@/lib/meubel-gaten'
@@ -85,7 +85,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
 
   // Maattekening (waskom, kraan, afvoer, uitsparingen): een offerte opslaan kan zonder,
   // bestellen niet. Die controle zit in de bestelstap (project-order.ts en placeMeubelOrder).
-  const uitsparingen = zelfGetekend ? betaaldeGaten(input.gaten ?? []) : input.uitsparingen ?? 0
+  const uitsparingen = zelfGetekend ? betaaldeGaten(input.gaten ?? [], gatenContext(input)) : input.uitsparingen ?? 0
   const attachmentUrl = assertValidAttachmentUrl(input.attachmentUrl)
 
   const factor = await getMeubelFactor(supabase, user.id)
@@ -243,7 +243,7 @@ export async function setMeubelTekening(configId: string, rawUrl: string): Promi
 function naarEigenTekening(opts: Record<string, unknown>): Record<string, unknown> {
   const meubel = { ...((opts.meubel ?? {}) as Record<string, unknown>) }
   const gelezen = leesMeubel(opts)
-  if (gelezen?.tekenwijze === 'module') meubel.uitsparingen = Math.min(UITSPARING_MAX, betaaldeGaten(gelezen.gaten))
+  if (gelezen?.tekenwijze === 'module') meubel.uitsparingen = Math.min(UITSPARING_MAX, betaaldeGaten(gelezen.gaten, gelezen.gatenContext))
   delete meubel.gaten
   meubel.tekenwijze = 'upload'
   return meubel
@@ -288,7 +288,7 @@ export async function setMeubelGaten(configId: string, rawGaten: Gat[], rawKom?:
   const { data, error } = await supabase.from('configurations')
     .update({
       total_price: (brutoCents / 100).toFixed(2),
-      selected_options: { ...opts, attachmentUrl: null, meubel: { ...((opts.meubel ?? {}) as Record<string, unknown>), tekenwijze: 'module', gaten, uitsparingen: betaaldeGaten(gaten) } },
+      selected_options: { ...opts, attachmentUrl: null, meubel: { ...((opts.meubel ?? {}) as Record<string, unknown>), tekenwijze: 'module', gaten, uitsparingen: betaaldeGaten(gaten, meubel.gatenContext) } },
       updated_at: new Date().toISOString(),
     })
     .eq('id', configId)

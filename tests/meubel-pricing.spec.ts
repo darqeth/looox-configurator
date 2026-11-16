@@ -840,7 +840,7 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
 
   test('eigen tekening of geen tekenwijze: de teller telt zoals voorheen, gaten tellen niet', () => {
     expect(calcMeubelNettoCents({ ...hout, uitsparingen: 2 })! - calcMeubelNettoCents(hout)!).toBe(2 * UITSPARING_NETTO_CENTS)
-    expect(telUitsparingen({ ...hout, tekenwijze: 'upload', uitsparingen: 1, gaten: [{ soort: 'kraan', x: 300, y: 80, d: 35 }, { soort: 'kraan', x: 600, y: 80, d: 35 }] })).toBe(1)
+    expect(telUitsparingen({ ...hout, tekenwijze: 'upload', uitsparingen: 1, gaten: [{ soort: 'kraan', x: 300, y: 80, d: 35 }, { soort: 'kraan', x: 600, y: 80, d: 35 }] }, null)).toBe(1)
   })
 
   test('waskom kost niets, het kraangat bij de waskom wel', () => {
@@ -857,7 +857,7 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
     expect(meubelOptiesTekst({ uitsparingen: 1, handdoekUitsparing: true })).toBe('Handdoekuitsparing')
     expect(meubelOptiesTekst({ uitsparingen: 3, handdoekUitsparing: true, tekenwijze: 'module' })).toBe('2 uitsparingen (volgens tekening) · Handdoekuitsparing')
     expect(valideerMeubelConfig({ ...hout, ladeBreedtes: null, quantity: 1, handdoekUitsparing: true })).toContain('Mini Base Shelf')
-    expect(telUitsparingen({ ...hout, handdoekUitsparing: true })).toBe(0)
+    expect(telUitsparingen({ ...hout, handdoekUitsparing: true }, null)).toBe(0)
   })
 
   test('tekeningVerplicht', () => {
@@ -874,7 +874,10 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
   test('zelf getekend wordt op de server getoetst', () => {
     const cfg = { ...hout, ladeBreedtes: null, quantity: 1, tekenwijze: 'module' as const }
     expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', x: 900, y: 240, d: 45 }] })).toBeNull()
-    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', x: 600, y: 240, d: 45 }] })).toContain('tussenschot')
+    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', x: 600, y: 240, d: 45 }] })).toBeNull()
+    // Sifongat boven het tussenschot: twee uitsparingen in de prijs
+    expect(getMeubelPrijsOpbouw({ ...hout, tekenwijze: 'module', gaten: [{ soort: 'sifon', x: 600, y: 240, d: 45 }] }, 2)!.regels.map((r) => r.label)).toContain('Uitsparing · 2×')
+    expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'sifon', x: 600, y: 240, d: 45 }, { soort: 'kraan', x: 600, y: 80, d: 35 }] })).toContain('te veel uit het schot')
     expect(valideerMeubelConfig({ ...cfg, gaten: [{ soort: 'kraan', x: 10, y: 80, d: 35 }] })).toContain('30 mm')
     expect(valideerMeubelConfig({ ...cfg, modelId: 'facet-deco', lengte: 800, lades: 1, gaten: [] })).toContain('geen tekening')
   })

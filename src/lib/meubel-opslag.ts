@@ -128,7 +128,7 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     factor: m.factor === undefined ? MEUBEL_FACTOR_DEFAULT : parseMeubelFactor(m.factor),
     opAanvraag: m.opAanvraag === true,
     logo: m.logo === true && kanLogo(model),
-    uitsparingen: telUitsparingen({ modelId: basisModel.id, uitsparingen: uitsparingenTeller, tekenwijze, gaten, handdoekUitsparing }),
+    uitsparingen: telUitsparingen({ modelId: basisModel.id, uitsparingen: uitsparingenTeller, tekenwijze, gaten, handdoekUitsparing }, context),
     uitsparingenTeller,
     tekenwijze,
     gaten,

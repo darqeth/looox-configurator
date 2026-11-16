@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { RotateCcw, Trash2, X } from 'lucide-react'
 import { formatMm, type KomKeuze } from '@/lib/meubel-config'
 import {
-  GAT, betaaldeGaten, klemGat, komOverRand, plaatsGat, snappunten, startGaten, valideerGaten, werkGaten,
+  GAT, betaaldeGaten, klemGat, komOverRand, plaatsGat, schotHap, snappunten, startGaten, valideerGaten, werkGaten,
   type Gat, type GatenContext,
 } from '@/lib/meubel-gaten'
 import { gatNaam, tekenGaten, type TekenGat } from '@/lib/meubel-tekening'
@@ -17,8 +17,11 @@ import { GatVorm } from './blad-gaten'
 
 type Soort = Gat['soort']
 
+/** Binnen deze afstand van het midden van een lade springt een gesleept sifongat erop */
+const SNAP_MM = 15
+
 const LEGENDA: Record<Soort, { naam: string; hulp: string }> = {
-  sifon: { naam: 'Sifongat', hulp: 'Het gat onder de waskom. Klik op het blad, of op een bolletje midden boven een lade. Daarna kun je het slepen of de maten typen. Tijdens het slepen zie je een waskom van 40 cm als hulplijn.' },
+  sifon: { naam: 'Sifongat', hulp: 'Het gat onder de waskom. Klik op het blad, of op een bolletje midden boven een lade. Daarna kun je het slepen of de maten typen. Tijdens het slepen zie je een waskom van 40 cm als hulplijn. Boven een tussenschot kost 1 uitsparing extra.' },
   kraan: { naam: 'Kraangat', hulp: 'Klik op het blad waar het kraangat moet komen. Daarna kun je het slepen of de maten typen.' },
   kom: { naam: 'Waskom', hulp: 'Klik op een bolletje om de waskom boven die lade te plaatsen.' },
   'kraan-kom': { naam: 'Kraangat', hulp: 'Klik op het plusje achter een waskom. Het gat schuift daarna naar links of rechts.' },
@@ -135,7 +138,11 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
     const g = s ? gaten[s.index] : null
     if (!s || !p || !g) return
     s.bewogen = true
-    if (g.soort === 'sifon' || g.soort === 'kraan') wijzig(s.index, { ...g, x: p.x, y: p.y })
+    if (g.soort === 'sifon') {
+      // Zachte snap: vlak bij het midden van een lade springt het gat erop
+      const midden = punten.find((m) => Math.abs(m.x - p.x) <= SNAP_MM)
+      wijzig(s.index, { ...g, x: midden ? midden.x : p.x, y: p.y })
+    } else if (g.soort === 'kraan') wijzig(s.index, { ...g, x: p.x, y: p.y })
     else if (g.soort === 'kraan-kom') {
       const hart = plaatsGat({ soort: 'kom', vak: g.vak }, context)?.x
       if (hart !== undefined) wijzig(s.index, { ...g, dx: p.x - hart })
@@ -184,7 +191,8 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
     setMelding(null)
   }
 
-  const aantal = betaaldeGaten(gaten)
+  const aantal = betaaldeGaten(gaten, context)
+  const hap = !!gekozenGat && schotHap(gekozenGat, context)
   const nogTePlaatsen = !hout && kommen.length < context.komAantal
   const lijn = '#26282B'
 
@@ -301,6 +309,10 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
               </g>
             )}
 
+            {/* Staat het gesleepte sifongat op het midden van een lade, dan licht die middellijn op */}
+            {sleeptGat?.soort === 'sifon' && punten.some((m) => Math.abs(m.x - sleeptGat.x) < 0.5) && (
+              <line x1={sleeptGat.x} y1={0} x2={sleeptGat.x} y2={diepte} stroke="var(--lx-cta)" strokeOpacity="0.5" strokeWidth={0.8 * px} pointerEvents="none" />
+            )}
             {/* Hulplijn tijdens het slepen van een sifongat: de gemiddelde opbouwwaskom van 40 cm */}
             {sleeptGat?.soort === 'sifon' && (
               <circle cx={sleeptGat.x} cy={sleeptGat.y} r={GAT.komRef / 2} fill="none" stroke={overRand ? '#B45309' : lijn} strokeOpacity={overRand ? 0.9 : 0.45} strokeWidth={1 * px} strokeDasharray={`${5 * px} ${4 * px}`} pointerEvents="none" />
@@ -373,7 +385,12 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
         <div className="mt-2 min-h-[54px] sm:min-h-[36px]">
           {melding
             ? <p role="alert" className="text-[12.5px] text-red-700 bg-red-50 rounded-lg px-3 py-2">{melding}</p>
-            : overRand && <p role="status" className="text-[12.5px] text-amber-800 bg-amber-50 rounded-lg px-3 py-2">Let op: een waskom van 40 cm steekt hier over de rand van het blad.</p>}
+            : (hap || overRand) && (
+              <p role="status" className="text-[12.5px] text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
+                {hap && `Dit gat staat boven een tussenschot. Er moet dan een stuk uit het schot: dat is 1 uitsparing extra${prijsPerStuk ? ` (${prijsPerStuk})` : ''}. `}
+                {overRand && 'Let op: een waskom van 40 cm steekt hier over de rand van het blad.'}
+              </p>
+            )}
         </div>
 
         {/* Maten van het gekozen gat */}

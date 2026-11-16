@@ -18,7 +18,7 @@ import {
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
   getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelModel, LADE_ACCESSOIRES, type LadeAccessoire,
   type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht, gatenContext, waskomMax, komKeuzes, telUitsparingen, HANDDOEK_UITSPARING_MODEL } from '@/lib/meubel-config'
-import { kommenCompleet, werkGaten, type Gat, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
+import { betaaldeGaten, kommenCompleet, werkGaten, type Gat, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
 import GatenEditor from './gaten-editor'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { startProjectVanConfig } from '@/lib/actions/project'
@@ -367,8 +367,10 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const tekeningNodig = tekeningVerplicht(model, { tekenwijze, uitsparingen: zelfTekenen ? 0 : uitsparingen, kommenCompleet: kommenStaan })
   const tekeningOntbreekt = tekeningNodig && (zelfTekenen || (!tekeningBestand && !bestaandeTekening))
   // Aantal waarvoor betaald wordt, voor de samenvatting
-  const uitsparingenTotaal = telUitsparingen({ modelId: model.id, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing })
+  const uitsparingenTotaal = telUitsparingen({ modelId: model.id, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing }, tekenContext)
   const gatenGetekend = gaten.filter((g) => g.soort !== 'kom').length
+  // Een sifongat boven een tussenschot telt dubbel: het gat en de hap uit het schot
+  const uitsparingenGetekend = betaaldeGaten(gaten, tekenContext)
   const prijsPerUitsparing = opAanvraag ? null : formatCents(Math.round(UITSPARING_NETTO_CENTS * parseMeubelFactor(factor)))
   const geldig = lengteOk && regaalOk && !ladeFout && gekozen !== undefined && (opAanvraag || opbouw !== null)
 
@@ -1184,7 +1186,8 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                       ? <span className="text-lx-text-primary font-medium">
                           {model.waskom && <>{gaten.filter((g) => g.soort === 'kom').length} van {waskomAantal} {waskomAantal === 1 ? 'waskom' : 'waskommen'} geplaatst · </>}
                           {gatenGetekend === 0 ? 'geen gaten' : `${gatenGetekend} ${gatenGetekend === 1 ? 'gat' : 'gaten'}`}
-                          {prijsPerUitsparing && gatenGetekend > 0 && <span className="font-normal text-lx-text-secondary">, {prijsPerUitsparing} per stuk</span>}
+                          {uitsparingenGetekend > gatenGetekend && <span className="font-normal text-lx-text-secondary"> · {uitsparingenGetekend} uitsparingen, want een gat staat boven een tussenschot</span>}
+                          {prijsPerUitsparing && gatenGetekend > 0 && <span className="font-normal text-lx-text-secondary">, {prijsPerUitsparing} per {uitsparingenGetekend > gatenGetekend ? 'uitsparing' : 'stuk'}</span>}
                         </span>
                       : model.waskom ? 'Plaats de waskom in de tekening.' : 'Niet verplicht: zonder gaten bestellen mag, dan maak je ze zelf.'}
                   </p>

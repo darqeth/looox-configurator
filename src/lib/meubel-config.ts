@@ -1385,8 +1385,8 @@ export const HANDDOEK_UITSPARING_MODEL = 'mini-base-shelf'
  * Aantal uitsparingen waarvoor betaald wordt. Zelf getekend: de gaten uit de tekening (een
  * waskom kost niets). Eigen tekening: de teller. De handdoekuitsparing telt er altijd bij.
  */
-export function telUitsparingen(c: Pick<MeubelInput, 'modelId' | 'uitsparingen' | 'tekenwijze' | 'gaten' | 'handdoekUitsparing'>): number {
-  const basis = c.tekenwijze === 'module' ? betaaldeGaten(c.gaten ?? []) : c.uitsparingen ?? 0
+export function telUitsparingen(c: Pick<MeubelInput, 'modelId' | 'uitsparingen' | 'tekenwijze' | 'gaten' | 'handdoekUitsparing'>, context: GatenContext | null): number {
+  const basis = c.tekenwijze === 'module' ? betaaldeGaten(c.gaten ?? [], context) : c.uitsparingen ?? 0
   return basis + (c.handdoekUitsparing && c.modelId === HANDDOEK_UITSPARING_MODEL ? 1 : 0)
 }
 
@@ -1440,7 +1440,7 @@ export function komKeuzes(c: Parameters<typeof gatenContext>[0]): KomKeuze[] {
 function valideerTekening(c: MeubelInput, model: MeubelModel): string | null {
   if (c.handdoekUitsparing && model.id !== HANDDOEK_UITSPARING_MODEL) return 'Een handdoekuitsparing kan alleen bij de Mini Base Shelf.'
   if (c.waskomMaat === 850 && c.waskomVorm !== 'vierkant') return 'De maat 850 bestaat alleen bij de rechthoekige waskom.'
-  if (telUitsparingen(c) > UITSPARING_MAX + 1) return `Uitsparingen: 0 tot ${UITSPARING_MAX}.`
+  if (telUitsparingen(c, gatenContext(c)) > UITSPARING_MAX + 1) return `Uitsparingen: 0 tot ${UITSPARING_MAX}.`
   if (c.tekenwijze !== 'module') return null
   const ctx = gatenContext(c)
   if (!ctx) return 'Bij dit product kan geen tekening gemaakt worden.'
@@ -1459,7 +1459,7 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
   const model = getMeubelModel(input.modelId)
   if (!model || input.opAanvraag) return null
   const kleur = getHoutkleuren(model).find((k) => k.id === input.houtkleur)
-  const uitsparingen = telUitsparingen(input)
+  const uitsparingen = telUitsparingen(input, gatenContext(input))
   if (!kleur || !Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX + 1) return null
   // Duo (Drawer Box Regal): prijs volgt uit de twee kastbreedtes, niet uit een lengtestaffel
   if (uitsparingen > 0 && !kanUitsparing(model)) return null
@@ -1530,7 +1530,7 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   const f = parseMeubelFactor(factor)
   const extra: MeubelPrijsRegel[] = []
   if (kleurMeerprijs(model, kleur) > 0) extra.push({ label: `Houtkleur · ${kleur.naam}`, cents: Math.round(kleurMeerprijs(model, kleur) * f) })
-  const uitsparingen = telUitsparingen(input)
+  const uitsparingen = telUitsparingen(input, gatenContext(input))
   if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
   const houders = input.handdoekhouders ?? 0
   if (houders > 0) extra.push({ label: `Handdoekhouder · ${houders}×`, cents: Math.round(houders * (model.plank?.handdoekhouder?.prijs ?? 0) * f) })

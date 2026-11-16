@@ -188,14 +188,21 @@ export function PasswordForm() {
   const [loading, setLoading] = useState(false)
 
   async function handlePassword(formData: FormData) {
+    if (loading) return
     setLoading(true)
     setStatus('idle')
     try {
-      await updatePassword(formData)
-      setStatus('success')
-      ;(document.getElementById('password-form') as HTMLFormElement)?.reset()
-    } catch (e) {
-      setError(foutTekst(e, 'Er is iets misgegaan'))
+      const res = await updatePassword(formData)
+      if (res.success) {
+        setStatus('success')
+        ;(document.getElementById('password-form') as HTMLFormElement)?.reset()
+      } else {
+        setError(res.error ?? 'Het wachtwoord kon niet worden gewijzigd. Probeer het opnieuw.')
+        setStatus('error')
+      }
+    } catch {
+      // Verbinding of antwoord viel weg: het wachtwoord kan al wel gewijzigd zijn
+      setError('We kregen geen bevestiging terug. Je wachtwoord kan al gewijzigd zijn. Log uit en probeer in te loggen met je nieuwe wachtwoord.')
       setStatus('error')
     } finally {
       setLoading(false)

@@ -69,19 +69,28 @@ export async function updateProfile(formData: FormData) {
 }
 
 
-export async function updatePassword(formData: FormData) {
+// Geeft een resultaat terug in plaats van te gooien: een gegooide fout komt in
+// productie als Engelse technische tekst bij de gebruiker.
+export async function updatePassword(formData: FormData): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Niet ingelogd')
+  if (!user) return { success: false, error: 'Je bent niet meer ingelogd. Log opnieuw in en probeer het nog eens.' }
 
   const password = formData.get('password') as string
   const confirm = formData.get('confirm') as string
 
-  if (password !== confirm) throw new Error('Wachtwoorden komen niet overeen')
-  if (password.length < 8) throw new Error('Wachtwoord moet minimaal 8 tekens zijn')
+  if (password !== confirm) return { success: false, error: 'De wachtwoorden komen niet overeen.' }
+  if (password.length < 8) return { success: false, error: 'Het wachtwoord moet minimaal 8 tekens zijn.' }
 
   const { error } = await supabase.auth.updateUser({ password })
-  if (error) throw new Error(error.message)
+  if (!error) return { success: true }
+  // Zelfde wachtwoord als nu, bijvoorbeeld na een dubbele klik: het wachtwoord staat er al
+  if (error.code === 'same_password') return { success: true }
+  if (error.code === 'weak_password') return { success: false, error: 'Dit wachtwoord is te makkelijk te raden. Kies een sterker wachtwoord.' }
+  if (error.code === 'over_request_rate_limit' || error.status === 429) return { success: false, error: 'Te veel pogingen achter elkaar. Wacht even en probeer het opnieuw.' }
+  if (error.code === 'reauthentication_needed' || error.code === 'session_not_found') return { success: false, error: 'Log opnieuw in en wijzig daarna je wachtwoord.' }
+  console.error('[updatePassword]', error.code, error.message)
+  return { success: false, error: 'Het wachtwoord kon niet worden gewijzigd. Probeer het opnieuw.' }
 }
 
 // Brutofactor voor Tailor-Made meubels: alleen de manager van het bedrijf.

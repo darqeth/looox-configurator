@@ -1201,20 +1201,18 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
               {magUitsparing && <div>
                 <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">{heeftTekenmodule ? 'Tekening van het blad' : 'Maattekening'}{!tekeningNodig && <span className="font-normal text-lx-text-secondary"> (optioneel)</span>}</p>
                 {heeftTekenmodule && (
-                  <div className="flex gap-2 mb-3" role="radiogroup" aria-label="Hoe lever je de tekening aan">
+                  <div className="flex gap-2 mb-3">
                     {([['module', 'Zelf tekenen'], ['upload', 'Eigen tekening uploaden']] as const).map(([id, naam]) => (
                       <button
                         key={id}
                         type="button"
-                        role="radio"
-                        aria-checked={tekenwijze === id}
                         onClick={() => {
                           // De knop kiest de manier en opent hem meteen: het tekenvenster of de bestandskiezer
                           setTekenwijze(id)
                           if (id === 'upload') tekeningInput.current?.click()
                           else if (kanTekenen) setTekenvenster(true)
                         }}
-                        className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${tekenwijze === id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'}`}
+                        className={`px-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border-black/10 bg-white text-lx-text-primary hover:bg-lx-panel-bg`}
                       >
                         {naam}
                       </button>

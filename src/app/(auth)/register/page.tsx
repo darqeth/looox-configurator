@@ -2,9 +2,9 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import Image from 'next/image'
-import { signUp } from '@/lib/actions/auth'
+import { signUp, zoekBedrijven, controleerBedrijf } from '@/lib/actions/auth'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
@@ -25,10 +25,43 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  // Bedrijfsnaam: snelselectie van bestaande bedrijven, en een vraag bij een naam die al bestaat
+  const [company, setCompany] = useState('')
+  const [suggesties, setSuggesties] = useState<string[]>([])
+  const [toonSuggesties, setToonSuggesties] = useState(false)
+  const [vraag, setVraag] = useState<{ naam: string; soort: 'gelijk' | 'lijkt' } | null>(null)
+  // Namen waarvan de gebruiker al zei: nee, dat is een ander bedrijf
+  const [afgewezen, setAfgewezen] = useState<string[]>([])
+  const [bedrijfFout, setBedrijfFout] = useState<string | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    if (company.trim().length < 3) { setSuggesties([]); return }
+    let actueel = true
+    const t = setTimeout(() => {
+      zoekBedrijven(company).then((namen) => { if (actueel) setSuggesties(namen.filter((n) => n !== company.trim())) }).catch(() => {})
+    }, 200)
+    return () => { actueel = false; clearTimeout(t) }
+  }, [company])
+
+  function verstuur(formData: FormData, bedrijf: string) {
+    const password = formData.get('password') as string
+    startTransition(async () => {
+      const result = await signUp({
+        email: formData.get('email') as string,
+        password,
+        fullName: formData.get('fullName') as string,
+        company: bedrijf,
+        phone: formData.get('phone') as string,
+      })
+      if (result?.error) setError(result.error)
+    })
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setBedrijfFout(null)
     const formData = new FormData(e.currentTarget)
 
     const password = formData.get('password') as string
@@ -39,15 +72,35 @@ export default function RegisterPage() {
     }
 
     startTransition(async () => {
-      const result = await signUp({
-        email: formData.get('email') as string,
-        password,
-        fullName: formData.get('fullName') as string,
-        company: formData.get('company') as string,
-        phone: formData.get('phone') as string,
-      })
-      if (result?.error) setError(result.error)
+      // Bestaat het bedrijf al onder een net andere naam, dan eerst vragen
+      const match = await controleerBedrijf(company).catch(() => ({ soort: 'nieuw' as const }))
+      if ((match.soort === 'gelijk' || match.soort === 'lijkt') && !afgewezen.includes(match.naam)) {
+        setVraag({ naam: match.naam, soort: match.soort })
+        return
+      }
+      if (match.soort === 'gelijk') {
+        setBedrijfFout(`Er bestaat al een bedrijf met de naam "${match.naam}". Is jouw bedrijf een andere vestiging, zet dan de plaats achter de naam.`)
+        return
+      }
+      verstuur(formData, company.trim())
     })
+  }
+
+  function sluitAan() {
+    if (!vraag || !formRef.current) return
+    const naam = vraag.naam
+    setCompany(naam)
+    setVraag(null)
+    verstuur(new FormData(formRef.current), naam)
+  }
+
+  function anderBedrijf() {
+    if (!vraag) return
+    setAfgewezen((a) => [...a, vraag.naam])
+    // Zelfde naam, alleen anders geschreven: dan moet de naam zelf het verschil maken
+    if (vraag.soort === 'gelijk') setBedrijfFout(`Er bestaat al een bedrijf met de naam "${vraag.naam}". Is jouw bedrijf een andere vestiging, zet dan de plaats achter de naam.`)
+    else if (formRef.current) verstuur(new FormData(formRef.current), company.trim())
+    setVraag(null)
   }
 
   return (
@@ -70,7 +123,7 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <label
                 htmlFor="fullName"
@@ -96,15 +149,45 @@ export default function RegisterPage() {
               >
                 Bedrijfsnaam
               </label>
-              <input
-                id="company"
-                name="company"
-                type="text"
-                required
-                autoComplete="organization"
-                className="w-full px-3 py-2.5 border border-lx-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
-                placeholder="Sanitair BV"
-              />
+              <div className="relative">
+                <input
+                  id="company"
+                  name="company"
+                  type="text"
+                  required
+                  maxLength={100}
+                  autoComplete="organization"
+                  value={company}
+                  onChange={(e) => { setCompany(e.target.value); setToonSuggesties(true); setBedrijfFout(null) }}
+                  onFocus={() => setToonSuggesties(true)}
+                  onBlur={() => setTimeout(() => setToonSuggesties(false), 150)}
+                  onKeyDown={(e) => { if (e.key === 'Escape') setToonSuggesties(false) }}
+                  aria-invalid={!!bedrijfFout}
+                  aria-describedby="company-hulp"
+                  className="w-full px-3 py-2.5 border border-lx-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-lx-cta/30 focus:border-lx-cta transition-colors"
+                  placeholder="Sanitair BV"
+                />
+                {toonSuggesties && suggesties.length > 0 && (
+                  <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-lx-border rounded-lg shadow-md overflow-hidden" aria-label="Bestaande bedrijven">
+                    <li className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-lx-text-secondary">Bestaat al bij LoooX</li>
+                    {suggesties.map((naam) => (
+                      <li key={naam}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => { setCompany(naam); setToonSuggesties(false); setBedrijfFout(null) }}
+                          className="w-full text-left px-3 py-2 text-sm text-lx-text-primary hover:bg-lx-panel-bg cursor-pointer"
+                        >
+                          {naam}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <p id="company-hulp" className={`text-xs mt-1.5 ${bedrijfFout ? 'text-red-600' : 'text-lx-text-secondary'}`}>
+                {bedrijfFout ?? 'Werkt je bedrijf al met de configurator? Kies het dan uit de lijst.'}
+              </p>
             </div>
 
             <div>
@@ -202,9 +285,21 @@ export default function RegisterPage() {
               </div>
             )}
 
+            {vraag && (
+              <div role="alertdialog" aria-labelledby="bedrijf-vraag" className="bg-lx-panel-bg border border-lx-border rounded-lg px-3.5 py-3 space-y-2.5">
+                <p id="bedrijf-vraag" className="text-sm text-lx-text-primary leading-relaxed">
+                  <strong>{vraag.naam}</strong> bestaat al. Weet je zeker dat je jezelf aan dit bedrijf wil toevoegen?
+                </p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={sluitAan} disabled={isPending} className="flex-1 bg-lx-cta text-white py-2 rounded-lg text-sm font-semibold hover:bg-[#2d5240] transition-colors cursor-pointer disabled:opacity-60">Ja, dit is mijn bedrijf</button>
+                  <button type="button" onClick={anderBedrijf} disabled={isPending} className="flex-1 bg-white border border-lx-border text-lx-text-primary py-2 rounded-lg text-sm font-semibold hover:bg-lx-divider transition-colors cursor-pointer disabled:opacity-60">Nee, ander bedrijf</button>
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || !!vraag}
               className="w-full flex items-center justify-center gap-2 bg-lx-cta text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#2d5240] hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lx-cta mt-1"
             >
               {isPending ? (

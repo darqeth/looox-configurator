@@ -57,12 +57,20 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
   const sluitRef = useRef<HTMLButtonElement>(null)
   const titelId = useId()
 
+  // Sluiten zonder Klaar gooit de tekening weg: eerst vragen als er iets veranderd is
+  const gewijzigd = keuze !== beginKeuze || JSON.stringify(gaten) !== JSON.stringify(start)
+  const sluitVraag = useRef(() => {})
+  sluitVraag.current = () => {
+    if (gewijzigd && !window.confirm('Je wijzigingen in de tekening zijn nog niet opgeslagen. Sluiten en de wijzigingen weggooien?')) return
+    onSluiten()
+  }
+
   useEffect(() => {
     sluitRef.current?.focus()
-    const opToets = (e: KeyboardEvent) => { if (e.key === 'Escape') onSluiten() }
+    const opToets = (e: KeyboardEvent) => { if (e.key === 'Escape') sluitVraag.current() }
     document.addEventListener('keydown', opToets)
     return () => document.removeEventListener('keydown', opToets)
-  }, [onSluiten])
+  }, [])
 
   // Marge rond het blad voor de labels, en de maat van één schermpixel in mm (bij benadering)
   const marge = Math.max(70, lengte * 0.05)
@@ -132,6 +140,12 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
     return { x: r.x, y: r.y }
   }
 
+  /** Zachte snap voor een kraangat: recht achter een sifongat, of op het midden van een lade. */
+  function snapKraanX(x: number): number {
+    const doelen = [...gaten.flatMap((g) => (g.soort === 'sifon' ? [g.x] : [])), ...punten.map((m) => m.x)]
+    return doelen.find((d) => Math.abs(d - x) <= SNAP_MM) ?? x
+  }
+
   function versleep(e: React.PointerEvent) {
     const s = sleep.current
     const p = s ? naarMm(e) : null
@@ -142,7 +156,7 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
       // Zachte snap: vlak bij het midden van een lade springt het gat erop
       const midden = punten.find((m) => Math.abs(m.x - p.x) <= SNAP_MM)
       wijzig(s.index, { ...g, x: midden ? midden.x : p.x, y: p.y })
-    } else if (g.soort === 'kraan') wijzig(s.index, { ...g, x: p.x, y: p.y })
+    } else if (g.soort === 'kraan') wijzig(s.index, { ...g, x: snapKraanX(p.x), y: p.y })
     else if (g.soort === 'kraan-kom') {
       const hart = plaatsGat({ soort: 'kom', vak: g.vak }, context)?.x
       if (hart !== undefined) wijzig(s.index, { ...g, dx: p.x - hart })
@@ -153,7 +167,7 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
     if (actief !== 'kraan' && actief !== 'sifon') { setGekozen(null); return }
     const p = naarMm(e)
     if (!p) return
-    probeer([...gaten, klemGat({ soort: actief, x: p.x, y: p.y, d: GAT[actief].std }, context)], gaten.length)
+    probeer([...gaten, klemGat({ soort: actief, x: actief === 'kraan' ? snapKraanX(p.x) : p.x, y: p.y, d: GAT[actief].std }, context)], gaten.length)
   }
 
   function opToets(e: React.KeyboardEvent, index: number) {
@@ -197,7 +211,7 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
   const lijn = '#26282B'
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4" onClick={onSluiten}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4" onClick={() => sluitVraag.current()}>
       <div
         role="dialog"
         aria-modal="true"
@@ -212,7 +226,7 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
           </div>
           <button
             ref={sluitRef}
-            onClick={onSluiten}
+            onClick={() => sluitVraag.current()}
             aria-label="Sluiten zonder opslaan"
             className="w-9 h-9 rounded-lg text-lx-text-muted hover:text-lx-text-primary hover:bg-lx-panel-bg flex items-center justify-center transition-colors cursor-pointer"
           >
@@ -430,7 +444,7 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
           )}
         </div>
 
-        <div className="mt-3 pt-3 border-t border-lx-divider flex flex-wrap items-center justify-between gap-3">
+        <div className="sticky bottom-0 z-10 bg-white mt-3 pt-3 pb-4 sm:pb-6 -mb-4 sm:-mb-6 border-t border-lx-divider flex flex-wrap items-center justify-between gap-3">
           <p className="text-[12.5px] text-lx-text-secondary" aria-live="polite">
             {!hout && `${kommen.length} van ${context.komAantal} ${context.komAantal === 1 ? 'waskom' : 'waskommen'} geplaatst · `}
             {aantal === 0 ? 'Geen uitsparingen' : `${aantal} ${aantal === 1 ? 'uitsparing' : 'uitsparingen'}`}

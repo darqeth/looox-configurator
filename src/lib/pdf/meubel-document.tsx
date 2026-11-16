@@ -261,7 +261,8 @@ export default function MeubelDocument({
     ...(meubel.waskomVorm ? [['Waskom', waskomTekst(meubel)] as [string, string]] : []),
     ...(meubel.regaalBreedte > 0 ? [['Regaalkast', `${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`] as [string, string]] : []),
     ...(model.rand ? [['Rand', `${model.rand} mm ${model.randOnder ? 'rondom' : model.randBoven ? 'links, rechts en boven' : 'links en rechts'}`] as [string, string]] : []),
-    [kleurLabel(model), meubel.houtkleurNaam || 'Geen'],
+    // Een los artikel (waskom, accessoire) heeft geen houtkleur
+    ...(model.artikel ? [] : [[kleurLabel(model), meubel.houtkleurNaam || 'Geen'] as [string, string]]),
     ['Opties', meubelOptiesTekst(meubel)],
     ...(opAanvraag ? [['Bijzonderheid', 'Groter dan de standaardmaten, op aanvraag'] as [string, string]] : []),
   ]
@@ -348,7 +349,7 @@ export default function MeubelDocument({
 
         {/* Specificatie */}
         <View style={styles.section} wrap={false}>
-          <Text style={styles.sectionTitle}>Specificatie meubel</Text>
+          <Text style={styles.sectionTitle}>{meubel.model.artikel ? 'Specificatie' : 'Specificatie meubel'}</Text>
           <View style={styles.table}>
             {specs.map(([label, value], i) => (
               <View key={label} style={i === specs.length - 1 ? styles.tableRowLast : styles.tableRow}>

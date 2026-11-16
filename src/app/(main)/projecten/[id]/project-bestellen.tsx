@@ -18,12 +18,18 @@ export interface BestelRegel {
   quantity: number
   totaalCents: number
   opAanvraag: boolean
+  /** Keuzes van een spiegel: verlichting, opties */
+  details?: string
+  /** Door het hulpje ingevuld en nog niet nagelopen: heeft nog geen prijs */
+  nalopen?: boolean
 }
+
+const adresTekst = (adres: string) => adres.split('\t').map((d) => d.trim()).filter(Boolean).join(' ')
 
 const inputCls = 'w-full h-10 rounded-xl border border-black/12 px-3.5 text-[13px] text-lx-text-primary outline-none focus:border-lx-cta bg-white transition-colors'
 const labelCls = 'text-[12px] font-semibold text-lx-text-secondary mb-1.5 block'
 
-export default function ProjectBestellen({ projectId, naam, regels, totaalCents, fout: blokkade }: {
+export default function ProjectBestellen({ projectId, naam, regels, totaalCents, fout: blokkade, besteld, afleveradres }: {
   /** Bijverkoop op het bedankscherm: wat er nog bij het project past */
   projectId: string
   naam: string
@@ -31,6 +37,10 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
   totaalCents: number
   /** Reden waarom het project nu niet te bestellen is */
   fout: string | null
+  /** Het project is besteld: alleen de bevestiging van deze sessie blijft nog staan */
+  besteld: boolean
+  /** Adres uit het account (afleveradres, anders het bedrijfsadres), met tabs gescheiden */
+  afleveradres: string | null
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -41,10 +51,14 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
   const [checked, setChecked] = useState(false)
   const [loading, setLoading] = useState(false)
   const [fout, setFout] = useState<string | null>(null)
-  const [result, setResult] = useState<string | null>(null)
-  const [altShipping, setAltShipping] = useState(false)
+  // Momentopname bij het bestellen: na het verversen kloppen de props niet meer met wat er besteld is
+  const [result, setResult] = useState<{ nummer: string; regels: BestelRegel[]; totaalCents: number; adres: string } | null>(null)
+  const accountAdres = afleveradres ? adresTekst(afleveradres) : ''
+  const [altShipping, setAltShipping] = useState(!accountAdres)
   const [alt, setAlt] = useState({ straat: '', huisnummer: '', woonplaats: '', provincie: '', land: 'NL' })
-  const altOk = !altShipping || (alt.straat.trim() !== '' && alt.woonplaats.trim() !== '')
+  const altIngevuld = alt.straat.trim() !== '' && alt.woonplaats.trim() !== ''
+  // Zonder adres in het account is een afleveradres hier verplicht
+  const altOk = altShipping ? altIngevuld : accountAdres !== ''
 
   function sluit() {
     if (loading) return
@@ -69,7 +83,7 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
         ? [alt.straat, alt.huisnummer, alt.woonplaats, alt.provincie, alt.land].map((v) => v.trim()).join('\t')
         : null
       const { orderNumber } = await placeProjectOrder(projectId, notes, altShippingAddress)
-      setResult(orderNumber)
+      setResult({ nummer: orderNumber, regels, totaalCents, adres: altShippingAddress ? adresTekst(altShippingAddress) : accountAdres })
       for (const key of ['orders', 'configurations', 'sidebar', 'dashboard', 'looox-circle']) {
         queryClient.invalidateQueries({ queryKey: [key] })
       }
@@ -81,14 +95,16 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
     }
   }
 
+  if (besteld && !result) return null
+
   return (
     <>
-      <button
+      {!besteld && <button
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 bg-lx-cta hover:bg-lx-cta-hover text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
       >
         {isOfferte ? 'Project aanvragen →' : 'Project bestellen →'}
-      </button>
+      </button>}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={sluit}>
@@ -101,20 +117,48 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
             onClick={(e) => e.stopPropagation()}
           >
             {result ? (
-              <div className="p-7 text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-lx-icon-bg flex items-center justify-center mx-auto">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <polyline points="20 6 9 17 4 12" stroke="var(--lx-cta)" strokeWidth="2.5" />
-                  </svg>
+              <div className="p-6 space-y-4 overflow-y-auto">
+                <div className="text-center space-y-3">
+                  <div className="w-14 h-14 rounded-full bg-lx-icon-bg flex items-center justify-center mx-auto">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12" stroke="var(--lx-cta)" strokeWidth="2.5" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p id={titelId} className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">
+                      {isOfferte ? 'Offerte aangevraagd' : 'Bestelling geplaatst'}
+                    </p>
+                    <p className="text-[20px] font-bold text-lx-text-primary font-mono tracking-wide">{result.nummer}</p>
+                  </div>
                 </div>
-                <div>
-                  <p id={titelId} className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">
-                    {isOfferte ? 'Offerte aangevraagd' : 'Bestelling geplaatst'}
-                  </p>
-                  <p className="text-[20px] font-bold text-lx-text-primary font-mono tracking-wide">{result}</p>
+                <div className="bg-lx-panel-bg rounded-xl px-4 py-1">
+                  <ul className="divide-y divide-lx-divider">
+                    {result.regels.map((r) => (
+                      <li key={r.id} className="flex items-start justify-between gap-3 py-2.5">
+                        <div className="min-w-0">
+                          <p className="text-[12.5px] font-semibold text-lx-text-primary">{r.quantity}× {r.titel}</p>
+                          <p className="text-[11.5px] text-lx-text-secondary">{r.omschrijving}</p>
+                        </div>
+                        <p className="text-[12.5px] font-semibold text-lx-text-primary tabular-nums flex-shrink-0">
+                          {r.opAanvraag ? 'Op aanvraag' : formatCents(r.totaalCents)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                  {!isOfferte && (
+                    <div className="flex items-center justify-between border-t border-lx-divider py-2.5">
+                      <span className="text-[12.5px] text-lx-text-secondary font-medium">Totaal netto ex. BTW</span>
+                      <span className="text-[16px] font-bold text-lx-cta tabular-nums">{formatCents(result.totaalCents)}</span>
+                    </div>
+                  )}
                 </div>
-                <p className="text-[13px] text-lx-text-secondary">
-                  {regels.length} {regels.length === 1 ? 'regel' : 'regels'} onder één nummer. Je ontvangt een bevestiging per e-mail.
+                {result.adres && (
+                  <p className="text-[12.5px] text-lx-text-secondary"><span className="font-semibold text-lx-text-primary">Afleveradres:</span> {result.adres}</p>
+                )}
+                <p className="text-[12.5px] text-lx-text-secondary leading-relaxed">
+                  {isOfferte
+                    ? 'Je ontvangt een bevestiging per e-mail. De status volg je onder Mijn bestellingen.'
+                    : 'Je ontvangt een bevestiging per e-mail met de orderbevestiging als PDF. De status volg je onder Mijn bestellingen.'}
                 </p>
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => router.push('/bestellingen')} className="flex-1 h-10 rounded-xl bg-lx-cta text-white text-[13px] font-semibold hover:bg-lx-cta-hover transition-colors cursor-pointer">
@@ -140,10 +184,16 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
                           <div className="min-w-0">
                             <p className="text-[12.5px] font-semibold text-lx-text-primary">{r.quantity}× {r.titel}</p>
                             <p className="text-[11.5px] text-lx-text-secondary">{r.omschrijving}</p>
+                            {r.details && <p className="text-[11.5px] text-lx-text-secondary">{r.details}</p>}
                           </div>
-                          <p className="text-[12.5px] font-semibold text-lx-text-primary tabular-nums flex-shrink-0">
-                            {r.opAanvraag ? 'Op aanvraag' : formatCents(r.totaalCents)}
-                          </p>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[12.5px] font-semibold text-lx-text-primary tabular-nums">
+                              {r.nalopen ? 'Eerst nalopen' : r.opAanvraag ? 'Op aanvraag' : formatCents(r.totaalCents)}
+                            </p>
+                            {!r.nalopen && !r.opAanvraag && r.quantity > 1 && (
+                              <p className="text-[11px] text-lx-text-secondary tabular-nums">{formatCents(Math.round(r.totaalCents / r.quantity))} per stuk</p>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -158,7 +208,16 @@ export default function ProjectBestellen({ projectId, naam, regels, totaalCents,
                   )}
 
                   <div>
-                    <Vinkje checked={altShipping} onChange={setAltShipping}>
+                    {accountAdres ? (
+                      <p className="text-[12.5px] text-lx-text-secondary mb-2.5">
+                        <span className="font-semibold text-lx-text-primary">Afleveradres:</span> {altShipping ? 'zie hieronder' : accountAdres}
+                      </p>
+                    ) : (
+                      <p className="text-[12.5px] text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5 mb-2.5">
+                        In je account staat nog geen adres. Vul hieronder het afleveradres in, of zet je adres vast onder Mijn account.
+                      </p>
+                    )}
+                    <Vinkje checked={altShipping} onChange={(v) => setAltShipping(accountAdres ? v : true)}>
                       <span className="text-[13px] text-lx-text-primary font-medium">Alternatief afleveradres</span>
                     </Vinkje>
                     {altShipping && (

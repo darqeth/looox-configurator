@@ -34,7 +34,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       .in('status', ['saved', 'ordered'])
       .order('created_at'),
     hasMeubelAccess(supabase, userId),
-    supabase.from('profiles').select('korting').eq('id', userId).single(),
+    supabase.from('profiles').select('korting, address, shipping_address').eq('id', userId).single(),
     supabase.from('company_members').select('can_order').eq('user_id', userId).maybeSingle(),
   ])
   if (!configs || configs.length === 0) notFound()
@@ -93,14 +93,17 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               <Plus size={15} /> Product toevoegen
             </Link>
           )}
-          {!besteld && magBestellen && (
+          {/* Blijft gemonteerd na het bestellen: anders verdwijnt de bevestiging zodra de pagina ververst */}
+          {magBestellen && (
             <ProjectBestellen
               projectId={id}
+              besteld={besteld}
+              afleveradres={profiel?.shipping_address || profiel?.address || null}
               naam={kop.naam}
               totaalCents={projectOrderTotaalCents(orderRegels)}
               fout={blokkade}
               regels={orderRegels.map((r) => ({
-                id: r.configId, titel: r.regel.titel, omschrijving: r.regel.omschrijving,
+                id: r.configId, titel: r.regel.titel, omschrijving: r.regel.omschrijving, details: r.regel.details, nalopen: r.regel.nalopen,
                 quantity: r.quantity, totaalCents: Math.round(r.totalPrice * 100), opAanvraag: r.regel.opAanvraag,
               }))}
             />

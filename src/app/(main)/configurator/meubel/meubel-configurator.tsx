@@ -145,6 +145,28 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
   const [categorie, setCategorie] = useState<MeubelCategorieId | null>(basisModel?.categorie ?? startCategorie ?? null)
   // 0 categorie, 1 model, 2 samenstellen, 3 samenvatting
   const [step, setStep] = useState(model ? 2 : startCategorie ? 1 : 0)
+  // Elke stap vooruit komt in de browsergeschiedenis: de terugknop gaat een stap terug in plaats van de
+  // configurator uit, en een nieuwe stap begint bovenaan.
+  const startStap = useRef(step)
+  const vorigeStap = useRef(step)
+  const viaGeschiedenis = useRef(false)
+  useEffect(() => {
+    if (step === vorigeStap.current) return
+    if (step > vorigeStap.current && !viaGeschiedenis.current) window.history.pushState({ ...window.history.state, meubelStap: step }, '')
+    viaGeschiedenis.current = false
+    vorigeStap.current = step
+    window.scrollTo({ top: 0 })
+  }, [step])
+  useEffect(() => {
+    const opTerug = (e: PopStateEvent) => {
+      const doel = typeof e.state?.meubelStap === 'number' ? e.state.meubelStap : startStap.current
+      if (doel === vorigeStap.current) return
+      viaGeschiedenis.current = true
+      setStep(doel)
+    }
+    window.addEventListener('popstate', opTerug)
+    return () => window.removeEventListener('popstate', opTerug)
+  }, [])
   const [lengteTekst, setLengteTekst] = useState(String(initialConfig?.lengte ?? 1200))
   // Laatste geldige lengte: tekening en opties blijven staan terwijl je typt
   const [laatsteLengte, setLaatsteLengte] = useState(initialConfig?.lengte ?? 1200)
@@ -585,6 +607,11 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                           inputMode="numeric"
                           value={lengteTekst}
                           onChange={(e) => setLengteTekst(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          onBlur={() => {
+                            // Buiten het bereik getypt: terug naar de dichtstbijzijnde maat die kan
+                            const n = Number(lengteTekst)
+                            if (lengteTekst && (n < bereik.min || n > bereik.max)) setLengteTekst(String(Math.min(Math.max(n, bereik.min), bereik.max)))
+                          }}
                           aria-invalid={!lengteOk}
                           aria-describedby="meubel-lengte-hulp"
                           className={`w-24 h-10 rounded-xl border text-center text-[14px] font-semibold text-lx-text-primary outline-none bg-white px-2 ${lengteOk ? 'border-black/10 focus:border-lx-cta' : 'border-red-400'}`}
@@ -1388,9 +1415,8 @@ function MeubelConfiguratorInner({ factor, initialConfig, project, startCategori
                   Opslaan en nog een product toevoegen
                 </button>
               )}
-              {!projectName.trim() && (
-                <p className="text-[11px] text-lx-text-secondary text-center">Vul een projectnaam in om op te slaan</p>
-              )}
+              {/* Altijd dezelfde hoogte: anders verspringen de knoppen zodra de naam is ingevuld */}
+              <p className={`text-[11px] text-lx-text-secondary text-center ${projectName.trim() ? 'invisible' : ''}`} aria-hidden={!!projectName.trim()}>Vul een projectnaam in om op te slaan</p>
             </div>
           )}
         </div>

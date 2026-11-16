@@ -1,6 +1,6 @@
 'use client'
 
-import { leesMeubel } from '@/lib/meubel-opslag'
+import { leesMeubel, meubelKort } from '@/lib/meubel-opslag'
 
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
@@ -160,7 +160,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
             const shape = (config?.selected_options as { shape?: string })?.shape ?? '—'
             const meubel = leesMeubel(config?.selected_options)
             const dims = meubel
-              ? `${meubel.model.naam} · ${meubel.lengte} mm`
+              ? `${meubel.model.naam} · ${meubel.model.artikel ? meubelKort(meubel) : `${meubel.lengte} mm`}`
               : config?.width && config?.height
               ? `B ${config.width} × H ${config.height} cm`
               : shape === 'rond'
@@ -171,7 +171,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
             const unitPrice = Number(order.unit_price)
             const priceSubLabel = order.quantity > 1
               ? `€${unitPrice.toLocaleString('nl-NL')} p.st.`
-              : meubel ? 'Netto ex. BTW' : 'Bruto ex. BTW'
+              : 'Netto ex. BTW'
 
             const drawings = (Array.isArray(order.order_drawings) ? order.order_drawings : []) as { file_url: string; file_name: string }[]
 

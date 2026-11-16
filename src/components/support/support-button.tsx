@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { sendSupportRequest, getMyConfigs, type SupportType } from '@/lib/actions/support'
 import { toast } from '@/components/toast'
+import { usePathname } from 'next/navigation'
 
 type Config = { id: string; name: string; article_number: string | null; width: number | null; height: number | null }
 
@@ -20,6 +21,8 @@ function configLabel(c: Config) {
 }
 
 export default function SupportButton() {
+  // In de configurator staat op de telefoon een prijsbalk met de knop Volgende onderin: daar blijft Hulp boven
+  const inConfigurator = usePathname()?.startsWith('/configurator') ?? false
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<'type' | 'form'>('type')
   const [type, setType] = useState<SupportType | null>(null)
@@ -101,13 +104,13 @@ export default function SupportButton() {
       {/* Floating button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-lx-cta text-white text-[13px] font-semibold shadow-lg hover:bg-lx-cta-hover transition-all hover:scale-105 active:scale-95"
+        className={`fixed right-4 sm:right-6 z-40 flex items-center gap-2 py-2.5 rounded-full ${inConfigurator ? 'px-2.5 lg:px-4 bottom-28 lg:bottom-6' : 'px-4 bottom-6'} bg-lx-cta text-white text-[13px] font-semibold shadow-lg hover:bg-lx-cta-hover transition-all hover:scale-105 active:scale-95`}
         title="Support"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>
         </svg>
-        <span>Hulp</span>
+        <span className={inConfigurator ? 'hidden lg:inline' : ''}>Hulp</span>
       </button>
 
       {/* Backdrop */}

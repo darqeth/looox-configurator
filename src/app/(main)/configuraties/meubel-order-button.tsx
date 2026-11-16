@@ -48,6 +48,8 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
   function sluit() {
     if (loading) return
     setOpen(false)
+    // Pas nu de lijst verversen: de bestelde regel valt eruit en neemt deze knop met de bevestiging mee
+    if (result) queryClient.invalidateQueries({ queryKey: ['configurations'] })
     setQuantity(meubel.quantity); setNotes(''); setChecked(false); setFout(null); setResult(null); setAltShipping(false)
   }
 
@@ -57,7 +59,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
     document.addEventListener('keydown', opToets)
     return () => document.removeEventListener('keydown', opToets)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, loading])
+  }, [open, loading, result])
 
   async function bestel() {
     if (!checked || !bestelbaar || !altOk) return
@@ -70,7 +72,7 @@ export default function MeubelOrderButton({ configId, configName, meubel }: {
         : null
       const { orderNumber } = await placeMeubelOrder(configId, quantity, notes, altShippingAddress)
       setResult(orderNumber)
-      for (const key of ['orders', 'configurations', 'sidebar', 'dashboard', 'looox-circle']) {
+      for (const key of ['orders', 'sidebar', 'dashboard', 'looox-circle']) {
         queryClient.invalidateQueries({ queryKey: [key] })
       }
     } catch (e) {

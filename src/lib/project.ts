@@ -1,4 +1,4 @@
-import { formatDimensions, formatShape, type ConfigOptions } from '@/lib/pdf/helpers'
+import { formatDimensions, formatExtras, formatGlas, formatLight, formatShape, type ConfigOptions } from '@/lib/pdf/helpers'
 import { leesMeubel, meubelSamenvatting, tekenInvoer, type TekenInvoer } from '@/lib/meubel-opslag'
 import { productIcoon } from '@/lib/product-icoon'
 
@@ -30,6 +30,8 @@ export interface ProjectRegel {
   icoon: string
   /** Afmeting en keuzes in één regel */
   omschrijving: string
+  /** Belangrijkste keuzes van een spiegel (glas, verlichting, opties), voor het bestelvenster */
+  details?: string
   quantity: number
   /** Geen prijs vanuit de configurator: spiegel op aanvraag of meubel groter dan standaard */
   opAanvraag: boolean
@@ -59,6 +61,21 @@ function cents(bedrag: number | string): number {
   return Math.round(Number(bedrag) * 100) || 0
 }
 
+/** Wat de dealer bij bestellen wil nalezen: glas, verlichting en opties in één regel. */
+export function spiegelKenmerken(opts: ConfigOptions): string {
+  const glas = opts.glasKleur && opts.glasKleur !== 'helder' ? formatGlas(opts.glasKleur) : ''
+  const direct = formatLight(opts.directLight, opts)
+  const indirect = formatLight(opts.indirectLight, opts)
+  const extras = formatExtras(opts.extras, opts.optionSubChoices)
+  return [
+    glas,
+    direct !== 'Geen' ? `Direct licht: ${direct}` : '',
+    indirect !== 'Geen' ? `Indirect licht: ${indirect}` : '',
+    direct === 'Geen' && indirect === 'Geen' ? 'Zonder verlichting' : '',
+    extras !== 'Geen' ? extras : '',
+  ].filter(Boolean).join(' · ')
+}
+
 /** Zet een configuratie om naar een regel van het project, met de prijs zoals die op de offerte staat. */
 export function projectRegel(c: ProjectConfigRij): ProjectRegel {
   const opts = (c.selected_options ?? {}) as Record<string, unknown>
@@ -82,11 +99,12 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
   }
 
   const omschrijving = formatDimensions(shape, c.width, c.height, opts as unknown as ConfigOptions)
+  const details = spiegelKenmerken(opts as unknown as ConfigOptions)
   if (shape === 'projectspiegel') {
     // total_price is hier al het netto totaal voor alle stuks
     const totaal = cents(c.total_price)
     return {
-      id: c.id, soort: 'projectspiegel', titel: 'Projectspiegel', omschrijving,
+      id: c.id, soort: 'projectspiegel', titel: 'Projectspiegel', omschrijving, details,
       quantity: aantal, opAanvraag: false,
       stukCents: Math.round(totaal / aantal), totaalCents: totaal, netto: true, besteld, nalopen, aiNotities, icoon: productIcoon(opts),
     }
@@ -96,7 +114,7 @@ export function projectRegel(c: ProjectConfigRij): ProjectRegel {
   const opAanvraag = shape === 'op-aanvraag'
   const stuk = opAanvraag ? 0 : cents(c.total_price)
   return {
-    id: c.id, soort: 'maatwerk', titel: `Spiegel ${formatShape(shape).toLowerCase()}`, omschrijving,
+    id: c.id, soort: 'maatwerk', titel: `Spiegel ${formatShape(shape).toLowerCase()}`, omschrijving, details,
     quantity: aantal, opAanvraag,
     stukCents: stuk, totaalCents: stuk * aantal, netto: false, besteld, nalopen, aiNotities, icoon: productIcoon(opts),
   }

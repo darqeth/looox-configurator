@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { projectRegel, projectTotaal, projectKop, isUuid } from '../src/lib/project'
+import { spiegelKenmerken, projectRegel, projectTotaal, projectKop, isUuid } from '../src/lib/project'
 
 const basis = { id: 'a', name: 'Badkamer De Vries', status: 'saved', width: 200, height: 60 }
 const meubelOpts = (extra = {}, top = {}) => ({
@@ -117,5 +117,20 @@ test.describe('Project: maattekening verplicht bij meubels', () => {
 
   test('spiegels hebben geen maattekening nodig', () => {
     expect(berekenProjectOrderRegel({ ...basis, total_price: 450, selected_options: { shape: 'rechthoek', quantity: 1 } }, 50).fout).toBeNull()
+  })
+})
+
+test.describe('spiegelKenmerken', () => {
+  test('verlichting, verwarming en glaskleur staan in één regel voor het bestelvenster', () => {
+    const tekst = spiegelKenmerken({
+      shape: 'rond', diameter: 80, glasKleur: 'helder',
+      directLight: { position: 'rondom' }, indirectLight: { position: 'geen' },
+      lightType: '3000k', lightControl: 'tip-touch', extras: ['verwarming'],
+    })
+    expect(tekst).toBe('Direct licht: Rondom / 3000K warm wit / Tip-Touch sensor · Spiegelverwarming')
+  })
+
+  test('zonder verlichting staat dat er ook', () => {
+    expect(spiegelKenmerken({ shape: 'rechthoek', directLight: { position: 'geen' }, indirectLight: { position: 'geen' } })).toBe('Zonder verlichting')
   })
 })

@@ -130,6 +130,12 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
   const [wizardMode, setWizardMode] = useState<WizardMode>(isEditing ? 'configuring' : 'selecting')
   const [shape, setShape] = useState<ShapeSlug | null>(initialConfig?.shape ?? null)
   const [step, setStep] = useState(1)
+  // Een nieuwe stap begint bovenaan: anders land je halverwege en mis je de eerste keuzes
+  const eersteStap = useRef(true)
+  useEffect(() => {
+    if (eersteStap.current) { eersteStap.current = false; return }
+    window.scrollTo({ top: 0 })
+  }, [step, shape])
 
   // Step 1: dimensions + glaskleur
   const [width, setWidth] = useState(initialConfig?.width ?? 80)
@@ -697,7 +703,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Left: step content */}
             <div className="flex-1 min-w-0">
-              <div className="bg-white rounded-2xl shadow-sm border border-black/8 p-6">
+              {/* Vaste hoogte tot onderaan het scherm: de knoppen staan zo altijd op dezelfde plek, ook als een keuze een blok openklapt */}
+              <div className={`bg-white rounded-2xl shadow-sm border border-black/8 p-6 ${step < 4 ? 'lg:min-h-[calc(100dvh-182px)] flex flex-col' : ''}`}>
                 <h2 className="text-[16px] font-bold text-lx-text-primary mb-5">
                   {step === 1 && 'Afmeting'}
                   {step === 2 && 'Verlichting'}
@@ -829,7 +836,8 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
                       </div>
                     ) : null
                   })()}
-                  <div className="flex justify-between mt-8 pt-5 border-t border-lx-divider">
+                  <div className="h-8 flex-shrink-0" aria-hidden="true" />
+                  <div className="flex justify-between mt-auto pt-5 pb-4 -mb-4 border-t border-lx-divider lg:sticky lg:bottom-0 bg-white z-10">
                     <button
                       onClick={() => step > 1 ? setStep(step - 1) : (setShape(null), setWizardMode('manual'))}
                       className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-lx-text-secondary hover:text-lx-text-primary hover:bg-lx-panel-bg transition-all"

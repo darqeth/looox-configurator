@@ -674,7 +674,7 @@ export async function placeMeubelOrder(
         [indelingLabel(meubel.model), indelingTekst(meubel.model, meubel.lades, meubel.ladeBreedtes, meubel.ladeRuimte, meubel)],
         ...(meubel.waskomVorm ? [['Waskom', waskomTekst(meubel)] as [string, string]] : []),
         ...(meubel.regaalBreedte > 0 ? [['Regaalkast', `${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`] as [string, string]] : []),
-        [kleurLabel(meubel.model), meubel.houtkleurNaam || 'Geen'],
+        ...(meubel.model.artikel ? [] : [[kleurLabel(meubel.model), meubel.houtkleurNaam || 'Geen'] as [string, string]]),
         ['Opties', meubelOptiesTekst(meubel)],
       ],
     },

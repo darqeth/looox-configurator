@@ -184,7 +184,6 @@ function OrderButtonInner({ configId, configName, metaSummary, price, korting, i
       )
       setResult(orderNumber)
       queryClient.invalidateQueries({ queryKey: ['orders'] })
-      queryClient.invalidateQueries({ queryKey: ['configurations'] })
       queryClient.invalidateQueries({ queryKey: ['sidebar'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['looox-circle'] })
@@ -198,6 +197,8 @@ function OrderButtonInner({ configId, configName, metaSummary, price, korting, i
 
   function handleClose() {
     setOpen(false)
+    // Pas nu de lijst verversen: de bestelde regel valt eruit en neemt deze knop met de bevestiging mee
+    if (result) queryClient.invalidateQueries({ queryKey: ['configurations'] })
     setModalStep(1)
     setQuantity(startQuantity)
     setMmsQuantity(startMms)

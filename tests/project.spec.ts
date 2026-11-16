@@ -181,3 +181,39 @@ test.describe('Project: klant en offertenummer', () => {
     expect(offerteNummer('3f9a2c1e-0000-4000-8000-000000000000', '2026-11-16T10:00:00Z')).toBe('OFF-2026-3F9A2C')
   })
 })
+
+import { komControle, komMaat } from '../src/lib/project'
+
+test.describe('Project: past de waskom', () => {
+  const gat = (soort: 'sifon' | 'kraan', x: number, y = 240) => ({ soort, x, y, d: soort === 'sifon' ? 45 : 35 })
+  const meubel = (gaten: unknown[] = [], lengte = 1400) => ({ ...basis, id: 'm', width: null, height: null, total_price: 1000, selected_options: meubelOpts({ modelId: 'facet', lengte, lades: 2, ...(gaten.length && { tekenwijze: 'module', gaten }) }, { quantity: 1, attachmentUrl: null }) })
+  const kom = (variant = 'WTMWK40W', quantity = 1) => ({ ...basis, id: 'k' + variant, width: null, height: null, total_price: 100, selected_options: { shape: 'meubel', quantity, meubel: { eenheid: 'mm', modelId: 'waskom-ceramic', variant, factor: 2 } } })
+
+  test('maat uit de prijslijsttekst', () => {
+    expect(komMaat('Ø 40 cm, hoogte 15 cm')).toEqual({ b: 400, d: 400 })
+    expect(komMaat('45 × 32,5 cm, hoogte 13,5 cm')).toEqual({ b: 450, d: 325 })
+    expect(komMaat(undefined)).toBeNull()
+  })
+  test('zonder waskom of zonder meubel: niets', () => {
+    expect(komControle([meubel()])).toBeNull()
+    expect(komControle([kom()])).toBeNull()
+  })
+  test('geen gaten getekend: past op het blad, monteur boort', () => {
+    const r = komControle([meubel(), kom()])
+    expect(r?.goed).toBe(true)
+    expect(r?.tekst).toContain('monteur boort')
+  })
+  test('aantal gaten en kommen verschilt', () => {
+    const r = komControle([meubel([gat('sifon', 400)]), kom('WTMWK40W', 2)])
+    expect(r).toEqual({ goed: false, tekst: 'Je hebt 1 afvoergat getekend en 2 waskommen in dit project. Klopt dat?' })
+  })
+  test('kom over de zijkant, kommen tegen elkaar, kraan onder de kom', () => {
+    expect(komControle([meubel([gat('sifon', 150)]), kom()])?.tekst).toContain('over de zijkant')
+    expect(komControle([meubel([gat('sifon', 500), gat('sifon', 800)]), kom('WTMWK40W', 2)])?.tekst).toContain('raken elkaar')
+    expect(komControle([meubel([gat('sifon', 400), gat('kraan', 450, 300)]), kom()])?.tekst).toContain('onder de waskom')
+  })
+  test('alles klopt', () => {
+    const r = komControle([meubel([gat('sifon', 350), gat('sifon', 1050), gat('kraan', 350, 420), gat('kraan', 1050, 420)]), kom('WTMWK30W', 2)])
+    expect(r).toEqual({ goed: true, tekst: 'De waskommen passen: de afvoergaten liggen goed en de kommen blijven binnen het blad.' })
+  })
+})

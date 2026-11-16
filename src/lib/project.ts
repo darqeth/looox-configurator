@@ -195,3 +195,55 @@ export function maatSeintje(configs: ProjectConfigRij[]): string | null {
   }
   return null
 }
+
+/** Maat van een losse waskom in mm uit de tekst van de prijslijst ("Ø 40 cm, …" of "49 × 40 cm, …"). */
+export function komMaat(afmeting: string | undefined): { b: number; d: number } | null {
+  if (!afmeting) return null
+  const getal = (t: string) => Math.round(Number(t.replace(',', '.')) * 10)
+  const rond = afmeting.match(/Ø\s*([\d,]+)\s*cm/)
+  if (rond) return { b: getal(rond[1]), d: getal(rond[1]) }
+  const recht = afmeting.match(/([\d,]+)\s*×\s*([\d,]+)\s*cm/)
+  return recht ? { b: getal(recht[1]), d: getal(recht[2]) } : null
+}
+
+export type KomControle = { goed: boolean; tekst: string }
+
+/**
+ * Past de losse waskom op het meubel en bij de getekende gaten? Alleen bij één houten
+ * wastafelmeubel met opbouwwaskommen in hetzelfde project. Geeft een geruststelling als
+ * alles klopt en anders het eerste punt om na te lopen.
+ */
+export function komControle(configs: ProjectConfigRij[]): KomControle | null {
+  const open = configs.filter((c) => c.status !== 'ordered').map((c) => leesMeubel(c.selected_options)).filter((m) => !!m)
+  const meubels = open.filter((m) => !m.model.artikel && !m.model.plank && !m.model.kast && !m.model.waskom && m.model.categorie === 'wastafelmeubels')
+  // Vrijstaande zuilen staan op de vloer en tellen niet mee
+  const kommen = open.filter((m) => m.model.artikel && m.model.categorie === 'waskommen' && !/pillar/.test(m.model.id))
+  if (meubels.length !== 1 || kommen.length === 0 || meubels[0].quantity !== 1) return null
+  const meubel = meubels[0]
+  const maten = kommen.map((k) => komMaat(k.model.afmetingTekst))
+  if (maten.some((m) => !m)) return null
+  const b = Math.max(...maten.map((m) => m!.b)), d = Math.max(...maten.map((m) => m!.d))
+  const aantal = kommen.reduce((s, k) => s + k.quantity, 0)
+  const cm = (mm: number) => `${(mm / 10).toLocaleString('nl-NL')} cm`
+  const kom = aantal === 1 ? 'De waskom' : 'De waskommen'
+  const letOp = (tekst: string): KomControle => ({ goed: false, tekst })
+
+  if (d > meubel.model.diepte) return letOp(`De waskom (${cm(d)} diep) is dieper dan het blad (${cm(meubel.model.diepte)}). Kies een kleinere waskom.`)
+  if (aantal * b > meubel.lengte) return letOp(`${aantal} waskommen van ${cm(b)} passen niet naast elkaar op ${cm(meubel.lengte)}.`)
+
+  const sifons = meubel.gaten.filter((g) => g.soort === 'sifon')
+  const kranen = meubel.gaten.filter((g) => g.soort === 'kraan')
+  if (sifons.length === 0) {
+    return { goed: true, tekst: `${kom} ${aantal === 1 ? 'past' : 'passen'} op het blad (${cm(b)} breed op ${cm(meubel.lengte)}). Er zijn geen gaten opgegeven, de monteur boort het afvoergat zelf.` }
+  }
+  if (sifons.length !== aantal) {
+    return letOp(`Je hebt ${sifons.length} ${sifons.length === 1 ? 'afvoergat' : 'afvoergaten'} getekend en ${aantal} ${aantal === 1 ? 'waskom' : 'waskommen'} in dit project. Klopt dat?`)
+  }
+  if (sifons.some((g) => g.x - b / 2 < 0 || g.x + b / 2 > meubel.lengte)) return letOp(`Een waskom van ${cm(b)} steekt op deze plek over de zijkant van het blad. Zet het afvoergat verder naar binnen.`)
+  if (sifons.some((g) => g.y - d / 2 < 0 || g.y + d / 2 > meubel.model.diepte)) return letOp(`Een waskom van ${cm(d)} diep steekt op deze plek over de voor- of achterkant van het blad. Zet het afvoergat meer in het midden.`)
+  const gesorteerd = [...sifons].sort((p, q) => p.x - q.x)
+  if (gesorteerd.some((g, i) => i > 0 && g.x - gesorteerd[i - 1].x < b)) return letOp(`De afvoergaten staan dichter bij elkaar dan de waskom breed is (${cm(b)}). De waskommen raken elkaar.`)
+  // Kraangat binnen de omtrek van de kom (ellips rond het afvoergat), de boring zelf meegerekend
+  if (kranen.some((k) => sifons.some((g) => ((k.x - g.x) / (b / 2 + k.d / 2)) ** 2 + ((k.y - g.y) / (d / 2 + k.d / 2)) ** 2 < 1))) return letOp(`Een kraangat valt onder de waskom (${cm(b)}). Zet het kraangat naast de waskom of kies een kleinere waskom.`)
+  return { goed: true, tekst: `${kom} ${aantal === 1 ? 'past' : 'passen'}: ${aantal === 1 ? 'het afvoergat ligt' : 'de afvoergaten liggen'} goed en ${aantal === 1 ? 'de kom blijft' : 'de kommen blijven'} binnen het blad.` }
+}

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getOfferteDealer, pdfResponseHeaders, renderOfferteBuffer } from '@/lib/pdf/render-offerte'
 import ProjectVoorblad from '@/lib/pdf/project-voorblad'
 import { voegPdfsSamen } from '@/lib/pdf/samenvoegen'
-import { isUuid, projectKop, projectRegel } from '@/lib/project'
+import { isUuid, offerteNummer, projectKop, projectRegel } from '@/lib/project'
 
 // Projectofferte: voorblad met alle regels en het totaal, daarna de bestaande
 // offerte per regel. RLS bepaalt welke regels de aanroeper mag zien.
@@ -33,6 +33,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     variant: 'offerte',
     projectNaam: kop.naam,
     referentie: kop.referentie,
+    offerteNummer: offerteNummer(id, configs[0].created_at),
+    klant: kop.klant,
     datum: new Date().toISOString(),
     dealer,
     regels: configs.map(projectRegel),

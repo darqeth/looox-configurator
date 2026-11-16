@@ -2,7 +2,7 @@ import React from 'react'
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
-import type { ProjectRegel } from '@/lib/project'
+import type { ProjectKlant, ProjectRegel } from '@/lib/project'
 
 // Voorblad van een projectofferte of -order: alle regels met het totaal. Daarachter
 // komen de bestaande documenten per regel, samengevoegd tot één PDF.
@@ -67,12 +67,15 @@ export type ProjectVoorbladProps = {
   referentie: string
   /** Order: het gezamenlijke ordernummer */
   orderNummer?: string
+  /** Offerte: nummer en de klant van de dealer */
+  offerteNummer?: string
+  klant?: ProjectKlant | null
   datum: string
   dealer: { name: string | null; company: string | null; email: string; phone?: string | null; address?: string | null }
   regels: ProjectRegel[]
 }
 
-export default function ProjectVoorblad({ variant, projectNaam, referentie, orderNummer, datum, dealer, regels }: ProjectVoorbladProps) {
+export default function ProjectVoorblad({ variant, projectNaam, referentie, orderNummer, offerteNummer, klant, datum, dealer, regels }: ProjectVoorbladProps) {
   const isOrder = variant === 'order'
   const totaal = regels.reduce((som, r) => som + r.totaalCents, 0)
   const btw = Math.round(totaal * 0.21)
@@ -95,9 +98,19 @@ export default function ProjectVoorblad({ variant, projectNaam, referentie, orde
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.docTitle}>{titel}</Text>
+            {!isOrder && offerteNummer && <Text style={styles.headerMeta}>Nummer: {offerteNummer}</Text>}
             <Text style={styles.headerMeta}>Datum: {formatDate(datum)}</Text>
           </View>
         </View>
+
+        {!isOrder && klant && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Offerte voor</Text>
+            {klant.naam ? <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 2 }}>{klant.naam}</Text> : null}
+            {klant.adres ? <Text style={{ fontSize: 9, color: DARK, marginBottom: 1 }}>{klant.adres}</Text> : null}
+            {klant.plaats ? <Text style={{ fontSize: 9, color: DARK }}>{klant.plaats}</Text> : null}
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Project</Text>
@@ -167,7 +180,7 @@ export default function ProjectVoorblad({ variant, projectNaam, referentie, orde
 
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>{isOrder ? 'LoooX' : `${dealer.company ?? dealer.name ?? ''} - ${dealer.email}`}</Text>
-          <Text style={styles.footerText}>{titel} {orderNummer ?? projectNaam}</Text>
+          <Text style={styles.footerText}>{titel} {orderNummer ?? offerteNummer ?? projectNaam}</Text>
         </View>
       </Page>
     </Document>

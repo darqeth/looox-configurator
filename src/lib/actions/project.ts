@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { leesKlant, type ProjectKlant } from '@/lib/project'
 import { generateArticleNumber } from '@/lib/actions/configurator-helpers'
 
 // Projecten (winkelmandje): zie src/lib/project.ts. Alle toegang loopt via de
@@ -56,8 +57,15 @@ export async function kopieerRegel(configId: string): Promise<void> {
   revalidatePath('/dashboard')
 }
 
+function metKlant(opts: Record<string, unknown>, klant: ProjectKlant | null | undefined): Record<string, unknown> {
+  if (klant === undefined) return opts
+  const { klant: _oud, ...rest } = opts
+  void _oud
+  return klant ? { ...rest, klant } : rest
+}
+
 /** Naam en referentie van het project wijzigen: dat zijn de naam en referentie van elke regel. */
-export async function hernoemProject(projectId: string, rawNaam: string, rawReferentie: string): Promise<void> {
+export async function hernoemProject(projectId: string, rawNaam: string, rawReferentie: string, rawKlant?: { naam?: string; adres?: string; plaats?: string }): Promise<void> {
   const parsed = z.object({
     projectId: z.string().uuid(),
     naam: z.string().trim().min(1, 'Projectnaam is verplicht').max(200),
@@ -65,6 +73,8 @@ export async function hernoemProject(projectId: string, rawNaam: string, rawRefe
   }).safeParse({ projectId, naam: rawNaam, referentie: rawReferentie })
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? 'Ongeldige invoer')
   const { naam, referentie } = parsed.data
+  // Klant voor de offerte: leeg gelaten betekent geen klant op de offerte
+  const klant = rawKlant === undefined ? undefined : leesKlant({ klant: rawKlant })
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -76,7 +86,7 @@ export async function hernoemProject(projectId: string, rawNaam: string, rawRefe
 
   for (const regel of regels) {
     const { data, error } = await supabase.from('configurations')
-      .update({ name: naam, selected_options: { ...(regel.selected_options as Record<string, unknown>), reference: referentie }, updated_at: new Date().toISOString() })
+      .update({ name: naam, selected_options: metKlant({ ...(regel.selected_options as Record<string, unknown>), reference: referentie }, klant), updated_at: new Date().toISOString() })
       .eq('id', regel.id)
       .select('id')
     if (error) throw new Error(error.message)

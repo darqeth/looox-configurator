@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { ShapeSlug, GlasKleur, LightType, calcTotalPrice } from '@/lib/configurator-config'
 import { DEFAULT_PRODUCT_ID, generateArticleNumber, buildSelectedOptionsJson, assertSolLunaMaat, assertKraangat, resolveStoredDims } from '@/lib/actions/configurator-helpers'
 import { z } from 'zod'
-import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
+import { bepaalProjectDoel, projectVelden, behoudKlant } from '@/lib/actions/project-helpers'
 import { parseOrThrow, configInputSchema } from '@/lib/validation'
 
 const saveConfigSchema = configInputSchema.extend({
@@ -130,7 +130,7 @@ export async function saveConfiguration(rawInput: SaveConfigInput): Promise<{ pr
     product_id: DEFAULT_PRODUCT_ID,
     name: doel?.naam ?? input.projectName,
     ...resolveStoredDims(input),
-    selected_options: doel ? { ...selectedOptionsJson, reference: doel.referentie } : selectedOptionsJson,
+    selected_options: doel ? { ...selectedOptionsJson, ...projectVelden(doel) } : selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: input.status,
     article_number: generateArticleNumber(),
@@ -229,7 +229,7 @@ export async function updateConfiguration(rawInput: UpdateConfigInput) {
   const { data, error } = await supabase.from('configurations').update({
     name: input.projectName,
     ...resolveStoredDims(input),
-    selected_options: selectedOptionsJson,
+    selected_options: { ...selectedOptionsJson, ...await behoudKlant(supabase, input.configId) },
     total_price: totalPrice.toString(),
     status: input.status,
     updated_at: new Date().toISOString(),
@@ -283,7 +283,7 @@ export async function updateProjectspiegelConfiguration(configId: string, input:
     name: input.projectName,
     width: input.lengte,
     height: input.hoogte,
-    selected_options: selectedOptionsJson,
+    selected_options: { ...selectedOptionsJson, ...await behoudKlant(supabase, configId) },
     total_price: totalPrice.toString(),
     updated_at: new Date().toISOString(),
   }).eq('id', configId).select('id')
@@ -356,7 +356,7 @@ export async function saveProjectspiegelConfiguration(input: SaveProjectspiegelI
     name: doel?.naam ?? input.projectName,
     width: input.lengte,
     height: input.hoogte,
-    selected_options: doel ? { ...selectedOptionsJson, reference: doel.referentie } : selectedOptionsJson,
+    selected_options: doel ? { ...selectedOptionsJson, ...projectVelden(doel) } : selectedOptionsJson,
     total_price: totalPrice.toString(),
     status: 'saved',
     article_number: generateArticleNumber(),

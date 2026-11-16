@@ -51,8 +51,8 @@ test.describe('Project: totaal en kop', () => {
   })
 
   test('naam en referentie komen van de eerste regel', () => {
-    expect(projectKop([{ ...basis, total_price: 1, selected_options: meubelOpts() }])).toEqual({ naam: 'Badkamer De Vries', referentie: 'REF-1' })
-    expect(projectKop([])).toEqual({ naam: 'Naamloos project', referentie: '' })
+    expect(projectKop([{ ...basis, total_price: 1, selected_options: meubelOpts() }])).toEqual({ naam: 'Badkamer De Vries', referentie: 'REF-1', klant: null })
+    expect(projectKop([])).toEqual({ naam: 'Naamloos project', referentie: '', klant: null })
   })
 
   test('isUuid', () => {
@@ -157,5 +157,27 @@ test.describe('Project: seintje spiegel en meubel', () => {
   test('zonder meubel of met twee meubels: geen seintje', () => {
     expect(maatSeintje([spiegel(120)])).toBeNull()
     expect(maatSeintje([meubel(1300), { ...meubel(1500), id: 'm2' }, spiegel(120)])).toBeNull()
+  })
+})
+
+import { leesKlant, offerteNummer } from '../src/lib/project'
+
+test.describe('Project: klant en offertenummer', () => {
+  test('klant komt van de eerste regel die er een heeft', () => {
+    const klant = { naam: 'Familie Van Dijk', adres: 'Dorpsstraat 1', plaats: '1234 AB Ede' }
+    const kop = projectKop([
+      { ...basis, id: 'a', total_price: 1, selected_options: { shape: 'rechthoek' } },
+      { ...basis, id: 'b', total_price: 1, selected_options: { shape: 'rechthoek', klant } },
+    ])
+    expect(kop.klant).toEqual(klant)
+    expect(projectKop([{ ...basis, total_price: 1, selected_options: {} }]).klant).toBeNull()
+  })
+  test('lege of ongeldige klant telt niet', () => {
+    expect(leesKlant({ klant: { naam: '  ', adres: '', plaats: '' } })).toBeNull()
+    expect(leesKlant({ klant: 'x' })).toBeNull()
+    expect(leesKlant({ klant: { naam: ' Jansen ', adres: 5 } })).toEqual({ naam: 'Jansen', adres: '', plaats: '' })
+  })
+  test('offertenummer is vast per project', () => {
+    expect(offerteNummer('3f9a2c1e-0000-4000-8000-000000000000', '2026-11-16T10:00:00Z')).toBe('OFF-2026-3F9A2C')
   })
 })

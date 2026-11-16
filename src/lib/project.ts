@@ -137,13 +137,34 @@ export function projectTotaal(regels: ProjectRegel[]): ProjectTotaal {
   }
 }
 
-/** Naam en referentie van het project: die van de eerste regel. */
-export function projectKop(configs: ProjectConfigRij[]): { naam: string; referentie: string } {
+/** Klant van de dealer, voor op de offerte. Staat net als de referentie op elke regel. */
+export interface ProjectKlant {
+  naam: string
+  adres: string
+  plaats: string
+}
+
+export function leesKlant(selectedOptions: unknown): ProjectKlant | null {
+  const k = (selectedOptions as { klant?: unknown } | null)?.klant as Partial<Record<keyof ProjectKlant, unknown>> | undefined
+  if (!k || typeof k !== 'object') return null
+  const tekst = (v: unknown) => (typeof v === 'string' ? v.trim().slice(0, 200) : '')
+  const klant = { naam: tekst(k.naam), adres: tekst(k.adres), plaats: tekst(k.plaats) }
+  return klant.naam || klant.adres || klant.plaats ? klant : null
+}
+
+/** Offertenummer van een project: vast per project, zonder eigen teller. */
+export function offerteNummer(projectId: string, datum: string | Date = new Date()): string {
+  return `OFF-${new Date(datum).getFullYear()}-${projectId.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+}
+
+/** Naam, referentie en klant van het project: die van de eerste regel (klant: de eerste regel die er een heeft). */
+export function projectKop(configs: ProjectConfigRij[]): { naam: string; referentie: string; klant: ProjectKlant | null } {
   const eerste = configs[0]
   const opts = (eerste?.selected_options ?? {}) as Record<string, unknown>
   return {
     naam: eerste?.name?.trim() || 'Naamloos project',
     referentie: typeof opts.reference === 'string' ? opts.reference : '',
+    klant: configs.map((c) => leesKlant(c.selected_options)).find(Boolean) ?? null,
   }
 }
 

@@ -13,6 +13,7 @@ import UpsellCards, { upsellVoorMeubels } from '@/components/upsell-cards'
 import { leesMeubel } from '@/lib/meubel-opslag'
 import { berekenProjectOrderRegel } from '@/lib/project-order'
 import { zietInkoop } from '@/lib/inkoop'
+import OfferteDelen from './offerte-delen'
 
 export const metadata = { title: 'Project | LoooX Configurator' }
 
@@ -80,7 +81,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-widest text-lx-text-secondary mb-1">Project</p>
-          <ProjectNaam projectId={id} naam={kop.naam} referentie={kop.referentie} bewerkbaar={!ietsBesteld} />
+          <ProjectNaam projectId={id} naam={kop.naam} referentie={kop.referentie} klant={kop.klant} bewerkbaar={!ietsBesteld} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a
@@ -90,6 +91,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           >
             <Download size={15} /> Offerte
           </a>
+          <OfferteDelen url={`/api/pdf/project/${id}`} bestandsnaam={`Offerte ${kop.naam}.pdf`} />
           {!ietsBesteld && (
             <Link
               href={`/configurator/nieuw?project=${id}`}

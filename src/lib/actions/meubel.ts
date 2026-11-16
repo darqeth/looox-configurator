@@ -11,7 +11,8 @@ import {
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE, leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
 import { betaaldeGaten, valideerGaten, type Gat } from '@/lib/meubel-gaten'
-import { bepaalProjectDoel } from '@/lib/actions/project-helpers'
+import { bepaalProjectDoel, projectVelden } from '@/lib/actions/project-helpers'
+import { leesKlant } from '@/lib/project'
 
 const mm = z.number().finite().min(-5000).max(5000)
 const gatSchema = z.discriminatedUnion('soort', [
@@ -157,7 +158,7 @@ export async function saveMeubelConfiguration(rawInput: SaveMeubelInput): Promis
   const doel = await bepaalProjectDoel(supabase, { projectId: input.projectId, nieuwProject: input.nieuwProject, naam: rij.name, referentie: input.reference })
   const projectId = doel?.projectId ?? null
   const naam = doel?.naam ?? rij.name
-  const opties = doel ? { ...rij.selected_options, reference: doel.referentie } : rij.selected_options
+  const opties = doel ? { ...rij.selected_options, ...projectVelden(doel) } : rij.selected_options
 
   const { data, error } = await supabase.from('configurations').insert({
     ...rij,
@@ -193,7 +194,7 @@ export async function updateMeubelConfiguration(configId: string, rawInput: Save
       // Een regel in een project houdt de naam en referentie van het project
       ...(bestaand.project_id && {
         name: bestaand.name,
-        selected_options: { ...rij.selected_options, reference: (bestaand.selected_options as { reference?: string } | null)?.reference ?? '' },
+        selected_options: { ...rij.selected_options, reference: (bestaand.selected_options as { reference?: string } | null)?.reference ?? '', ...(leesKlant(bestaand.selected_options) && { klant: leesKlant(bestaand.selected_options) }) },
       }),
       updated_at: new Date().toISOString(),
     })

@@ -6,6 +6,7 @@ import { ArrowRight, Paperclip, Sparkles, X } from 'lucide-react'
 import { analyzeMeubelWithAI } from '@/lib/actions/meubel-ai'
 import { comprimeerAfbeelding } from '@/lib/comprimeer-afbeelding'
 import type { MeubelVoorstel } from '@/lib/meubel-ai'
+import { nieuwProjectKlaar, useNieuwProject } from '@/lib/nieuw-project'
 
 // Het hulpje boven de categoriekaarten: de dealer omschrijft wat hij zoekt, met of
 // zonder schets. Eén meubel opent ingevuld in de configurator; bij meer producten
@@ -34,6 +35,8 @@ export default function MeubelAiBalk({ projectId, onVoorstel }: {
 }) {
   const [tekst, setTekst] = useState('')
   const [naam, setNaam] = useState('')
+  // Net een nieuw project begonnen: het hulpje zet zijn voorstel in dat project
+  useNieuwProject(!projectId, setNaam)
   const [beeld, setBeeld] = useState<File | null>(null)
   const [uitkomst, setUitkomst] = useState<Uitkomst | null>(null)
   const [bezig, start] = useTransition()
@@ -63,7 +66,7 @@ export default function MeubelAiBalk({ projectId, onVoorstel }: {
         })
         if (!r.success) setUitkomst({ soort: 'fout', tekst: r.error })
         else if (r.soort === 'meubel') onVoorstel(r.voorstel, r.meldingen, r.projectnaam)
-        else if (r.soort === 'project') setUitkomst({ soort: 'project', projectId: r.projectId, aantal: r.aantal, meldingen: r.meldingen })
+        else if (r.soort === 'project') { nieuwProjectKlaar(); setUitkomst({ soort: 'project', projectId: r.projectId, aantal: r.aantal, meldingen: r.meldingen }) }
         else setUitkomst({ soort: 'spiegel', meldingen: r.meldingen })
       } catch (e) {
         console.error(e)

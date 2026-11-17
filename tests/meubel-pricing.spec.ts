@@ -806,7 +806,7 @@ test.describe('Planken, waskommen en accessoires', () => {
     const s2 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1600, lades: 2, waskomVorm: 'vierkant', waskomMaat: 850 })!
     expect(s2.config).toMatchObject({ tekenwijze: 'module', waskomMaat: 500 })
     expect(s2.meldingen.join(' ')).toContain('850')
-    const s3 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1200, lades: 2 })!
+    const s3 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1100, lades: 2 })!
     expect(s3.config.tekenwijze).toBe('upload')
     expect(s3.meldingen.join(' ')).toContain('15 cm')
     expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw', variant: 'WTMWK40RO', uitsparingen: 2 })!.config.uitsparingen).toBe(0)
@@ -883,14 +883,14 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
   })
 
   test('advies als er geen waskom boven de lades past', () => {
-    const c = { modelId: 'solid-drawer-box', lengte: 1800, lades: 3, ladeBreedtes: null }
+    const c = { modelId: 'solid-drawer-box', lengte: 1700, lades: 3, ladeBreedtes: null }
     expect(waskomMax(c, 'ovaal')).toBe(0)
-    const advies = komAdvies(c, 1800, [2, 3])
-    expect(advies.breder).toEqual([650, 575, 575])
+    const advies = komAdvies(c, 1700, [2, 3])
+    expect(advies.breder).toEqual([600, 550, 550])
     expect(advies.minder).toBe(2)
     expect(waskomMax({ ...c, ladeBreedtes: advies.breder }, 'ovaal')).toBe(1)
     // Te kort om een lade breed genoeg te maken: alleen minder lades helpt
-    expect(komAdvies({ ...c, lengte: 1300 }, 1300, [2, 3]).breder).toBeNull()
+    expect(komAdvies({ ...c, lengte: 1200 }, 1200, [2, 3]).breder).toBeNull()
   })
 
   test('waskom 850 alleen rechthoekig en alleen als hij past', () => {

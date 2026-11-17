@@ -52,12 +52,13 @@ export interface Kom {
 
 /**
  * Maten van de kommen. Rechthoekig 500: tekening Marlan 206646. De 850 heeft dezelfde
- * diepte en hetzelfde hart aangenomen; de ovale kom is voorlopig, de echte maat volgt.
+ * diepte en hetzelfde hart aangenomen. Ovaal (Puffin 500): tekening Marlan 17-11-2026,
+ * ellips 450 x 285, hart 240 uit de achterkant, afvoer Ø45.
  */
 const KOMMEN: Record<'ovaal' | 'vierkant-500' | 'vierkant-850', Kom> = {
   'vierkant-500': { b: 500, d: 298, cy: 240, radius: 52, afvoer: 50, ovaal: false },
   'vierkant-850': { b: 850, d: 298, cy: 240, radius: 52, afvoer: 50, ovaal: false },
-  ovaal: { b: 500, d: 298, cy: 240, radius: 149, afvoer: 50, ovaal: true },
+  ovaal: { b: 450, d: 285, cy: 240, radius: 142.5, afvoer: 45, ovaal: true },
 }
 
 /** De ovale kom bestaat in één maat; alleen de rechthoekige ook in 850. */

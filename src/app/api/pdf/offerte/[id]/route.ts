@@ -6,6 +6,7 @@ import React from 'react'
 import OfferteDocument from '@/lib/pdf/offerte-document'
 import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { prepareAttachmentForPdf } from '@/lib/pdf/prepare-attachment'
+import { isAdminOrSubAdmin } from '@/lib/company-utils'
 
 export async function GET(
   _req: NextRequest,
@@ -20,17 +21,21 @@ export async function GET(
   // Fetch configuration — RLS regelt toegang (eigen configs + bedrijfscollega's)
   const { data: config, error } = await supabase
     .from('configurations')
-    .select('id, name, article_number, width, height, total_price, selected_options, created_at')
+    .select('id, user_id, name, article_number, width, height, total_price, selected_options, created_at')
     .eq('id', id)
     .single()
 
   if (error || !config) return new NextResponse('Not found', { status: 404 })
 
-  // Fetch dealer profile
+  // Afzender op de offerte: normaal wie downloadt. Downloadt LoooX (admin) de offerte
+  // van een dealer, dan horen de gegevens van die dealer erop.
+  const eigenaarId = (config as { user_id?: string }).user_id
+  const vanDealer = !!eigenaarId && eigenaarId !== user.id && await isAdminOrSubAdmin(supabase, user.id)
+  const dealerId = vanDealer ? eigenaarId : user.id
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, company, phone, address, shipping_address')
-    .eq('id', user.id)
+    .select('full_name, company, phone, address, shipping_address, email')
+    .eq('id', dealerId)
     .single()
 
   // Aangevinkt sfeerbeeld voor deze configuratie (besluit V3, exclusief)
@@ -63,7 +68,7 @@ export async function GET(
     dealer: {
       name: profile?.full_name ?? null,
       company: profile?.company ?? null,
-      email: user.email ?? '',
+      email: vanDealer ? ((profile as { email?: string | null } | null)?.email ?? '') : (user.email ?? ''),
       phone: profile?.phone ?? null,
       address: profile?.address ?? null,
       shippingAddress: (profile as { shipping_address?: string | null } | null)?.shipping_address ?? null,

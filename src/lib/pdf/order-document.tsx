@@ -9,6 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import { PdfMirrorPreview } from './mirror-preview'
 import { PdfLogo } from './pdf-logo'
+import { getStaffelKorting } from '@/lib/projectspiegel-config'
 import { MMS, addEuro, calcMmsBruto, calcMmsNetto, clampMmsQuantity, isMmsAllowed, resolveMmsUnitPrice } from '@/lib/mms'
 
 function formatAddress(str: string | null | undefined): string {
@@ -32,6 +33,8 @@ import {
   formatExtras,
   formatDate,
   formatPrice,
+  isProjectspiegel,
+  projectspiegelRijen,
 } from './helpers'
 
 
@@ -270,12 +273,15 @@ export default function OrderDocument({
   const isOpAanvraag = (opts.shape as string) === 'op-aanvraag'
   const docTitle = isOpAanvraag ? 'Offerteaanvraag' : 'Orderbevestiging'
   const nummerLabel = isOpAanvraag ? 'Offertenummer' : 'Ordernummer'
-  const nettoUnitPrice = Math.round(unitPrice * (1 - korting / 100))
-  const staffelAmountPerStuk = staffelKortingPct && staffelKortingPct > 0
+  // Projectspiegel: unitPrice is al de nettoprijs per stuk (staffel verwerkt), zonder dealerkorting en met centen
+  const isProject = isProjectspiegel(opts)
+  const projectStaffelPct = isProject ? getStaffelKorting(quantity) : 0
+  const nettoUnitPrice = isProject ? unitPrice : Math.round(unitPrice * (1 - korting / 100))
+  const staffelAmountPerStuk = !isProject && staffelKortingPct && staffelKortingPct > 0
     ? Math.round(nettoUnitPrice * staffelKortingPct)
     : 0
   const finalNettoUnitPrice = nettoUnitPrice - staffelAmountPerStuk
-  const nettoSubtotal = finalNettoUnitPrice * quantity
+  const nettoSubtotal = Math.round(finalNettoUnitPrice * quantity * 100) / 100
   const discountAmount = (opts.discountAmount as number | null) ?? 0
   // Mirror Maintenance Set: aparte regel, alleen dealerkorting (zie lib/mms.ts)
   const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
@@ -304,7 +310,7 @@ export default function OrderDocument({
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerMeta}>Spiegel op maat</Text>
+            <Text style={styles.headerMeta}>{isProject ? 'Projectspiegel' : 'Spiegel op maat'}</Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.docTitle}>{docTitle}</Text>
@@ -391,6 +397,12 @@ export default function OrderDocument({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Specificatie</Text>
           <View style={styles.table}>
+            {isProject ? projectspiegelRijen(opts, config.width, config.height).map(([label, waarde], i, alle) => (
+              <View key={label} style={i === alle.length - 1 ? styles.tableRowLast : styles.tableRow}>
+                <Text style={styles.tableLabel}>{label}</Text>
+                <Text style={styles.tableValue}>{waarde}</Text>
+              </View>
+            )) : <>
             <View style={styles.tableRow}>
               <Text style={styles.tableLabel}>Vorm</Text>
               <Text style={styles.tableValue}>{formatShape(opts.shape)}</Text>
@@ -425,6 +437,7 @@ export default function OrderDocument({
                 <Text style={styles.tableValue}>{MMS.name}, {mmsQuantity}×, EAN {MMS.ean}</Text>
               </View>
             )}
+            </>}
           </View>
         </View>
 
@@ -444,10 +457,10 @@ export default function OrderDocument({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Prijsoverzicht (excl. BTW)</Text>
             <View style={styles.pricingBox}>
-              <View style={styles.pricingRow}>
+              {!isProject && <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Bruto ex. BTW{spiegelSuffix}</Text>
                 <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(unitPrice)}</Text>
-              </View>
+              </View>}
               {/* De set staat boven de dealerkorting, zodat zichtbaar is dat de korting daar ook op geldt */}
               {mmsQuantity > 0 && (
                 <View style={styles.pricingRow}>
@@ -455,10 +468,16 @@ export default function OrderDocument({
                   <Text style={[styles.pricingValue, { color: GRAY }]}>{formatPrice(mmsBruto)}</Text>
                 </View>
               )}
-              <View style={styles.pricingRow}>
+              {!isProject && <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Dealer korting ({korting}%)</Text>
                 <Text style={[styles.pricingValue, { color: GRAY }]}>-{formatPrice(dealerKortingBedrag)}</Text>
-              </View>
+              </View>}
+              {projectStaffelPct > 0 && (
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>Staffelkorting bij dit aantal</Text>
+                  <Text style={[styles.pricingValue, { color: GRAY }]}>{(projectStaffelPct * 100).toLocaleString('nl-NL', { maximumFractionDigits: 1 })}%, al verwerkt</Text>
+                </View>
+              )}
               {staffelAmountPerStuk > 0 && (
                 <View style={styles.pricingRow}>
                   <Text style={styles.pricingLabel}>
@@ -468,7 +487,7 @@ export default function OrderDocument({
                 </View>
               )}
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>Netto ex. BTW{spiegelSuffix}</Text>
+                <Text style={styles.pricingLabel}>{isProject ? 'Netto per stuk ex. BTW' : `Netto ex. BTW${spiegelSuffix}`}</Text>
                 <Text style={styles.pricingValue}>{formatPrice(finalNettoUnitPrice)}</Text>
               </View>
               <View style={styles.pricingRow}>

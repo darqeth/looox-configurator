@@ -19,7 +19,10 @@ import {
   formatExtras,
   formatDate,
   formatPrice,
+  isProjectspiegel,
+  projectspiegelRijen,
 } from './helpers'
+import { getStaffelKorting } from '@/lib/projectspiegel-config'
 
 
 const BRAND = '#3D6B4F'
@@ -255,21 +258,25 @@ export default function OfferteDocument({
   attachmentUrl, visualisationUrl,
 }: OfferteDocumentProps) {
   const opts = config.options
+  // Projectspiegel: nettoprijzen met staffel, geen verlichting of opties
+  const isProject = isProjectspiegel(opts)
+  const staffelPct = isProject ? getStaffelKorting(quantity) : 0
+  const docTitel = isProject ? 'Prijsopgave' : 'Offerte'
   // Mirror Maintenance Set: eigen regel naast de spiegels. De spiegels blijven
   // rekenen zoals altijd (btw op hele euro's), de set telt exact in centen mee.
   const mmsQuantity = isMmsAllowed(opts.shape) ? clampMmsQuantity(opts.mmsQuantity) : 0
   const mmsUnitPrice = resolveMmsUnitPrice(opts.mmsUnitPrice)
   const mmsBruto = calcMmsBruto(mmsQuantity, mmsUnitPrice)
-  const spiegelSubtotaal = unitPrice * quantity
+  const spiegelSubtotaal = Math.round(unitPrice * quantity * 100) / 100
   const subtotalExclBtw = addEuro(spiegelSubtotaal, mmsBruto)
-  const btwBedrag = addEuro(Math.round(spiegelSubtotaal * 0.21), Math.round(mmsBruto * 21) / 100)
+  const btwBedrag = addEuro(isProject ? Math.round(spiegelSubtotaal * 21) / 100 : Math.round(spiegelSubtotaal * 0.21), Math.round(mmsBruto * 21) / 100)
   const totalInclBtw = addEuro(subtotalExclBtw, btwBedrag)
 
   const today = formatDate(new Date().toISOString())
 
   return (
     <Document
-      title={`Offerte — ${configName ?? 'Configuratie'}`}
+      title={`${docTitel} ${configName ?? 'Configuratie'}`}
       author={dealer.company ?? dealer.name ?? 'LoooX dealer'}
       creator="LoooX Configurator"
     >
@@ -292,7 +299,7 @@ export default function OfferteDocument({
             <Text style={styles.companyDetails}>{dealer.email}</Text>
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.docTitle}>Offerte</Text>
+            <Text style={styles.docTitle}>{docTitel}</Text>
             <Text style={styles.headerMeta}>Datum: {today}</Text>
           </View>
         </View>
@@ -335,8 +342,14 @@ export default function OfferteDocument({
 
         {/* Specificaties */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Spiegelspecificatie</Text>
+          <Text style={styles.sectionTitle}>{isProject ? 'Specificatie projectspiegel' : 'Spiegelspecificatie'}</Text>
           <View style={styles.table}>
+            {isProject ? projectspiegelRijen(opts, config.width, config.height).map(([label, waarde], i, alle) => (
+              <View key={label} style={i === alle.length - 1 ? styles.tableRowLast : styles.tableRow}>
+                <Text style={styles.tableLabel}>{label}</Text>
+                <Text style={styles.tableValue}>{waarde}</Text>
+              </View>
+            )) : <>
             <View style={styles.tableRow}>
               <Text style={styles.tableLabel}>Vorm</Text>
               <Text style={styles.tableValue}>{formatShape(opts.shape)}</Text>
@@ -371,6 +384,7 @@ export default function OfferteDocument({
                 <Text style={styles.tableValue}>{MMS.name}, {mmsQuantity}×</Text>
               </View>
             )}
+            </>}
           </View>
         </View>
 
@@ -391,13 +405,19 @@ export default function OfferteDocument({
           ) : (
             <View style={styles.pricingBox}>
               <View style={styles.pricingRow}>
-                <Text style={styles.pricingLabel}>Prijs per stuk (excl. btw)</Text>
+                <Text style={styles.pricingLabel}>{isProject ? 'Netto per stuk (excl. btw)' : 'Prijs per stuk (excl. btw)'}</Text>
                 <Text style={styles.pricingValue}>{formatPrice(unitPrice)}</Text>
               </View>
               <View style={styles.pricingRow}>
                 <Text style={styles.pricingLabel}>Aantal</Text>
                 <Text style={styles.pricingValue}>{quantity}×</Text>
               </View>
+              {staffelPct > 0 && (
+                <View style={styles.pricingRow}>
+                  <Text style={styles.pricingLabel}>Staffelkorting bij dit aantal</Text>
+                  <Text style={styles.pricingValue}>{(staffelPct * 100).toLocaleString('nl-NL', { maximumFractionDigits: 1 })}%, al verwerkt in de stuksprijs</Text>
+                </View>
+              )}
               {mmsQuantity > 0 && (
                 <View style={styles.pricingRow}>
                   <Text style={styles.pricingLabel}>{MMS.name}, {mmsQuantity}× {formatPrice(mmsUnitPrice)}</Text>
@@ -438,6 +458,8 @@ export default function OfferteDocument({
             <Text style={styles.noticeText}>
               {opts.shape === 'op-aanvraag'
                 ? 'Op aanvraag spiegel — prijs wordt op maat bepaald. U ontvangt een offerte na beoordeling van de tekening en specificaties. Productietijd is 4 tot 6 weken na akkoord. Neem contact op voor vragen.'
+                : isProject
+                ? 'Deze prijsopgave is 30 dagen geldig. De stuksprijs is een nettoprijs excl. btw en geldt bij het genoemde aantal; bij een ander aantal hoort een andere staffel. Het totaalbedrag is inclusief 21% btw. Onder voorbehoud van beschikbaarheid.'
                 : 'Deze offerte is 30 dagen geldig. Prijzen zijn excl. btw, tenzij anders vermeld. Het totaalbedrag is inclusief 21% btw. Onder voorbehoud van beschikbaarheid. Productietijd is 4 tot 6 weken na akkoord. Neem contact op voor vragen of bestelling.'}
             </Text>
           </View>
@@ -446,7 +468,7 @@ export default function OfferteDocument({
         {/* Footer */}
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>{dealer.company ?? dealer.name ?? ''} - {dealer.email}</Text>
-          <Text style={styles.footerText}>Offerte {configName ?? ''} - {today}</Text>
+          <Text style={styles.footerText}>{docTitel} {configName ?? ''} - {today}</Text>
         </View>
 
       </Page>

@@ -3,7 +3,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { getOfferteDealer, pdfResponseHeaders, renderOfferteBuffer } from '@/lib/pdf/render-offerte'
+import { offerteDealerVoor, pdfResponseHeaders, renderOfferteBuffer } from '@/lib/pdf/render-offerte'
 import ProjectVoorblad from '@/lib/pdf/project-voorblad'
 import { voegPdfsSamen } from '@/lib/pdf/samenvoegen'
 import { isUuid, offerteNummer, projectKop, projectRegel } from '@/lib/project'
@@ -20,13 +20,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: configs } = await supabase
     .from('configurations')
-    .select('id, name, article_number, width, height, total_price, status, selected_options, created_at')
+    .select('id, user_id, name, article_number, width, height, total_price, status, selected_options, created_at')
     .eq('project_id', id)
     .in('status', ['saved', 'ordered'])
     .order('created_at')
   if (!configs || configs.length === 0) return new NextResponse('Not found', { status: 404 })
 
-  const dealer = await getOfferteDealer(supabase, user.id, user.email ?? '')
+  const dealer = await offerteDealerVoor(supabase, user, (configs[0] as { user_id?: string }).user_id)
   const kop = projectKop(configs)
 
   const voorblad = await renderToBuffer(React.createElement(ProjectVoorblad, {

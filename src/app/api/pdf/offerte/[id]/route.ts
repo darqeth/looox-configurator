@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getOfferteDealer, pdfResponseHeaders, renderOfferteBuffer } from '@/lib/pdf/render-offerte'
+import { offerteDealerVoor, pdfResponseHeaders, renderOfferteBuffer } from '@/lib/pdf/render-offerte'
 
 export async function GET(
   _req: NextRequest,
@@ -15,13 +15,13 @@ export async function GET(
   // Fetch configuration — RLS regelt toegang (eigen configs + bedrijfscollega's)
   const { data: config, error } = await supabase
     .from('configurations')
-    .select('id, name, article_number, width, height, total_price, selected_options, created_at')
+    .select('id, user_id, name, article_number, width, height, total_price, selected_options, created_at')
     .eq('id', id)
     .single()
 
   if (error || !config) return new NextResponse('Not found', { status: 404 })
 
-  const dealer = await getOfferteDealer(supabase, user.id, user.email ?? '')
+  const dealer = await offerteDealerVoor(supabase, user, (config as { user_id?: string }).user_id)
   const buffer = await renderOfferteBuffer(supabase, config, dealer)
 
   const safeName = (config.name ?? 'offerte').replace(/[^a-z0-9\-_]/gi, '-')

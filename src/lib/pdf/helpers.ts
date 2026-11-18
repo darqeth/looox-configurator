@@ -29,6 +29,11 @@ export type ConfigOptions = {
   lunaOnderkant?: number | null
   lunaAfstand?: number | null
   lunaMuurZijde?: string | null
+  /** Projectspiegel */
+  glasdikte?: string | null
+  ophanging?: boolean
+  voormonteren?: boolean
+  verpakkingPerStuk?: boolean
 }
 
 const SHAPE_LABELS: Record<string, string> = {
@@ -42,6 +47,7 @@ const SHAPE_LABELS: Record<string, string> = {
   arc: 'Boog (Arc)',
   sol: 'Sol',
   luna: 'Luna',
+  projectspiegel: 'Projectspiegel',
 }
 
 const GLAS_LABELS: Record<string, string> = {
@@ -121,6 +127,20 @@ export function formatDimensions(
     ? `⌀ ${opts.diameter} cm · meubel ${opts.lunaMeubelHoogte ?? '?'} cm · ${opts.lunaMuurZijde ?? 'links'} ${opts.lunaAfstand ?? '?'} cm · uitsteek ${opts.lunaOnderkant ?? '?'} cm` : '—'
   if (width && height) return `B ${width} × H ${height} cm`
   return '—'
+}
+
+export const isProjectspiegel = (opts: ConfigOptions): boolean => opts.shape === 'projectspiegel'
+
+/** Specificatie van een projectspiegel: die heeft geen verlichting of extra opties, wel glasdikte, ophanging en verpakking. */
+export function projectspiegelRijen(opts: ConfigOptions, width: number | null, height: number | null): [string, string][] {
+  return [
+    ['Product', 'Projectspiegel'],
+    ['Afmeting', width && height ? `B ${width} × H ${height} cm` : '—'],
+    ['Glas', `Helder${opts.glasdikte ? `, ${opts.glasdikte} mm dik` : ''}`],
+    ['Randafwerking', 'Gepolijst'],
+    ['Ophanging', opts.ophanging ? (opts.voormonteren ? 'Ja, voorgemonteerd' : 'Ja, los meegeleverd') : 'Nee'],
+    ['Verpakking', opts.verpakkingPerStuk ? 'Per stuk verpakt' : 'Niet per stuk verpakt'],
+  ]
 }
 
 export function formatGlas(glasKleur?: string): string {

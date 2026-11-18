@@ -8,6 +8,7 @@ import type { ConfigOptions } from './helpers'
 import { prepareAttachmentForPdf } from './prepare-attachment'
 import { haalPdfBijlage, voegPdfBijlageToe } from './samenvoegen'
 import { leesMeubel } from '@/lib/meubel-opslag'
+import { isAdminOrSubAdmin } from '@/lib/company-utils'
 
 // Eén plek die de klantofferte van een configuratie maakt: gebruikt door de
 // losse offerte-download en door de projectofferte (één PDF per regel, samengevoegd).
@@ -46,6 +47,18 @@ export async function getOfferteDealer(supabase: SupabaseClient, userId: string,
     address: profile?.address ?? null,
     shippingAddress: (profile as { shipping_address?: string | null } | null)?.shipping_address ?? null,
   }
+}
+
+/**
+ * Wie staat er als afzender op de offerte? Normaal degene die downloadt. Downloadt LoooX
+ * (admin) de offerte van een dealer, dan horen de gegevens van die dealer erop, niet die van LoooX.
+ */
+export async function offerteDealerVoor(supabase: SupabaseClient, user: { id: string; email?: string | null }, eigenaarId: string | null | undefined): Promise<OfferteDealer> {
+  if (eigenaarId && eigenaarId !== user.id && await isAdminOrSubAdmin(supabase, user.id)) {
+    const { data: eigenaar } = await supabase.from('profiles').select('email').eq('id', eigenaarId).maybeSingle()
+    return getOfferteDealer(supabase, eigenaarId, eigenaar?.email ?? '')
+  }
+  return getOfferteDealer(supabase, user.id, user.email ?? '')
 }
 
 export async function renderOfferteBuffer(supabase: SupabaseClient, config: OfferteConfig, dealer: OfferteDealer): Promise<Buffer> {

@@ -5,6 +5,10 @@ import {
   ShapeSlug,
   GlasKleur,
   ROND_DIAMETERS,
+  SOL_DIAMETERS,
+  SOL_MIN_DIAMETER,
+  SOL_MIN_DIAMETER_MELDING,
+  solDiameterTeKlein,
   ORGANIC_SIZES,
   RECHTHOEK_CONSTRAINTS,
   GLAS_KLEUREN,
@@ -347,7 +351,6 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
   }
 
   if (shape === 'sol') {
-    const SOL_DIAMETERS = [60, 70, 80, 90, 100, 120, 140, 160, 180, 200]
     const extraDeelTeBestellen = solOnderkant >= 15
     return (
       <div className="space-y-5">
@@ -368,6 +371,11 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
               </button>
             ))}
           </div>
+          {solDiameterTeKlein(diameter) && (
+            <p role="alert" className="text-[12.5px] text-amber-800 leading-relaxed rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+              Deze spiegel heeft een diameter van {diameter} cm. {SOL_MIN_DIAMETER_MELDING}
+            </p>
+          )}
         </div>
         <DimInput
           label="Meubel hoogte"
@@ -390,7 +398,7 @@ export default function StepAfmeting({ shape, width, height, diameter, organicSi
             </p>
           )}
         </div>
-        <RestmatenKaart rest={computeSolRestmaten(diameter ?? 80, solMeubelHoogte, solOnderkant)} />
+        <RestmatenKaart rest={computeSolRestmaten(diameter ?? SOL_MIN_DIAMETER, solMeubelHoogte, solOnderkant)} />
         <div className="border-t border-lx-divider pt-5">
           <GlaskleurPicker glasKleur={glasKleur} onChange={(k) => onChange({ glasKleur: k })} meerprijs={glasMeerprijs} />
         </div>

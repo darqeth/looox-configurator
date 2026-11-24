@@ -1,6 +1,6 @@
 import 'server-only'
 import Anthropic from '@anthropic-ai/sdk'
-import { SHAPES, ROND_DIAMETERS, RECHTHOEK_CONSTRAINTS, EXTRA_OPTIONS } from '@/lib/configurator-config'
+import { SHAPES, ROND_DIAMETERS, SOL_DIAMETERS, SOL_MIN_DIAMETER, RECHTHOEK_CONSTRAINTS, EXTRA_OPTIONS } from '@/lib/configurator-config'
 import type { AISuggestion } from '@/lib/types/ai-configurator'
 
 // Kern van de spiegel-intake: prompt, aanroep en controle van de uitvoer. Inloggen en
@@ -34,7 +34,7 @@ export async function analyseerSpiegel(input: {
   const systemPrompt = `Je bent een spiegel-configurator assistent voor LoooX, een Nederlands B2B badkamerspiegelbedrijf.
 Retourneer ALLEEN een JSON object, geen markdown, geen uitleg.
 
-AFMETINGEN: Geef altijd de werkelijke afmeting in cm als maatwerk (width en height als gehele getallen). Probeer NIET te matchen op vaste maten. Gebruik "diameter" alleen voor rond/sol/luna (kies dichtstbijzijnde uit: ${validDiameters}).
+AFMETINGEN: Geef altijd de werkelijke afmeting in cm als maatwerk (width en height als gehele getallen). Probeer NIET te matchen op vaste maten. Gebruik "diameter" alleen voor rond/sol/luna (rond/luna: kies dichtstbijzijnde uit: ${validDiameters}; sol: minimaal ${SOL_MIN_DIAMETER}, kies dichtstbijzijnde uit: ${SOL_DIAMETERS.join(', ')}).
 
 Geldige shapes: ${validShapes}
 Breedte/hoogte bereik: ${RECHTHOEK_CONSTRAINTS.min}–${RECHTHOEK_CONSTRAINTS.max} cm
@@ -141,7 +141,9 @@ Default glasKleur: "helder". Default shape indien onbekend: "op-aanvraag".`
     }
     const raw = JSON.parse(jsonMatch[0]) as AISuggestion
 
-    // Snap diameter to nearest valid value
+    // Snap diameter to nearest valid value. Sol heeft een eigen reeks (vanaf
+    // SOL_MIN_DIAMETER); die wordt hieronder gezet zodra de vorm gecontroleerd is.
+    const gevraagdeDiameter = typeof raw.diameter === 'number' ? raw.diameter : null
     if (raw.diameter != null) {
       raw.diameter = ROND_DIAMETERS.reduce((prev, curr) =>
         Math.abs(curr - raw.diameter!) < Math.abs(prev - raw.diameter!) ? curr : prev
@@ -170,7 +172,18 @@ Default glasKleur: "helder". Default shape indien onbekend: "op-aanvraag".`
       raw.selectedOptions = raw.selectedOptions.filter(o => o === extraDeel)
     }
     // Ensure arrays/objects exist
-    raw.confidenceNotes = raw.confidenceNotes ?? []
+    raw.confidenceNotes = Array.isArray(raw.confidenceNotes) ? raw.confidenceNotes : []
+    // Sol: dichtstbijzijnde maat uit de Sol-reeks; onder de ondergrens wordt de
+    // ondergrens, met een notitie zodat de dealer het ziet.
+    if (raw.shape === 'sol') {
+      const doel = gevraagdeDiameter ?? SOL_MIN_DIAMETER
+      raw.diameter = SOL_DIAMETERS.reduce((prev, curr) =>
+        Math.abs(curr - doel) < Math.abs(prev - doel) ? curr : prev
+      )
+      if (gevraagdeDiameter != null && gevraagdeDiameter < SOL_MIN_DIAMETER) {
+        raw.confidenceNotes.push(`Sol is leverbaar vanaf ${SOL_MIN_DIAMETER} cm. De diameter is aangepast van ${Math.round(gevraagdeDiameter)} naar ${SOL_MIN_DIAMETER} cm.`)
+      }
+    }
 
     return { success: true, result: raw }
   } catch (err) {

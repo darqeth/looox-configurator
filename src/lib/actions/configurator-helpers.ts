@@ -1,5 +1,5 @@
 import { clampMmsQuantity, getMmsUnitPrice, isMmsAllowed } from '@/lib/mms'
-import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, KRAANGAT_MAX_GATEN, isValidKraangatDiameter, getOrganicDims } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, solDiameterTeKlein, SOL_MIN_DIAMETER_MELDING, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, KRAANGAT_DIAMETER_MM, KRAANGAT_MAX_GATEN, isValidKraangatDiameter, getOrganicDims } from '@/lib/configurator-config'
 
 // Fixed product UUID for the default LoooX spiegel product
 // Run the seed SQL in Supabase to create this product
@@ -58,6 +58,7 @@ export function assertSolLunaMaat(input: {
   lunaMeubelHoogte?: number
   lunaOnderkant?: number
   lunaAfstand?: number
+  status?: 'draft' | 'saved'
 }) {
   // Elips: kortste zijde ≥ 40, langste ≤ 200 (verhouding 1:2 wordt in de UI
   // afgedwongen; hier alleen de grenzen als vangnet).
@@ -73,6 +74,10 @@ export function assertSolLunaMaat(input: {
   }
   if (input.diameter == null) return
   if (input.shape === 'sol') {
+    // Ondergrens Sol: een concept mag nog onder de grens staan, opslaan en
+    // bestellen (geen status) niet.
+    if (input.status !== 'draft' && solDiameterTeKlein(input.diameter))
+      throw new Error(SOL_MIN_DIAMETER_MELDING)
     if (solLunaExceedsMax(computeSolMainPiece(input.diameter, input.solMeubelHoogte ?? 0, input.solOnderkant ?? 0)))
       throw new Error('Deze Sol-spiegel is te groot om te produceren: breedte en hoogte zijn beide groter dan 150 cm.')
   } else if (input.shape === 'luna') {

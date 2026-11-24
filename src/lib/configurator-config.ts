@@ -350,6 +350,17 @@ export function solLunaExceedsMax(m: MainPieceMaten): boolean {
   return m.breedte > SOL_LUNA_MAX_ZIJDE && m.hoogte > SOL_LUNA_MAX_ZIJDE
 }
 
+// ─── Sol: minimale diameter ───────────────────────────────────────────────────
+// Sol is leverbaar vanaf 140 cm. Eén bron voor UI, AI-intake en servercontrole.
+// Geldt alleen voor Sol, niet voor Luna of Rond.
+export const SOL_MIN_DIAMETER = 140
+export const SOL_DIAMETERS = [140, 160, 180, 200]
+export const SOL_MIN_DIAMETER_MELDING = `Sol is leverbaar vanaf een diameter van ${SOL_MIN_DIAMETER} cm. Kies een diameter van ${SOL_MIN_DIAMETER} cm of groter.`
+
+export function solDiameterTeKlein(diameter: number | null | undefined): boolean {
+  return diameter != null && diameter < SOL_MIN_DIAMETER
+}
+
 // ─── Sol/Luna catalogusprijzen ────────────────────────────────────────────────
 // Bron: LoooX prijslijst 2026
 

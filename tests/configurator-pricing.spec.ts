@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { calcTotalPrice, SOL_CATALOGUS, LUNA_CATALOGUS, RONDE_GLAS_SMOKE_M2 } from '../src/lib/configurator-config'
+import { calcTotalPrice, SOL_CATALOGUS, LUNA_CATALOGUS, RONDE_GLAS_SMOKE_M2, SHAPES, SOL_MIN_DIAMETER, SOL_DIAMETERS, solDiameterTeKlein } from '../src/lib/configurator-config'
+import { assertSolLunaMaat } from '../src/lib/actions/configurator-helpers'
 
 // Regressietests voor de bugklasse "state-veld niet doorgegeven aan
 // calcTotalPrice" (optionSubChoices 2026-05-27, lunaMeubelHoogte audit C1).
@@ -56,6 +57,46 @@ test.describe('Sol catalogusprijs', () => {
   test('basis = €999, met extra deel = €1199', () => {
     expect(sol()).toBe(SOL_CATALOGUS.basis)
     expect(sol({ selectedOptions: ['sol-extra-deel'] })).toBe(SOL_CATALOGUS.metExtraDeel)
+  })
+
+  test('prijs bij de minimale diameter (140 cm)', () => {
+    // Catalogusprijs is niet maatafhankelijk; alleen de smoke-meerprijs schaalt mee.
+    expect(sol({ diameter: SOL_MIN_DIAMETER })).toBe(999)
+    expect(sol({ diameter: SOL_MIN_DIAMETER, selectedOptions: ['sol-extra-deel'] })).toBe(1199)
+    const smoke = Math.round(Math.PI * 0.7 * 0.7 * RONDE_GLAS_SMOKE_M2)
+    expect(sol({ diameter: SOL_MIN_DIAMETER, glasKleur: 'smoke-zwart' })).toBe(999 + smoke)
+    // "Vanaf"-prijs op de vormkaart volgt uit de prijsfunctie bij de ondergrens
+    expect(SHAPES.find(s => s.slug === 'sol')?.fromPrice).toBe(sol({ diameter: SOL_MIN_DIAMETER }))
+  })
+})
+
+test.describe('Sol minimale diameter', () => {
+  test('ondergrens is 140 cm, 140 zelf mag', () => {
+    expect(SOL_MIN_DIAMETER).toBe(140)
+    expect(solDiameterTeKlein(139)).toBe(true)
+    expect(solDiameterTeKlein(80)).toBe(true)
+    expect(solDiameterTeKlein(140)).toBe(false)
+    expect(solDiameterTeKlein(200)).toBe(false)
+    expect(solDiameterTeKlein(null)).toBe(false)
+  })
+
+  test('keuzereeks begint bij de ondergrens', () => {
+    expect(Math.min(...SOL_DIAMETERS)).toBe(SOL_MIN_DIAMETER)
+  })
+
+  test('server weigert Sol onder 140 bij opslaan en bestellen, concept mag', () => {
+    const sol = (diameter: number, status?: 'draft' | 'saved') =>
+      () => assertSolLunaMaat({ shape: 'sol', diameter, solMeubelHoogte: 35, solOnderkant: 15, status })
+    expect(sol(120, 'saved')).toThrow(/140 cm/)
+    expect(sol(120)).toThrow(/140 cm/) // bestellen stuurt geen status mee
+    expect(sol(120, 'draft')).not.toThrow()
+    expect(sol(140, 'saved')).not.toThrow()
+    expect(sol(160)).not.toThrow()
+  })
+
+  test('Luna en Rond hebben geen ondergrens van 140', () => {
+    expect(() => assertSolLunaMaat({ shape: 'luna', diameter: 60, lunaMeubelHoogte: 35, lunaOnderkant: 15, lunaAfstand: 20, status: 'saved' })).not.toThrow()
+    expect(() => assertSolLunaMaat({ shape: 'rond', diameter: 60, status: 'saved' })).not.toThrow()
   })
 })
 

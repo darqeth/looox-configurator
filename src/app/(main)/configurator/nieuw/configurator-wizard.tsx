@@ -8,7 +8,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, isValidKraangatDiameter } from '@/lib/configurator-config'
+import { ShapeSlug, GlasKleur, RECHTHOEK_CONSTRAINTS, calcTotalPrice, EXTRA_OPTIONS, LightType, computeSolMainPiece, computeLunaMainPiece, solLunaExceedsMax, solDiameterTeKlein, SOL_MIN_DIAMETER, KRAANGAT_OPTIE_ID, KRAANGAT_DIAMETER_KEY, isValidKraangatDiameter } from '@/lib/configurator-config'
 import ShapePicker from './shape-picker'
 import { ModeSelector } from './mode-selector'
 import { AIIntake } from './ai-intake'
@@ -230,6 +230,9 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     setSelectedOptions(s.selectedOptions)
     if (s.optionSubChoices) setOptionSubChoices(s.optionSubChoices)
     if (s.shape === 'op-aanvraag' && aiImageFile) { opAanvraagFileRef.current = aiImageFile; setOpAanvraagFile(aiImageFile) }
+    // Sol is leverbaar vanaf SOL_MIN_DIAMETER; een AI-voorstel zonder of met een
+    // te kleine diameter start op de ondergrens.
+    if (s.shape === 'sol') setDiameter(Math.max(SOL_MIN_DIAMETER, s.diameter ?? SOL_MIN_DIAMETER))
     if (s.shape === 'sol' || s.shape === 'luna') {
       initSolLunaDefaults(s.indirectLight?.type as LightType | null)
     }
@@ -251,7 +254,7 @@ export default function ConfiguratorWizard({ initialConfig, korting = 50, canOrd
     if (shape === 'rond') return diameter !== null
     if (shape === 'organic') return organicSizeKey !== null
     if (shape === 'sol') return (
-      diameter !== null && solMeubelHoogte > 0 && solOnderkant >= 0 &&
+      diameter !== null && !solDiameterTeKlein(diameter) && solMeubelHoogte > 0 && solOnderkant >= 0 &&
       !solLunaExceedsMax(computeSolMainPiece(diameter, solMeubelHoogte, solOnderkant))
     )
     if (shape === 'luna') return (

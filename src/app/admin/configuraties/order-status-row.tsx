@@ -4,18 +4,9 @@ import { useState, useTransition } from 'react'
 import { updateOrderStatus, type OrderStatus } from '@/lib/actions/admin'
 import { OrderDrawingsUploadModal } from './order-drawings-upload'
 import { toast } from '@/components/toast'
+import { ORDER_STATUS_LABELS } from '@/lib/beheer-filter'
 
-export const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
-  { value: 'pending',           label: 'In behandeling' },
-  { value: 'confirmed',         label: 'Bevestigd' },
-  { value: 'controle_vereist',  label: 'Controle vereist' },
-  { value: 'goedgekeurd',       label: 'Goedgekeurd' },
-  { value: 'afgekeurd',         label: 'Afgekeurd' },
-  { value: 'in_production',     label: 'In productie' },
-  { value: 'shipped',           label: 'Verzonden' },
-  { value: 'delivered',         label: 'Geleverd' },
-  { value: 'cancelled',         label: 'Geannuleerd' },
-]
+export const ORDER_STATUSES = Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => ({ value: value as OrderStatus, label }))
 
 const STATUS_COLORS: Record<string, string> = {
   pending:          'bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]',
@@ -32,9 +23,12 @@ const STATUS_COLORS: Record<string, string> = {
 export function OrderStatusSelect({
   orderId,
   currentStatus,
+  onChanged,
 }: {
   orderId: string
   currentStatus: string
+  /** De status is opgeslagen: de lijst werkt filters en tellers bij */
+  onChanged?: (status: string) => void
 }) {
   const [status, setStatus] = useState<string>(currentStatus)
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -53,6 +47,8 @@ export function OrderStatusSelect({
         // Rollback was stil (audit U8) — admin dacht dat het gelukt was
         setStatus(prev)
         toast(result.error ?? 'Status wijzigen mislukt. Probeer het opnieuw.')
+      } else {
+        onChanged?.(newStatus)
       }
     })
   }
@@ -85,6 +81,7 @@ export function OrderStatusSelect({
           onSuccess={() => {
             setShowUploadModal(false)
             setStatus('controle_vereist')
+            onChanged?.('controle_vereist')
           }}
           onCancel={() => setShowUploadModal(false)}
         />

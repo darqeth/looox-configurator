@@ -90,13 +90,8 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
     },
     {
       href: '/admin/configuraties',
-      label: 'Klantconfiguraties',
+      label: 'Configuraties',
       icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 10h18"/><path d="M8 15h4"/></svg>,
-    },
-    {
-      href: '/admin/bestellingen',
-      label: 'Bestellingen',
-      icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
     },
     {
       href: '/admin/producten',
@@ -172,9 +167,7 @@ export default function Sidebar({ userName, company, tier, orderCount, configCou
         {(isAdmin || isSubAdmin) && (
           <div className="mt-4">
             <p className="text-white/45 text-[9.5px] font-semibold tracking-widest uppercase px-3 pb-2 pt-1">Beheer</p>
-            {(isAdmin ? adminItems : adminItems.filter(i =>
-              i.href === '/admin/configuraties' || i.href === '/admin/bestellingen'
-            )).map((item) => <NavItem key={item.href} item={item} />)}
+            {(isAdmin ? adminItems : adminItems.filter(i => i.href === '/admin/configuraties')).map((item) => <NavItem key={item.href} item={item} />)}
           </div>
         )}
       </nav>

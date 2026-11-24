@@ -543,7 +543,7 @@ export function UserEditModal({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[13px] font-medium text-lx-text-primary">Tussenbeheerder</p>
-                      <p className="text-[11.5px] text-lx-text-secondary">Toegang tot Klantconfiguraties en Bestellingen</p>
+                      <p className="text-[11.5px] text-lx-text-secondary">Toegang tot Configuraties (offertes en bestellingen)</p>
                     </div>
                     <button
                       role="switch"

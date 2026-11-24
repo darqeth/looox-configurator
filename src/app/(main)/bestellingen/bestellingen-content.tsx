@@ -8,7 +8,8 @@ import { Folder } from 'lucide-react'
 import { OrderApprovalButtons } from './order-approval-buttons'
 import { AdminPagination } from '@/components/admin-pagination'
 import { fetchOrders } from '@/lib/queries/fetch-orders'
-import { ProjectBadge, OfferteBadge } from '@/components/project-badge'
+import { ProjectBadge, OfferteBadge, GroothandelBadge } from '@/components/project-badge'
+import { leesViaGroothandel } from '@/lib/groothandel-order'
 import { formatEuro } from '@/lib/mms'
 import { useMagInkoop } from '@/components/inkoop-oog'
 import { BestellingenContentSkeleton } from './bestellingen-skeleton'
@@ -163,6 +164,8 @@ export function BestellingenContent({ page, view }: { page: string; view: string
             } | null
             const shape = (config?.selected_options as { shape?: string })?.shape ?? '—'
             const meubel = leesMeubel(config?.selected_options)
+            // Door LoooX aangemaakt omdat de bestelling via de groothandel liep
+            const viaGroothandel = !!leesViaGroothandel(config?.selected_options)
             const dims = meubel
               ? `${meubel.model.naam} · ${meubel.model.artikel ? meubelKort(meubel) : `${meubel.lengte} mm`}`
               : config?.width && config?.height
@@ -264,7 +267,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
                         {STATUS_LABELS[order.status] ?? order.status}
                       </span>
                     </div>
-                    <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{(shape === 'op-aanvraag' || meubel?.opAanvraag) && <OfferteBadge className="ml-1.5" />}</p>
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary mt-2 truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{(shape === 'op-aanvraag' || meubel?.opAanvraag) && <OfferteBadge className="ml-1.5" />}{viaGroothandel && <GroothandelBadge className="ml-1.5" />}</p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[11px] text-lx-text-secondary">{dims} · {order.quantity}×</span>
                       <span className="text-[13px] font-bold text-lx-text-primary">{shape === 'op-aanvraag' || meubel?.opAanvraag ? 'Op offerte' : magInkoop ? formatEuro(price) : ''}</span>
@@ -301,7 +304,7 @@ export function BestellingenContent({ page, view }: { page: string; view: string
 
                   {/* Col: Project name + dims */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{(shape === 'op-aanvraag' || meubel?.opAanvraag) && <OfferteBadge className="ml-1.5" />}</p>
+                    <p className="text-[12.5px] font-semibold text-lx-text-primary truncate">{config?.name ?? '—'}{shape === 'projectspiegel' && <ProjectBadge className="ml-1.5" />}{(shape === 'op-aanvraag' || meubel?.opAanvraag) && <OfferteBadge className="ml-1.5" />}{viaGroothandel && <GroothandelBadge className="ml-1.5" />}</p>
                     <p className="text-[11px] text-lx-text-secondary mt-0.5 truncate">{dims}</p>
                   </div>
 

@@ -255,7 +255,7 @@ export async function updateOrderStatus(
   const { error } = await admin.from('orders').update({ status }).eq('id', orderId)
   if (error) return { success: false, error: error.message }
 
-  revalidatePath('/admin/bestellingen')
+  revalidatePath('/admin/configuraties')
   revalidatePath('/bestellingen')
 
   // Status e-mail naar dealer (niet bij pending — dat is de initiële status)
@@ -323,7 +323,7 @@ export async function setControleVereist(
     await adminClient.from('order_drawings').delete().in('id', existingIds)
   }
 
-  revalidatePath('/admin/bestellingen')
+  revalidatePath('/admin/configuraties')
   revalidatePath('/bestellingen')
 
   const { data: profile } = await supabase

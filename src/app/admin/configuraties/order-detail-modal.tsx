@@ -3,10 +3,12 @@
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { leesMeubel, meubelExtraPrijs } from '@/lib/meubel-opslag'
-import { formatPct, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
+import { formatPct, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst, SOLID_KLEUR_LABEL } from '@/lib/meubel-config'
 import { formatOrganicSize } from '@/lib/configurator-config'
 import { formatEuro } from '@/lib/mms'
-import type { AdminOrder } from './admin-bestellingen-list'
+import { leesViaGroothandel } from '@/lib/groothandel-order'
+import { GroothandelBadge } from '@/components/project-badge'
+import type { AdminOrder } from './admin-configuraties-list'
 
 // Detail van een bestelling voor admin, met de PDF's als vangnet wanneer de
 // mail niet is aangekomen. Opent door op het ordernummer in de lijst te klikken.
@@ -52,6 +54,7 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
   else if (order.config?.width && order.config?.height) afmeting = `B ${order.config.width} × H ${order.config.height} cm`
 
   const opbouw = meubel && !isOfferte ? getMeubelOrderOpbouw(Math.round(Number(order.unit_price) * 100), meubel.factor, meubelExtraPrijs(meubel)) : null
+  const viaGroothandel = leesViaGroothandel(opts)
   const altAdres = typeof opts.altShippingAddress === 'string' ? opts.altShippingAddress.split('\t').filter(Boolean).join(' ') : ''
 
   return createPortal(
@@ -69,6 +72,7 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
             <div>
               <h2 id={titelId} className="text-[15px] font-bold text-lx-text-primary font-mono leading-snug">{order.order_number}</h2>
               <p className="text-[12px] text-lx-text-muted mt-0.5">{isOfferte ? 'Offerteaanvraag' : 'Bestelling'}{order.order_group ? ` · regel van project ${order.order_group}` : ''} · {datum}</p>
+              {viaGroothandel && <GroothandelBadge className="mt-1.5" />}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-lx-panel-bg text-lx-text-secondary">{statusLabel}</span>
@@ -104,6 +108,7 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
                 {meubel.waskomVorm && <Rij label="Waskom" value={waskomTekst(meubel)} />}
                   {meubel.regaalBreedte > 0 && <Rij label="Regaalkast" value={`${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`} />}
                 <Rij label={kleurLabel(meubel.model)} value={meubel.houtkleurNaam || 'Geen'} />
+                {meubel.solidKleurNaam && <Rij label={SOLID_KLEUR_LABEL} value={meubel.solidKleurNaam} />}
                 <Rij label="Opties" value={meubelOptiesTekst(meubel)} />
                 {meubel.attachmentUrl && (
                   <a href={meubel.attachmentUrl} target="_blank" rel="noopener noreferrer" className="block py-2.5 text-[12.5px] font-semibold text-lx-cta hover:underline border-b border-lx-divider">Maattekening uitsparingen openen</a>
@@ -125,6 +130,8 @@ export default function OrderDetailModal({ order, statusLabel, onClose }: {
                 <Rij label={meubel ? 'Netto per stuk' : 'Stuksprijs'} value={formatEuro(Number(order.unit_price))} />
               </>
             )}
+            {viaGroothandel && <Rij label="Besteld" value="Via groothandel, aangemaakt door LoooX" />}
+            {viaGroothandel?.referentie && <Rij label="Referentie groothandel" value={viaGroothandel.referentie} />}
             {altAdres && <Rij label="Afleveradres" value={altAdres} />}
             {order.notes && <Rij label="Opmerking" value={order.notes} />}
           </div>

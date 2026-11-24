@@ -217,3 +217,88 @@ test.describe('Project: past de waskom', () => {
     expect(r).toEqual({ goed: true, tekst: 'De waskommen passen: de afvoergaten liggen goed en de kommen blijven binnen het blad.' })
   })
 })
+
+// ─── Op besteld zetten via de groothandel (beheer) ──────────────────────────
+import { groothandelPatch, groothandelWaarschuwingen, kiesGroothandelRegels, leesViaGroothandel } from '../src/lib/groothandel-order'
+import { leesBeheerFilter, pastInBeheerFilter } from '../src/lib/beheer-filter'
+
+test.describe('Op besteld zetten via de groothandel', () => {
+  const spiegel = { ...basis, width: 120, height: 80, total_price: 450, selected_options: { shape: 'rechthoek', quantity: 3 } }
+
+  test('zelfde prijs als wanneer de dealer bestelt', () => {
+    const dealer = berekenProjectOrderRegel(spiegel, 50)
+    const beheer = berekenProjectOrderRegel(spiegel, 50, { zonderDealerBlokkades: true })
+    expect(beheer.totalPrice).toBe(dealer.totalPrice)
+    expect(beheer.unitPrice).toBe(dealer.unitPrice)
+    expect(beheer.quantity).toBe(3)
+  })
+
+  test('nalopen en een ontbrekende tekening blokkeren het beheer niet', () => {
+    const nalopen = { ...spiegel, selected_options: { ...spiegel.selected_options, nalopen: true } }
+    expect(berekenProjectOrderRegel(nalopen, 50).fout).toBeTruthy()
+    const r = berekenProjectOrderRegel(nalopen, 50, { zonderDealerBlokkades: true })
+    expect(r.fout).toBeNull()
+    expect(r.totalPrice).toBe(berekenProjectOrderRegel(spiegel, 50).totalPrice)
+    expect(groothandelWaarschuwingen(nalopen.selected_options)).toHaveLength(1)
+
+    const zonderTekening = { ...basis, total_price: '5801.12', selected_options: meubelOpts({ uitsparingen: 2 }, { attachmentUrl: null }) }
+    expect(berekenProjectOrderRegel(zonderTekening, 50).fout).toBeTruthy()
+    const m = berekenProjectOrderRegel(zonderTekening, 50, { zonderDealerBlokkades: true })
+    expect(m.fout).toBeNull()
+    expect(m.totalPrice).toBeGreaterThan(0)
+    expect(groothandelWaarschuwingen(zonderTekening.selected_options)).toHaveLength(1)
+    expect(groothandelWaarschuwingen(spiegel.selected_options)).toEqual([])
+  })
+
+  test('een meubel zonder prijs in de prijslijst blijft geblokkeerd', () => {
+    const r = berekenProjectOrderRegel({ ...basis, total_price: 100, selected_options: meubelOpts({ lades: 9 }) }, 50, { zonderDealerBlokkades: true })
+    expect(r.fout).toBeTruthy()
+  })
+
+  test('markering bij de configuratie: schrijven en teruglezen', () => {
+    const patch = groothandelPatch({ door: 'beheerder', op: '2026-11-24T10:00:00.000Z', referentie: '  PO-123 ', staffelPct: 0.05 })
+    expect(patch.staffelKortingPct).toBe(0.05)
+    expect(leesViaGroothandel({ shape: 'rechthoek', ...patch })).toEqual({ referentie: 'PO-123', op: '2026-11-24T10:00:00.000Z' })
+    const zonder = groothandelPatch({ door: 'beheerder', op: '2026-11-24T10:00:00.000Z', referentie: '', staffelPct: 0 })
+    expect('staffelKortingPct' in zonder).toBe(false)
+    expect(leesViaGroothandel(zonder)?.referentie).toBe('')
+    expect(leesViaGroothandel({ shape: 'rechthoek' })).toBeNull()
+    expect(leesViaGroothandel(null)).toBeNull()
+  })
+
+  test('welke regels worden besteld', () => {
+    const los = { id: 'a', status: 'saved', project_id: null }
+    expect(kiesGroothandelRegels(los, [])).toEqual({ regels: [los] })
+    expect(kiesGroothandelRegels({ ...los, status: 'ordered' }, [])).toHaveProperty('fout')
+    expect(kiesGroothandelRegels({ ...los, status: 'draft' }, [])).toHaveProperty('fout')
+
+    const p = (id: string, status: string) => ({ id, status, project_id: 'p1' })
+    const project = [p('a', 'saved'), p('b', 'ordered'), p('c', 'saved')]
+    const keuze = kiesGroothandelRegels(project[0], project)
+    expect('regels' in keuze && keuze.regels.map((r) => r.id)).toEqual(['a', 'c'])
+    expect(kiesGroothandelRegels(project[0], [p('a', 'saved'), p('d', 'draft')])).toHaveProperty('fout')
+    expect(kiesGroothandelRegels(p('b', 'ordered'), project)).toHaveProperty('fout')
+  })
+
+  test('statusfilter van de beheerpagina', () => {
+    expect(leesBeheerFilter(undefined)).toBe('alle')
+    expect(leesBeheerFilter('besteld')).toBe('besteld')
+    expect(leesBeheerFilter('ordered')).toBe('besteld')
+    expect(leesBeheerFilter('saved')).toBe('offerte')
+    expect(leesBeheerFilter('controle_vereist')).toBe('controle_vereist')
+    expect(leesBeheerFilter('onzin')).toBe('alle')
+
+    const offerte = { soort: 'config' as const, status: 'saved' }
+    const order = { soort: 'order' as const, status: 'controle_vereist' }
+    expect(pastInBeheerFilter(offerte, 'alle')).toBe(true)
+    expect(pastInBeheerFilter(offerte, 'offerte')).toBe(true)
+    expect(pastInBeheerFilter(offerte, 'besteld')).toBe(false)
+    expect(pastInBeheerFilter(order, 'besteld')).toBe(true)
+    expect(pastInBeheerFilter(order, 'offerte')).toBe(false)
+    expect(pastInBeheerFilter(order, 'controle_vereist')).toBe(true)
+    expect(pastInBeheerFilter(order, 'pending')).toBe(false)
+    // Bestelde configuratie zonder orderregel (oude gegevens)
+    expect(pastInBeheerFilter({ soort: 'config', status: 'ordered' }, 'besteld')).toBe(true)
+    expect(pastInBeheerFilter({ soort: 'config', status: 'ordered' }, 'pending')).toBe(false)
+  })
+})

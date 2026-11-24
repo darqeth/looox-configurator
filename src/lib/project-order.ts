@@ -26,13 +26,18 @@ export interface ProjectOrderRegel {
   fout: string | null
 }
 
-export function berekenProjectOrderRegel(config: ProjectConfigRij, dealerKortingPct: number): ProjectOrderRegel {
+/**
+ * `zonderDealerBlokkades`: het beheer zet een order die via de groothandel is
+ * geplaatst op besteld. Nalopen en een ontbrekende tekening houden dat niet tegen;
+ * een meubel zonder prijs in de prijslijst wel.
+ */
+export function berekenProjectOrderRegel(config: ProjectConfigRij, dealerKortingPct: number, opties: { zonderDealerBlokkades?: boolean } = {}): ProjectOrderRegel {
   const opts = (config.selected_options ?? {}) as unknown as ConfigOptions
   const regel = projectRegel(config)
   const basis = { configId: config.id, regel, staffelPct: 0, fout: null as string | null }
 
   // Het hulpje vult in, de dealer beslist: eerst nalopen en opslaan, dan pas bestellen
-  if (regel.nalopen) {
+  if (regel.nalopen && !opties.zonderDealerBlokkades) {
     return { ...basis, quantity: regel.quantity, korting: 0, unitPrice: 0, totalPrice: 0, fout: `${regel.titel} is door het hulpje ingevuld en nog niet nagelopen. Open de regel, controleer de keuzes en sla hem op.` }
   }
 
@@ -40,7 +45,7 @@ export function berekenProjectOrderRegel(config: ProjectConfigRij, dealerKorting
   if (meubel) {
     // Solid Surface: de waskom moet een plaats hebben (getekend of op een eigen maattekening).
     // Hout: alleen bij een eigen tekening met uitsparingen; zonder gaten bestellen mag.
-    if (meubel.tekeningOntbreekt) {
+    if (meubel.tekeningOntbreekt && !opties.zonderDealerBlokkades) {
       return { ...basis, quantity: meubel.quantity, korting: 0, unitPrice: 0, totalPrice: 0, fout: tekeningMelding(meubel) }
     }
     const nettoCents = meubel.opAanvraag ? 0 : calcMeubelNettoCents(meubelPrijsInput(meubel))

@@ -16,3 +16,13 @@ export function OfferteBadge({ className = '' }: { className?: string }) {
     </span>
   )
 }
+
+// Order die het beheer namens de dealer heeft aangemaakt: besteld via de groothandel,
+// niet in de configurator (zie src/lib/groothandel-order.ts).
+export function GroothandelBadge({ className = '' }: { className?: string }) {
+  return (
+    <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-100 whitespace-nowrap align-middle ${className}`}>
+      Via groothandel
+    </span>
+  )
+}

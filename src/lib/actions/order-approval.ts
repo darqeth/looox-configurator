@@ -33,7 +33,7 @@ export async function approveOrder(
   if (count === 0) return { success: false, error: 'Status is al gewijzigd door een andere actie' }
 
   revalidatePath('/bestellingen')
-  revalidatePath('/admin/bestellingen')
+  revalidatePath('/admin/configuraties')
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -90,7 +90,7 @@ export async function rejectOrder(
   if (count === 0) return { success: false, error: 'Status is al gewijzigd door een andere actie' }
 
   revalidatePath('/bestellingen')
-  revalidatePath('/admin/bestellingen')
+  revalidatePath('/admin/configuraties')
 
   const { data: profile } = await supabase
     .from('profiles')

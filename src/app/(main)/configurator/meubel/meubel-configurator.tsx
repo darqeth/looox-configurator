@@ -1239,33 +1239,30 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
               {magLadeAcc && (
                 <div>
                   <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">Voor in de lade</p>
-                  <div className="space-y-2">
+                  <div className="space-y-2 @container">
                     {LADE_ACCESSOIRES.map((soort) => {
                       const acc = getMeubelModel(soort)
                       if (!acc?.artikel) return null
                       return (
-                        <div key={soort} className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-3 rounded-xl border border-black/10 p-3">
-                          <span className="relative w-20 h-[60px] flex-shrink-0">
-                            <Image src={acc.afbeelding} alt="" fill sizes="80px" className="object-contain" />
+                        <div key={soort} className="flex flex-wrap @md:flex-nowrap items-center gap-x-3 gap-y-2.5 rounded-xl border border-black/10 px-3 py-2.5">
+                          <span className="relative w-14 h-11 flex-shrink-0">
+                            <Image src={acc.afbeelding} alt="" fill sizes="56px" className="object-contain" />
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block text-[13px] font-semibold text-lx-text-primary">{acc.naam}</span>
-                            <span className="block text-[11.5px] text-lx-text-secondary">{acc.omschrijving}</span>
-                            <span className="block text-[11.5px] text-lx-text-secondary">
-                              {acc.artikel.varianten.map((v) => `${v.naam} ${formatCents(Math.round(v.prijs * parseMeubelFactor(factor)))}`).join(' · ')}
-                            </span>
+                            <span className="block text-[12px] text-lx-text-secondary leading-snug">{acc.omschrijving}</span>
                           </span>
-                          <div className="flex flex-wrap gap-x-5 gap-y-2 w-full sm:w-auto sm:flex-shrink-0">
+                          <div className="flex gap-x-4 w-full @md:w-auto @md:flex-shrink-0">
                             {LADE_ACC_MATEN.map((maat) => {
                               const aantal = ladeAcc[soort][maat]
                               const naam = `${acc.naam} ${maat.toUpperCase()}`
                               const zet = (n: number) => setLadeAcc((s) => ({ ...s, [soort]: { ...s[soort], [maat]: Math.min(LADE_ACC_MAX, Math.max(0, n)) } }))
                               return (
-                                <div key={maat} className="flex items-center gap-1.5" role="group" aria-label={naam}>
-                                  <span className="w-4 text-[13px] font-semibold text-lx-text-primary">{maat.toUpperCase()}</span>
-                                  <button type="button" onClick={() => zet(aantal - 1)} disabled={aantal <= 0} aria-label={`Eén ${naam} minder`} className="w-9 h-9 rounded-xl bg-white border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">−</button>
-                                  <span aria-live="polite" aria-label={`Aantal ${naam}`} className="w-6 text-center text-[14px] font-bold text-lx-text-primary tabular-nums">{aantal}</span>
-                                  <button type="button" onClick={() => zet(aantal + 1)} disabled={aantal >= LADE_ACC_MAX} aria-label={`Eén ${naam} meer`} className="w-9 h-9 rounded-xl bg-white border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+                                <div key={maat} className="flex items-center gap-1" role="group" aria-label={naam}>
+                                  <span className="w-4 text-[12px] font-medium text-lx-text-secondary">{maat.toUpperCase()}</span>
+                                  <button type="button" onClick={() => zet(aantal - 1)} disabled={aantal <= 0} aria-label={`Eén ${naam} minder`} className="w-8 h-8 rounded-lg bg-white border border-black/8 text-lx-text-primary text-base font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">−</button>
+                                  <span aria-live="polite" aria-label={`Aantal ${naam}`} className="w-5 text-center text-[13.5px] font-semibold text-lx-text-primary tabular-nums">{aantal}</span>
+                                  <button type="button" onClick={() => zet(aantal + 1)} disabled={aantal >= LADE_ACC_MAX} aria-label={`Eén ${naam} meer`} className="w-8 h-8 rounded-lg bg-white border border-black/8 text-lx-text-primary text-base font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">+</button>
                                 </div>
                               )
                             })}
@@ -1274,7 +1271,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                       )
                     })}
                   </div>
-                  <p className="text-[12px] text-lx-text-muted mt-1.5">Prijs per stuk, maximaal {LADE_ACC_MAX} per maat. Elke Organizer wordt geleverd met 1 Divider.</p>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">Maximaal {LADE_ACC_MAX} per maat. Elke Organizer wordt geleverd met 1 Divider.</p>
                 </div>
               )}
 

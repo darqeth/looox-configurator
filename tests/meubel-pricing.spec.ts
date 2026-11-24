@@ -6,9 +6,10 @@ import {
   MEUBEL_MODELLEN, getHoutkleuren, getMeubelHoogte, ladeRuimte, meubelOptiesTekst,
   getRegaalBreedte, getDuoPrijs, getDuoReeksen, getLengteBereik as lengteBereik,
   formatMm, ladeBreedtesTekst, valideerLadeBreedtes, komAdvies, getLadeBreedtes, startLadeBreedtes, kanLadesAanpassen, valideerMeubelConfig,
+  KOM_LADE_MIN_MM, leesLadeAcc, ladeAccessoireTekst, heeftSolidKleur, solidKleurMeerprijs,
   tekeningVerplicht, telUitsparingen, gatenContext, waskomMax, waskomTekst, UITSPARING_NETTO_CENTS, meubelAfmeting, indelingTekst, kanUitsparing, getDeurOpties, plankExtraPrijs, getPlankExtraArtikel,
 } from '../src/lib/meubel-config'
-import { leesMeubel, meubelPrijsInput, meubelKort, tekeningMelding } from '../src/lib/meubel-opslag'
+import { leesMeubel, meubelPrijsInput, meubelKort, meubelSamenvatting, tekeningMelding } from '../src/lib/meubel-opslag'
 import { upsellVoorMeubels } from '../src/components/upsell-cards'
 import { maakMeubelVoorstel, meubelCatalogusTekst } from '../src/lib/meubel-ai'
 import { productIcoon } from '../src/lib/product-icoon'
@@ -699,9 +700,13 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(calcMeubelNettoCents({ ...f, organizer: 'bestaat-niet' })).toBeNull()
     // Niet bij een kast of plank
     expect(calcMeubelNettoCents({ ...k, modelId: 'cabinet', lengte: 400, lades: 2, hoogte: 1800, diepte: 300, organizer: 'WORG242' })).toBeNull()
-    expect(meubelOptiesTekst({ logo: true, organizer: 'WORG242', divider: 'WDIV218' })).toBe('Met logo · Organizer L (art. WORG242) · Divider M (art. WDIV218)')
+    // Oude vorm: één artikelnummer is 1 stuk van die maat, ook met de oude eigen id's
+    expect(meubelOptiesTekst({ logo: true, organizer: 'WORG242', divider: 'WDIV218' })).toBe('Met logo · 1 × Organizer L (art. WORG242) · 1 × Divider M (art. WDIV218)')
+    expect(leesLadeAcc('organizer', 'organizer-m')).toEqual({ m: 1, l: 0 })
+    expect(leesLadeAcc('divider', 'WORG242')).toBeNull()
     const p = leesMeubel({ shape: 'meubel', meubel: { modelId: 'facet', lengte: 1000, lades: 1, houtkleur: 'old-grey', organizer: 'WORG242' }, quantity: 1 })!
-    expect(p.organizer).toBe('WORG242')
+    expect(p.organizer).toEqual({ m: 0, l: 1 })
+    expect(p.divider).toBeNull()
     expect(calcMeubelNettoCents(meubelPrijsInput(p))).toBe(zonder + 5616)
     // De Wooden Box Facet staat bij de kasten, direct na de Mirror Cabinet
     const kasten = MEUBEL_MODELLEN.filter((m) => m.categorie === 'kasten').map((m) => m.id)
@@ -755,9 +760,112 @@ test.describe('Planken, waskommen en accessoires', () => {
     expect(maakMeubelVoorstel({})).toBeNull()
   })
 
+  test('Organizer en Divider: aantal per maat, 0 tot en met 10', () => {
+    const f = { ...k, modelId: 'facet', lengte: 1000, lades: 1 }
+    const zonder = calcMeubelNettoCents(f)!
+    // Prijs is aantal maal stuksprijs; M en L kunnen naast elkaar
+    expect(calcMeubelNettoCents({ ...f, organizer: { m: 2, l: 3 }, divider: { m: 0, l: 10 } })).toBe(zonder + 2 * 5096 + 3 * 5616 + 10 * 936)
+    expect(calcMeubelNettoCents({ ...f, organizer: { m: 0, l: 0 }, divider: null })).toBe(zonder)
+    expect(calcMeubelBrutoCents({ ...f, organizer: { m: 0, l: 2 } }, 2.5)).toBe(Math.round((zonder + 2 * 5616) * 2.5))
+    // Alleen hele getallen van 0 tot en met 10
+    for (const fout of [{ m: 11, l: 0 }, { m: -1, l: 0 }, { m: 1.5, l: 0 }, { m: '2', l: 0 }, { m: NaN, l: 0 }, [1, 0], 3]) {
+      expect(calcMeubelNettoCents({ ...f, organizer: fout as never })).toBeNull()
+      expect(leesLadeAcc('organizer', fout)).toBeNull()
+    }
+    expect(valideerMeubelConfig({ ...f, ladeBreedtes: null, quantity: 1, organizer: { m: 11, l: 0 } })).toContain('bestaat niet')
+    expect(valideerMeubelConfig({ ...f, ladeBreedtes: null, quantity: 1, organizer: { m: 10, l: 10 } })).toBeNull()
+    // Op aanvraag heeft geen prijs, maar de aantallen worden wel gecontroleerd
+    const groot = { ...f, lengte: 3000, lades: 3, opAanvraag: true, ladeBreedtes: null, quantity: 1 }
+    expect(valideerMeubelConfig({ ...groot, divider: { m: 4, l: 0 } })).toBeNull()
+    expect(valideerMeubelConfig({ ...groot, divider: { m: 40, l: 0 } })).toContain('0 tot 10')
+    // Niet bij een kast, een plank of een blad zonder lades; nul stuks mag overal
+    const kast = { ...k, modelId: 'cabinet', lengte: 400, lades: 2, hoogte: 1800, diepte: 300 }
+    expect(calcMeubelNettoCents({ ...kast, organizer: { m: 1, l: 0 } })).toBeNull()
+    expect(calcMeubelNettoCents({ ...kast, organizer: { m: 0, l: 0 } })).toBe(calcMeubelNettoCents(kast))
+    expect(calcMeubelNettoCents({ modelId: 'solid-washbasin-solo', lengte: 1200, lades: 0, houtkleur: 'old-grey', divider: { m: 0, l: 1 } })).toBeNull()
+    // Teksten en prijsopbouw tonen het aantal
+    expect(ladeAccessoireTekst({ organizer: { m: 0, l: 2 }, divider: { m: 3, l: 1 } })).toEqual(['2 × Organizer L (art. WORG242)', '3 × Divider M (art. WDIV218)', '1 × Divider L (art. WDIV242)'])
+    expect(meubelOptiesTekst({ organizer: { m: 0, l: 0 } })).toBe('Geen')
+    const opbouw = getMeubelPrijsOpbouw({ ...f, organizer: { m: 2, l: 1 }, divider: { m: 0, l: 3 } }, 2)!
+    expect(opbouw.regels.slice(1)).toEqual([
+      { label: 'Organizer M · 2×', cents: 2 * 5096 * 2 }, { label: 'Organizer L · 1×', cents: 5616 * 2 }, { label: 'Divider L · 3×', cents: 3 * 936 * 2 },
+    ])
+    expect(opbouw.regels.reduce((som, r) => som + r.cents, 0)).toBe(opbouw.totaal)
+    // Opslag: aantallen blijven staan, onzin valt weg, en de prijs volgt
+    const lees = (meubel: object) => leesMeubel({ shape: 'meubel', meubel: { modelId: 'facet', lengte: 1000, lades: 1, houtkleur: 'old-grey', ...meubel }, quantity: 1 })!
+    const p = lees({ organizer: { m: 2, l: 0 }, divider: { m: 0, l: 0 } })
+    expect([p.organizer, p.divider]).toEqual([{ m: 2, l: 0 }, null])
+    expect(calcMeubelNettoCents(meubelPrijsInput(p))).toBe(zonder + 2 * 5096)
+    expect(meubelOptiesTekst(p)).toBe('2 × Organizer M (art. WORG218)')
+    expect(lees({ organizer: { m: 99, l: 0 } }).organizer).toBeNull()
+    expect(leesMeubel({ shape: 'meubel', meubel: { modelId: 'cabinet', lengte: 400, lades: 2, hoogte: 1800, diepte: 300, houtkleur: 'old-grey', organizer: { m: 1, l: 0 } }, quantity: 1 })!.organizer).toBeNull()
+  })
+
+  test('Kleur Solid Surface: Mat Warm Grey kost een percentage over alleen de basisprijs', () => {
+    // Alle modellen met een Solid Surface blad, en alleen die
+    expect(MEUBEL_MODELLEN.filter(heeftSolidKleur).map((m) => m.id)).toEqual(MEUBEL_MODELLEN.filter((m) => m.categorie === 'solid-surface').map((m) => m.id))
+    expect(MEUBEL_MODELLEN.filter(heeftSolidKleur)).toHaveLength(10)
+    const sf = { modelId: 'solid-facet', lengte: 1200, lades: 2, houtkleur: 'old-grey', waskomVorm: 'ovaal' as const, waskomAantal: 1 }
+    // Hout met Solid Surface: 4% over de basis (217256), afgerond op hele centen
+    expect(calcMeubelNettoCents(sf)).toBe(217256)
+    expect(calcMeubelNettoCents({ ...sf, solidKleur: 'mat-white' })).toBe(217256)
+    expect(calcMeubelNettoCents({ ...sf, solidKleur: null })).toBe(217256)
+    expect(solidKleurMeerprijs(getMeubelModel('solid-facet')!, 217256, 'mat-warm-grey')).toBe(8690)
+    expect(calcMeubelNettoCents({ ...sf, solidKleur: 'mat-warm-grey' })).toBe(217256 + 8690)
+    // Niet over houtkleur, uitsparingen of organizers: die tellen er los bij
+    const vol = { ...sf, houtkleur: 'pure', uitsparingen: 2, organizer: { m: 1, l: 1 }, divider: { m: 2, l: 0 } }
+    const opties = 4160 + 2 * 1040 + 5096 + 5616 + 2 * 936
+    expect(calcMeubelNettoCents(vol)).toBe(217256 + opties)
+    expect(calcMeubelNettoCents({ ...vol, solidKleur: 'mat-warm-grey' })).toBe(217256 + 8690 + opties)
+    // Alleen een Solid Surface blad: 12% (ook niet over het accessoire eronder)
+    const solo = { modelId: 'solid-washbasin-solo', lengte: 1200, lades: 0, houtkleur: 'old-grey' }
+    expect(calcMeubelNettoCents({ ...solo, solidKleur: 'mat-warm-grey' })).toBe(114296 + 13716)
+    expect(calcMeubelNettoCents({ ...solo, solidKleur: 'mat-warm-grey', extra: 'roll-curved', extraArtikel: 'WROLLC16RVS' })).toBe(114296 + 13716 + 3588)
+    // Afronden op hele centen: precies een halve cent gaat omhoog
+    const facet = getMeubelModel('solid-facet')!
+    expect([solidKleurMeerprijs(facet, 112, 'mat-warm-grey'), solidKleurMeerprijs(facet, 113, 'mat-warm-grey'), solidKleurMeerprijs(facet, 137, 'mat-warm-grey')]).toEqual([4, 5, 5])
+    expect(solidKleurMeerprijs(facet, 217256, 'mat-white')).toBe(0)
+    expect(solidKleurMeerprijs(getMeubelModel('facet')!, 100000, 'mat-warm-grey')).toBe(0)
+    // Bruto is netto maal factor, en de prijsopbouw telt exact op
+    for (const factor of [1, 2, 2.35, 3.33]) {
+      const netto = calcMeubelNettoCents({ ...vol, solidKleur: 'mat-warm-grey' })!
+      expect(calcMeubelBrutoCents({ ...vol, solidKleur: 'mat-warm-grey' }, factor)).toBe(Math.round(netto * factor))
+      const opbouw = getMeubelPrijsOpbouw({ ...vol, solidKleur: 'mat-warm-grey' }, factor)!
+      expect(opbouw.regels.find((r) => r.label === 'Kleur Solid Surface · Mat Warm Grey')!.cents).toBe(Math.round(8690 * factor))
+      expect(opbouw.regels.reduce((som, r) => som + r.cents, 0)).toBe(opbouw.totaal)
+      expect(getMeubelOrderOpbouw(netto, factor).brutoCents).toBe(opbouw.totaal)
+    }
+    expect(getMeubelPrijsOpbouw(sf, 2)!.regels.map((r) => r.label).join()).not.toContain('Kleur Solid Surface')
+    // Onbekende kleur, of een kleur bij een model zonder Solid Surface blad: geen prijs
+    expect(calcMeubelNettoCents({ ...sf, solidKleur: 'roze' as never })).toBeNull()
+    expect(calcMeubelNettoCents({ ...k, modelId: 'facet', lengte: 1000, lades: 1, solidKleur: 'mat-warm-grey' })).toBeNull()
+    expect(calcMeubelNettoCents({ ...k, modelId: 'waskom-basin-free', lengte: 0, lades: 0, variant: 'TMSWTFR35W', solidKleur: 'mat-warm-grey' })).toBeNull()
+    expect(valideerMeubelConfig({ ...sf, lengte: 3000, lades: 3, opAanvraag: true, ladeBreedtes: null, quantity: 1, solidKleur: 'roze' as never })).toContain('Solid Surface')
+    // Opslag: oude configuraties zonder veld zijn Mat White; de prijs volgt de opgeslagen kleur
+    const lees = (meubel: object) => leesMeubel({ shape: 'meubel', meubel: { ...sf, ...meubel }, quantity: 1 })!
+    const oud = lees({})
+    expect([oud.solidKleur, oud.solidKleurNaam, oud.kleurKort]).toEqual(['mat-white', 'Mat White', 'Old Grey'])
+    expect(calcMeubelNettoCents(meubelPrijsInput(oud))).toBe(217256)
+    const grijs = lees({ solidKleur: 'mat-warm-grey' })
+    expect([grijs.solidKleur, grijs.solidKleurNaam, grijs.kleurKort]).toEqual(['mat-warm-grey', 'Mat Warm Grey', 'Old Grey · Mat Warm Grey'])
+    expect(calcMeubelNettoCents(meubelPrijsInput(grijs))).toBe(217256 + 8690)
+    expect(meubelSamenvatting(grijs)).toContain('Mat Warm Grey')
+    expect(lees({ solidKleur: 'roze' }).solidKleur).toBe('mat-white')
+    const hout = leesMeubel({ shape: 'meubel', meubel: { modelId: 'facet', lengte: 1000, lades: 1, houtkleur: 'old-grey', solidKleur: 'mat-warm-grey' }, quantity: 1 })!
+    expect([hout.solidKleur, hout.solidKleurNaam, hout.kleurKort]).toEqual([null, '', 'Old Grey'])
+    expect(leesMeubel({ shape: 'meubel', meubel: { ...solo, solidKleur: 'mat-warm-grey' }, quantity: 1 })!.kleurKort).toBe('Solid Surface · Mat Warm Grey')
+    // Het hulpje herkent de kleur niet: het voorstel blijft geldig en is Mat White
+    const v = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1200, lades: 2, houtkleur: 'old-grey', waskomVorm: 'ovaal', solidKleur: 'mat-warm-grey' } as never)!
+    expect(v.config.solidKleur).toBeUndefined()
+    expect(calcMeubelNettoCents(v.config)).toBe(217256)
+  })
+
   test('AI-hulp: keuzes worden overgenomen of teruggebracht naar de prijslijst', () => {
     const v = maakMeubelVoorstel({ modelId: 'facet', lengte: 1400, lades: 3, houtkleur: 'white', aantal: 2, organizer: 'WORG242' })!
-    expect(v.config).toMatchObject({ modelId: 'facet', lengte: 1400, lades: 3, houtkleur: 'white', quantity: 2, organizer: 'WORG242', opAanvraag: false })
+    expect(v.config).toMatchObject({ modelId: 'facet', lengte: 1400, lades: 3, houtkleur: 'white', quantity: 2, organizer: { m: 0, l: 1 }, opAanvraag: false })
+    // Aantallen per maat neemt het hulpje over; wat niet klopt, laat het weg
+    expect(maakMeubelVoorstel({ modelId: 'facet', lengte: 1400, lades: 3, houtkleur: 'white', organizer: { m: 2, l: 1 }, divider: { m: 99 } })!.config).toMatchObject({ organizer: { m: 2, l: 1 } })
+    expect(maakMeubelVoorstel({ modelId: 'facet', lengte: 1400, lades: 3, houtkleur: 'white', divider: { m: 99 } })!.config.divider).toBeUndefined()
     expect(v.meldingen).toEqual([])
     expect(calcMeubelNettoCents(v.config)).toBe(179816 + 4160 + calcMeubelNettoCents({ ...k, modelId: 'organizer', lengte: 0, lades: 0, variant: 'WORG242' })!)
 
@@ -806,9 +914,9 @@ test.describe('Planken, waskommen en accessoires', () => {
     const s2 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1600, lades: 2, waskomVorm: 'vierkant', waskomMaat: 850 })!
     expect(s2.config).toMatchObject({ tekenwijze: 'module', waskomMaat: 500 })
     expect(s2.meldingen.join(' ')).toContain('850')
-    const s3 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1100, lades: 2 })!
+    const s3 = maakMeubelVoorstel({ modelId: 'solid-facet', lengte: 1000, lades: 2 })!
     expect(s3.config.tekenwijze).toBe('upload')
-    expect(s3.meldingen.join(' ')).toContain('15 cm')
+    expect(s3.meldingen.join(' ')).toContain('10 cm')
     expect(maakMeubelVoorstel({ modelId: 'waskom-ceramic-raw', variant: 'WTMWK40RO', uitsparingen: 2 })!.config.uitsparingen).toBe(0)
 
     // Vast artikel: uitvoering op artikelnummer, anders de eerste met melding
@@ -883,10 +991,13 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
   })
 
   test('advies als er geen waskom boven de lades past', () => {
-    const c = { modelId: 'solid-drawer-box', lengte: 1700, lades: 3, ladeBreedtes: null }
+    // De kleinste waskom (ovaal, 450) vraagt een lade van 550: 10 cm breder dan de kom
+    expect(KOM_LADE_MIN_MM).toBe(550)
+    expect(waskomMax({ modelId: 'solid-drawer-box', lengte: 1650, lades: 3, ladeBreedtes: null }, 'ovaal')).toBe(2)
+    const c = { modelId: 'solid-drawer-box', lengte: 1620, lades: 3, ladeBreedtes: null }
     expect(waskomMax(c, 'ovaal')).toBe(0)
-    const advies = komAdvies(c, 1700, [2, 3])
-    expect(advies.breder).toEqual([600, 550, 550])
+    const advies = komAdvies(c, 1620, [2, 3])
+    expect(advies.breder).toEqual([550, 535, 535])
     expect(advies.minder).toBe(2)
     expect(waskomMax({ ...c, ladeBreedtes: advies.breder }, 'ovaal')).toBe(1)
     // Te kort om een lade breed genoeg te maken: alleen minder lades helpt
@@ -896,11 +1007,12 @@ test.describe('Tekenmodule: prijs, regels en opslag', () => {
   test('waskom 850 alleen rechthoekig en alleen als hij past', () => {
     const cfg = { ...solid, ladeBreedtes: null, quantity: 1, tekenwijze: 'module' as const, gaten: [] }
     expect(valideerMeubelConfig({ ...cfg, waskomVorm: 'ovaal', waskomMaat: 850 })).toContain('850')
-    expect(valideerMeubelConfig({ ...cfg, waskomMaat: 850 })).toContain('15 cm')
+    expect(valideerMeubelConfig({ ...cfg, waskomMaat: 850 })).toContain('10 cm')
     expect(valideerMeubelConfig({ ...cfg, lengte: 1100, lades: 1, waskomMaat: 850 })).toBeNull()
     expect(waskomMax(solid, 'vierkant', 500)).toBe(2)
     expect(waskomMax(solid, 'vierkant', 850)).toBe(0)
-    expect(waskomMax({ ...solid, lengte: 1200 }, 'vierkant', 500)).toBe(0)
+    expect(waskomMax({ ...solid, lengte: 1200 }, 'vierkant', 500)).toBe(2)
+    expect(waskomMax({ ...solid, lengte: 1190 }, 'vierkant', 500)).toBe(0)
     expect(waskomMax({ ...solid, lengte: 1200, lades: 1 }, 'ovaal')).toBe(1)
     expect(waskomTekst({ waskomVorm: 'vierkant', waskomAantal: 2, waskomMaat: 850, tekenwijze: 'module' })).toBe('2 waskommen, rechthoekig 850 (plaats volgens tekening)')
     expect(waskomTekst({ waskomVorm: 'ovaal', waskomAantal: 1 })).toBe('1 waskom, ovaal (plaats volgens maattekening)')

@@ -1,7 +1,7 @@
 import {
   MEUBEL_MODELLEN, MEUBEL_CATEGORIEEN, HOUTKLEUREN, HOUTKLEUR_DEFAULT, MEUBEL_AANTAL_MAX, MEUBEL_AANVRAAG_MAX_MM, LAMPEN_MAX,
   getMeubelModel, getLengteBereik, getLadeOpties, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, getMeubelDiepte,
-  getKastHoogteBereik, getDeurOpties, getRegaalBreedte, getDuoPrijs, getDuoReeksen, getArtikelVariant, getLadeAccessoire,
+  getKastHoogteBereik, getDeurOpties, getRegaalBreedte, getDuoPrijs, getDuoReeksen, getArtikelVariant, leesLadeAcc, type LadeAccAantal,
   kanLadeAccessoire, kanLogo, kanUitsparing, ladeRuimte, valideerMeubelConfig, gatenContext, waskomMax, UITSPARING_MAX,
   type MeubelModel, type MeubelConfig, type WaskomVorm, type HanddoekType,
 } from '@/lib/meubel-config'
@@ -41,6 +41,9 @@ export interface MeubelVoorstelConfig extends MeubelConfig {
   logo: boolean
   uitsparingen: number
   opAanvraag: boolean
+  /** Het hulpje zet altijd aantallen per maat, nooit de oude vorm met één artikelnummer */
+  organizer?: LadeAccAantal | null
+  divider?: LadeAccAantal | null
 }
 
 export interface MeubelVoorstel {
@@ -189,8 +192,9 @@ export function maakMeubelVoorstel(ruw: MeubelAiRuw): MeubelVoorstel | null {
   if (model.lamp && ruw.lamp === true) config.lampen = LAMPEN_MAX
   if (kanLadeAccessoire(model) && !config.opAanvraag) {
     for (const soort of ['organizer', 'divider'] as const) {
-      const v = getLadeAccessoire(soort, typeof ruw[soort] === 'string' ? ruw[soort] as string : null)
-      if (v) config[soort] = v.id
+      // Aantallen per maat, of één artikelnummer (dan 1 stuk). Wat niet klopt, blijft weg
+      const a = leesLadeAcc(soort, ruw[soort])
+      if (a && a.m + a.l > 0) config[soort] = a
     }
   }
 
@@ -213,7 +217,7 @@ export function maakMeubelVoorstel(ruw: MeubelAiRuw): MeubelVoorstel | null {
       if (startGaten(context).length === 0) meld(`De ${aantal === 2 ? 'waskommen staan' : 'waskom staat'} in de tekening. Controleer boven welke lade.`)
     } else {
       config.tekenwijze = 'upload'
-      meld('De waskom past niet boven deze lades: een lade moet minstens 15 cm breder zijn dan de waskom. Maak een lade breder, kies minder lades of lever een eigen maattekening aan.')
+      meld(`De waskom past niet boven deze lades: een lade moet minstens ${GAT.komMarge / 10} cm breder zijn dan de waskom. Maak een lade breder, kies minder lades of lever een eigen maattekening aan.`)
     }
   } else if (context) {
     config.tekenwijze = 'module'

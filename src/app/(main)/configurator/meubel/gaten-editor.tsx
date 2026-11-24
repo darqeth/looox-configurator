@@ -245,7 +245,7 @@ export default function GatenEditor({ context: beginContext, gaten: start, onKla
                   role="radio"
                   aria-checked={keuze === i}
                   disabled={!k.past}
-                  title={k.past ? undefined : 'Past niet boven deze lades: een lade moet minstens 15 cm breder zijn dan de waskom'}
+                  title={k.past ? undefined : `Past niet boven deze lades: een lade moet minstens ${GAT.komMarge / 10} cm breder zijn dan de waskom`}
                   onClick={() => wisselKom(i)}
                   className={`px-3.5 py-2 rounded-xl text-[13px] font-medium border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                     keuze === i ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'bg-white text-lx-text-secondary border-black/10 hover:text-lx-text-primary'

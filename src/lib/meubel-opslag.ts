@@ -1,5 +1,5 @@
 import {
-  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getArtikelVariant, indelingTekst, PLANK_EXTRAS, heeftExtras, getPlankExtraArtikel, plankExtraPrijs, LAMPEN_MAX, getDeurOpties, kanLogo, kanLadeAccessoire, getLadeAccessoire,
+  HOUTKLEUREN, MEUBEL_FACTOR_DEFAULT, UITSPARING_MAX, getMeubelHoogte, getMeubelDiepte, meubelAfmeting, tekeningVerplicht, getArtikelVariant, indelingTekst, PLANK_EXTRAS, heeftExtras, getPlankExtraArtikel, plankExtraPrijs, LAMPEN_MAX, getDeurOpties, kanLogo, kanLadeAccessoire, leesLadeAcc, getSolidKleur, SOLID_KLEUR_DEFAULT, type LadeAccessoire, type LadeAccAantal, type SolidKleur,
   type PlankExtra, type HanddoekType, getRegaalBreedte, ladeRuimte, getMeubelModel, ladeLabel, parseMeubelFactor,
   type LadeBreedtes, type MeubelInput, type MeubelModel, type WaskomVorm, gatenContext, komKeuzes, telUitsparingen, HANDDOEK_UITSPARING_MODEL, type KomKeuze,
 } from '@/lib/meubel-config'
@@ -46,9 +46,14 @@ export interface OpgeslagenMeubel {
   /** Plank: handdoekhouders, het type en wat eronder hangt */
   handdoekhouders: number
   lampen: number
-  /** Bijverkoop voor in de lade: artikelnummer of null */
-  organizer: string | null
-  divider: string | null
+  /** Bijverkoop voor in de lade: aantal per maat, of null zonder */
+  organizer: LadeAccAantal | null
+  divider: LadeAccAantal | null
+  /** Kleur van het Solid Surface blad; null bij een model zonder. Oude configuraties zijn Mat White */
+  solidKleur: SolidKleur | null
+  solidKleurNaam: string
+  /** Kleur voor lijsten: de houtkleur, met de bladkleur erbij als die afwijkt van de standaard */
+  kleurKort: string
   handdoekType: HanddoekType
   extra: PlankExtra | null
   extraArtikel: string | null
@@ -102,6 +107,13 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
   const gaten = tekenwijze === 'module' && context && Array.isArray(m.gaten) ? herzieGaten(leesGaten(m.gaten, context), context).gaten : []
   const handdoekUitsparing = m.handdoekUitsparing === true && basisModel.id === HANDDOEK_UITSPARING_MODEL
   const uitsparingenTeller = tekenwijze === 'module' ? 0 : uitsparingen
+  const houtkleurNaam = model.geenHout ? (model.artikel ? '' : 'Solid Surface') : kleur?.naam ?? ''
+  // Oude vorm (één artikelnummer) is 1 stuk; wat niet klopt of nergens bij hoort, valt weg
+  const ladeAcc = (soort: LadeAccessoire): LadeAccAantal | null => {
+    const a = kanLadeAccessoire(basisModel) ? leesLadeAcc(soort, m[soort]) : null
+    return a && a.m + a.l > 0 ? a : null
+  }
+  const solid = getSolidKleur(basisModel, m.solidKleur)
   return {
     model,
     lengte,
@@ -110,8 +122,11 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     waskomMaat,
     regaalBreedte,
     handdoekhouders: houders,
-    organizer: kanLadeAccessoire(basisModel) ? getLadeAccessoire('organizer', typeof m.organizer === 'string' ? m.organizer : null)?.id ?? null : null,
-    divider: kanLadeAccessoire(basisModel) ? getLadeAccessoire('divider', typeof m.divider === 'string' ? m.divider : null)?.id ?? null : null,
+    organizer: ladeAcc('organizer'),
+    divider: ladeAcc('divider'),
+    solidKleur: solid?.id ?? null,
+    solidKleurNaam: solid?.naam ?? '',
+    kleurKort: [houtkleurNaam, solid && solid.id !== SOLID_KLEUR_DEFAULT ? solid.naam : ''].filter(Boolean).join(' · '),
     lampen: basisModel.lamp ? Math.min(LAMPEN_MAX, Math.max(0, Math.floor(Number(m.lampen) || 0))) : 0,
     handdoekType: m.handdoekType === 'B' ? 'B' : 'A',
     extra: heeftExtras(basisModel, typeof m.variant === 'string' ? m.variant : null) ? PLANK_EXTRAS.find((e) => e.id === m.extra)?.id ?? null : null,
@@ -124,7 +139,7 @@ export function leesMeubel(selectedOptions: unknown): OpgeslagenMeubel | null {
     lades,
     ladeBreedtes: breedtes,
     houtkleur: kleur?.id ?? '',
-    houtkleurNaam: model.geenHout ? (model.artikel ? '' : 'Solid Surface') : kleur?.naam ?? '',
+    houtkleurNaam,
     factor: m.factor === undefined ? MEUBEL_FACTOR_DEFAULT : parseMeubelFactor(m.factor),
     opAanvraag: m.opAanvraag === true,
     logo: m.logo === true && kanLogo(model),
@@ -180,7 +195,7 @@ export function tekenInvoer(m: OpgeslagenMeubel): TekenInvoer | null {
 
 /** Korte omschrijving voor lijsten: "Facet Double · 2000 mm · 3 × 2 lades · White". */
 export function meubelSamenvatting(m: OpgeslagenMeubel): string {
-  return [m.model.naam, meubelKort(m), m.regaalBreedte ? `regaal ${m.regaalZijde}` : '', m.houtkleurNaam].filter(Boolean).join(' · ')
+  return [m.model.naam, meubelKort(m), m.regaalBreedte ? `regaal ${m.regaalZijde}` : '', m.kleurKort].filter(Boolean).join(' · ')
 }
 
 /** Maat en indeling voor een lijstregel: "2000 mm · 3 lades", of bij een kast de drie maten. */
@@ -194,7 +209,7 @@ export function meubelKort(m: OpgeslagenMeubel): string {
 /** Invoer voor de prijsmotor uit een opgeslagen meubel: één plek, zodat geen optie wordt vergeten. */
 export function meubelPrijsInput(m: OpgeslagenMeubel): MeubelInput {
   return { modelId: m.model.id, lengte: m.lengte, lades: m.lades, hoogte: m.model.hoogte, diepte: m.model.diepte,
-    ...(m.handdoekhouders > 0 && { handdoekhouders: m.handdoekhouders, handdoekType: m.handdoekType }), ...(m.extra && { extra: m.extra, extraArtikel: m.extraArtikel }), ...(m.lampen > 0 && { lampen: m.lampen }), ...(m.organizer && { organizer: m.organizer }), ...(m.divider && { divider: m.divider }), ...(m.variant && { variant: m.variant }), houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
+    ...(m.handdoekhouders > 0 && { handdoekhouders: m.handdoekhouders, handdoekType: m.handdoekType }), ...(m.extra && { extra: m.extra, extraArtikel: m.extraArtikel }), ...(m.lampen > 0 && { lampen: m.lampen }), ...(m.organizer && { organizer: m.organizer }), ...(m.divider && { divider: m.divider }), ...(m.solidKleur && { solidKleur: m.solidKleur }), ...(m.variant && { variant: m.variant }), houtkleur: m.houtkleur, uitsparingen: m.uitsparingen, regaalBreedte: m.regaalBreedte || undefined, regaalZijde: m.regaalZijde, ladeBreedtes: m.ladeBreedtes }
 }
 
 /** Accessoire onder de plank: catalogusprijs en netto, voor de prijsopbouw bij bestellen. */

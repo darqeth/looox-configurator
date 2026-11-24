@@ -79,7 +79,7 @@ UITVOER
     "regaalBreedte": number, "regaalZijde": "links" | "rechts",
     "handdoekhouders": 0 | 1 | 2, "handdoekType": "A" | "B",
     "lamp": boolean,
-    "organizer": "WORG218" | "WORG242", "divider": "WDIV218" | "WDIV242",
+    "organizer": { "m": number, "l": number }, "divider": { "m": number, "l": number },
     "uitsparingen": number,
     "aantal": number,
     "opmerkingen": string[]
@@ -87,7 +87,7 @@ UITVOER
   "spiegels": [{ "omschrijving": string, "aantal": number }],
   "nietGevonden": string[]
 }
-Organizer en Divider: 218 is maat M, 242 is maat L. Alleen bij een meubel met lades, en alleen als de dealer erom vraagt.
+Organizer en Divider: het aantal per maat, m is maat M (art. 218) en l is maat L (art. 242), elk 0 tot en met 10. Noemt de dealer geen aantal, dan 1. Alleen bij een meubel met lades, en alleen als de dealer erom vraagt.
 
 PRIJSLIJST (maten in mm)
 ${meubelCatalogusTekst()}`

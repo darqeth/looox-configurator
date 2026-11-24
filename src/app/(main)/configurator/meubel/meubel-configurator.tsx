@@ -18,9 +18,10 @@ import { calcMeubelNettoCents,
   getAanvraagBereik, getAanvraagLadeOpties, getHoutkleuren, getMeubelHoogte, ladeRuimte, REGAAL_STANDAARD_MM,
   getDuoPrijs, getDuoReeksen, WASKOM_VORMEN, waskomTekst, type WaskomVorm,
   type MeubelModel, type MeubelCategorieId, type LadeBreedtes, meubelAfmeting,
-  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelModel, LADE_ACCESSOIRES, type LadeAccessoire,
+  getMeubelDiepte, getKastHoogteBereik, kanUitsparing, getArtikelVariant, artikelNummer, PLANK_EXTRAS, HANDDOEKHOUDER_TYPES, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelModel, LADE_ACCESSOIRES, LADE_ACC_MATEN, LADE_ACC_MAX, leesLadeAcc, type LadeAccessoire, type LadeAccAantal, type LadeAccWaarde,
+  SOLID_KLEUREN, SOLID_KLEUR_DEFAULT, SOLID_KLEUR_LABEL, getSolidKleur, solidKleurPct, type SolidKleur,
   type PlankExtra, type HanddoekType, indelingLabel, indelingTekst, tekeningVerplicht, gatenContext, waskomMax, komKeuzes, komAdvies, KOM_LADE_MIN_MM, telUitsparingen, HANDDOEK_UITSPARING_MODEL } from '@/lib/meubel-config'
-import { betaaldeGaten, kommenCompleet, werkGaten, type Gat, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
+import { GAT, betaaldeGaten, kommenCompleet, werkGaten, type Gat, type KomMaat, type Tekenwijze } from '@/lib/meubel-gaten'
 import GatenEditor from './gaten-editor'
 import { saveMeubelConfiguration, updateMeubelConfiguration } from '@/lib/actions/meubel'
 import { startProjectVanConfig } from '@/lib/actions/project'
@@ -71,8 +72,10 @@ export interface MeubelInitialConfig {
   extra?: PlankExtra | null
   extraArtikel?: string | null
   lampen?: number
-  organizer?: string | null
-  divider?: string | null
+  /** Aantal per maat; een oud concept kan nog één artikelnummer hebben */
+  organizer?: LadeAccWaarde
+  divider?: LadeAccWaarde
+  solidKleur?: SolidKleur | null
   variant?: string | null
   quantity: number
   projectName: string
@@ -168,7 +171,11 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   const [extra, setExtra] = useState<PlankExtra | null>(initialConfig?.extra ?? null)
   const [extraArtikelKeuze, setExtraArtikel] = useState<string | null>(initialConfig?.extraArtikel ?? null)
   const [lampen, setLampen] = useState(Math.min(1, initialConfig?.lampen ?? 0))
-  const [ladeAcc, setLadeAcc] = useState<Record<LadeAccessoire, string | null>>({ organizer: initialConfig?.organizer ?? null, divider: initialConfig?.divider ?? null })
+  const [ladeAcc, setLadeAcc] = useState<Record<LadeAccessoire, LadeAccAantal>>({
+    organizer: leesLadeAcc('organizer', initialConfig?.organizer) ?? { m: 0, l: 0 },
+    divider: leesLadeAcc('divider', initialConfig?.divider) ?? { m: 0, l: 0 },
+  })
+  const [solidKleurKeuze, setSolidKleur] = useState<SolidKleur>(initialConfig?.solidKleur ?? SOLID_KLEUR_DEFAULT)
   // Met een handdoekhouder moet de plank diep genoeg zijn
   const houderMinDiepte = basisModel?.plank?.handdoekhouder && handdoekhouders > 0 ? basisModel.plank.handdoekhouder.minDiepte : 0
   const plankDiepteOk = !plankDiepteBereik || (plankDiepteInvoer >= Math.max(plankDiepteBereik.min, houderMinDiepte) && plankDiepteInvoer <= plankDiepteBereik.max)
@@ -404,6 +411,8 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   const magExtra = heeftExtras(model, variant?.id)
   const magLadeAcc = kanLadeAccessoire(model)
   const ladeAccKeuze = magLadeAcc ? ladeAcc : { organizer: null, divider: null }
+  // Kleur van het Solid Surface blad; null bij een model zonder
+  const solidKleur = getSolidKleur(model, solidKleurKeuze)
   const extraArtikel = magExtra ? getPlankExtraArtikel(extra, extraArtikelKeuze) : null
   const plankKeuzes = { handdoekhouders, handdoekType, extra: magExtra ? extra : null, extraArtikel: extraArtikel?.id, variant: variant?.id, lampen: model.lamp ? lampen : 0 }
   // Vervalt de gekozen indeling bij een andere lengte, dan de eerste die wel kan
@@ -447,7 +456,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   const houtkleur = kleuren.some((k) => k.id === houtkleurKeuze) ? houtkleurKeuze : HOUTKLEUR_DEFAULT
   const kleurNaam = kleuren.find((k) => k.id === houtkleur)?.naam ?? ''
   const prijsInput = { modelId: model.id, lengte, lades: gekozen, houtkleur, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing, hoogte: model.hoogte, diepte: model.diepte,
-    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }
+    ...(model.plank?.handdoekhouder && handdoekhouders > 0 && { handdoekhouders, handdoekType }), ...(magExtra && extra && { extra, extraArtikel: extraArtikel?.id }), ...(model.lamp && lampen > 0 && { lampen }), ...(ladeAccKeuze.organizer && { organizer: ladeAccKeuze.organizer }), ...(ladeAccKeuze.divider && { divider: ladeAccKeuze.divider }), ...(solidKleur && { solidKleur: solidKleur.id }), ...(variant && { variant: variant.id }), regaalBreedte: regaalMm || undefined, ladeBreedtes: breedtes }
   const opbouw = lengteOk && !opAanvraag ? getMeubelPrijsOpbouw(prijsInput, factor) : null
   // Eigen inkoop: de tabelprijs zonder factor, achter het oogje
   const nettoCents = opbouw ? calcMeubelNettoCents(prijsInput) : null
@@ -455,6 +464,8 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
   const magUitsparing = kanUitsparing(model)
   const tekeningNodig = tekeningVerplicht(model, { tekenwijze, uitsparingen: zelfTekenen ? 0 : uitsparingen, kommenCompleet: kommenStaan })
   const tekeningOntbreekt = tekeningNodig && (zelfTekenen || (!tekeningBestand && !bestaandeTekening))
+  // Zelf tekenen bij Solid Surface: de waskom heeft nog geen plaats. Die melding staat bij de waskom zelf
+  const waskomOntbreekt = tekeningOntbreekt && zelfTekenen
   // Aantal waarvoor betaald wordt, voor de samenvatting
   const uitsparingenTotaal = telUitsparingen({ modelId: model.id, uitsparingen: zelfTekenen ? 0 : uitsparingen, tekenwijze, gaten, handdoekUitsparing }, tekenContext)
   const gatenGetekend = gaten.filter((g) => g.soort !== 'kom').length
@@ -524,6 +535,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
     ...(magExtra && { extra, extraArtikel: extraArtikel?.id ?? null }),
     ...(model.lamp && { lampen }),
     ...(magLadeAcc && ladeAccKeuze),
+    ...(solidKleur && { solidKleur: solidKleur.id }),
     ...(variant && { variant: variant.id }),
     ...(model.regaal && { regaalBreedte: regaalMm, regaalZijde: isDuo ? 'midden' as const : regaalZijde }),
     ...(model.waskom && { waskomVorm, waskomAantal, ...(waskomVorm === 'vierkant' && { waskomMaat }) }),
@@ -1167,8 +1179,35 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                   <p className="text-[12px] text-lx-text-muted mt-1.5">
                     Ingebouwd in het Solid Surface blad, zonder meerprijs.{' '}
                     {zelfTekenen
-                      ? 'Een waskom past boven een lade die minstens 15 cm breder is. Wat niet past, is niet te kiezen.'
+                      ? `Een waskom past boven een lade die minstens ${GAT.komMarge / 10} cm breder is. Wat niet past, is niet te kiezen.`
                       : `Teken de plaats van de ${waskomAantal === 2 ? 'waskommen' : 'waskom'} op de maattekening.`}
+                  </p>
+                  {waskomOntbreekt && <TekeningNodig waskom />}
+                </div>
+              )}
+
+              {solidKleur && (
+                <div>
+                  <p className="text-[13px] font-medium text-lx-text-primary mb-1.5">
+                    {SOLID_KLEUR_LABEL} <span className="font-normal text-lx-text-secondary">· {solidKleur.naam}</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={SOLID_KLEUR_LABEL}>
+                    {SOLID_KLEUREN.map((k) => (
+                      <button
+                        key={k.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={solidKleur.id === k.id}
+                        onClick={() => setSolidKleur(k.id)}
+                        className={`flex items-center gap-2 pl-2 pr-3.5 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${solidKleur.id === k.id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'}`}
+                      >
+                        <span className="w-6 h-6 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: k.tint }} aria-hidden="true" />
+                        {k.naam}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">
+                    Mat White zonder meerprijs. Mat Warm Grey: {solidKleurPct(model, 'mat-warm-grey')}% meerprijs over de basisprijs van {model.geenHout ? 'het blad' : 'het meubel'}.
                   </p>
                 </div>
               )}
@@ -1216,27 +1255,26 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                               {acc.artikel.varianten.map((v) => `${v.naam} ${formatCents(Math.round(v.prijs * parseMeubelFactor(factor)))}`).join(' · ')}
                             </span>
                           </span>
-                          <div className="flex gap-2 w-full sm:w-auto sm:flex-shrink-0" role="radiogroup" aria-label={acc.naam}>
-                            {[null, ...acc.artikel.varianten.map((v) => v.id)].map((id) => (
-                              <button
-                                key={id ?? 'geen'}
-                                type="button"
-                                role="radio"
-                                aria-checked={ladeAcc[soort] === id}
-                                onClick={() => setLadeAcc((s) => ({ ...s, [soort]: id }))}
-                                className={`flex-1 sm:flex-none px-3 h-10 rounded-xl border text-[13px] font-semibold transition-colors cursor-pointer ${
-                                  ladeAcc[soort] === id ? 'border-lx-cta bg-lx-icon-bg text-lx-text-primary' : 'border-black/10 text-lx-text-secondary hover:text-lx-text-primary'
-                                }`}
-                              >
-                                {id === null ? 'Geen' : acc.artikel!.varianten.find((v) => v.id === id)!.naam}
-                              </button>
-                            ))}
+                          <div className="flex flex-wrap gap-x-5 gap-y-2 w-full sm:w-auto sm:flex-shrink-0">
+                            {LADE_ACC_MATEN.map((maat) => {
+                              const aantal = ladeAcc[soort][maat]
+                              const naam = `${acc.naam} ${maat.toUpperCase()}`
+                              const zet = (n: number) => setLadeAcc((s) => ({ ...s, [soort]: { ...s[soort], [maat]: Math.min(LADE_ACC_MAX, Math.max(0, n)) } }))
+                              return (
+                                <div key={maat} className="flex items-center gap-1.5" role="group" aria-label={naam}>
+                                  <span className="w-4 text-[13px] font-semibold text-lx-text-primary">{maat.toUpperCase()}</span>
+                                  <button type="button" onClick={() => zet(aantal - 1)} disabled={aantal <= 0} aria-label={`Eén ${naam} minder`} className="w-9 h-9 rounded-xl bg-white border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">−</button>
+                                  <span aria-live="polite" aria-label={`Aantal ${naam}`} className="w-6 text-center text-[14px] font-bold text-lx-text-primary tabular-nums">{aantal}</span>
+                                  <button type="button" onClick={() => zet(aantal + 1)} disabled={aantal >= LADE_ACC_MAX} aria-label={`Eén ${naam} meer`} className="w-9 h-9 rounded-xl bg-white border border-black/8 text-lx-text-primary text-lg font-light hover:bg-lx-border transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       )
                     })}
                   </div>
-                  <p className="text-[12px] text-lx-text-muted mt-1.5">Eén per meubel. Elke Organizer wordt geleverd met 1 Divider.</p>
+                  <p className="text-[12px] text-lx-text-muted mt-1.5">Prijs per stuk, maximaal {LADE_ACC_MAX} per maat. Elke Organizer wordt geleverd met 1 Divider.</p>
                 </div>
               )}
 
@@ -1374,7 +1412,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                 </p>
                 {heeftTekenmodule && gatenKeuze.length > 0 && <p className="text-[12px] text-lx-text-muted mt-1.5">Bij opslaan telt je eigen maattekening. De gaten uit het tekenvenster vervallen dan.</p>}
                 </>}
-                {tekeningOntbreekt && <TekeningNodig waskom={zelfTekenen} />}
+                {tekeningOntbreekt && !zelfTekenen && <TekeningNodig />}
               </div>}
 
               {model.opmerking && (
@@ -1403,8 +1441,11 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                 {model.regaal && <Rij label="Regaalkast" waarde={`${regaalMm} mm breed, ${isDuo ? 'in het midden' : regaalZijde}`} onEdit={() => setStep(2)} />}
                 {model.waskom && <Rij label="Waskom" waarde={waskomTekst({ waskomVorm, waskomAantal, waskomMaat, tekenwijze })} onEdit={() => setStep(2)} />}
                 {!model.geenHout && <Rij label="Houtkleur" waarde={kleurNaam} onEdit={() => setStep(2)} />}
+                {solidKleur && <Rij label={SOLID_KLEUR_LABEL} waarde={solidKleur.naam} onEdit={() => setStep(2)} />}
                 <Rij label="Opties" waarde={meubelOptiesTekst({ logo: logo && kanLogo(model), uitsparingen: uitsparingenTotaal, tekenwijze, handdoekUitsparing, ...ladeAccKeuze })} onEdit={() => setStep(2)} />
               </div>
+              {/* Bij de configuratie, waar de waskom staat, en niet onderaan bij de knoppen: daar wordt hij gemist */}
+              {waskomOntbreekt && <TekeningNodig waskom />}
 
               <div className="bg-lx-panel-bg rounded-2xl p-4 flex items-center gap-4">
                 <span id="meubel-aantal-label" className="text-[13px] font-medium text-lx-text-primary flex-shrink-0">Aantal</span>
@@ -1499,7 +1540,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
                 </div>
               </div>
 
-              {tekeningOntbreekt && <TekeningNodig waskom={zelfTekenen} />}
+              {tekeningOntbreekt && !zelfTekenen && <TekeningNodig />}
 
               <button
                 onClick={() => handleSave()}
@@ -1539,6 +1580,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
             toonHout={toonHout}
             regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
             blad={tekenBlad}
+            bladKleur={solidKleur?.tint}
           />
           )}
           <p className="text-[11px] text-lx-text-secondary text-center">{model.artikel ? `${variant?.naam ?? ''} · ${variant?.afmeting ?? ''}` : tekenBlad || model.plank ? 'Bovenaanzicht en vooraanzicht, maten in mm' : `Vooraanzicht, maten in mm · diepte ${model.diepte} mm`}</p>
@@ -1604,6 +1646,7 @@ function MeubelConfiguratorInner({ factor, magInkoopZien = false, initialConfig,
               toonHout={toonHout}
               regaal={model.regaal ? { breedte: regaalMm, zijde: isDuo ? 'midden' : regaalZijde } : null}
             blad={tekenBlad}
+            bladKleur={solidKleur?.tint}
             />
             <p className="text-[12px] text-lx-text-secondary text-center mt-1">
               {tekenBlad ? 'Bovenaanzicht en vooraanzicht' : 'Vooraanzicht'}, maten in mm · hoogte {model.hoogte} mm · diepte {model.diepte} mm

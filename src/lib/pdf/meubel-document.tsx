@@ -3,7 +3,7 @@ import { meubelExtraPrijs } from '@/lib/meubel-opslag'
 import { Document, Page, View, Text, Image, StyleSheet, Svg, Rect, Line, Ellipse, Polygon, Circle, G, Text as SvgText } from '@react-pdf/renderer'
 import { PdfLogo } from './pdf-logo'
 import { formatDate } from './helpers'
-import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
+import { formatMm, formatPct, getLadeBreedtes, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst, SOLID_KLEUR_LABEL } from '@/lib/meubel-config'
 import type { OpgeslagenMeubel } from '@/lib/meubel-opslag'
 import { gatenTabel, spiegelGlans, tekenGaten, tekenIndeling, tekenKast, tekenKommenIndicatief } from '@/lib/meubel-tekening'
 
@@ -263,6 +263,7 @@ export default function MeubelDocument({
     ...(model.rand ? [['Rand', `${model.rand} mm ${model.randOnder ? 'rondom' : model.randBoven ? 'links, rechts en boven' : 'links en rechts'}`] as [string, string]] : []),
     // Een los artikel (waskom, accessoire) heeft geen houtkleur
     ...(model.artikel ? [] : [[kleurLabel(model), meubel.houtkleurNaam || 'Geen'] as [string, string]]),
+    ...(meubel.solidKleurNaam ? [[SOLID_KLEUR_LABEL, meubel.solidKleurNaam] as [string, string]] : []),
     ['Opties', meubelOptiesTekst(meubel)],
     ...(opAanvraag ? [['Bijzonderheid', 'Groter dan de standaardmaten, op aanvraag'] as [string, string]] : []),
   ]

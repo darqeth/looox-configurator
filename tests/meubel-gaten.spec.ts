@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { getMeubelModel } from '../src/lib/meubel-config'
 import { gatenTabel, tekenGaten, tekenKommenIndicatief } from '../src/lib/meubel-tekening'
 import {
-  maakBlad, snappunten, valideerGaten, klemGat, getKom, komMax, plaatsGat, herzieGaten,
+  GAT, maakBlad, snappunten, valideerGaten, klemGat, getKom, komMax, plaatsGat, herzieGaten,
   betaaldeGaten, kommenCompleet, gatenSoort, startGaten, werkGaten, type GatenContext, schotten, komOverRand, leesGaten, schotHap, type Gat } from '../src/lib/meubel-gaten'
 
 const facet = getMeubelModel('facet')!, solid = getMeubelModel('solid-facet')!
@@ -112,16 +112,17 @@ test('klemGat houdt diameter en plaats binnen de grenzen', () => {
   expect(valideerGaten([klemGat({ soort: 'sifon', x: 600, y: 9999, d: 100 }, c)], c)).toBeNull()
 })
 
-test('kom 500 past boven een lade van 650, niet van 640', () => {
+test('kom 500 past boven een lade van 600, niet van 590', () => {
   const kom = getKom('vierkant', 500)
-  expect(komMax(blad(1300, [650, 650]), kom)).toBe(2)
-  expect(komMax(blad(1280, [640, 640]), kom)).toBe(0)
+  expect(GAT.komMarge).toBe(100)
+  expect(komMax(blad(1200, [600, 600]), kom)).toBe(2)
+  expect(komMax(blad(1180, [590, 590]), kom)).toBe(0)
   expect(komMax(blad(1500, [500, 500, 500]), kom)).toBe(0)
 })
 
-test('kom 850 vraagt een lade van 1000; ovaal bestaat in één maat', () => {
-  expect(komMax(blad(1000, [1000]), getKom('vierkant', 850))).toBe(1)
-  expect(komMax(blad(999, [999]), getKom('vierkant', 850))).toBe(0)
+test('kom 850 vraagt een lade van 950; ovaal bestaat in één maat', () => {
+  expect(komMax(blad(950, [950]), getKom('vierkant', 850))).toBe(1)
+  expect(komMax(blad(949, [949]), getKom('vierkant', 850))).toBe(0)
   expect(getKom('ovaal', 850)).toEqual(getKom('ovaal'))
   expect(getKom('vierkant').b).toBe(500)
 })
@@ -134,7 +135,9 @@ test('Solid Washbasin Solo: kom in het midden, twee kommen op een kwart en driek
   const twee = maakBlad({ model: solo, lengte: 1400, diepte: 460, breedtes: [], komAantal: 2 })
   expect(komMax(twee, kom)).toBe(2)
   expect(snappunten(twee, kom).map((s) => s.x)).toEqual([350, 1050])
-  expect(komMax(maakBlad({ model: solo, lengte: 1200, diepte: 460, breedtes: [], komAantal: 2 }), kom)).toBe(1)
+  // Twee kommen van 500 vragen elk 600 mm: 1200 past net, 1190 niet
+  expect(komMax(maakBlad({ model: solo, lengte: 1200, diepte: 460, breedtes: [], komAantal: 2 }), kom)).toBe(2)
+  expect(komMax(maakBlad({ model: solo, lengte: 1190, diepte: 460, breedtes: [], komAantal: 2 }), kom)).toBe(1)
 })
 
 test('kraangat bij kom: vaste Y, X tot 50 mm voorbij de kom', () => {
@@ -166,7 +169,7 @@ test('herzieGaten: korter blad haalt het kraangat binnen het blad, kom weg haalt
   const kort = herzieGaten([{ soort: 'kraan', x: 1500, y: 80, d: 35 }], hout(1200, [600, 600]))
   expect(kort.vervallen).toBe(0)
   expect(valideerGaten(kort.gaten, hout(1200, [600, 600]))).toBeNull()
-  const smal: GatenContext = { soort: 'solid', blad: blad(1200, [600, 600]), kom: getKom('vierkant', 500), komAantal: 1 }
+  const smal: GatenContext = { soort: 'solid', blad: blad(1100, [550, 550]), kom: getKom('vierkant', 500), komAantal: 1 }
   expect(herzieGaten([{ soort: 'kraan-kom', vak: 0, dx: 0, d: 34 }, { soort: 'kom', vak: 0 }], smal)).toEqual({ gaten: [], vervallen: 2 })
   const ok: GatenContext = { ...smal, blad: blad(1400, [700, 700]) }
   expect(herzieGaten([{ soort: 'kraan-kom', vak: 0, dx: 0, d: 34 }, { soort: 'kom', vak: 0 }], ok).vervallen).toBe(0)

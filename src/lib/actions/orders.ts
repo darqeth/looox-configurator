@@ -16,7 +16,7 @@ import type { ConfigOptions } from '@/lib/pdf/helpers'
 import { z } from 'zod'
 import { hasMeubelAccess } from '@/lib/meubel-access'
 import { leesMeubel, meubelPrijsInput, meubelExtraPrijs } from '@/lib/meubel-opslag'
-import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst } from '@/lib/meubel-config'
+import { MEUBEL_AANTAL_MAX, calcMeubelNettoCents, formatPct, getMeubelOrderOpbouw, indelingLabel, indelingTekst, kleurLabel, meubelAfmeting, meubelOptiesTekst, waskomTekst, SOLID_KLEUR_LABEL } from '@/lib/meubel-config'
 
 type LightConfig = {
   position: string
@@ -675,6 +675,7 @@ export async function placeMeubelOrder(
         ...(meubel.waskomVorm ? [['Waskom', waskomTekst(meubel)] as [string, string]] : []),
         ...(meubel.regaalBreedte > 0 ? [['Regaalkast', `${meubel.regaalBreedte} mm breed, ${meubel.regaalZijde}`] as [string, string]] : []),
         ...(meubel.model.artikel ? [] : [[kleurLabel(meubel.model), meubel.houtkleurNaam || 'Geen'] as [string, string]]),
+        ...(meubel.solidKleurNaam ? [[SOLID_KLEUR_LABEL, meubel.solidKleurNaam] as [string, string]] : []),
         ['Opties', meubelOptiesTekst(meubel)],
       ],
     },

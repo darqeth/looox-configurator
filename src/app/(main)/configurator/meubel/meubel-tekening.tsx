@@ -21,7 +21,7 @@ const LIJN_OP_DONKER = '#F4F1EA'
 const VLAK_ZONDER_HOUT = '#F6F4EF'
 const MAAT = 'var(--lx-text-secondary)'
 
-export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout: houtAan = true, regaal = null, blad = null, deuren = 0 }: {
+export const MeubelTekening = memo(function MeubelTekening({ model, lengte, breedtes, houtkleur, toonHout: houtAan = true, regaal = null, blad = null, bladKleur, deuren = 0 }: {
   model: MeubelModel
   lengte: number
   /** Breedte per lade in mm, van links naar rechts */
@@ -37,6 +37,8 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
    * mee (useMemo), anders tekent de tekening bij elke render opnieuw.
    */
   blad?: { context: GatenContext; gaten: Gat[]; indicatief: boolean } | null
+  /** Tint van het Solid Surface blad in het bovenaanzicht (Mat White of Mat Warm Grey) */
+  bladKleur?: string
   /** Aantal deuren bij een kast */
   deuren?: number
 }) {
@@ -93,7 +95,7 @@ export const MeubelTekening = memo(function MeubelTekening({ model, lengte, bree
       {/* Bovenaanzicht: het blad met de gaten en waskommen */}
       {heeftBlad && (
         <g>
-          <rect x={x} y={yBlad} width={w} height={bladD} rx="1.5" fill={model.categorie === 'solid-surface' ? '#FBFAF7' : toonHout ? `url(#${patroon})` : VLAK_ZONDER_HOUT} stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
+          <rect x={x} y={yBlad} width={w} height={bladD} rx="1.5" fill={model.categorie === 'solid-surface' ? bladKleur ?? '#FBFAF7' : toonHout ? `url(#${patroon})` : VLAK_ZONDER_HOUT} stroke={LIJN_OP_LICHT} strokeWidth="1.5" />
           {/* Ladevakken als stippellijn: daarboven kan een sifongat of waskom */}
           {blad && !blad.context.blad.los && blad.context.blad.vakken.flatMap((v) => [v.x0, v.x1]).filter((gx, i, alle) => gx > 0.5 && gx < lengte - 0.5 && alle.indexOf(gx) === i).map((gx) => (
             <line key={`bv${gx}`} x1={x + gx * schaal} y1={yBlad} x2={x + gx * schaal} y2={yBlad + bladD} stroke={model.categorie === 'solid-surface' ? LIJN_OP_LICHT : LIJN} strokeWidth="0.6" strokeDasharray="3 3" strokeOpacity="0.55" />

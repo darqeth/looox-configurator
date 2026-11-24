@@ -60,6 +60,7 @@ export default async function EditConfiguratorPage({ params }: { params: Promise
           lampen: meubel.lampen,
           organizer: meubel.organizer,
           divider: meubel.divider,
+          solidKleur: meubel.solidKleur,
           handdoekType: meubel.handdoekType,
           extra: meubel.extra,
           extraArtikel: meubel.extraArtikel,

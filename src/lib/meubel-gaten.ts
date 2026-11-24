@@ -31,8 +31,8 @@ export const GAT = {
   kraan: { min: 20, max: 60, std: 35 },
   /** Kraangat in een Solid Surface blad: vaste Y, X tot een stukje voorbij de kom */
   komKraan: { min: 20, max: 40, std: 34, y: 45.5, voorbij: 50 },
-  /** Een lade is minstens zoveel breder dan de kom (75 mm aan elke kant) */
-  komMarge: 150,
+  /** Een lade is minstens zoveel breder dan de kom (50 mm aan elke kant) */
+  komMarge: 100,
   /** Zoveel uitsparingen kunnen er hooguit betaald in één blad */
   max: 10,
   /** Vanaf deze lengte krijgt een blad zonder lades drie snappunten in plaats van één */

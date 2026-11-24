@@ -1374,9 +1374,11 @@ export interface MeubelInput {
   variant?: string
   /** Kant van de regaalkast */
   regaalZijde?: 'links' | 'rechts' | 'midden'
-  /** Bijverkoop bij een meubel met lades: één Organizer en/of één Divider, op artikelnummer */
-  organizer?: string | null
-  divider?: string | null
+  /** Bijverkoop bij een meubel met lades: aantal Organizers en Dividers per maat. Oude vorm: één artikelnummer */
+  organizer?: LadeAccWaarde
+  divider?: LadeAccWaarde
+  /** Kleur van het Solid Surface blad; ontbreekt is Mat White */
+  solidKleur?: SolidKleur | null
 }
 
 export const HANDDOEK_UITSPARING_MODEL = 'mini-base-shelf'
@@ -1462,7 +1464,7 @@ function valideerTekening(c: MeubelInput, model: MeubelModel): string | null {
   if (c.tekenwijze !== 'module') return null
   const ctx = gatenContext(c)
   if (!ctx) return 'Bij dit product kan geen tekening gemaakt worden.'
-  if (ctx.kom && komMax(ctx.blad, ctx.kom) < ctx.komAantal) return 'Deze waskom past niet boven de lades. Een lade moet minstens 15 cm breder zijn dan de waskom. Maak een lade breder of kies minder lades.'
+  if (ctx.kom && komMax(ctx.blad, ctx.kom) < ctx.komAantal) return `Deze waskom past niet boven de lades. Een lade moet minstens ${GAT.komMarge / 10} cm breder zijn dan de waskom. Maak een lade breder of kies minder lades.`
   return valideerGaten(c.gaten ?? [], ctx)
 }
 
@@ -1472,32 +1474,10 @@ export function tekeningCompleet(c: MeubelInput): boolean {
   return ctx ? kommenCompleet(c.gaten ?? [], ctx) : false
 }
 
-/** Netto per stuk in centen, of null bij een ongeldige combinatie. Niet tonen buiten de bestelstap. */
-export function calcMeubelNettoCents(input: MeubelInput): number | null {
-  const model = getMeubelModel(input.modelId)
-  if (!model || input.opAanvraag) return null
-  const kleur = getHoutkleuren(model).find((k) => k.id === input.houtkleur)
-  const uitsparingen = telUitsparingen(input, gatenContext(input))
-  if (!kleur || !Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX + 1) return null
+/** Netto basisprijs in centen: de tabelprijs bij deze maten, lades of uitvoering, zonder opties. Null als die niet bestaat. */
+export function meubelBasisNetto(model: MeubelModel, input: MeubelInput): number | null {
   // Duo (Drawer Box Regal): prijs volgt uit de twee kastbreedtes, niet uit een lengtestaffel
-  if (uitsparingen > 0 && !kanUitsparing(model)) return null
-  const houders = input.handdoekhouders ?? 0
-  if (houders !== 0) {
-    const h = model.plank?.handdoekhouder
-    // Met een handdoekhouder moet de plank diep genoeg zijn
-    if (!h || !Number.isInteger(houders) || houders < 0 || houders > 2 || (input.diepte ?? model.diepte) < h.minDiepte) return null
-  }
-  let ladeAcc = 0
-  for (const soort of LADE_ACCESSOIRES) {
-    if (input[soort] == null) continue
-    const v = kanLadeAccessoire(model) ? getLadeAccessoire(soort, input[soort]) : null
-    if (!v) return null
-    ladeAcc += v.prijs
-  }
-  const lampen = input.lampen ?? 0
-  if (lampen !== 0 && (!model.lamp || !Number.isInteger(lampen) || lampen < 0 || lampen > LAMPEN_MAX)) return null
-  if (input.extra != null && (!heeftExtras(model, input.variant) || !PLANK_EXTRAS.some((e) => e.id === input.extra))) return null
-  const basis = model.artikel
+  return model.artikel
     ? getArtikelVariant(model, input.variant)?.prijs ?? null
     : model.plank
     ? getPlankPrijs(model, input)
@@ -1508,8 +1488,32 @@ export function calcMeubelNettoCents(input: MeubelInput): number | null {
     : getLadeOpties(model, input.lengte, getRegaalBreedte(model, input.regaalBreedte)).includes(input.lades)
       ? findStaffel(model, input.lengte)?.prijzen[input.lades] ?? null
       : null
+}
+
+/** Netto per stuk in centen, of null bij een ongeldige combinatie. Niet tonen buiten de bestelstap. */
+export function calcMeubelNettoCents(input: MeubelInput): number | null {
+  const model = getMeubelModel(input.modelId)
+  if (!model || input.opAanvraag) return null
+  const kleur = getHoutkleuren(model).find((k) => k.id === input.houtkleur)
+  const uitsparingen = telUitsparingen(input, gatenContext(input))
+  if (!kleur || !Number.isInteger(uitsparingen) || uitsparingen < 0 || uitsparingen > UITSPARING_MAX + 1) return null
+  if (uitsparingen > 0 && !kanUitsparing(model)) return null
+  const houders = input.handdoekhouders ?? 0
+  if (houders !== 0) {
+    const h = model.plank?.handdoekhouder
+    // Met een handdoekhouder moet de plank diep genoeg zijn
+    if (!h || !Number.isInteger(houders) || houders < 0 || houders > 2 || (input.diepte ?? model.diepte) < h.minDiepte) return null
+  }
+  if (!ladeAccGeldig(model, input)) return null
+  const ladeAcc = ladeAccRegels(input).reduce((som, r) => som + r.aantal * r.variant.prijs, 0)
+  if (!solidKleurGeldig(model, input.solidKleur)) return null
+  const lampen = input.lampen ?? 0
+  if (lampen !== 0 && (!model.lamp || !Number.isInteger(lampen) || lampen < 0 || lampen > LAMPEN_MAX)) return null
+  if (input.extra != null && (!heeftExtras(model, input.variant) || !PLANK_EXTRAS.some((e) => e.id === input.extra))) return null
+  const basis = meubelBasisNetto(model, input)
   if (basis === null) return null
-  return basis + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0) + ladeAcc + plankExtraPrijs(input).netto
+  // De meerprijs van de bladkleur is een percentage over alleen deze basisprijs
+  return basis + solidKleurMeerprijs(model, basis, input.solidKleur) + kleurMeerprijs(model, kleur) + uitsparingen * UITSPARING_NETTO_CENTS + houders * (model.plank?.handdoekhouder?.prijs ?? 0) + ladeAcc + plankExtraPrijs(input).netto
 }
 
 /** Laagste brutoprijs van een model in centen, voor "vanaf" op de modelkaart. Null als die niet te bepalen is. */
@@ -1565,14 +1569,13 @@ export function getMeubelPrijsOpbouw(input: MeubelInput, factor: number): { rege
   const f = parseMeubelFactor(factor)
   const extra: MeubelPrijsRegel[] = []
   if (kleurMeerprijs(model, kleur) > 0) extra.push({ label: `Houtkleur · ${kleur.naam}`, cents: Math.round(kleurMeerprijs(model, kleur) * f) })
+  const solidMeer = solidKleurMeerprijs(model, meubelBasisNetto(model, input) ?? 0, input.solidKleur)
+  if (solidMeer > 0) extra.push({ label: `${SOLID_KLEUR_LABEL} · ${getSolidKleur(model, input.solidKleur)!.naam}`, cents: Math.round(solidMeer * f) })
   const uitsparingen = telUitsparingen(input, gatenContext(input))
   if (uitsparingen > 0) extra.push({ label: `Uitsparing · ${uitsparingen}×`, cents: Math.round(uitsparingen * UITSPARING_NETTO_CENTS * f) })
   const houders = input.handdoekhouders ?? 0
   if (houders > 0) extra.push({ label: `Handdoekhouder · ${houders}×`, cents: Math.round(houders * (model.plank?.handdoekhouder?.prijs ?? 0) * f) })
-  for (const soort of LADE_ACCESSOIRES) {
-    const v = getLadeAccessoire(soort, input[soort])
-    if (v) extra.push({ label: `${getMeubelModel(soort)!.naam} ${v.naam}`, cents: Math.round(v.prijs * f) })
-  }
+  for (const r of ladeAccRegels(input)) extra.push({ label: `${r.naam} · ${r.aantal}×`, cents: Math.round(r.aantal * r.variant.prijs * f) })
   const acc = plankExtraPrijs(input)
   const lampCents = lampBruto(input)
   if (acc.bruto - lampCents > 0) extra.push({ label: plankExtraTekst(input).replace(/ \(art\. .*\)$/, ''), cents: acc.bruto - lampCents })
@@ -1675,6 +1678,9 @@ export function valideerMeubelConfig(c: MeubelConfig): string | null {
   if (c.opAanvraag) {
     const model = getMeubelModel(c.modelId)
     if (!model || model.geenAanvraag || !getHoutkleuren(model).some((k) => k.id === c.houtkleur)) return 'Dit model of deze houtkleur bestaat niet.'
+    // Zonder prijs loopt dit niet langs de prijsmotor: hier dezelfde controle
+    if (!ladeAccGeldig(model, c)) return `Organizer en Divider: 0 tot ${LADE_ACC_MAX} per maat, alleen bij een meubel met lades.`
+    if (!solidKleurGeldig(model, c.solidKleur)) return 'Deze kleur Solid Surface bestaat niet bij dit model.'
     const bereik = getAanvraagBereik(model)
     if (!Number.isInteger(c.lengte) || c.lengte < bereik.min || c.lengte > bereik.max) return `Op aanvraag kan van ${bereik.min} tot ${bereik.max} mm.`
     if (model.zonderLades ? c.lades !== 0 : !getAanvraagLadeOpties(ladeRuimte(model, c.lengte, getRegaalBreedte(model, c.regaalBreedte))).includes(c.lades)) return 'Dit aantal lades past niet bij deze lengte.'
@@ -1765,27 +1771,114 @@ export function meubelAfmeting(model: MeubelModel, lengte: number): string {
 }
 
 // ─── Bijverkoop voor in de lade ─────────────────────────────────────────────
-// Bij een meubel met lades kan er één Organizer en één Divider bij. Het zijn de
-// artikelen uit de categorie Accessoires, met dezelfde prijs (netto × factor).
+// Bij een meubel met lades kunnen er Organizers en Dividers bij: per soort een aantal
+// in maat M en een aantal in maat L. Het zijn de artikelen uit de categorie
+// Accessoires, met dezelfde prijs per stuk (netto × factor).
 export const LADE_ACCESSOIRES = ['organizer', 'divider'] as const
 export type LadeAccessoire = typeof LADE_ACCESSOIRES[number]
+export const LADE_ACC_MATEN = ['m', 'l'] as const
+export type LadeAccMaat = typeof LADE_ACC_MATEN[number]
+export const LADE_ACC_MAX = 10
+/** Aantal per maat, elk 0 tot en met LADE_ACC_MAX */
+export type LadeAccAantal = Record<LadeAccMaat, number>
+/** Zoals het is opgeslagen: aantallen per maat, of (oude configuraties) één artikelnummer = 1 stuk */
+export type LadeAccWaarde = LadeAccAantal | string | null
 
 export function kanLadeAccessoire(model: MeubelModel): boolean {
   return !model.kast && !model.plank && !model.artikel && !model.zonderLades
 }
 
-/** De gekozen uitvoering (M of L) van de Organizer of Divider, of null. */
+/** De uitvoering (M of L) van de Organizer of Divider bij een artikelnummer, of null. */
 export function getLadeAccessoire(soort: LadeAccessoire, id?: string | null): ArtikelVariant | null {
   const model = getMeubelModel(soort)
   return model && id ? getArtikelVariant(model, id) : null
 }
 
-/** "Organizer L (art. WORG242)" per gekozen accessoire. */
-export function ladeAccessoireTekst(o: { organizer?: string | null; divider?: string | null }): string[] {
-  return LADE_ACCESSOIRES.flatMap((soort) => {
-    const v = getLadeAccessoire(soort, o[soort])
-    return v ? [`${getMeubelModel(soort)!.naam} ${v.naam} (art. ${v.id})`] : []
+/** De uitvoering van de Organizer of Divider in deze maat. */
+function ladeAccVariant(soort: LadeAccessoire, maat: LadeAccMaat): ArtikelVariant | null {
+  return getMeubelModel(soort)?.artikel?.varianten.find((v) => v.naam.toLowerCase() === maat) ?? null
+}
+
+const isAantal = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= LADE_ACC_MAX
+
+/**
+ * Aantallen per maat uit wat er is opgeslagen of meegestuurd, of null als het niet klopt.
+ * Niets gekozen is 0 en 0; een artikelnummer (oude vorm, ook de oude eigen id's) is 1 stuk van die maat.
+ */
+export function leesLadeAcc(soort: LadeAccessoire, waarde: unknown): LadeAccAantal | null {
+  if (waarde == null) return { m: 0, l: 0 }
+  if (typeof waarde === 'string') {
+    const v = getLadeAccessoire(soort, waarde)
+    return v ? { m: v.naam === 'M' ? 1 : 0, l: v.naam === 'L' ? 1 : 0 } : null
+  }
+  if (typeof waarde !== 'object' || Array.isArray(waarde)) return null
+  const { m = 0, l = 0 } = waarde as Partial<Record<LadeAccMaat, unknown>>
+  return isAantal(m) && isAantal(l) ? { m, l } : null
+}
+
+type LadeAccKeuze = { [S in LadeAccessoire]?: LadeAccWaarde }
+
+/** Kloppen de aantallen (hele getallen, 0 tot en met 10) en kan er bij dit model iets in de lade? */
+export function ladeAccGeldig(model: MeubelModel, o: LadeAccKeuze): boolean {
+  return LADE_ACCESSOIRES.every((soort) => {
+    const a = leesLadeAcc(soort, o[soort])
+    return a !== null && (a.m + a.l === 0 || kanLadeAccessoire(model))
   })
+}
+
+/** Eén regel per gekozen artikel: "Organizer L", het aantal en de uitvoering met prijs per stuk. */
+export function ladeAccRegels(o: LadeAccKeuze): { soort: LadeAccessoire; naam: string; aantal: number; variant: ArtikelVariant }[] {
+  return LADE_ACCESSOIRES.flatMap((soort) => {
+    const a = leesLadeAcc(soort, o[soort])
+    return LADE_ACC_MATEN.flatMap((maat) => {
+      const variant = ladeAccVariant(soort, maat)
+      return a && variant && a[maat] > 0 ? [{ soort, naam: `${getMeubelModel(soort)!.naam} ${variant.naam}`, aantal: a[maat], variant }] : []
+    })
+  })
+}
+
+/** "2 × Organizer L (art. WORG242)" per gekozen accessoire. */
+export function ladeAccessoireTekst(o: LadeAccKeuze): string[] {
+  return ladeAccRegels(o).map((r) => `${r.aantal} × ${r.naam} (art. ${r.variant.id})`)
+}
+
+// ─── Kleur van het Solid Surface blad ───────────────────────────────────────
+// Elk model met een Solid Surface blad is er in Mat White (standaard) en Mat Warm Grey.
+// Warm Grey kost een percentage over alleen de basisprijs van het meubel: 4% bij hout met
+// een Solid Surface blad, 12% bij een product dat alleen het blad is.
+export const SOLID_KLEUREN = [
+  { id: 'mat-white', naam: 'Mat White', tint: '#FBFAF7' },
+  { id: 'mat-warm-grey', naam: 'Mat Warm Grey', tint: '#D9D3CA' },
+] as const
+export type SolidKleur = typeof SOLID_KLEUREN[number]['id']
+export const SOLID_KLEUR_DEFAULT: SolidKleur = 'mat-white'
+export const SOLID_KLEUR_LABEL = 'Kleur Solid Surface'
+export const SOLID_KLEUR_PCT = { metHout: 4, alleenBlad: 12 } as const
+
+export function heeftSolidKleur(model: MeubelModel): boolean {
+  return model.categorie === 'solid-surface'
+}
+
+/** De gekozen bladkleur; zonder (geldige) keuze Mat White. Null bij een model zonder Solid Surface blad. */
+export function getSolidKleur(model: MeubelModel, id?: unknown): typeof SOLID_KLEUREN[number] | null {
+  if (!heeftSolidKleur(model)) return null
+  return SOLID_KLEUREN.find((k) => k.id === id) ?? SOLID_KLEUREN[0]
+}
+
+/** Geen keuze mag altijd; een keuze moet bestaan en bij een model met Solid Surface blad horen. */
+function solidKleurGeldig(model: MeubelModel, id?: string | null): boolean {
+  return id == null || (heeftSolidKleur(model) && SOLID_KLEUREN.some((k) => k.id === id))
+}
+
+/** Percentage meerprijs van deze bladkleur over de basisprijs: 0 bij Mat White of zonder Solid Surface blad. */
+export function solidKleurPct(model: MeubelModel, id?: string | null): number {
+  if (getSolidKleur(model, id)?.id !== 'mat-warm-grey') return 0
+  return model.geenHout ? SOLID_KLEUR_PCT.alleenBlad : SOLID_KLEUR_PCT.metHout
+}
+
+/** Meerprijs van de bladkleur in centen netto, afgerond op hele centen. `basis` is de netto basisprijs. */
+export function solidKleurMeerprijs(model: MeubelModel, basis: number, id?: string | null): number {
+  return Math.floor((basis * solidKleurPct(model, id) + 50) / 100)
 }
 
 /** Opties uit de tabel "Opties meubels" in één regel, of een streepje als er geen zijn. */
@@ -1793,7 +1886,7 @@ export function ladeAccessoireTekst(o: { organizer?: string | null; divider?: st
  * `uitsparingen` is het aantal waarvoor betaald wordt (telUitsparingen), dus met de
  * handdoekuitsparing erbij als die aan staat; die krijgt hier een eigen vermelding.
  */
-export function meubelOptiesTekst(o: { logo?: boolean; uitsparingen?: number; tekenwijze?: Tekenwijze | null; handdoekUitsparing?: boolean; organizer?: string | null; divider?: string | null }): string {
+export function meubelOptiesTekst(o: { logo?: boolean; uitsparingen?: number; tekenwijze?: Tekenwijze | null; handdoekUitsparing?: boolean; organizer?: LadeAccWaarde; divider?: LadeAccWaarde }): string {
   const gaten = (o.uitsparingen ?? 0) - (o.handdoekUitsparing ? 1 : 0)
   const delen = [
     o.logo ? 'Met logo' : '',

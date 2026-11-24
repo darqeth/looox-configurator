@@ -7,7 +7,7 @@ import { parseOrThrow } from '@/lib/validation'
 import { DEFAULT_PRODUCT_ID, generateArticleNumber, assertValidAttachmentUrl } from '@/lib/actions/configurator-helpers'
 import { hasMeubelAccess, getMeubelFactor } from '@/lib/meubel-access'
 import {
-  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig, gatenContext,
+  MEUBEL_AANTAL_MAX, UITSPARING_MAX, calcMeubelBrutoCents, heeftExtras, getPlankExtraArtikel, kanLogo, kanLadeAccessoire, heeftSolidKleur, getSolidKleur, LADE_ACC_MAX, getMeubelHoogte, getMeubelDiepte, getMeubelModel, valideerMeubelConfig, gatenContext,
 } from '@/lib/meubel-config'
 import { MEUBEL_SHAPE, leesMeubel, meubelPrijsInput } from '@/lib/meubel-opslag'
 import { betaaldeGaten, valideerGaten, type Gat } from '@/lib/meubel-gaten'
@@ -23,6 +23,9 @@ const gatSchema = z.discriminatedUnion('soort', [
 ])
 const gatenSchema = z.array(gatSchema).max(20)
 
+// Organizer en Divider: een aantal per maat, hele getallen van 0 tot en met het maximum
+const ladeAccSchema = z.object({ m: z.number().int().min(0).max(LADE_ACC_MAX), l: z.number().int().min(0).max(LADE_ACC_MAX) }).strict().nullish()
+
 const meubelInputSchema = z.object({
   modelId: z.string().max(40),
   lengte: z.number().int().min(0).max(10000),
@@ -34,8 +37,9 @@ const meubelInputSchema = z.object({
   diepte: z.number().int().min(1).max(1000).optional(),
   handdoekhouders: z.number().int().min(0).max(2).optional(),
   lampen: z.number().int().min(0).max(1).optional(),
-  organizer: z.string().max(20).nullish(),
-  divider: z.string().max(20).nullish(),
+  organizer: ladeAccSchema,
+  divider: ladeAccSchema,
+  solidKleur: z.enum(['mat-white', 'mat-warm-grey']).nullish(),
   handdoekType: z.enum(['A', 'B']).optional(),
   extra: z.enum(['rail', 'rail-curved', 'roll', 'roll-curved']).nullish(),
   extraArtikel: z.string().max(20).nullish(),
@@ -117,6 +121,7 @@ async function bouwRij(rawInput: SaveMeubelInput) {
           ...((model.kast || model.plank) && { diepte: getMeubelDiepte(model, input.diepte) }),
           ...(model.lamp && { lampen: input.lampen ?? 0 }),
           ...(kanLadeAccessoire(model) && { organizer: input.organizer ?? null, divider: input.divider ?? null }),
+          ...(heeftSolidKleur(model) && { solidKleur: getSolidKleur(model, input.solidKleur)!.id }),
           ...(model.plank?.handdoekhouder && { handdoekhouders: input.handdoekhouders ?? 0, handdoekType: input.handdoekType ?? 'A' }),
           ...(heeftExtras(model, input.variant) && { extra: input.extra ?? null, extraArtikel: getPlankExtraArtikel(input.extra, input.extraArtikel)?.id ?? null }),
           ...(model.artikel && { variant: input.variant }),
